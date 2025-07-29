@@ -1,0 +1,97 @@
+{
+  "name": "engineersdaybook",
+  "image": "mcr.microsoft.com/vscode/devcontainers/base:0-ubuntu-22.04",
+  "workspaceFolder": "/root/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/root/workspace,type=bind",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers-extra/features/starship:1": {},
+    "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
+      "packages": [
+        "netcat"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/root/.bash_history,type=bind"
+  ],
+  "forwardPorts": [
+    8080
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-azuretools.vscode-docker",
+        "streetsidesoftware.code-spell-checker",
+        "redhat.vscode-yaml",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "mhutchie.git-graph",
+        "donjayamanne.githistory",
+        "VisualStudioExptTeam.vscodeintellicode",
+        "yzhang.markdown-all-in-one",
+        "rangav.vscode-thunder-client",
+        "Gruntfuggly.todo-tree",
+        "mutantdino.resourcemonitor"
+      ],
+      "settings": {
+        "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font Mono",
+        "terminal.integrated.gpuAcceleration": "on",
+        "editor.fontLigatures": true,
+        "editor.fontFamily": "JetBrainsMono Nerd Font Mono",
+        "vs-kubernetes": {
+          "vs-kubernetes.crd-code-completion": "enabled"
+        },
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": [
+              "-l"
+            ],
+            "icon": "terminal-bash"
+          }
+        },
+        // https://github.com/microsoft/vscode-copilot-release/issues/6498#issuecomment-2739557361
+        "github.copilot.advanced": {
+          "debug.useNodeFetcher": true
+        },
+        "yaml.format.enable": true,
+        "yaml.format.singleQuote": false,
+        "yaml.format.bracketSpacing": true,
+        "telemetry.telemetryLevel": "off",
+        "files.autoSave": "afterDelay",
+        "files.associations": {
+          "*.yaml": "yaml"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "isort.args": [
+          "--profile",
+          "black"
+        ]
+      }
+    }
+  },
+  "remoteUser": "root",
+  "remoteEnv": {
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8"
+  },
+  "containerEnv": {
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8"
+  }
+}
