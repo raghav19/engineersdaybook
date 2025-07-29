@@ -16,7 +16,7 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind",
+    "source=/root/.ssh,target=/root/.ssh,type=bind",
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind",
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/root/.bash_history,type=bind",
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache/pre-commit,target=/root/.cache/pre-commit,type=bind,consistency=cached"
