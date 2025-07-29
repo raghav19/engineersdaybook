@@ -7,6 +7,8 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/python:1": {},
     "ghcr.io/devcontainers-extra/features/starship:1": {},
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/larsnieuwenhuizen/features/jqyq:0": {},
     "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
       "packages": [
         "netcat"
@@ -16,7 +18,8 @@
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind",
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/root/.bash_history,type=bind"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/root/.bash_history,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache/pre-commit,target=/root/.cache/pre-commit,type=bind,consistency=cached"
   ],
   "forwardPorts": [
     8080
@@ -24,6 +27,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "golang.Go",
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.debugpy",
