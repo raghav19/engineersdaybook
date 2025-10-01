@@ -1,5 +1,9 @@
 title: [Engineers Day Book]
 description: [The things that I dabble with as an engineer]
+sass:
+  style: compressed
+include:
+  - assets/css/custom-font.css
 remote_theme: pages-themes/merlot@v0.2.0
 plugins:
 - jekyll-remote-theme # add this line to the plugins list if you already have one
