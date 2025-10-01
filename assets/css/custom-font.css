@@ -6,6 +6,8 @@
   font-style: normal;
 }
 
-body, code, pre, tt {
+@import "{{ site.theme }}";
+
+.markdown-body, body, code, pre, tt {
   font-family: 'Cascadia Code Nerd Font', monospace !important;
 }
