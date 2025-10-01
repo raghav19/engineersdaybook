@@ -8,6 +8,10 @@
 
 @import "{{ site.theme }}";
 
-.markdown-body, body, code, pre, tt {
+.markdown-body {
+  font-family: 'Cascadia Code Nerd Font';
+}
+
+body, code, pre, tt {
   font-family: 'Cascadia Code Nerd Font', monospace !important;
 }
