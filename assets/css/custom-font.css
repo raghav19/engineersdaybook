@@ -1,0 +1,11 @@
+@font-face {
+  font-family: 'Cascadia Code Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts/patched-fonts/CascadiaCode/Regular/complete/CascadiaCode%20Regular%20Nerd%20Font%20Complete.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts/patched-fonts/CascadiaCode/Regular/complete/CascadiaCode%20Regular%20Nerd%20Font%20Complete.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body, code, pre, tt {
+  font-family: 'Cascadia Code Nerd Font', monospace, monospace;
+}
