@@ -48,11 +48,11 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
 - Use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
 	> NOTE: OIDC flow would be showcased in a separate post  
 	- From Headlamp UI -> Add Cluster -> Load From Kubeconfig
-		- ![image.png](../assets/image_1758878520002_0.png)
-		- ![image.png](../assets/image_1758878566648_0.png)
+		- ![Headlamp Add Cluster](/assets/image_1758878520002_0.png)
+		- ![Load From Kubeconfig](/assets/image_1758878566648_0.png)
 		-
 - Once added, you can see your cluster getting listed in `HOME`
-	- ![image.png](../assets/image_1758878628349_0.png)
+	- ![Cluster Listed in Home](/assets/image_1758878628349_0.png)
 
 #### Verify Trivy
 	```shell
@@ -91,12 +91,12 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
 - #### Observe on Headlamp Dashboard
 - Check on Headlamp UI -> <your-cluster> -> Trivy
 	- ##### Compliance Reports
-		- ![image.png](../assets/image_1758879507809_0.png)
-		- ![image.png](../assets/image_1758879532544_0.png)
-		- ![image.png](../assets/image_1758879574806_0.png)
-		- ![image.png](../assets/image_1758879598485_0.png)
+		- ![Compliance Reports Overview](/assets/image_1758879507809_0.png)
+		- ![Compliance Report Details](/assets/image_1758879532544_0.png)
+		- ![Compliance Report Analysis](/assets/image_1758879574806_0.png)
+		- ![Compliance Report Results](/assets/image_1758879598485_0.png)
 	- ##### Vulnerability Reports
-		- ![image.png](../assets/image_1758879654311_0.png)
+		- ![Vulnerability Reports](/assets/image_1758879654311_0.png)
 		
 #### Value Additions
 - 0 cost K8s Security Posture management with addon based integration
