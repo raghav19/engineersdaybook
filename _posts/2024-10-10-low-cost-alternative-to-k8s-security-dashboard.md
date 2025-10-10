@@ -1,9 +1,17 @@
 ---
 layout: post
 title: "Low cost alternative to off-the-shelf k8s security dashboard"
-date: 2025-10-10
-categories: [kubernetes, security, devops]
-tags: [k8s, trivy, headlamp, security-dashboard, vulnerability-scanning]
+date: 2024-10-10
+categories: 
+  - kubernetes
+  - security
+  - devops
+tags: 
+  - k8s
+  - trivy
+  - headlamp
+  - security-dashboard
+  - vulnerability-scanning
 excerpt: "Learn how to build a cost-effective Kubernetes security dashboard using Headlamp and Trivy as an alternative to expensive off-the-shelf solutions."
 ---
 
