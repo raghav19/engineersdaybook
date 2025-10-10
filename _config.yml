@@ -45,6 +45,7 @@ liquid:
   error_mode: strict
 
 # Build settings
+future: true
 permalink: /:categories/:title/
 markdown: kramdown
 feed:
