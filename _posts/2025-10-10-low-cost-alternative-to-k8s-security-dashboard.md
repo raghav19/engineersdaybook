@@ -19,85 +19,86 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
 
 #### Setup Local machine
 - Install Chocolatey & Tools
-	- Install [Chocolatey Software | Installing Chocolatey](https://chocolatey.org/install) on windows
-	- Install `awscli`/`azure-cli`
-		```shell
-		# requires elevated powershell 
-		choco install awscli azure-cli
-		```
-- Setup local credentials for [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
+  - Install [Chocolatey Software](https://chocolatey.org/install) on Windows
+  - Install `awscli`/`azure-cli`
+    ```shell
+    # requires elevated powershell 
+    choco install awscli azure-cli
+    ```
+- Setup local credentials for [AWS](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [Azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
 
 - Install Headlamp and plugins
-	- Install [Headlamp](https://headlamp.dev/) on your local machine
-	- Install [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin), can be done via headlamp UI (Home -> Plugin Catalog)
+  - Install [Headlamp](https://headlamp.dev/) on your local machine
+  - Install [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin), can be done via headlamp UI (Home -> Plugin Catalog)
 
 #### Setup Trivy Operator
-- Install [trivy-operator· deployment-aqua/trivy-operator](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
-	> NOTE: if you use corporate-proxy, ensure to set the values as below
-		```yaml
-		trivy:
-			httpProxy: <your-http-proxy>
-			httpsProxy: <your-https-proxy>
-			noProxy: <no-proxy>
-		```
+- Install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
+  > **NOTE:** if you use corporate-proxy, ensure to set the values as below
+  ```yaml
+  trivy:
+    httpProxy: <your-http-proxy>
+    httpsProxy: <your-https-proxy>
+    noProxy: <no-proxy>
+  ```
 
 #### Import Kubeconfig
-> NOTE: this can be used for EKS, AKS & On-prem clusters
+> **NOTE:** this can be used for EKS, AKS & On-prem clusters
 
 - Import `kubeconfig` for your K8s cluster
 - Use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
-	> NOTE: OIDC flow would be showcased in a separate post  
-	- From Headlamp UI -> Add Cluster -> Load From Kubeconfig
-		- ![Headlamp Add Cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
-		- ![Load From Kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
-		-
+  > **NOTE:** OIDC flow would be showcased in a separate post  
+  - From Headlamp UI -> Add Cluster -> Load From Kubeconfig
+    - ![Headlamp Add Cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
+    - ![Load From Kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
 - Once added, you can see your cluster getting listed in `HOME`
-	- ![Cluster Listed in Home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
+  - ![Cluster Listed in Home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
 
 #### Verify Trivy
-	```shell
-	# cluster vulnerabilities
-	❯ k get clustervulnerabilityreports.aquasecurity.github.io
-	NAME                                       REPOSITORY   TAG           SCANNER   AGE
-	clustersbomreport-6597787456-k8s-cluster   kubernetes   1.32.7-k3s1   Trivy     5d5h
-	
-	# cluster compliance
-	❯ k get clustercompliancereports.aquasecurity.github.io
-	NAME                     AGE
-	k8s-cis-1.23             6d
-	k8s-nsa-1.0              6d
-	k8s-pss-baseline-0.1     6d
-	k8s-pss-restricted-0.1   6d
-	
-	# RBAC assessments
-	❯ k get clusterrbacassessmentreports.aquasecurity.github.io -A
-	NAME                                                             SCANNER   AGE
-	clusterrole-547457d6d8                                           Trivy     6d
-	clusterrole-54ccb57cc4                                           Trivy     6d
-	clusterrole-54cdc9b678                                           Trivy     6d
-	clusterrole-5585c7b9ff                                           Trivy     6d
-	clusterrole-565cd5fdf                                            Trivy     6d
-	clusterrole-569d87574c                                           Trivy     6d
-	clusterrole-56bc9577c9                                           Trivy     6d
-	clusterrole-575b7f6784                                           Trivy     6d
-	clusterrole-57d745d4cc                                           Trivy     6d
-	clusterrole-584c484c4f                                           Trivy     6d
-	clusterrole-5857f84f59                                           Trivy     6d
-	clusterrole-586b8c778d                                           Trivy     6d
-	clusterrole-58bfc7788d                                           Trivy     6d
-	clusterrole-59dc5c9cb6                                           Trivy     6d
-	```
-- The specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled)](above one uses the defaults)
-- #### Observe on Headlamp Dashboard
+```shell
+# cluster vulnerabilities
+❯ k get clustervulnerabilityreports.aquasecurity.github.io
+NAME                                       REPOSITORY   TAG           SCANNER   AGE
+clustersbomreport-6597787456-k8s-cluster   kubernetes   1.32.7-k3s1   Trivy     5d5h
+
+# cluster compliance
+❯ k get clustercompliancereports.aquasecurity.github.io
+NAME                     AGE
+k8s-cis-1.23             6d
+k8s-nsa-1.0              6d
+k8s-pss-baseline-0.1     6d
+k8s-pss-restricted-0.1   6d
+
+# RBAC assessments
+❯ k get clusterrbacassessmentreports.aquasecurity.github.io -A
+NAME                                                             SCANNER   AGE
+clusterrole-547457d6d8                                           Trivy     6d
+clusterrole-54ccb57cc4                                           Trivy     6d
+clusterrole-54cdc9b678                                           Trivy     6d
+clusterrole-5585c7b9ff                                           Trivy     6d
+clusterrole-565cd5fdf                                            Trivy     6d
+clusterrole-569d87574c                                           Trivy     6d
+clusterrole-56bc9577c9                                           Trivy     6d
+clusterrole-575b7f6784                                           Trivy     6d
+clusterrole-57d745d4cc                                           Trivy     6d
+clusterrole-584c484c4f                                           Trivy     6d
+clusterrole-5857f84f59                                           Trivy     6d
+clusterrole-586b8c778d                                           Trivy     6d
+clusterrole-58bfc7788d                                           Trivy     6d
+clusterrole-59dc5c9cb6                                           Trivy     6d
+```
+
+The specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled) (above one uses the defaults).
+
+#### Observe on Headlamp Dashboard
 - Check on Headlamp UI -> <your-cluster> -> Trivy
-	- ##### Compliance Reports
-		- ![Compliance Reports Overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
-		- ![Compliance Report Details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
-		- ![Compliance Report Analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
-		- ![Compliance Report Results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
-	- ##### Vulnerability Reports
-		- ![Vulnerability Reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
-		
+  - **Compliance Reports**
+    - ![Compliance Reports Overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
+    - ![Compliance Report Details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
+    - ![Compliance Report Analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
+    - ![Compliance Report Results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
+  - **Vulnerability Reports**
+    - ![Vulnerability Reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
+
 #### Value Additions
 - 0 cost K8s Security Posture management with addon based integration
 - Enables strong security posture management with a comprehensive view and can be expanded for full Cluster view
