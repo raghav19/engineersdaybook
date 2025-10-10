@@ -1,44 +1,68 @@
-/* Full-width layout customizations */
+/* Full-width layout customizations - Override So Simple theme restrictions */
 
-/* Make the main container use full width */
-.layout--default .inner,
-.layout--home .inner,
-.layout--post .inner,
-.layout--page .inner {
+/* Target the main page container directly */
+.page-wrapper {
   max-width: 95vw !important;
-  margin-left: auto;
-  margin-right: auto;
+  width: 95vw !important;
+  margin: 0 auto !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
 }
 
-/* Ensure content uses the full available width */
-.entry-content,
-.page-content {
+/* Target all other potential containers */
+.main-content,
+.inner {
   max-width: none !important;
+  width: 100% !important;
 }
 
-/* Adjust sidebar width for better proportions on wide screens */
-@media (min-width: 1024px) {
-  .layout--post .sidebar,
-  .layout--page .sidebar {
-    width: 250px;
-  }
-  
-  .layout--post .main,
-  .layout--page .main {
-    margin-left: 270px;
-  }
+/* Ensure all content containers use full width */
+.page-content,
+.entry-content,
+.e-content {
+  max-width: none !important;
+  width: 100% !important;
 }
 
-/* Make images responsive in full-width layout */
+/* Override any theme width restrictions globally */
+* {
+  box-sizing: border-box !important;
+}
+
+/* Make sure the entire layout uses full width */
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Responsive images and code blocks */
+.page-content img,
 .entry-content img,
-.page-content img {
-  max-width: 100%;
-  height: auto;
+.e-content img {
+  max-width: 100% !important;
+  height: auto !important;
 }
 
-/* Improve code block width in full-width layout */
+.page-content pre,
 .entry-content pre,
-.page-content pre {
-  max-width: 100%;
-  overflow-x: auto;
+.e-content pre {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+/* Adjust layout for wide screens */
+@media (min-width: 768px) {
+  .page-wrapper {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .page-wrapper {
+    padding-left: 4rem !important;
+    padding-right: 4rem !important;
+  }
 }
