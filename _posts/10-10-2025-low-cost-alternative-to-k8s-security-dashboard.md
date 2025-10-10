@@ -20,7 +20,7 @@
 	    httpProxy: <your-http-proxy>  
 	    httpsProxy: <your-https-proxy>  
 	    noProxy: <no-proxy>  
-	  if you use corporate-proxy, ensure to set the values as below  
+	  if you use corporate-proxy, ensure to set the values as below
 	  ```yaml
 	  trivy:
 	    httpProxy: <your-http-proxy>
