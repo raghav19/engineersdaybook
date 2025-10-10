@@ -25,26 +25,25 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
 		# requires elevated powershell 
 		choco install awscli azure-cli
 		```
-	- Setup local credentials for [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
+- Setup local credentials for [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
+
 - Install Headlamp and plugins
 	- Install [Headlamp](https://headlamp.dev/) on your local machine
 	- Install [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin), can be done via headlamp UI (Home -> Plugin Catalog)
 
 #### Setup Trivy Operator
-- Install [trivy-operator· deployment-aqua/trivy-operator](https://artifacttrivy:
-		httpProxy: <your-http-proxy>  
-		httpsProxy: <your-https-proxy>  
-		noProxy: <no-proxy>  
-	if you use corporate-proxy, ensure to set the values as below
-	```yaml
-	trivy:
-		httpProxy: <your-http-proxy>
-		httpsProxy: <your-https-proxy>
-		noProxy: <no-proxy>
-	```
+- Install [trivy-operator· deployment-aqua/trivy-operator](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
+	> NOTE: if you use corporate-proxy, ensure to set the values as below
+		```yaml
+		trivy:
+			httpProxy: <your-http-proxy>
+			httpsProxy: <your-https-proxy>
+			noProxy: <no-proxy>
+		```
 
 #### Import Kubeconfig
-> NOTE: this can be used for EKS, AKS & On-prem clusters  
+> NOTE: this can be used for EKS, AKS & On-prem clusters
+
 - Import `kubeconfig` for your K8s cluster
 - Use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
 	> NOTE: OIDC flow would be showcased in a separate post  
