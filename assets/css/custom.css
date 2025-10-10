@@ -1,0 +1,44 @@
+/* Full-width layout customizations */
+
+/* Make the main container use full width */
+.layout--default .inner,
+.layout--home .inner,
+.layout--post .inner,
+.layout--page .inner {
+  max-width: 95vw !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Ensure content uses the full available width */
+.entry-content,
+.page-content {
+  max-width: none !important;
+}
+
+/* Adjust sidebar width for better proportions on wide screens */
+@media (min-width: 1024px) {
+  .layout--post .sidebar,
+  .layout--page .sidebar {
+    width: 250px;
+  }
+  
+  .layout--post .main,
+  .layout--page .main {
+    margin-left: 270px;
+  }
+}
+
+/* Make images responsive in full-width layout */
+.entry-content img,
+.page-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Improve code block width in full-width layout */
+.entry-content pre,
+.page-content pre {
+  max-width: 100%;
+  overflow-x: auto;
+}

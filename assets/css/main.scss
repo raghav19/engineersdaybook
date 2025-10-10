@@ -5,4 +5,8 @@ sitemap: false
 
 @charset "utf-8";
 
+// Override So Simple theme variables for full-width layout
+$main-max-width: 95vw;
+$main-sidebar-max-width: 95vw;
+
 @import "so-simple";
