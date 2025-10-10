@@ -33,7 +33,8 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
 
 #### Setup Trivy Operator
 - Install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
-  > **NOTE:** if you use corporate-proxy, ensure to set the values as below
+  
+  _**Note:** If you use corporate-proxy, ensure to set the values as below_
   ```yaml
   trivy:
     httpProxy: <your-http-proxy>
@@ -42,11 +43,12 @@ Security is a layered approach and in the Kubernetes world, its has so many laye
   ```
 
 #### Import Kubeconfig
-> **NOTE:** this can be used for EKS, AKS & On-prem clusters
+_**Note:** This can be used for EKS, AKS & On-prem clusters_
 
 - Import `kubeconfig` for your K8s cluster
 - Use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
-  > **NOTE:** OIDC flow would be showcased in a separate post  
+  
+  _**Note:** OIDC flow would be showcased in a separate post_
   - From Headlamp UI -> Add Cluster -> Load From Kubeconfig
     - ![Headlamp Add Cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
     - ![Load From Kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
