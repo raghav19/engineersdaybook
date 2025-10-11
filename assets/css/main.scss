@@ -80,45 +80,72 @@ div .highlight pre {
 }
 
 /* Language-specific syntax highlighting with highest specificity */
-.highlight .c,   /* Comment */
-.highlight .cm,  /* Comment.Multiline */
-.highlight .cp,  /* Comment.Preproc */
-.highlight .c1,  /* Comment.Single */
-.highlight .cs,  /* Comment.Special */
+.highlight .c,
+/* Comment */
+.highlight .cm,
+/* Comment.Multiline */
+.highlight .cp,
+/* Comment.Preproc */
+.highlight .c1,
+/* Comment.Single */
+.highlight .cs,
+/* Comment.Special */
 body .highlight .c,
 body .highlight .cm,
 body .highlight .cp,
 body .highlight .c1,
-body .highlight .cs
-{ color: #6a9955 !important; font-style: italic !important; }
+body .highlight .cs {
+  color: #6a9955 !important;
+  font-style: italic !important;
+}
 
-.highlight .k,   /* Keyword */
-.highlight .kc,  /* Keyword.Constant */
-.highlight .kd,  /* Keyword.Declaration */
-.highlight .kn,  /* Keyword.Namespace */
-.highlight .kp,  /* Keyword.Pseudo */
-.highlight .kr,  /* Keyword.Reserved */
-.highlight .kt,  /* Keyword.Type */
+.highlight .k,
+/* Keyword */
+.highlight .kc,
+/* Keyword.Constant */
+.highlight .kd,
+/* Keyword.Declaration */
+.highlight .kn,
+/* Keyword.Namespace */
+.highlight .kp,
+/* Keyword.Pseudo */
+.highlight .kr,
+/* Keyword.Reserved */
+.highlight .kt,
+/* Keyword.Type */
 body .highlight .k,
 body .highlight .kc,
 body .highlight .kd,
 body .highlight .kn,
 body .highlight .kp,
 body .highlight .kr,
-body .highlight .kt
-{ color: #569cd6 !important; font-weight: bold !important; }
+body .highlight .kt {
+  color: #569cd6 !important;
+  font-weight: bold !important;
+}
 
-.highlight .s,   /* String */
-.highlight .sb,  /* String.Backtick */
-.highlight .sc,  /* String.Char */
-.highlight .sd,  /* String.Doc */
-.highlight .s2,  /* String.Double */
-.highlight .se,  /* String.Escape */
-.highlight .sh,  /* String.Heredoc */
-.highlight .si,  /* String.Interpol */
-.highlight .sx,  /* String.Other */
-.highlight .sr,  /* String.Regex */
-.highlight .s1,  /* String.Single */
+.highlight .s,
+/* String */
+.highlight .sb,
+/* String.Backtick */
+.highlight .sc,
+/* String.Char */
+.highlight .sd,
+/* String.Doc */
+.highlight .s2,
+/* String.Double */
+.highlight .se,
+/* String.Escape */
+.highlight .sh,
+/* String.Heredoc */
+.highlight .si,
+/* String.Interpol */
+.highlight .sx,
+/* String.Other */
+.highlight .sr,
+/* String.Regex */
+.highlight .s1,
+/* String.Single */
 body .highlight .s,
 body .highlight .sb,
 body .highlight .sc,
@@ -129,20 +156,27 @@ body .highlight .sh,
 body .highlight .si,
 body .highlight .sx,
 body .highlight .sr,
-body .highlight .s1
-{ color: #ce9178 !important; }
+body .highlight .s1 {
+  color: #ce9178 !important;
+}
 
-.highlight .m,   /* Number */
-.highlight .mf,  /* Number.Float */
-.highlight .mh,  /* Number.Hex */
-.highlight .mi,  /* Number.Integer */
-.highlight .mo,  /* Number.Oct */
+.highlight .m,
+/* Number */
+.highlight .mf,
+/* Number.Float */
+.highlight .mh,
+/* Number.Hex */
+.highlight .mi,
+/* Number.Integer */
+.highlight .mo,
+/* Number.Oct */
 body .highlight .m,
 body .highlight .mf,
 body .highlight .mh,
 body .highlight .mi,
-body .highlight .mo
-{ color: #b5cea8 !important; }
+body .highlight .mo {
+  color: #b5cea8 !important;
+}
 
 .highlight .n,
 /* Name */
@@ -188,28 +222,39 @@ body .highlight .nn,
 body .highlight .nx,
 body .highlight .py,
 body .highlight .nt,
-body .highlight .nv
-{ color: #d4d4d4 !important; }
+body .highlight .nv {
+  color: #d4d4d4 !important;
+}
 
-.highlight .o,   /* Operator */
-.highlight .ow,  /* Operator.Word */
+.highlight .o,
+/* Operator */
+.highlight .ow,
+/* Operator.Word */
 body .highlight .o,
-body .highlight .ow
-{ color: #d4d4d4 !important; }
+body .highlight .ow {
+  color: #d4d4d4 !important;
+}
 
 /* Special highlighting for YAML */
 .highlight .l-Scalar-Plain,
-body .highlight .l-Scalar-Plain
-{ color: #ce9178 !important; }
+body .highlight .l-Scalar-Plain {
+  color: #ce9178 !important;
+}
 
 /* Special highlighting for shell/bash */
 .highlight .gp,
-body .highlight .gp
-{ color: #6a9955 !important; } /* Generic.Prompt */
+body .highlight .gp {
+  color: #6a9955 !important;
+}
+
+/* Generic.Prompt */
 
 .highlight .go,
-body .highlight .go
-{ color: #d4d4d4 !important; } /* Generic.Output */
+body .highlight .go {
+  color: #d4d4d4 !important;
+}
+
+/* Generic.Output */
 }
 
 /* Generic.Output */
