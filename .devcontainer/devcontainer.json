@@ -1,8 +1,8 @@
 {
   "name": "engineersdaybook",
   "image": "mcr.microsoft.com/vscode/devcontainers/base:0-ubuntu-22.04",
-  "workspaceFolder": "/root/workspace",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/root/workspace,type=bind",
+  "workspaceFolder": "/home/code/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/code/workspace,type=bind",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/python:1": {},
@@ -16,10 +16,10 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/root/.bash_history,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache/pre-commit,target=/root/.cache/pre-commit,type=bind,consistency=cached"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/code/.ssh,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/code/.gitconfig,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache/pre-commit,target=/home/code/.cache/pre-commit,type=bind,consistency=cached"
   ],
   "forwardPorts": [
     8080
@@ -89,7 +89,8 @@
       }
     }
   },
-  "remoteUser": "root",
+  "remoteUser": "1000",
+  "containerUser": "1000",
   "remoteEnv": {
     "LANG": "C.UTF-8",
     "LC_ALL": "C.UTF-8"
