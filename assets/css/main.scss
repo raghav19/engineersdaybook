@@ -83,13 +83,16 @@ article code,
 main code,
 div code,
 code {
-  background-color: #3c3c3c !important;  /* Darker gray for better contrast against black */
-  color: #e0e0e0 !important;  /* Light gray text */
+  background-color: #3c3c3c !important;
+  /* Darker gray for better contrast against black */
+  color: #e0e0e0 !important;
+  /* Light gray text */
   padding: 0.3em 0.5em !important;
   border-radius: 4px !important;
   font-size: 90% !important;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-  border: 1px solid #666666 !important;  /* Subtle border for definition */
+  border: 1px solid #666666 !important;
+  /* Subtle border for definition */
 }
 
 /* Code inside pre should be transparent */
@@ -114,7 +117,8 @@ article .highlight,
 .post .highlight,
 main .highlight,
 div .highlight {
-  background-color: #2d2d30 !important;  /* Match the new pre background */
+  background-color: #2d2d30 !important;
+  /* Match the new pre background */
   color: #cccccc !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
