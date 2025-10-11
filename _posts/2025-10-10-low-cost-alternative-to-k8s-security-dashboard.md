@@ -15,7 +15,7 @@ tags:
 excerpt: "Learn how to build a cost-effective Kubernetes security dashboard using Headlamp and Trivy as an alternative to expensive off-the-shelf solutions."
 ---
 Security is a layered approach and in the Kubernetes world, its has so many layers to deal with. As organizations increase their security focused initiatives especially from a security posture management standpoint, we see that there are lot of off-the-shell software that are used in this space. (e.g. wiz.io). Although these do provide a very broad view of your entire stack beyond K8s and do bring in lot of value to the table to observe and reconcile across your tech stack and fix issues, we also see an opportunity to achieve some of this in a lot more simpler and robust manner for security operations
-- In this write-up, we will see how we can us `headlamp` as a off-the-shelf security dashboard integrating with`trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
+- In this write-up, we will see how we can us `headlamp` as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
 
 #### Setup Local machine
 - Install Chocolatey & Tools
