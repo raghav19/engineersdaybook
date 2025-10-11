@@ -1,18 +1,15 @@
 ---
----
 
 @import "no-style-please";
 
-/* Custom code block styling - language-agnostic dark theme */
-code {
-  background-color: #f6f8fa !important;
-  color: #24292f !important;
-  padding: 0.2em 0.4em !important;
-  border-radius: 6px !important;
-  font-size: 85% !important;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-}
+/* AGGRESSIVE Custom code block styling - Override no-style-please theme */
+/* Force dark theme with highest specificity */
 
+body pre,
+article pre,
+.post pre,
+main pre,
+div pre,
 pre {
   background-color: #0d1117 !important;
   color: #e6edf3 !important;
@@ -23,36 +20,75 @@ pre {
   font-size: 14px !important;
   line-height: 1.45 !important;
   border: 1px solid #30363d !important;
+  margin: 1em 0 !important;
 }
 
-pre code {
+body code,
+article code,
+.post code,
+main code,
+div code,
+code {
+  background-color: #f6f8fa !important;
+  color: #24292f !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 6px !important;
+  font-size: 85% !important;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+}
+
+/* Code inside pre should be transparent */
+pre code,
+body pre code,
+article pre code,
+.post pre code,
+main pre code,
+div pre code {
   background-color: transparent !important;
   color: inherit !important;
   padding: 0 !important;
   border-radius: 0 !important;
   font-size: inherit !important;
+  border: none !important;
 }
 
-/* Syntax highlighting colors for dark theme */
-.highlight {
+/* Syntax highlighting containers */
+.highlight,
+body .highlight,
+article .highlight,
+.post .highlight,
+main .highlight,
+div .highlight {
   background-color: #0d1117 !important;
   color: #e6edf3 !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
+  margin: 1em 0 !important;
 }
 
-.highlight pre {
+.highlight pre,
+body .highlight pre,
+article .highlight pre,
+.post .highlight pre,
+main .highlight pre,
+div .highlight pre {
   margin: 0 !important;
   background-color: transparent !important;
   border: none !important;
+  padding: 16px !important;
 }
 
-/* Language-specific syntax highlighting */
+/* Language-specific syntax highlighting with highest specificity */
 .highlight .c,   /* Comment */
 .highlight .cm,  /* Comment.Multiline */
 .highlight .cp,  /* Comment.Preproc */
 .highlight .c1,  /* Comment.Single */
-.highlight .cs   /* Comment.Special */
+.highlight .cs,  /* Comment.Special */
+body .highlight .c,
+body .highlight .cm,
+body .highlight .cp,
+body .highlight .c1,
+body .highlight .cs
 { color: #8b949e !important; font-style: italic !important; }
 
 .highlight .k,   /* Keyword */
@@ -61,7 +97,14 @@ pre code {
 .highlight .kn,  /* Keyword.Namespace */
 .highlight .kp,  /* Keyword.Pseudo */
 .highlight .kr,  /* Keyword.Reserved */
-.highlight .kt   /* Keyword.Type */
+.highlight .kt,  /* Keyword.Type */
+body .highlight .k,
+body .highlight .kc,
+body .highlight .kd,
+body .highlight .kn,
+body .highlight .kp,
+body .highlight .kr,
+body .highlight .kt
 { color: #ff7b72 !important; font-weight: bold !important; }
 
 .highlight .s,   /* String */
@@ -74,14 +117,30 @@ pre code {
 .highlight .si,  /* String.Interpol */
 .highlight .sx,  /* String.Other */
 .highlight .sr,  /* String.Regex */
-.highlight .s1   /* String.Single */
+.highlight .s1,  /* String.Single */
+body .highlight .s,
+body .highlight .sb,
+body .highlight .sc,
+body .highlight .sd,
+body .highlight .s2,
+body .highlight .se,
+body .highlight .sh,
+body .highlight .si,
+body .highlight .sx,
+body .highlight .sr,
+body .highlight .s1
 { color: #a5d6ff !important; }
 
 .highlight .m,   /* Number */
 .highlight .mf,  /* Number.Float */
 .highlight .mh,  /* Number.Hex */
 .highlight .mi,  /* Number.Integer */
-.highlight .mo   /* Number.Oct */
+.highlight .mo,  /* Number.Oct */
+body .highlight .m,
+body .highlight .mf,
+body .highlight .mh,
+body .highlight .mi,
+body .highlight .mo
 { color: #79c0ff !important; }
 
 .highlight .n,   /* Name */
@@ -99,31 +158,39 @@ pre code {
 .highlight .py,  /* Name.Property */
 .highlight .nt,  /* Name.Tag */
 .highlight .nv,  /* Name.Variable */
-.highlight .ow,  /* Operator.Word */
-.highlight .w,   /* Text.Whitespace */
-.highlight .mf,  /* Literal.Number.Float */
-.highlight .mh,  /* Literal.Number.Hex */
-.highlight .mi,  /* Literal.Number.Integer */
-.highlight .mo   /* Literal.Number.Oct */
+body .highlight .n,
+body .highlight .na,
+body .highlight .nb,
+body .highlight .nc,
+body .highlight .no,
+body .highlight .nd,
+body .highlight .ni,
+body .highlight .ne,
+body .highlight .nf,
+body .highlight .nl,
+body .highlight .nn,
+body .highlight .nx,
+body .highlight .py,
+body .highlight .nt,
+body .highlight .nv
 { color: #e6edf3 !important; }
 
 .highlight .o,   /* Operator */
-.highlight .ow   /* Operator.Word */
+.highlight .ow,  /* Operator.Word */
+body .highlight .o,
+body .highlight .ow
 { color: #ff7b72 !important; }
 
 /* Special highlighting for YAML */
-.highlight .l-Scalar-Plain { color: #a5d6ff !important; }
+.highlight .l-Scalar-Plain,
+body .highlight .l-Scalar-Plain
+{ color: #a5d6ff !important; }
 
 /* Special highlighting for shell/bash */
-.highlight .gp { color: #8b949e !important; } /* Generic.Prompt */
-.highlight .go { color: #e6edf3 !important; } /* Generic.Output */
+.highlight .gp,
+body .highlight .gp
+{ color: #8b949e !important; } /* Generic.Prompt */
 
-/* Code block copy button styling (if used) */
-.code-header {
-  background-color: #21262d !important;
-  color: #e6edf3 !important;
-  border-radius: 8px 8px 0 0 !important;
-  padding: 8px 16px !important;
-  font-size: 12px !important;
-  border-bottom: 1px solid #30363d !important;
-}
+.highlight .go,
+body .highlight .go
+{ color: #e6edf3 !important; } /* Generic.Output */
