@@ -11,15 +11,15 @@ article pre,
 main pre,
 div pre,
 pre {
-  background-color: #0d1117 !important;
-  color: #e6edf3 !important;
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
   padding: 16px !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.45 !important;
-  border: 1px solid #30363d !important;
+  border: 1px solid #404040 !important;
   margin: 1em 0 !important;
 }
 
@@ -59,11 +59,12 @@ article .highlight,
 .post .highlight,
 main .highlight,
 div .highlight {
-  background-color: #0d1117 !important;
-  color: #e6edf3 !important;
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   margin: 1em 0 !important;
+  border: 1px solid #404040 !important;
 }
 
 .highlight pre,
@@ -79,72 +80,45 @@ div .highlight pre {
 }
 
 /* Language-specific syntax highlighting with highest specificity */
-.highlight .c,
-/* Comment */
-.highlight .cm,
-/* Comment.Multiline */
-.highlight .cp,
-/* Comment.Preproc */
-.highlight .c1,
-/* Comment.Single */
-.highlight .cs,
-/* Comment.Special */
+.highlight .c,   /* Comment */
+.highlight .cm,  /* Comment.Multiline */
+.highlight .cp,  /* Comment.Preproc */
+.highlight .c1,  /* Comment.Single */
+.highlight .cs,  /* Comment.Special */
 body .highlight .c,
 body .highlight .cm,
 body .highlight .cp,
 body .highlight .c1,
-body .highlight .cs {
-  color: #8b949e !important;
-  font-style: italic !important;
-}
+body .highlight .cs
+{ color: #6a9955 !important; font-style: italic !important; }
 
-.highlight .k,
-/* Keyword */
-.highlight .kc,
-/* Keyword.Constant */
-.highlight .kd,
-/* Keyword.Declaration */
-.highlight .kn,
-/* Keyword.Namespace */
-.highlight .kp,
-/* Keyword.Pseudo */
-.highlight .kr,
-/* Keyword.Reserved */
-.highlight .kt,
-/* Keyword.Type */
+.highlight .k,   /* Keyword */
+.highlight .kc,  /* Keyword.Constant */
+.highlight .kd,  /* Keyword.Declaration */
+.highlight .kn,  /* Keyword.Namespace */
+.highlight .kp,  /* Keyword.Pseudo */
+.highlight .kr,  /* Keyword.Reserved */
+.highlight .kt,  /* Keyword.Type */
 body .highlight .k,
 body .highlight .kc,
 body .highlight .kd,
 body .highlight .kn,
 body .highlight .kp,
 body .highlight .kr,
-body .highlight .kt {
-  color: #ff7b72 !important;
-  font-weight: bold !important;
-}
+body .highlight .kt
+{ color: #569cd6 !important; font-weight: bold !important; }
 
-.highlight .s,
-/* String */
-.highlight .sb,
-/* String.Backtick */
-.highlight .sc,
-/* String.Char */
-.highlight .sd,
-/* String.Doc */
-.highlight .s2,
-/* String.Double */
-.highlight .se,
-/* String.Escape */
-.highlight .sh,
-/* String.Heredoc */
-.highlight .si,
-/* String.Interpol */
-.highlight .sx,
-/* String.Other */
-.highlight .sr,
-/* String.Regex */
-.highlight .s1,
-/* String.Single */
+.highlight .s,   /* String */
+.highlight .sb,  /* String.Backtick */
+.highlight .sc,  /* String.Char */
+.highlight .sd,  /* String.Doc */
+.highlight .s2,  /* String.Double */
+.highlight .se,  /* String.Escape */
+.highlight .sh,  /* String.Heredoc */
+.highlight .si,  /* String.Interpol */
+.highlight .sx,  /* String.Other */
+.highlight .sr,  /* String.Regex */
+.highlight .s1,  /* String.Single */
 body .highlight .s,
 body .highlight .sb,
 body .highlight .sc,
@@ -155,27 +129,20 @@ body .highlight .sh,
 body .highlight .si,
 body .highlight .sx,
 body .highlight .sr,
-body .highlight .s1 {
-  color: #a5d6ff !important;
-}
+body .highlight .s1
+{ color: #ce9178 !important; }
 
-.highlight .m,
-/* Number */
-.highlight .mf,
-/* Number.Float */
-.highlight .mh,
-/* Number.Hex */
-.highlight .mi,
-/* Number.Integer */
-.highlight .mo,
-/* Number.Oct */
+.highlight .m,   /* Number */
+.highlight .mf,  /* Number.Float */
+.highlight .mh,  /* Number.Hex */
+.highlight .mi,  /* Number.Integer */
+.highlight .mo,  /* Number.Oct */
 body .highlight .m,
 body .highlight .mf,
 body .highlight .mh,
 body .highlight .mi,
-body .highlight .mo {
-  color: #79c0ff !important;
-}
+body .highlight .mo
+{ color: #b5cea8 !important; }
 
 .highlight .n,
 /* Name */
@@ -221,36 +188,28 @@ body .highlight .nn,
 body .highlight .nx,
 body .highlight .py,
 body .highlight .nt,
-body .highlight .nv {
-  color: #e6edf3 !important;
-}
+body .highlight .nv
+{ color: #d4d4d4 !important; }
 
-.highlight .o,
-/* Operator */
-.highlight .ow,
-/* Operator.Word */
+.highlight .o,   /* Operator */
+.highlight .ow,  /* Operator.Word */
 body .highlight .o,
-body .highlight .ow {
-  color: #ff7b72 !important;
-}
+body .highlight .ow
+{ color: #d4d4d4 !important; }
 
 /* Special highlighting for YAML */
 .highlight .l-Scalar-Plain,
-body .highlight .l-Scalar-Plain {
-  color: #a5d6ff !important;
-}
+body .highlight .l-Scalar-Plain
+{ color: #ce9178 !important; }
 
 /* Special highlighting for shell/bash */
 .highlight .gp,
-body .highlight .gp {
-  color: #8b949e !important;
-}
-
-/* Generic.Prompt */
+body .highlight .gp
+{ color: #6a9955 !important; } /* Generic.Prompt */
 
 .highlight .go,
-body .highlight .go {
-  color: #e6edf3 !important;
+body .highlight .go
+{ color: #d4d4d4 !important; } /* Generic.Output */
 }
 
 /* Generic.Output */
