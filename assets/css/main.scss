@@ -1,24 +1,80 @@
---- --- @import "no-style-please";
+--- 
+--- 
+@import "no-style-please";
 
-/* AGGRESSIVE Custom code block styling - Override no-style-please theme */
-/* Force dark theme with highest specificity */
+/* Responsive layout - use more page width based on device */
+body {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
 
+main,
+.main,
+article,
+.content {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 1rem !important;
+}
+
+/* Responsive padding based on screen size */
+@media (min-width: 768px) {
+
+  main,
+  .main,
+  article,
+  .content {
+    padding: 2rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+
+  main,
+  .main,
+  article,
+  .content {
+    padding: 3rem !important;
+    max-width: 95vw !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (min-width: 1440px) {
+
+  main,
+  .main,
+  article,
+  .content {
+    padding: 4rem !important;
+    max-width: 90vw !important;
+  }
+}
+
+/* IMPROVED Code block styling with better contrast against black background */
 body pre,
 article pre,
 .post pre,
 main pre,
 div pre,
 pre {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
-  padding: 16px !important;
+  background-color: #2d2d30 !important;
+  /* Much lighter gray for better contrast */
+  color: #cccccc !important;
+  padding: 20px !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
   font-size: 14px !important;
-  line-height: 1.45 !important;
-  border: 1px solid #404040 !important;
-  margin: 1em 0 !important;
+  line-height: 1.5 !important;
+  border: 2px solid #555555 !important;
+  /* More visible border */
+  margin: 1.5em 0 !important;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1) !important;
+  /* Subtle white shadow for depth */
 }
 
 body code,
@@ -27,12 +83,13 @@ article code,
 main code,
 div code,
 code {
-  background-color: #f6f8fa !important;
-  color: #24292f !important;
-  padding: 0.2em 0.4em !important;
-  border-radius: 6px !important;
-  font-size: 85% !important;
+  background-color: #3c3c3c !important;  /* Darker gray for better contrast against black */
+  color: #e0e0e0 !important;  /* Light gray text */
+  padding: 0.3em 0.5em !important;
+  border-radius: 4px !important;
+  font-size: 90% !important;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+  border: 1px solid #666666 !important;  /* Subtle border for definition */
 }
 
 /* Code inside pre should be transparent */
@@ -57,12 +114,13 @@ article .highlight,
 .post .highlight,
 main .highlight,
 div .highlight {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
+  background-color: #2d2d30 !important;  /* Match the new pre background */
+  color: #cccccc !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
-  margin: 1em 0 !important;
-  border: 1px solid #404040 !important;
+  margin: 1.5em 0 !important;
+  border: 2px solid #555555 !important;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1) !important;
 }
 
 .highlight pre,
