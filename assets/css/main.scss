@@ -1,6 +1,4 @@
---- 
---- 
-@import "no-style-please";
+--- --- @import "no-style-please";
 
 /* AGGRESSIVE Custom code block styling - Override no-style-please theme */
 /* Force dark theme with highest specificity */
@@ -252,9 +250,6 @@ body .highlight .gp {
 .highlight .go,
 body .highlight .go {
   color: #d4d4d4 !important;
-}
-
-/* Generic.Output */
 }
 
 /* Generic.Output */
