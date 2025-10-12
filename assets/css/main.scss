@@ -45,48 +45,71 @@ body {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
+  background-color: #f0f0f0;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
 }
 
 .social-links a:hover {
-  opacity: 0.6;
+  opacity: 0.7;
+  background-color: #e0e0e0;
 }
 
 .social-icon {
   width: 24px;
   height: 24px;
-  stroke: #ffffff !important;
+  stroke: #000000 !important;
   fill: none !important;
   stroke-width: 2 !important;
 }
 
-/* Light mode - black icons */
-body[a="light"] .social-icon {
+/* Dark mode - light background with dark icons */
+body[a="dark"] .social-links a {
+  background-color: #e8e8e8;
+}
+
+body[a="dark"] .social-links a:hover {
+  background-color: #d0d0d0;
+}
+
+body[a="dark"] .social-icon {
   stroke: #000000 !important;
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .social-links a {
+    background-color: #e8e8e8;
+  }
+
+  body[a="auto"] .social-links a:hover {
+    background-color: #d0d0d0;
+  }
+
   body[a="auto"] .social-icon {
     stroke: #000000 !important;
   }
 }
 
-/* Dark mode support for social icons */
-body[a="dark"] .social-links {
-  border-top-color: #555;
+/* Light mode explicit */
+body[a="light"] .social-links a {
+  background-color: #f0f0f0;
 }
 
-body[a="dark"] .social-icon {
-  stroke: #ffffff !important;
+body[a="light"] .social-icon {
+  stroke: #000000 !important;
+}
+
+/* Dark mode border color */
+body[a="dark"] .social-links {
+  border-top-color: #555;
 }
 
 @media (prefers-color-scheme: dark) {
   body[a="auto"] .social-links {
     border-top-color: #555;
-  }
-
-  body[a="auto"] .social-icon {
-    stroke: #ffffff !important;
   }
 }
 
