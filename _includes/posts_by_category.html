@@ -17,7 +17,7 @@
 
 {%- if include.show_more -%}
 <p class="see-all-posts">
-  <a href="{{ include.show_more_url }}">{{ include.show_more_text | default: "see all posts..." }}</a>
+  <a href="{{ include.show_more_url | relative_url }}">{{ include.show_more_text | default: "see all posts..." }}</a>
 </p>
 {%- endif -%}
 {%- else -%}
