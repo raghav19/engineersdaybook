@@ -6,11 +6,11 @@ entries:
     post_list:
       limit: 5
       show_more: true
-      show_more_text: See archive...
+      show_more_text: see archive...
       show_more_url: archives/archive.html
 
   - title: posts by category
     posts_by_category:
       limit: 5
       show_more: true
-      show_more_text: See all posts...
+      show_more_text: see all posts...

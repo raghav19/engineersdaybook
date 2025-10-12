@@ -2,9 +2,9 @@
 layout: default
 ---
 <header>
-  <h1>{{ site.title }}</h1>
+  <h1>{{ site.title | downcase }}</h1>
   {%-if site.theme_config.show_description-%}
-    <p>{{ site.description }}</p>
+  <p>{{ site.description | downcase }}</p>
   {%-endif-%}
 </header>
 

@@ -9,101 +9,30 @@ body {
 }
 
 /* Category sections styling */
-.categories-overview {
-  margin-bottom: 2rem !important;
+.category-section {
+  margin-bottom: 2.5rem !important;
 }
 
-.categories-overview h3,
-.recent-posts-by-category h3 {
+.category-section h3 {
   margin-bottom: 0.8rem !important;
-  margin-top: 1rem !important;
+  margin-top: 1.5rem !important;
   font-weight: bold !important;
+  font-size: 1.1em !important;
 }
 
-.category-list {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 1rem !important;
-  margin-bottom: 2rem !important;
-}
-
-.category-list li {
-  list-style: none !important;
+.category-section p {
   margin: 0 !important;
+  padding-left: 1rem !important;
+  font-size: 0.95em !important;
 }
 
-.category-list a {
-  padding: 0.5rem 1rem !important;
-  background-color: #f0f0f0 !important;
-  border-radius: 6px !important;
+.category-section a {
   text-decoration: none !important;
-  border: 1px solid #ddd !important;
-  display: inline-block !important;
+  color: inherit !important;
 }
 
-.category-list a:hover {
-  background-color: #e0e0e0 !important;
-}
-
-.post-categories {
-  font-size: 0.9em !important;
-  color: #666 !important;
-  margin-left: 1rem !important;
-}
-
-.category-tag {
-  background-color: #f8f8f8 !important;
-  padding: 0.2rem 0.5rem !important;
-  border-radius: 4px !important;
-  font-size: 0.8em !important;
-  border: 1px solid #ddd !important;
-}
-
-.recent-posts-by-category {
-  margin-top: 2rem !important;
-}
-
-/* Dark mode support for categories */
-body[a="dark"] .category-list a {
-  background-color: #2d2d2d !important;
-  border: 1px solid #555 !important;
-  color: #e0e0e0 !important;
-}
-
-body[a="dark"] .category-list a:hover {
-  background-color: #3d3d3d !important;
-}
-
-body[a="dark"] .category-tag {
-  background-color: #2d2d2d !important;
-  border: 1px solid #555 !important;
-  color: #e0e0e0 !important;
-}
-
-body[a="dark"] .post-categories {
-  color: #999 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .category-list a {
-    background-color: #2d2d2d !important;
-    border: 1px solid #555 !important;
-    color: #e0e0e0 !important;
-  }
-
-  body[a="auto"] .category-list a:hover {
-    background-color: #3d3d3d !important;
-  }
-
-  body[a="auto"] .category-tag {
-    background-color: #2d2d2d !important;
-    border: 1px solid #555 !important;
-    color: #e0e0e0 !important;
-  }
-
-  body[a="auto"] .post-categories {
-    color: #999 !important;
-  }
+.category-section a:hover {
+  text-decoration: underline !important;
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
