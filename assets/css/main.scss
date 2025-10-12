@@ -121,6 +121,26 @@ body[a="dark"] h6 {
   }
 }
 
+/* Image alignment - align with text instead of centering */
+img {
+  display: block !important;
+  margin: 0.5rem 0 !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Images in list items should align with list text */
+li img {
+  margin-left: 0 !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Images in paragraphs */
+p img {
+  margin: 0.5rem 0 !important;
+}
+
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
   max-width: none !important;
