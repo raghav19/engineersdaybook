@@ -28,6 +28,43 @@ body {
   margin-bottom: 2rem !important;
 }
 
+/* Social links styling */
+.social-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.social-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.social-links a:hover {
+  opacity: 0.6;
+}
+
+.social-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
+
+/* Dark mode support for social icons */
+body[a="dark"] .social-icon {
+  stroke: #e0e0e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .social-icon {
+    stroke: #e0e0e0;
+  }
+}
+
 .category-list {
   display: flex !important;
   flex-wrap: wrap !important;

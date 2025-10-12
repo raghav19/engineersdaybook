@@ -6,6 +6,10 @@ baseurl: "/engineersdaybook" # subpath of the site, e.g. "/blog" (leave it blank
 description: > # description of the site (multiple lines allowed)
   my dabbling with tech and perspectives
 
+# Social media usernames
+github_username: raghav19 # your GitHub username
+linkedin_username: raghavender-nagarajan # your LinkedIn username (the part after /in/)
+
 permalink: /:slug.html
 
 favicon: "logo.png" # name+extension of favicon (which must be put on the root folder)
