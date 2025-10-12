@@ -78,14 +78,15 @@ clusterrole-59dc5c9cb6                                           Trivy     6d
 the specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled) (above one uses the defaults).
 
 #### observe on headlamp dashboard
-- check on headlamp ui -> <your-cluster> -> trivy
-  - **compliance reports**
-  ![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
-  ![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
-  ![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
-  ![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
-  - **vulnerability reports**
-  ![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
+
+- **compliance reports**
+![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
+![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
+![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
+![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
+
+- **vulnerability reports**
+![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
 
 #### value additions
 - 0 cost k8s security posture management with addon based integration
