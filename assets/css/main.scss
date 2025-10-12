@@ -823,3 +823,105 @@ body .highlight .go {
 }
 
 /* Generic.Output */
+
+/* Post and TOC layout */
+.post-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.post-content {
+  flex: 1;
+  min-width: 0;
+  /* Prevents flexbox overflow */
+}
+
+.toc {
+  width: 280px;
+  position: -webkit-sticky;
+  /* For Safari */
+  position: sticky;
+  top: 2rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  font-size: 0.85em;
+}
+
+/* TOC styling */
+#toc-container {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem;
+  background: #f9f9f9;
+}
+
+#toc-title {
+  font-weight: bold;
+  margin-top: 0;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.1em;
+}
+
+#toc-list,
+#markdown-toc {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+#markdown-toc ul {
+  padding-left: 1rem;
+  list-style-type: none;
+}
+
+#markdown-toc>li {
+  margin-bottom: 0.5rem;
+}
+
+#markdown-toc li a {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  padding: 0.2rem 0;
+}
+
+#markdown-toc li a:hover {
+  text-decoration: underline;
+}
+
+/* Dark mode for TOC */
+body[a="dark"] #toc-container {
+  background: #2d2d2d;
+  border-color: #555;
+}
+
+body[a="dark"] #toc-title {
+  border-color: #444;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] #toc-container {
+    background: #2d2d2d;
+    border-color: #555;
+  }
+
+  body[a="auto"] #toc-title {
+    border-color: #444;
+  }
+}
+
+/* Responsive: Hide TOC on smaller screens */
+@media (max-width: 1024px) {
+  .toc {
+    display: none;
+  }
+
+  .post-container {
+    flex-direction: column;
+  }
+}
