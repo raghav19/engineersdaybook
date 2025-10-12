@@ -165,7 +165,7 @@ blockquote p {
 li blockquote {
   margin: 0.3rem 0 0.5rem 0 !important;
   padding: 0 !important;
-  margin-left: 1rem !important;
+  margin-left: 0 !important;
   border: none !important;
   background: none !important;
   font-style: italic !important;
@@ -185,7 +185,7 @@ li blockquote p {
 /* Italic text in list items (notes) - simple italic with indentation */
 li em {
   display: block !important;
-  margin: 0.3rem 0 0.5rem 1rem !important;
+  margin: 0.3rem 0 0.5rem 0 !important;
   font-style: italic !important;
   color: inherit !important;
   text-align: left !important;
@@ -195,7 +195,7 @@ li em {
 li strong em,
 li em strong {
   display: block !important;
-  margin: 0.3rem 0 0.5rem 1rem !important;
+  margin: 0.3rem 0 0.5rem 0 !important;
   font-style: italic !important;
   color: inherit !important;
   text-align: left !important;
