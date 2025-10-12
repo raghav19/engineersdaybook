@@ -940,6 +940,7 @@ h4:target,
 h5:target,
 h6:target {
   background-color: #e8e8e8 !important;
+  color: #333 !important;
   padding: 0.5rem !important;
   border-radius: 3px !important;
   transition: background-color 0.3s ease;
@@ -952,6 +953,7 @@ body[a="dark"] h4:target,
 body[a="dark"] h5:target,
 body[a="dark"] h6:target {
   background-color: #3c3c3c !important;
+  color: #e0e0e0 !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -962,5 +964,6 @@ body[a="dark"] h6:target {
   body[a="auto"] h5:target,
   body[a="auto"] h6:target {
     background-color: #3c3c3c !important;
+    color: #e0e0e0 !important;
   }
 }
