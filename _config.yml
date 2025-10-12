@@ -4,7 +4,7 @@ email: rahavendern@hotmail.com # email of site's author
 url: https://raghav19.github.io # root address of the site
 baseurl: "/engineersdaybook" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
 description: > # description of the site (multiple lines allowed)
-  my daily dablling with tech and perspectives
+  my dabbling with tech and perspectives
 
 permalink: /:slug.html
 
