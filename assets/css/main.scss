@@ -141,14 +141,15 @@ p img {
   margin: 0.5rem 0 !important;
 }
 
-/* Note formatting - simple italic text with proper indentation */
+/* Note formatting - simple italic text with proper left alignment */
 blockquote {
   margin: 0.5rem 0 !important;
   padding: 0 !important;
   border: none !important;
   background: none !important;
   font-style: italic !important;
-  margin-left: 1rem !important;
+  margin-left: 0 !important;
+  text-align: left !important;
   color: inherit !important;
 }
 
@@ -156,7 +157,8 @@ blockquote p {
   margin: 0 !important;
   padding: 0 !important;
   font-style: italic !important;
-  display: inline !important;
+  display: block !important;
+  text-align: left !important;
 }
 
 /* Notes in list items - indented italic text */
@@ -167,7 +169,8 @@ li blockquote {
   border: none !important;
   background: none !important;
   font-style: italic !important;
-  display: inline-block !important;
+  display: block !important;
+  text-align: left !important;
   color: inherit !important;
 }
 
@@ -175,24 +178,27 @@ li blockquote p {
   margin: 0 !important;
   padding: 0 !important;
   font-style: italic !important;
-  display: inline !important;
+  display: block !important;
+  text-align: left !important;
 }
 
 /* Italic text in list items (notes) - simple italic with indentation */
 li em {
-  display: inline-block !important;
+  display: block !important;
   margin: 0.3rem 0 0.5rem 1rem !important;
   font-style: italic !important;
   color: inherit !important;
+  text-align: left !important;
 }
 
 /* Bold italic text (like **note:**) - simple italic with indentation */
 li strong em,
 li em strong {
-  display: inline-block !important;
+  display: block !important;
   margin: 0.3rem 0 0.5rem 1rem !important;
   font-style: italic !important;
   color: inherit !important;
+  text-align: left !important;
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
