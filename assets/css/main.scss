@@ -2,6 +2,21 @@
 --- 
 @import "no-style-please";
 
+/* Prevent horizontal scrolling on all devices */
+html {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+* {
+  box-sizing: border-box !important;
+}
+
 /* Increase base font size for better readability */
 body {
   font-size: 20px !important;
@@ -971,6 +986,31 @@ body[a="dark"] h6:target {
 /* Mobile-friendly enhancements */
 @media (max-width: 768px) {
 
+  /* Prevent horizontal scrolling and fix overflow */
+  html,
+  body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* Fix word breaking for long words */
+  body,
+  article,
+  .post-content,
+  p,
+  li,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    hyphens: auto !important;
+  }
+
   /* Adjust base font size for mobile */
   body {
     font-size: 18px !important;
@@ -980,6 +1020,7 @@ body[a="dark"] h6:target {
   .w {
     width: 100% !important;
     padding: 0.75rem !important;
+    box-sizing: border-box !important;
   }
 
   /* Make category buttons stack better on mobile */
@@ -1037,12 +1078,32 @@ body[a="dark"] h6:target {
 
 /* Extra small screens (phones in portrait) */
 @media (max-width: 480px) {
+
+  /* Prevent horizontal scrolling on small phones */
+  html,
+  body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  * {
+    max-width: 100% !important;
+  }
+
   body {
     font-size: 16px !important;
   }
 
   .w {
     padding: 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  article,
+  .post-content {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
 
   h1 {
