@@ -9,26 +9,17 @@ categories:
 ---
 security is a layered approach and in the kubernetes world, its has so many layers to deal with. as organizations increase their security focused initiatives especially from a security posture management standpoint, we see that there are lot of off-the-shell software that are used in this space. (e.g. wiz.io). although these do provide a very broad view of your entire stack beyond k8s and do bring in lot of value to the table to observe and reconcile across your tech stack and fix issues, we also see an opportunity to achieve some of this in a lot more simpler and robust manner for security operations
 
-in this write-up, we will see how we can us `headlamp` as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
+in this write-up, we will see how we can us `headlamp`(kubernetes sig project) as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
 
 #### setup local machine
-- install [chocolatey](https://chocolatey.org/install) & tools
-  - install `awscli`/`azure-cli`
-    ```shell
-    # requires elevated powershell 
-    choco install awscli azure-cli
-    ```
-- setup local credentials for [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
+> **note:** assumes you have cloud provider CLI and config setup in your local
 
 - install [headlamp](https://headlamp.dev/) and [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin)
-  >
-  - install  on your local machine
-  - install , can be done via headlamp ui (home -> plugin catalog)
+
 
 #### setup trivy operator
 - install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
-  
-  _**note:** if you use corporate-proxy, ensure to set the values as below_
+  > **note:** if you use corporate-proxy, ensure to set the values as below_
   ```yaml
   trivy:
     httpProxy: <your-http-proxy>
@@ -37,18 +28,18 @@ in this write-up, we will see how we can us `headlamp` as a off-the-shelf securi
   ```
 
 #### import kubeconfig
-_**note:** this can be used for eks, aks & on-prem clusters_
+> **note:** this can be used for eks, aks & on-prem clusters_
 
 - import `kubeconfig` for your k8s cluster
 - use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
   _**note:** oidc flow would be showcased in a separate post_
 
 - from headlamp ui -> add cluster -> load from kubeconfig
-  ![headlamp add cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
-  ![load from kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
-  
+![headlamp add cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
+![load from kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
+
 - once added, you can see your cluster getting listed in `home`\
-  ![cluster listed in home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
+![cluster listed in home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
 
 #### verify trivy
 ```shell
@@ -89,19 +80,19 @@ the specific settings around this can be found in the trivy operator [values.yam
 #### observe on headlamp dashboard
 - check on headlamp ui -> <your-cluster> -> trivy
   - **compliance reports**
-    - ![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
-    - ![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
-    - ![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
-    - ![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
+  ![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
+  ![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
+  ![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
+  ![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
   - **vulnerability reports**
-    - ![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
+  ![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
 
 #### value additions
 - 0 cost k8s security posture management with addon based integration
 - enables strong security posture management with a comprehensive view and can be expanded for full cluster view
 - enables shift from reactive to proactive security operations of k8s clusters
 - can be easily setup with just `kubeconfig` and respects `rbac` and works with `oidc`
-- kubernetes`sig` team opensource project
+- kubernetes sig team opensource project
 - integrates seamlessly for managed cloud k8s clusters as well
 
 #### operational maintenance

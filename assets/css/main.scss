@@ -90,6 +90,37 @@ body[a="dark"] .see-all-posts {
   }
 }
 
+/* Heading styles - underline all headings except title (h1) */
+h2,
+h3,
+h4,
+h5,
+h6 {
+  border-bottom: 1px solid #ddd !important;
+  padding-bottom: 0.3rem !important;
+  margin-bottom: 1rem !important;
+}
+
+/* Dark mode support for heading underlines */
+body[a="dark"] h2,
+body[a="dark"] h3,
+body[a="dark"] h4,
+body[a="dark"] h5,
+body[a="dark"] h6 {
+  border-bottom: 1px solid #555 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+
+  body[a="auto"] h2,
+  body[a="auto"] h3,
+  body[a="auto"] h4,
+  body[a="auto"] h5,
+  body[a="auto"] h6 {
+    border-bottom: 1px solid #555 !important;
+  }
+}
+
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
   max-width: none !important;
