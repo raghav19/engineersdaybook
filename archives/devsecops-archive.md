@@ -1,5 +1,5 @@
 ---
 layout: archive
 which_category: devsecops
-title: All posts about DevSecOps
+title: all posts about devsecops
 ---
