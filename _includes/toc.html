@@ -1,11 +1,7 @@
-{::nomarkdown}
+{% assign toc_content = "* TOC
+{:toc}" %}
+
 <div id="toc-container">
   <p id="toc-title">contents</p>
-{:/nomarkdown}
-
-* TOC
-{:toc}
-
-{::nomarkdown}
+  {{ toc_content | markdownify }}
 </div>
-{:/nomarkdown}
