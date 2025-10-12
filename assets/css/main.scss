@@ -1,6 +1,10 @@
----
----
-@import "no-style-please";
+--- --- @import "no-style-please";
+
+/* Increase base font size for better readability */
+body {
+  font-size: 20px !important;
+  /* Increased from 16px by 4 points */
+}
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
@@ -56,29 +60,36 @@ main.page-content {
 pre,
 div.highlighter-rouge pre,
 .highlight pre {
-  background-color: #1e1e1e !important; /* Dark gray, not pure black */
-  color: #d4d4d4 !important; /* Light gray text */
+  background-color: #1e1e1e !important;
+  /* Dark gray, not pure black */
+  color: #d4d4d4 !important;
+  /* Light gray text */
   padding: 24px !important;
   border-radius: 12px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.6 !important;
-  border: 3px solid #404040 !important; /* Visible border */
+  border: 3px solid #404040 !important;
+  /* Visible border */
   margin: 2rem 0 !important;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important; /* White shadow for depth */
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important;
+  /* White shadow for depth */
   position: relative !important;
 }
 
 /* Override the theme's default code styling completely */
 code {
-  background-color: #333333 !important; /* Much lighter than black */
-  color: #ffffff !important; /* Pure white text */
+  background-color: #333333 !important;
+  /* Much lighter than black */
+  color: #ffffff !important;
+  /* Pure white text */
   padding: 0.4em 0.6em !important;
   border-radius: 6px !important;
   font-size: 88% !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  border: 2px solid #555555 !important; /* Strong border for visibility */
+  border: 2px solid #555555 !important;
+  /* Strong border for visibility */
   font-weight: 500 !important;
 }
 
@@ -108,82 +119,150 @@ div.highlighter-rouge {
 }
 
 /* Enhanced syntax highlighting with VS Code Dark theme colors */
-.highlight .c,   /* Comment */
-.highlight .cm,  /* Comment.Multiline */
-.highlight .cp,  /* Comment.Preproc */
-.highlight .c1,  /* Comment.Single */
-.highlight .cs   /* Comment.Special */ {
-  color: #6a9955 !important; /* Green comments */
+.highlight .c,
+/* Comment */
+.highlight .cm,
+/* Comment.Multiline */
+.highlight .cp,
+/* Comment.Preproc */
+.highlight .c1,
+/* Comment.Single */
+.highlight .cs
+
+/* Comment.Special */
+  {
+  color: #6a9955 !important;
+  /* Green comments */
   font-style: italic !important;
 }
 
-.highlight .k,   /* Keyword */
-.highlight .kc,  /* Keyword.Constant */
-.highlight .kd,  /* Keyword.Declaration */
-.highlight .kn,  /* Keyword.Namespace */
-.highlight .kp,  /* Keyword.Pseudo */
-.highlight .kr,  /* Keyword.Reserved */
-.highlight .kt   /* Keyword.Type */ {
-  color: #569cd6 !important; /* Blue keywords */
+.highlight .k,
+/* Keyword */
+.highlight .kc,
+/* Keyword.Constant */
+.highlight .kd,
+/* Keyword.Declaration */
+.highlight .kn,
+/* Keyword.Namespace */
+.highlight .kp,
+/* Keyword.Pseudo */
+.highlight .kr,
+/* Keyword.Reserved */
+.highlight .kt
+
+/* Keyword.Type */
+  {
+  color: #569cd6 !important;
+  /* Blue keywords */
   font-weight: bold !important;
 }
 
-.highlight .s,   /* String */
-.highlight .sb,  /* String.Backtick */
-.highlight .sc,  /* String.Char */
-.highlight .sd,  /* String.Doc */
-.highlight .s2,  /* String.Double */
-.highlight .se,  /* String.Escape */
-.highlight .sh,  /* String.Heredoc */
-.highlight .si,  /* String.Interpol */
-.highlight .sx,  /* String.Other */
-.highlight .sr,  /* String.Regex */
-.highlight .s1   /* String.Single */ {
-  color: #ce9178 !important; /* Orange strings */
+.highlight .s,
+/* String */
+.highlight .sb,
+/* String.Backtick */
+.highlight .sc,
+/* String.Char */
+.highlight .sd,
+/* String.Doc */
+.highlight .s2,
+/* String.Double */
+.highlight .se,
+/* String.Escape */
+.highlight .sh,
+/* String.Heredoc */
+.highlight .si,
+/* String.Interpol */
+.highlight .sx,
+/* String.Other */
+.highlight .sr,
+/* String.Regex */
+.highlight .s1
+
+/* String.Single */
+  {
+  color: #ce9178 !important;
+  /* Orange strings */
 }
 
-.highlight .m,   /* Number */
-.highlight .mf,  /* Number.Float */
-.highlight .mh,  /* Number.Hex */
-.highlight .mi,  /* Number.Integer */
-.highlight .mo   /* Number.Oct */ {
-  color: #b5cea8 !important; /* Light green numbers */
+.highlight .m,
+/* Number */
+.highlight .mf,
+/* Number.Float */
+.highlight .mh,
+/* Number.Hex */
+.highlight .mi,
+/* Number.Integer */
+.highlight .mo
+
+/* Number.Oct */
+  {
+  color: #b5cea8 !important;
+  /* Light green numbers */
 }
 
-.highlight .n,   /* Name */
-.highlight .na,  /* Name.Attribute */
-.highlight .nb,  /* Name.Builtin */
-.highlight .nc,  /* Name.Class */
-.highlight .no,  /* Name.Constant */
-.highlight .nd,  /* Name.Decorator */
-.highlight .ni,  /* Name.Entity */
-.highlight .ne,  /* Name.Exception */
-.highlight .nf,  /* Name.Function */
-.highlight .nl,  /* Name.Label */
-.highlight .nn,  /* Name.Namespace */
-.highlight .nx,  /* Name.Other */
-.highlight .py,  /* Name.Property */
-.highlight .nt,  /* Name.Tag */
-.highlight .nv   /* Name.Variable */ {
-  color: #d4d4d4 !important; /* Default light gray */
+.highlight .n,
+/* Name */
+.highlight .na,
+/* Name.Attribute */
+.highlight .nb,
+/* Name.Builtin */
+.highlight .nc,
+/* Name.Class */
+.highlight .no,
+/* Name.Constant */
+.highlight .nd,
+/* Name.Decorator */
+.highlight .ni,
+/* Name.Entity */
+.highlight .ne,
+/* Name.Exception */
+.highlight .nf,
+/* Name.Function */
+.highlight .nl,
+/* Name.Label */
+.highlight .nn,
+/* Name.Namespace */
+.highlight .nx,
+/* Name.Other */
+.highlight .py,
+/* Name.Property */
+.highlight .nt,
+/* Name.Tag */
+.highlight .nv
+
+/* Name.Variable */
+  {
+  color: #d4d4d4 !important;
+  /* Default light gray */
 }
 
-.highlight .o,   /* Operator */
-.highlight .ow   /* Operator.Word */ {
-  color: #d4d4d4 !important; /* Light gray operators */
+.highlight .o,
+/* Operator */
+.highlight .ow
+
+/* Operator.Word */
+  {
+  color: #d4d4d4 !important;
+  /* Light gray operators */
 }
 
 /* Special highlighting for YAML and shell commands */
 .highlight .l-Scalar-Plain {
-  color: #ce9178 !important; /* Orange for YAML values */
+  color: #ce9178 !important;
+  /* Orange for YAML values */
 }
 
-.highlight .gp {  /* Generic.Prompt */
-  color: #6a9955 !important; /* Green for shell prompts */
+.highlight .gp {
+  /* Generic.Prompt */
+  color: #6a9955 !important;
+  /* Green for shell prompts */
 }
 
-.highlight .go {  /* Generic.Output */
-  color: #d4d4d4 !important; /* Default for output */
+.highlight .go {
+  /* Generic.Output */
+  color: #d4d4d4 !important;
+  /* Default for output */
 }
 
 /* IMPROVED Code block styling with better contrast against black background */
