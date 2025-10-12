@@ -943,7 +943,12 @@ body[a="dark"] #toc-title {
     flex-direction: column;
   }
 
+  .post-content {
+    order: 2;
+  }
+
   .toc {
+    order: 1;
     position: static;
     width: 100%;
     max-height: none;
