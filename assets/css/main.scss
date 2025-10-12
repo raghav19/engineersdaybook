@@ -9,30 +9,85 @@ body {
 }
 
 /* Category sections styling */
-.category-section {
-  margin-bottom: 2.5rem !important;
+.categories-overview {
+  margin-bottom: 2rem !important;
 }
 
-.category-section h3 {
-  margin-bottom: 0.8rem !important;
-  margin-top: 1.5rem !important;
-  font-weight: bold !important;
-  font-size: 1.1em !important;
+.category-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 1rem !important;
+  margin-bottom: 1.5rem !important;
+  list-style: none !important;
+  padding: 0 !important;
 }
 
-.category-section p {
+.category-list li {
+  list-style: none !important;
   margin: 0 !important;
-  padding-left: 1rem !important;
-  font-size: 0.95em !important;
 }
 
-.category-section a {
+.category-list a {
+  padding: 0.5rem 1rem !important;
+  background-color: #f0f0f0 !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  border: 1px solid #ddd !important;
+  display: inline-block !important;
+  color: inherit !important;
+  font-size: 0.9em !important;
+}
+
+.category-list a:hover {
+  background-color: #e0e0e0 !important;
+}
+
+.see-all-posts {
+  text-align: center !important;
+  margin-top: 2rem !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid #eee !important;
+}
+
+.see-all-posts a {
   text-decoration: none !important;
   color: inherit !important;
+  font-style: italic !important;
 }
 
-.category-section a:hover {
+.see-all-posts a:hover {
   text-decoration: underline !important;
+}
+
+/* Dark mode support for categories */
+body[a="dark"] .category-list a {
+  background-color: #2d2d2d !important;
+  border: 1px solid #555 !important;
+  color: #e0e0e0 !important;
+}
+
+body[a="dark"] .category-list a:hover {
+  background-color: #3d3d3d !important;
+}
+
+body[a="dark"] .see-all-posts {
+  border-top: 1px solid #444 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .category-list a {
+    background-color: #2d2d2d !important;
+    border: 1px solid #555 !important;
+    color: #e0e0e0 !important;
+  }
+  
+  body[a="auto"] .category-list a:hover {
+    background-color: #3d3d3d !important;
+  }
+  
+  body[a="auto"] .see-all-posts {
+    border-top: 1px solid #444 !important;
+  }
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */

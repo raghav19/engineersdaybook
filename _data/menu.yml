@@ -2,7 +2,7 @@
 # https://github.com/riggraz/no-style-please#customize-the-menu
 
 entries:
-  - title: all posts
+  - title: recent posts
     post_list:
       limit: 5
       show_more: true
@@ -14,3 +14,4 @@ entries:
       limit: 5
       show_more: true
       show_more_text: see all posts...
+      show_more_url: archives/archive.html

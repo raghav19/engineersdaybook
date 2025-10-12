@@ -1,19 +1,25 @@
 {%- assign all_categories = site.categories | sort -%}
 
 {%- if all_categories.size > 0 -%}
-{%- for category in all_categories -%}
-{%- assign category_name = category[0] -%}
-{%- assign category_posts = category[1] -%}
-
-<div class="category-section">
-  <h3>{{ category_name | downcase }}</h3>
-  <p>
-    <a href="archives/{{ category_name }}-archive.html">
-      {{ category_posts.size }} post{% if category_posts.size != 1 %}s{% endif %}
-    </a>
-  </p>
+<div class="categories-overview">
+  <ul class="category-list">
+    {%- for category in all_categories -%}
+    {%- assign category_name = category[0] -%}
+    {%- assign category_posts = category[1] -%}
+    <li>
+      <a href="archives/{{ category_name }}-archive.html">
+        {{ category_name | downcase }} ({{ category_posts.size }})
+      </a>
+    </li>
+    {%- endfor -%}
+  </ul>
 </div>
-{%- endfor -%}
+
+{%- if include.show_more -%}
+<p class="see-all-posts">
+  <a href="{{ include.show_more_url }}">{{ include.show_more_text | default: "see all posts..." }}</a>
+</p>
+{%- endif -%}
 {%- else -%}
 <p>no categorized posts found.</p>
 {%- endif -%}
