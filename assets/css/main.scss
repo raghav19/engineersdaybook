@@ -55,9 +55,20 @@ body {
 .social-icon {
   width: 24px;
   height: 24px;
-  stroke: #000000;
-  fill: none;
-  stroke-width: 2;
+  stroke: #ffffff !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+}
+
+/* Light mode - black icons */
+body[a="light"] .social-icon {
+  stroke: #000000 !important;
+}
+
+@media (prefers-color-scheme: light) {
+  body[a="auto"] .social-icon {
+    stroke: #000000 !important;
+  }
 }
 
 /* Dark mode support for social icons */
@@ -76,17 +87,6 @@ body[a="dark"] .social-icon {
 
   body[a="auto"] .social-icon {
     stroke: #ffffff !important;
-  }
-}
-
-/* Light mode explicit colors */
-body[a="light"] .social-icon {
-  stroke: #000000 !important;
-}
-
-@media (prefers-color-scheme: light) {
-  body[a="auto"] .social-icon {
-    stroke: #000000 !important;
   }
 }
 
