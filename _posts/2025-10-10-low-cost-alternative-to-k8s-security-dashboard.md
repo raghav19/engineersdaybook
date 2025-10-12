@@ -93,7 +93,8 @@ the specific settings around this can be found in the trivy operator [values.yam
 - enables strong security posture management with a comprehensive view and can be expanded for full cluster view
 - enables shift from reactive to proactive security operations of k8s clusters
 - can be easily setup with just `kubeconfig` and respects `rbac` and works with `oidc`
-- kubernetes sig team opensource project
+- [kubernetes sig](https://github.com/kubernetes-sigs/headlamp) team opensource project and amazing alternative to Lens
+- thriving ecosystem with [plugins](https://github.com/headlamp-k8s/plugins) for integrations
 - integrates seamlessly for managed cloud k8s clusters as well
 
 ### operational maintenance
