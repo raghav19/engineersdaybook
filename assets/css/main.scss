@@ -241,41 +241,39 @@ main.page-content {
   }
 }
 
-/* SUPERIOR Code block styling - HIGH CONTRAST for black backgrounds */
+/* Solarized Code block styling - Clean and elegant */
 pre,
 div.highlighter-rouge pre,
 .highlight pre {
-  background-color: #1e1e1e !important;
-  /* Dark gray, not pure black */
-  color: #d4d4d4 !important;
-  /* Light gray text */
-  padding: 24px !important;
-  border-radius: 12px !important;
+  background-color: #002b36 !important;
+  /* Solarized dark base03 */
+  color: #839496 !important;
+  /* Solarized dark base0 */
+  padding: 1.5rem !important;
+  border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
-  line-height: 1.6 !important;
-  border: 3px solid #404040 !important;
-  /* Visible border */
-  margin: 2rem 0 !important;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important;
-  /* White shadow for depth */
+  line-height: 1.5 !important;
+  border: 1px solid #073642 !important;
+  /* Solarized dark base02 */
+  margin: 1.5rem 0 !important;
+  box-shadow: none !important;
   position: relative !important;
 }
 
-/* Override the theme's default code styling completely */
+/* Inline code styling */
 code {
-  background-color: #333333 !important;
-  /* Much lighter than black */
-  color: #ffffff !important;
-  /* Pure white text */
-  padding: 0.4em 0.6em !important;
-  border-radius: 6px !important;
-  font-size: 88% !important;
+  background-color: #073642 !important;
+  /* Solarized dark base02 */
+  color: #93a1a1 !important;
+  /* Solarized dark base1 */
+  padding: 0.2em 0.4em !important;
+  border-radius: 4px !important;
+  font-size: 85% !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  border: 2px solid #555555 !important;
-  /* Strong border for visibility */
-  font-weight: 500 !important;
+  border: none !important;
+  font-weight: normal !important;
 }
 
 /* Code inside pre should be transparent */
@@ -294,16 +292,19 @@ div.highlighter-rouge pre code,
 /* Syntax highlighting containers */
 .highlight,
 div.highlighter-rouge {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
-  border-radius: 12px !important;
+  background-color: #002b36 !important;
+  /* Solarized dark base03 */
+  color: #839496 !important;
+  /* Solarized dark base0 */
+  border-radius: 8px !important;
   overflow-x: auto !important;
-  margin: 2rem 0 !important;
-  border: 3px solid #404040 !important;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important;
+  margin: 1.5rem 0 !important;
+  border: 1px solid #073642 !important;
+  /* Solarized dark base02 */
+  box-shadow: none !important;
 }
 
-/* Enhanced syntax highlighting with VS Code Dark theme colors */
+/* Solarized syntax highlighting colors */
 .highlight .c,
 /* Comment */
 .highlight .cm,
@@ -316,8 +317,8 @@ div.highlighter-rouge {
 
 /* Comment.Special */
   {
-  color: #6a9955 !important;
-  /* Green comments */
+  color: #586e75 !important;
+  /* Solarized dark base01 */
   font-style: italic !important;
 }
 
@@ -326,6 +327,109 @@ div.highlighter-rouge {
 .highlight .kc,
 /* Keyword.Constant */
 .highlight .kd,
+/* Keyword.Declaration */
+.highlight .kn,
+/* Keyword.Namespace */
+.highlight .kp,
+/* Keyword.Pseudo */
+.highlight .kr,
+/* Keyword.Reserved */
+.highlight .kt
+
+/* Keyword.Type */
+  {
+  color: #859900 !important;
+  /* Solarized green */
+  font-weight: bold !important;
+}
+
+.highlight .s,
+/* String */
+.highlight .sb,
+/* String.Backtick */
+.highlight .sc,
+/* String.Char */
+.highlight .sd,
+/* String.Doc */
+.highlight .s2,
+/* String.Double */
+.highlight .se,
+/* String.Escape */
+.highlight .sh,
+/* String.Heredoc */
+.highlight .si,
+/* String.Interpol */
+.highlight .sx,
+/* String.Other */
+.highlight .sr,
+/* String.Regex */
+.highlight .s1
+
+/* String.Single */
+  {
+  color: #2aa198 !important;
+  /* Solarized cyan */
+}
+
+.highlight .m,
+/* Number */
+.highlight .mf,
+/* Number.Float */
+.highlight .mh,
+/* Number.Hex */
+.highlight .mi,
+/* Number.Integer */
+.highlight .mo
+
+/* Number.Oct */
+  {
+  color: #d33682 !important;
+  /* Solarized magenta */
+}
+
+.highlight .n,
+/* Name */
+.highlight .na,
+/* Name.Attribute */
+.highlight .nb,
+/* Name.Builtin */
+.highlight .nc,
+/* Name.Class */
+.highlight .nd,
+/* Name.Decorator */
+.highlight .ne,
+/* Name.Exception */
+.highlight .nf,
+/* Name.Function */
+.highlight .ni,
+/* Name.Entity */
+.highlight .nl,
+/* Name.Label */
+.highlight .nn,
+/* Name.Namespace */
+.highlight .nt,
+/* Name.Tag */
+.highlight .nv,
+/* Name.Variable */
+.highlight .nx
+
+/* Name.Other */
+  {
+  color: #268bd2 !important;
+  /* Solarized blue */
+}
+
+.highlight .o,
+/* Operator */
+.highlight .ow
+
+/* Operator.Word */
+  {
+  color: #859900 !important;
+  /* Solarized green */
+}
+
+/* Additional syntax highlighting rules */
 /* Keyword.Declaration */
 .highlight .kn,
 /* Keyword.Namespace */
