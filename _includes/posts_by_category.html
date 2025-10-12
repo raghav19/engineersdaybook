@@ -1,0 +1,31 @@
+{%- assign all_categories = site.categories | sort -%}
+
+{%- if all_categories.size > 0 -%}
+{%- for category in all_categories -%}
+{%- assign category_name = category[0] -%}
+{%- assign category_posts = category[1] -%}
+
+<div class="category-section">
+  <h3>{{ category_name | capitalize }}</h3>
+  <ul>
+    {%- for post in category_posts limit: include.limit -%}
+    <li>
+      <span>{{- post.date | date: site.theme_config.date_format -}}</span>
+      {% if site.theme_config.lowercase_titles == true %}
+      <a href="{{ post.url | relative_url }}">{{ post.title | downcase }}</a>
+      {% else %}
+      <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+      {% endif %}
+    </li>
+    {%- endfor -%}
+
+    {%- if include.show_more and category_posts.size > include.limit -%}
+    <li><a href="archives/{{ category_name }}-archive.html">{{ include.show_more_text | default: "See more..." }}</a>
+    </li>
+    {%- endif -%}
+  </ul>
+</div>
+{%- endfor -%}
+{%- else -%}
+<p>No categorized posts found.</p>
+{%- endif -%}

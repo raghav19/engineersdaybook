@@ -6,6 +6,17 @@ body {
   /* Increased from 16px by 4 points */
 }
 
+/* Category sections styling */
+.category-section {
+  margin-bottom: 2rem !important;
+}
+
+.category-section h3 {
+  margin-bottom: 0.5rem !important;
+  margin-top: 1rem !important;
+  font-weight: bold !important;
+}
+
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
   max-width: none !important;

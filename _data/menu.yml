@@ -7,11 +7,10 @@ entries:
       limit: 5
       show_more: true
       show_more_text: See archive...
-      show_more_url: archive.html
+      show_more_url: archives/archive.html
 
   - title: posts by category
-    post_list:
-      category: example2
+    posts_by_category:
+      limit: 3
       show_more: true
-      show_more_text: See more posts...
-      show_more_url: example2-archive.html
+      show_more_text: See more...

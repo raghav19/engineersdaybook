@@ -2,7 +2,7 @@
 layout: post
 title: "Low cost alternative to off-the-shelf k8s security dashboard"
 date: 2025-10-10
-which_category: 
+categories: 
   - kubernetes
   - security
   - devsecops
