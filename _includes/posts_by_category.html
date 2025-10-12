@@ -7,7 +7,7 @@
     {%- assign category_name = category[0] -%}
     {%- assign category_posts = category[1] -%}
     <li>
-      <a href="archives/{{ category_name }}-archive.html">
+      <a href="{{ '/archives/' | append: category_name | append: '-archive.html' | relative_url }}">
         {{ category_name | downcase }} ({{ category_posts.size }})
       </a>
     </li>
