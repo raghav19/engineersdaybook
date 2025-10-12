@@ -1,14 +1,28 @@
 {%- assign all_categories = site.categories | sort -%}
 
 {%- if all_categories.size > 0 -%}
-{%- for category in all_categories -%}
-{%- assign category_name = category[0] -%}
-{%- assign category_posts = category[1] -%}
+<div class="categories-overview">
+  <h3>Available Categories:</h3>
+  <ul class="category-list">
+    {%- for category in all_categories -%}
+    {%- assign category_name = category[0] -%}
+    {%- assign category_posts = category[1] -%}
+    <li>
+      <a href="archives/{{ category_name }}-archive.html">
+        <strong>{{ category_name | capitalize }}</strong> ({{ category_posts.size }} post{% if category_posts.size != 1
+        %}s{% endif %})
+      </a>
+    </li>
+    {%- endfor -%}
+  </ul>
+</div>
 
-<div class="category-section">
-  <h3>{{ category_name | capitalize }}</h3>
+<div class="recent-posts-by-category">
+  <h3>Recent Posts:</h3>
   <ul>
-    {%- for post in category_posts limit: include.limit -%}
+    {%- assign displayed_posts = "" | split: "" -%}
+    {%- for post in site.posts limit: include.limit -%}
+    {%- unless displayed_posts contains post.url -%}
     <li>
       <span>{{- post.date | date: site.theme_config.date_format -}}</span>
       {% if site.theme_config.lowercase_titles == true %}
@@ -16,16 +30,23 @@
       {% else %}
       <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
       {% endif %}
+      {%- if post.categories.size > 0 -%}
+      <span class="post-categories">
+        {%- for category in post.categories -%}
+        <span class="category-tag">{{ category }}</span>{% unless forloop.last %}, {% endunless %}
+        {%- endfor -%}
+      </span>
+      {%- endif -%}
     </li>
+    {%- assign displayed_posts = displayed_posts | push: post.url -%}
+    {%- endunless -%}
     {%- endfor -%}
-
-    {%- if include.show_more and category_posts.size > include.limit -%}
-    <li><a href="archives/{{ category_name }}-archive.html">{{ include.show_more_text | default: "See more..." }}</a>
-    </li>
-    {%- endif -%}
   </ul>
+
+  {%- if include.show_more -%}
+  <p><a href="archives/archive.html">{{ include.show_more_text | default: "See all posts..." }}</a></p>
+  {%- endif -%}
 </div>
-{%- endfor -%}
 {%- else -%}
 <p>No categorized posts found.</p>
 {%- endif -%}

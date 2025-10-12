@@ -11,6 +11,6 @@ entries:
 
   - title: posts by category
     posts_by_category:
-      limit: 3
+      limit: 5
       show_more: true
-      show_more_text: See more...
+      show_more_text: See all posts...

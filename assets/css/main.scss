@@ -1,4 +1,6 @@
---- --- @import "no-style-please";
+--- 
+--- 
+@import "no-style-please";
 
 /* Increase base font size for better readability */
 body {
@@ -7,22 +9,109 @@ body {
 }
 
 /* Category sections styling */
-.category-section {
+.categories-overview {
   margin-bottom: 2rem !important;
 }
 
-.category-section h3 {
-  margin-bottom: 0.5rem !important;
+.categories-overview h3,
+.recent-posts-by-category h3 {
+  margin-bottom: 0.8rem !important;
   margin-top: 1rem !important;
   font-weight: bold !important;
+}
+
+.category-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 1rem !important;
+  margin-bottom: 2rem !important;
+}
+
+.category-list li {
+  list-style: none !important;
+  margin: 0 !important;
+}
+
+.category-list a {
+  padding: 0.5rem 1rem !important;
+  background-color: #f0f0f0 !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  border: 1px solid #ddd !important;
+  display: inline-block !important;
+}
+
+.category-list a:hover {
+  background-color: #e0e0e0 !important;
+}
+
+.post-categories {
+  font-size: 0.9em !important;
+  color: #666 !important;
+  margin-left: 1rem !important;
+}
+
+.category-tag {
+  background-color: #f8f8f8 !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 4px !important;
+  font-size: 0.8em !important;
+  border: 1px solid #ddd !important;
+}
+
+.recent-posts-by-category {
+  margin-top: 2rem !important;
+}
+
+/* Dark mode support for categories */
+body[a="dark"] .category-list a {
+  background-color: #2d2d2d !important;
+  border: 1px solid #555 !important;
+  color: #e0e0e0 !important;
+}
+
+body[a="dark"] .category-list a:hover {
+  background-color: #3d3d3d !important;
+}
+
+body[a="dark"] .category-tag {
+  background-color: #2d2d2d !important;
+  border: 1px solid #555 !important;
+  color: #e0e0e0 !important;
+}
+
+body[a="dark"] .post-categories {
+  color: #999 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .category-list a {
+    background-color: #2d2d2d !important;
+    border: 1px solid #555 !important;
+    color: #e0e0e0 !important;
+  }
+
+  body[a="auto"] .category-list a:hover {
+    background-color: #3d3d3d !important;
+  }
+
+  body[a="auto"] .category-tag {
+    background-color: #2d2d2d !important;
+    border: 1px solid #555 !important;
+    color: #e0e0e0 !important;
+  }
+
+  body[a="auto"] .post-categories {
+    color: #999 !important;
+  }
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
   max-width: none !important;
-  width: 95% !important;
+  width: 98% !important;
   margin: 0 auto !important;
-  padding: 1.5rem !important;
+  padding: 1rem !important;
 }
 
 main.page-content {
@@ -34,36 +123,36 @@ main.page-content {
 /* Responsive padding and width based on screen size */
 @media (min-width: 480px) {
   .w {
-    width: 92% !important;
-    padding: 2rem !important;
+    width: 97% !important;
+    padding: 1.5rem !important;
   }
 }
 
 @media (min-width: 768px) {
   .w {
-    width: 88% !important;
-    padding: 2.5rem !important;
+    width: 96% !important;
+    padding: 2rem !important;
   }
 }
 
 @media (min-width: 1024px) {
   .w {
-    width: 85% !important;
-    padding: 3rem !important;
+    width: 95% !important;
+    padding: 2.5rem !important;
   }
 }
 
 @media (min-width: 1440px) {
   .w {
-    width: 80% !important;
-    padding: 3.5rem !important;
+    width: 94% !important;
+    padding: 3rem !important;
   }
 }
 
 @media (min-width: 1920px) {
   .w {
-    width: 75% !important;
-    padding: 4rem !important;
+    width: 93% !important;
+    padding: 3.5rem !important;
   }
 }
 
