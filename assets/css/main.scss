@@ -32,8 +32,12 @@ body {
 .social-links {
   display: flex;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ddd;
   align-items: center;
+  justify-content: center;
 }
 
 .social-links a {
@@ -49,19 +53,28 @@ body {
 }
 
 .social-icon {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
+  width: 24px;
+  height: 24px;
+  stroke: #333;
+  fill: none;
 }
 
 /* Dark mode support for social icons */
+body[a="dark"] .social-links {
+  border-top-color: #555;
+}
+
 body[a="dark"] .social-icon {
-  stroke: #e0e0e0;
+  stroke: #ffffff !important;
 }
 
 @media (prefers-color-scheme: dark) {
+  body[a="auto"] .social-links {
+    border-top-color: #555;
+  }
+
   body[a="auto"] .social-icon {
-    stroke: #e0e0e0;
+    stroke: #ffffff !important;
   }
 }
 

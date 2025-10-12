@@ -6,9 +6,12 @@ layout: default
   {%-if site.theme_config.show_description-%}
   <p>{{ site.description | downcase }}</p>
   {%-endif-%}
-  {%-include social_links.html-%}
 </header>
 
 {%-include menu_item.html collection=site.data.menu.entries-%}
 
 {{ content }}
+
+<footer>
+  {%-include social_links.html-%}
+</footer>
