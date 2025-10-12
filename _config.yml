@@ -30,8 +30,6 @@ kramdown:
   input: GFM
   syntax_highlighter: rouge
   toc_levels: 2..6
-  input: GFM
-  syntax_highlighter: rouge
   syntax_highlighter_opts:
     block:
       line_numbers: false

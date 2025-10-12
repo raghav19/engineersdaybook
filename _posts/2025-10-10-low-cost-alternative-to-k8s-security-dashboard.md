@@ -11,13 +11,13 @@ security is a layered approach and in the kubernetes world, its has so many laye
 
 in this write-up, we will see how we can us `headlamp`(kubernetes sig project) as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
 
-## setup local machine
+### setup local machine
 > **note:** assumes you have cloud provider CLI and config setup in your local
 
 - install [headlamp](https://headlamp.dev/) on your desktop and [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin) as as addon into `headlamp`
 
 
-## setup trivy operator
+### setup trivy operator
 - install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator) on your kubernetes cluster
 > **note:** if you use corporate-proxy, ensure to set the values as below
   ```yaml
@@ -27,7 +27,7 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
     noProxy: <no-proxy>
   ```
 
-## import kubeconfig
+### import kubeconfig
 > **note:** this can be used for eks, aks & on-prem clusters
 
 - import `kubeconfig` for your k8s cluster
@@ -41,7 +41,7 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
 - once added, you can see your cluster getting listed in `home`\
 ![cluster listed in home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
 
-## verify trivy
+### verify trivy
 ```shell
 # cluster vulnerabilities
 ❯ k get clustervulnerabilityreports.aquasecurity.github.io
@@ -77,7 +77,7 @@ clusterrole-59dc5c9cb6                                           Trivy     6d
 
 the specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled) (above one uses the defaults).
 
-## observe on headlamp dashboard
+### observe on headlamp dashboard
 
 - **compliance reports**
 ![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
@@ -88,7 +88,7 @@ the specific settings around this can be found in the trivy operator [values.yam
 - **vulnerability reports**
 ![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
 
-## value additions
+### value additions
 - 0 cost k8s security posture management with addon based integration
 - enables strong security posture management with a comprehensive view and can be expanded for full cluster view
 - enables shift from reactive to proactive security operations of k8s clusters
@@ -96,6 +96,6 @@ the specific settings around this can be found in the trivy operator [values.yam
 - kubernetes sig team opensource project
 - integrates seamlessly for managed cloud k8s clusters as well
 
-## operational maintenance
+### operational maintenance
 - need to update trivy addon regularly to latest versions
 - need to modify resource allocations, scan settings as new workloads are added into the cluster
