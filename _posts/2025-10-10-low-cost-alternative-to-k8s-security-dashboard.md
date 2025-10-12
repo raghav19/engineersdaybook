@@ -19,7 +19,7 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
 
 #### setup trivy operator
 - install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator) on your kubernetes cluster
-  > **note:** if you use corporate-proxy, ensure to set the values as below_
+> **note:** if you use corporate-proxy, ensure to set the values as below
   ```yaml
   trivy:
     httpProxy: <your-http-proxy>
@@ -28,11 +28,11 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
   ```
 
 #### import kubeconfig
-> **note:** this can be used for eks, aks & on-prem clusters_
+> **note:** this can be used for eks, aks & on-prem clusters
 
 - import `kubeconfig` for your k8s cluster
 - use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
-  _**note:** oidc flow would be showcased in a separate post_
+> **note:** oidc flow would be showcased in a separate post_
 
 - from headlamp ui -> add cluster -> load from kubeconfig
 ![headlamp add cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
