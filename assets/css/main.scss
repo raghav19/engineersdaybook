@@ -141,6 +141,35 @@ p img {
   margin: 0.5rem 0 !important;
 }
 
+/* Note and blockquote formatting - align with main text */
+blockquote {
+  margin: 1rem 0 !important;
+  padding: 0 !important;
+  border-left: none !important;
+  font-style: normal !important;
+  background: none !important;
+}
+
+/* Remove default blockquote indentation */
+blockquote p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Italic text in list items (like notes) should not be indented */
+li em {
+  display: block !important;
+  margin: 0.3rem 0 !important;
+  font-style: italic !important;
+}
+
+/* Bold italic text (like **note:**) */
+li strong em,
+li em strong {
+  display: block !important;
+  margin: 0.3rem 0 !important;
+}
+
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
 .w {
   max-width: none !important;

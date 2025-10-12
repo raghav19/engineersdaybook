@@ -18,7 +18,7 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
 
 
 #### setup trivy operator
-- install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
+- install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator) on your kubernetes cluster
   > **note:** if you use corporate-proxy, ensure to set the values as below_
   ```yaml
   trivy:
