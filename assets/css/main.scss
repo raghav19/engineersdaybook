@@ -967,3 +967,112 @@ body[a="dark"] h6:target {
     color: #e0e0e0 !important;
   }
 }
+
+/* Mobile-friendly enhancements */
+@media (max-width: 768px) {
+
+  /* Adjust base font size for mobile */
+  body {
+    font-size: 18px !important;
+  }
+
+  /* Reduce padding on mobile */
+  .w {
+    width: 100% !important;
+    padding: 0.75rem !important;
+  }
+
+  /* Make category buttons stack better on mobile */
+  .category-list {
+    gap: 0.5rem !important;
+  }
+
+  .category-list a {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85em !important;
+  }
+
+  /* Adjust heading sizes for mobile */
+  h1 {
+    font-size: 1.5em !important;
+  }
+
+  h2 {
+    font-size: 1.3em !important;
+  }
+
+  h3 {
+    font-size: 1.1em !important;
+  }
+
+  /* Make code blocks scroll horizontally on mobile */
+  pre {
+    overflow-x: auto !important;
+    font-size: 12px !important;
+    padding: 1rem !important;
+  }
+
+  /* Adjust images for mobile */
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Better touch targets for links */
+  a {
+    padding: 0.2rem 0 !important;
+    display: inline-block !important;
+  }
+
+  /* Adjust list spacing on mobile */
+  ul,
+  ol {
+    padding-left: 1.5rem !important;
+  }
+
+  li {
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+  body {
+    font-size: 16px !important;
+  }
+
+  .w {
+    padding: 0.5rem !important;
+  }
+
+  h1 {
+    font-size: 1.3em !important;
+  }
+
+  h2 {
+    font-size: 1.2em !important;
+  }
+
+  h3 {
+    font-size: 1.05em !important;
+  }
+
+  pre {
+    font-size: 11px !important;
+    padding: 0.75rem !important;
+  }
+
+  code {
+    font-size: 80% !important;
+  }
+
+  /* Make category buttons full width on very small screens */
+  .category-list {
+    flex-direction: column !important;
+  }
+
+  .category-list a {
+    display: block !important;
+    text-align: center !important;
+  }
+}
