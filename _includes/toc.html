@@ -1,5 +1,9 @@
+{% capture toc %}
+* TOC
+{:toc}
+{% endcapture %}
+
 <div id="toc-container">
   <p id="toc-title">contents</p>
-  * TOC
-  {:toc}
+  {{ toc | markdownify }}
 </div>
