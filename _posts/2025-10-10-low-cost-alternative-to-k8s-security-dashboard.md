@@ -7,27 +7,28 @@ categories:
   - security
   - devsecops
 ---
-security is a layered approach and in the Kubernetes world, its has so many layers to deal with. As organizations increase their security focused initiatives especially from a security posture management standpoint, we see that there are lot of off-the-shell software that are used in this space. (e.g. wiz.io). although these do provide a very broad view of your entire stack beyond K8s and do bring in lot of value to the table to observe and reconcile across your tech stack and fix issues, we also see an opportunity to achieve some of this in a lot more simpler and robust manner for security operations
+security is a layered approach and in the kubernetes world, its has so many layers to deal with. as organizations increase their security focused initiatives especially from a security posture management standpoint, we see that there are lot of off-the-shell software that are used in this space. (e.g. wiz.io). although these do provide a very broad view of your entire stack beyond k8s and do bring in lot of value to the table to observe and reconcile across your tech stack and fix issues, we also see an opportunity to achieve some of this in a lot more simpler and robust manner for security operations
 
-In this write-up, we will see how we can us `headlamp` as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
+in this write-up, we will see how we can us `headlamp` as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
 
 #### setup local machine
-- Install [Chocolatey](https://chocolatey.org/install) & Tools
-  - Install `awscli`/`azure-cli`
+- install [chocolatey](https://chocolatey.org/install) & tools
+  - install `awscli`/`azure-cli`
     ```shell
     # requires elevated powershell 
     choco install awscli azure-cli
     ```
-- Setup local credentials for [AWS](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [Azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
+- setup local credentials for [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html) & [azure](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli?view=azure-cli-latest)
 
-- Install Headlamp and plugins
-  - Install [Headlamp](https://headlamp.dev/) on your local machine
-  - Install [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin), can be done via headlamp UI (Home -> Plugin Catalog)
+- install [headlamp](https://headlamp.dev/) and [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin)
+  >
+  - install  on your local machine
+  - install , can be done via headlamp ui (home -> plugin catalog)
 
-#### Setup Trivy Operator
-- Install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
+#### setup trivy operator
+- install [trivy-operator deployment](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator)
   
-  _**Note:** If you use corporate-proxy, ensure to set the values as below_
+  _**note:** if you use corporate-proxy, ensure to set the values as below_
   ```yaml
   trivy:
     httpProxy: <your-http-proxy>
@@ -35,20 +36,21 @@ In this write-up, we will see how we can us `headlamp` as a off-the-shelf securi
     noProxy: <no-proxy>
   ```
 
-#### Import Kubeconfig
-_**Note:** This can be used for EKS, AKS & On-prem clusters_
+#### import kubeconfig
+_**note:** this can be used for eks, aks & on-prem clusters_
 
-- Import `kubeconfig` for your K8s cluster
-- Use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
+- import `kubeconfig` for your k8s cluster
+- use [serviceaccount](https://headlamp.dev/docs/latest/installation/#create-a-service-account-token) flow for simplicity purposes
+  _**note:** oidc flow would be showcased in a separate post_
+
+- from headlamp ui -> add cluster -> load from kubeconfig
+  ![headlamp add cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
+  ![load from kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
   
-  _**Note:** OIDC flow would be showcased in a separate post_
-  - From Headlamp UI -> Add Cluster -> Load From Kubeconfig
-    - ![Headlamp Add Cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
-    - ![Load From Kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
-- Once added, you can see your cluster getting listed in `HOME`
-  - ![Cluster Listed in Home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
+- once added, you can see your cluster getting listed in `home`\
+  ![cluster listed in home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
 
-#### Verify Trivy
+#### verify trivy
 ```shell
 # cluster vulnerabilities
 ❯ k get clustervulnerabilityreports.aquasecurity.github.io
@@ -82,26 +84,26 @@ clusterrole-58bfc7788d                                           Trivy     6d
 clusterrole-59dc5c9cb6                                           Trivy     6d
 ```
 
-The specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled) (above one uses the defaults).
+the specific settings around this can be found in the trivy operator [values.yaml](https://artifacthub.io/packages/helm/trivy-operator/trivy-operator?modal=values&path=operator.vulnerabilityScannerEnabled) (above one uses the defaults).
 
-#### Observe on Headlamp Dashboard
-- Check on Headlamp UI -> <your-cluster> -> Trivy
-  - **Compliance Reports**
-    - ![Compliance Reports Overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
-    - ![Compliance Report Details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
-    - ![Compliance Report Analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
-    - ![Compliance Report Results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
-  - **Vulnerability Reports**
-    - ![Vulnerability Reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
+#### observe on headlamp dashboard
+- check on headlamp ui -> <your-cluster> -> trivy
+  - **compliance reports**
+    - ![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
+    - ![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
+    - ![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
+    - ![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
+  - **vulnerability reports**
+    - ![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
 
-#### Value Additions
-- 0 cost K8s Security Posture management with addon based integration
-- Enables strong security posture management with a comprehensive view and can be expanded for full Cluster view
-- Enables shift from reactive to proactive security operations of k8s clusters
-- Can be easily setup with just `kubeconfig` and respects `RBAC` and works with `OIDC`
-- Kubernetes`SIG` team opensource project
-- Integrates seamlessly for Managed Cloud K8s clusters as well
+#### value additions
+- 0 cost k8s security posture management with addon based integration
+- enables strong security posture management with a comprehensive view and can be expanded for full cluster view
+- enables shift from reactive to proactive security operations of k8s clusters
+- can be easily setup with just `kubeconfig` and respects `rbac` and works with `oidc`
+- kubernetes`sig` team opensource project
+- integrates seamlessly for managed cloud k8s clusters as well
 
-#### Operational Maintenance
-- Need to update trivy addon regularly to latest versions
-- Need to modify resource allocations, scan settings as new workloads are added into the cluster
+#### operational maintenance
+- need to update trivy addon regularly to latest versions
+- need to modify resource allocations, scan settings as new workloads are added into the cluster

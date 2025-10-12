@@ -9,7 +9,7 @@ entries:
       show_more_text: see archive...
       show_more_url: archives/archive.html
 
-  - title: posts by category
+  - title: categories
     posts_by_category:
       limit: 5
       show_more: true
