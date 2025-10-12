@@ -4,7 +4,7 @@ email: rahavendern@hotmail.com # email of site's author
 url: https://raghav19.github.io # root address of the site
 baseurl: "/engineersdaybook" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
 description: > # description of the site (multiple lines allowed)
-  My Dabbling with Devops & Perspectives
+  my daily dablling with tech and perspectives
 
 permalink: /:slug.html
 
@@ -17,7 +17,7 @@ theme_config:
   appearance: "auto" # can be "light", "dark" or "auto"
   back_home_text: ".." # customize text for homepage link in post layout
   date_format: "%Y-%m-%d" # customize how date is formatted
-  show_description: false # show blog description in home page
+  show_description: true # show blog description in home page
   lowercase_titles: true # show titles in lowercase in lists
 
 sass:

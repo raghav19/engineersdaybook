@@ -1,48 +1,30 @@
 {
   "name": "engineersdaybook",
-  "image": "mcr.microsoft.com/vscode/devcontainers/base:0-ubuntu-22.04",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
   "workspaceFolder": "/home/code/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/home/code/workspace,type=bind",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/python:1": {},
     "ghcr.io/devcontainers-extra/features/starship:1": {},
-    "ghcr.io/devcontainers/features/go:1": {},
-    "ghcr.io/larsnieuwenhuizen/features/jqyq:0": {},
     "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
       "packages": [
-        "netcat"
+        "netcat-openbsd"
       ]
     }
   },
   "mounts": [
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/code/.ssh,type=bind",
     "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/code/.gitconfig,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.cache/pre-commit,target=/home/code/.cache/pre-commit,type=bind,consistency=cached"
-  ],
-  "forwardPorts": [
-    8080
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind"
   ],
   "customizations": {
     "vscode": {
       "extensions": [
-        "golang.Go",
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-python.debugpy",
-        "ms-python.black-formatter",
-        "ms-python.isort",
-        "ms-azuretools.vscode-docker",
         "streetsidesoftware.code-spell-checker",
-        "redhat.vscode-yaml",
         "GitHub.copilot",
         "GitHub.copilot-chat",
         "mhutchie.git-graph",
         "donjayamanne.githistory",
-        "VisualStudioExptTeam.vscodeintellicode",
         "yzhang.markdown-all-in-one",
-        "rangav.vscode-thunder-client",
         "Gruntfuggly.todo-tree",
         "mutantdino.resourcemonitor"
       ],
@@ -51,9 +33,6 @@
         "terminal.integrated.gpuAcceleration": "on",
         "editor.fontLigatures": true,
         "editor.fontFamily": "JetBrainsMono Nerd Font Mono",
-        "vs-kubernetes": {
-          "vs-kubernetes.crd-code-completion": "enabled"
-        },
         "terminal.integrated.profiles.linux": {
           "bash": {
             "path": "/bin/bash",
@@ -74,29 +53,17 @@
         "files.autoSave": "afterDelay",
         "files.associations": {
           "*.yaml": "yaml"
-        },
-        "[python]": {
-          "editor.defaultFormatter": "ms-python.black-formatter",
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-          }
-        },
-        "isort.args": [
-          "--profile",
-          "black"
-        ]
+        }
       }
+    },
+    "remoteUser": "1000",
+    "containerUser": "1000",
+    "remoteEnv": {
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8"
+    },
+    "containerEnv": {
+      "LANG": "C.UTF-8",
+      "LC_ALL": "C.UTF-8"
     }
-  },
-  "remoteUser": "1000",
-  "containerUser": "1000",
-  "remoteEnv": {
-    "LANG": "C.UTF-8",
-    "LC_ALL": "C.UTF-8"
-  },
-  "containerEnv": {
-    "LANG": "C.UTF-8",
-    "LC_ALL": "C.UTF-8"
   }
-}
