@@ -143,13 +143,15 @@ p img {
 
 /* Note and blockquote formatting - align with main text */
 blockquote {
-  margin: 1rem 0 !important;
+  margin: 0.5rem 0 !important;
   padding: 0 !important;
   border-left: none !important;
   font-style: normal !important;
   background: none !important;
   margin-left: 0 !important;
   padding-left: 0 !important;
+  display: block !important;
+  clear: both !important;
 }
 
 /* Remove default blockquote indentation */
@@ -158,16 +160,20 @@ blockquote p {
   padding: 0 !important;
   margin-left: 0 !important;
   padding-left: 0 !important;
+  display: inline !important;
 }
 
-/* Blockquotes in list items should not be indented */
+/* Blockquotes in list items should not be indented and stay contained */
 li blockquote {
-  margin: 0.3rem 0 !important;
+  margin: 0.3rem 0 0.8rem 0 !important;
   padding: 0 !important;
   margin-left: 0 !important;
   padding-left: 0 !important;
   border-left: none !important;
   background: none !important;
+  display: block !important;
+  clear: both !important;
+  overflow: hidden !important;
 }
 
 li blockquote p {
@@ -175,20 +181,25 @@ li blockquote p {
   padding: 0 !important;
   margin-left: 0 !important;
   padding-left: 0 !important;
+  display: inline !important;
 }
 
-/* Italic text in list items (like notes) should not be indented */
+/* Italic text in list items (like notes) should not be indented and stay contained */
 li em {
   display: block !important;
-  margin: 0.3rem 0 !important;
+  margin: 0.3rem 0 0.8rem 0 !important;
   font-style: italic !important;
+  clear: both !important;
+  overflow: hidden !important;
 }
 
 /* Bold italic text (like **note:**) */
 li strong em,
 li em strong {
   display: block !important;
-  margin: 0.3rem 0 !important;
+  margin: 0.3rem 0 0.8rem 0 !important;
+  clear: both !important;
+  overflow: hidden !important;
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
