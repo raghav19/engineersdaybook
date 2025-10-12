@@ -852,19 +852,19 @@ body .highlight .go {
 
 /* TOC styling */
 #toc-container {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 1rem;
-  background: #f9f9f9;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
 }
 
 #toc-title {
-  font-weight: bold;
+  font-weight: normal;
   margin-top: 0;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid #ddd;
   padding-bottom: 0.5rem;
-  margin-bottom: 0.5rem;
-  font-size: 1.1em;
+  margin-bottom: 1rem;
+  font-size: 1em;
 }
 
 #toc-list,
@@ -877,10 +877,15 @@ body .highlight .go {
 #markdown-toc ul {
   padding-left: 1rem;
   list-style-type: none;
+  margin-top: 0.5rem;
 }
 
 #markdown-toc>li {
   margin-bottom: 0.5rem;
+}
+
+#markdown-toc li {
+  margin-bottom: 0.3rem;
 }
 
 #markdown-toc li a {
@@ -888,6 +893,7 @@ body .highlight .go {
   color: inherit;
   display: block;
   padding: 0.2rem 0;
+  font-size: 0.9em;
 }
 
 #markdown-toc li a:hover {
@@ -895,23 +901,13 @@ body .highlight .go {
 }
 
 /* Dark mode for TOC */
-body[a="dark"] #toc-container {
-  background: #2d2d2d;
+body[a="dark"] #toc-title {
   border-color: #555;
 }
 
-body[a="dark"] #toc-title {
-  border-color: #444;
-}
-
 @media (prefers-color-scheme: dark) {
-  body[a="auto"] #toc-container {
-    background: #2d2d2d;
-    border-color: #555;
-  }
-
   body[a="auto"] #toc-title {
-    border-color: #444;
+    border-color: #555;
   }
 }
 
