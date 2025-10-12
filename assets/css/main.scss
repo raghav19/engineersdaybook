@@ -300,19 +300,17 @@ div.highlighter-rouge pre code,
   font-weight: normal !important;
 }
 
-/* Syntax highlighting containers */
+/* Syntax highlighting containers - remove styling to prevent double blocks */
 .highlight,
 div.highlighter-rouge {
-  background-color: #002b36 !important;
-  /* Solarized dark base03 */
-  color: #839496 !important;
-  /* Solarized dark base0 */
-  border-radius: 8px !important;
-  overflow-x: auto !important;
-  margin: 1.5rem 0 !important;
-  border: 1px solid #073642 !important;
-  /* Solarized dark base02 */
+  background: none !important;
+  color: inherit !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  border: none !important;
   box-shadow: none !important;
+  padding: 0 !important;
 }
 
 /* Solarized syntax highlighting colors */
