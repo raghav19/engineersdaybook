@@ -937,15 +937,48 @@ body[a="dark"] #toc-title {
   }
 }
 
-/* Responsive: Hide TOC on smaller screens */
+/* Responsive: Show TOC on mobile in a different layout */
 @media (max-width: 1024px) {
-  .toc {
-    display: none;
-  }
-
   .post-container {
     flex-direction: column;
   }
+
+  .toc {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #ddd;
+  }
+
+  #toc-container {
+    padding: 0;
+  }
+
+  #toc-title {
+    font-size: 1.1em;
+    margin-bottom: 0.75rem;
+  }
+
+  #markdown-toc {
+    font-size: 0.9em;
+  }
+
+  #markdown-toc li {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* Dark mode for mobile TOC */
+@media (max-width: 1024px) and (prefers-color-scheme: dark) {
+  body[a="auto"] .toc {
+    border-bottom-color: #555;
+  }
+}
+
+body[a="dark"] .toc {
+  border-bottom-color: #555 !important;
 }
 
 /* Heading target highlight - gray background like inline code */
