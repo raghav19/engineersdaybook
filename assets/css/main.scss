@@ -148,12 +148,33 @@ blockquote {
   border-left: none !important;
   font-style: normal !important;
   background: none !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 /* Remove default blockquote indentation */
 blockquote p {
   margin: 0 !important;
   padding: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Blockquotes in list items should not be indented */
+li blockquote {
+  margin: 0.3rem 0 !important;
+  padding: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  border-left: none !important;
+  background: none !important;
+}
+
+li blockquote p {
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
 }
 
 /* Italic text in list items (like notes) should not be indented */

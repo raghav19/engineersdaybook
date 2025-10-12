@@ -14,7 +14,7 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
 #### setup local machine
 > **note:** assumes you have cloud provider CLI and config setup in your local
 
-- install [headlamp](https://headlamp.dev/) and [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin)
+- install [headlamp](https://headlamp.dev/) on your desktop and [kubebeam/trivy-headlamp-plugin](https://github.com/kubebeam/trivy-headlamp-plugin) as as addon into `headlamp`
 
 
 #### setup trivy operator
