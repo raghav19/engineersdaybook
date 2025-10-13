@@ -23,6 +23,34 @@ body {
   /* Increased from 16px by 4 points */
 }
 
+/* Preserve emoji natural colors */
+p,
+span,
+div,
+a {
+  font-variant-emoji: normal;
+}
+
+/* Ensure emojis don't inherit link color */
+a {
+  >span {
+    color: inherit;
+  }
+}
+
+/* Homepage intro styling */
+header+p {
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+/* Force emoji to use system colors, not theme colors */
+header+p::first-line {
+  color: inherit;
+}
+
 /* Category sections styling */
 .categories-overview {
   margin-bottom: 2rem !important;

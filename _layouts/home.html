@@ -8,10 +8,11 @@ layout: default
   {%-endif-%}
 </header>
 
-{%-include menu_item.html collection=site.data.menu.entries-%}
-
 {{ content }}
+
+{%-include menu_item.html collection=site.data.menu.entries-%}
 
 <footer>
   {%-include social_links.html-%}
 </footer>
+```
