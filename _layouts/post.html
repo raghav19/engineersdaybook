@@ -13,6 +13,31 @@ layout: default
     <h1>{{ page.title }}</h1>
 
     {{ content }}
+
+    <!-- Post navigation -->
+    <nav class="post-nav">
+      <div class="post-nav-links">
+        {%- if page.previous.url -%}
+        <a href="{{ page.previous.url | relative_url }}" class="post-nav-prev" title="{{ page.previous.title }}">
+          ← previous
+        </a>
+        {%- else -%}
+        <span class="post-nav-disabled">← previous</span>
+        {%- endif -%}
+
+        <a href="{{ '/' | relative_url }}" class="post-nav-home">
+          home
+        </a>
+
+        {%- if page.next.url -%}
+        <a href="{{ page.next.url | relative_url }}" class="post-nav-next" title="{{ page.next.title }}">
+          next →
+        </a>
+        {%- else -%}
+        <span class="post-nav-disabled">next →</span>
+        {%- endif -%}
+      </div>
+    </nav>
   </article>
 
   <aside class="toc">
