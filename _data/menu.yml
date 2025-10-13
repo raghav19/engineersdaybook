@@ -5,13 +5,9 @@ entries:
   - title: recent posts
     post_list:
       limit: 5
-      show_more: true
-      show_more_text: see archive...
-      show_more_url: /archives/archive.html
+      show_more: false
 
   - title: categories
     posts_by_category:
       limit: 5
-      show_more: true
-      show_more_text: see all posts...
-      show_more_url: /archives/archive.html
+      show_more: false
