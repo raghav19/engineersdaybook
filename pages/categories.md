@@ -1,6 +1,7 @@
 ---
 layout: page
 title: All Categories
+permalink: /categories.html
 ---
 
 # Posts by Category
