@@ -175,6 +175,87 @@ body[a="dark"] .social-links {
   border-top: 1px solid #ddd;
 }
 
+/* Related posts section */
+.related-posts {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #ddd;
+}
+
+.related-posts h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1em;
+  font-weight: normal;
+}
+
+.related-posts ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.related-posts li {
+  margin-bottom: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.related-post-date {
+  font-size: 0.85em;
+  color: #666;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.related-posts a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.related-posts a:hover {
+  text-decoration: underline;
+}
+
+/* Dark mode for related posts */
+body[a="dark"] .related-posts {
+  border-top-color: #555;
+}
+
+body[a="dark"] .related-post-date {
+  color: #999;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .related-posts {
+    border-top-color: #555;
+  }
+
+  body[a="auto"] .related-post-date {
+    color: #999;
+  }
+}
+
+/* Mobile related posts */
+@media (max-width: 768px) {
+  .related-posts {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+  }
+
+  .related-posts li {
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
+  }
+
+  .related-post-date {
+    font-size: 0.8em;
+    min-width: auto;
+  }
+}
+
 .post-nav-links {
   display: flex;
   justify-content: space-between;
