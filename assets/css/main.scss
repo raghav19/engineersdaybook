@@ -113,6 +113,45 @@ body[a="dark"] .social-links {
   }
 }
 
+/* Mobile responsive social links */
+@media (max-width: 768px) {
+  .social-links {
+    gap: 1.5rem;
+    padding-top: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .social-links a {
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    flex-shrink: 0;
+  }
+
+  .social-icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .social-links {
+    gap: 1.2rem;
+  }
+
+  .social-links a {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+  }
+
+  .social-icon {
+    width: 22px;
+    height: 22px;
+  }
+}
+
 .category-list {
   display: flex !important;
   flex-wrap: wrap !important;
