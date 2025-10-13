@@ -259,10 +259,13 @@ body[a="dark"] .post-nav-disabled {
   .post-nav-home {
     width: 100%;
     text-align: center;
+    display: block;
   }
 
   .post-nav-disabled {
-    display: none;
+    display: block;
+    width: 100%;
+    text-align: center;
   }
 }
 
