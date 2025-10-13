@@ -48,20 +48,18 @@ header+p {
 
 /* Emoji styling - preserve natural colors */
 .emoji {
-  color: transparent !important;
-  text-shadow: 0 0 0 rgba(0, 0, 0, 1);
-  font-style: normal !important;
-  -webkit-text-fill-color: transparent;
-  filter: none !important;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: none;
+  display: inline;
 }
 
-/* Alternative emoji fix */
-span.emoji {
-  display: inline-block;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
-  font-style: normal !important;
-  font-weight: normal !important;
-  line-height: 1;
+/* Prevent emoji from inheriting paragraph or link colors */
+p .emoji,
+a .emoji {
+  color: initial;
+  -webkit-text-fill-color: initial;
 }
 
 /* Force emoji to use system colors, not theme colors */
