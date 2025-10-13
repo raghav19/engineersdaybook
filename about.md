@@ -10,13 +10,9 @@ title: about me
 **github:** [github.com/raghav19](https://github.com/raghav19)  
 **linkedin:** [linkedin.com/in/raghavender-nagarajan](https://www.linkedin.com/in/raghavender-nagarajan-683743141)
 
----
-
 ### summary
 
 infrastructure and devops engineer with 12 years hands-on experience in multi-cloud solution architecture, infrastructure and devsecops. adept in designing, deploying, managing scalable multi-cloud, cloud-native hybrid infrastructures, cicd pipelines, ephemeral environments across aws/azure and on-prem.
-
----
 
 ### skills
 
@@ -37,8 +33,6 @@ infrastructure and devops engineer with 12 years hands-on experience in multi-cl
 **observability:** prometheus, grafana, kiali, fluentbit, elasticsearch
 
 **qa automation:** postman, readyapi, robot framework
-
----
 
 ### current role
 
@@ -61,8 +55,6 @@ infrastructure and devops engineer with 12 years hands-on experience in multi-cl
 - developed agentic ai poc with aws bedrock to showcase eks app lifecycle as a generative ai experience
 - co-designed enterprise multi-tenant infra on kubernetes with namespace/workload isolation, network policies, admission control, rbac, istio auth
 
----
-
 ### experience
 
 **intel india pvt ltd, bangalore** — sdet / devops engineer  
@@ -79,8 +71,6 @@ infrastructure and devops engineer with 12 years hands-on experience in multi-cl
 
 - developed ui test automation suites with selenium webdriver
 - developed test suites for data integrity checks on apache kafka/spark big data platform (contract: netapp india)
-
----
 
 ### education
 
