@@ -12,9 +12,9 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/code/.ssh,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/code/.gitconfig,type=bind",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/code/.ssh,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/code/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind,consistency=cached"
   ],
   "customizations": {
     "vscode": {
