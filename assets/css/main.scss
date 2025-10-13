@@ -50,7 +50,9 @@ body {
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  padding: 8px;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .social-links a:hover {
@@ -64,6 +66,8 @@ body {
   stroke: #000000 !important;
   fill: none !important;
   stroke-width: 2 !important;
+  display: block;
+  flex-shrink: 0;
 }
 
 /* Dark mode - light background with dark icons */
@@ -123,19 +127,21 @@ body[a="dark"] .social-links {
   }
 
   .social-links a {
-    width: 44px;
-    height: 44px;
-    padding: 0;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden;
   }
 
   .social-icon {
-    width: 24px;
-    height: 24px;
-    display: block;
+    width: 24px !important;
+    height: 24px !important;
+    display: block !important;
+    flex-shrink: 0;
   }
 }
 
@@ -145,18 +151,20 @@ body[a="dark"] .social-links {
   }
 
   .social-links a {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden;
   }
 
   .social-icon {
-    width: 22px;
-    height: 22px;
-    display: block;
+    width: 20px !important;
+    height: 20px !important;
+    display: block !important;
+    flex-shrink: 0;
   }
 }
 
