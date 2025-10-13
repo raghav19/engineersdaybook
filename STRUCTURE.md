@@ -49,9 +49,17 @@ Reusable template components
 - `goat_counter.html` - Analytics tracking
 
 ### `/assets/`
-Static assets (CSS, JavaScript)
-- `/css/` - Stylesheets
-- `/js/` - JavaScript files (TOC generator, search, etc.)
+Static assets (CSS, JavaScript, images)
+- `/css/` - Stylesheets (main.scss with responsive design, TOC, social icons)
+- `/js/` - JavaScript files (TOC generator, search, mouse coordinates, lunr search)
+- `/images/` - Post images organized by post title
+  - `/low-cost-alternative-to-k8s-security-dashboard/` - Images for the K8s security dashboard post
+  - *Future posts will have their own subdirectories*
+
+**Image Organization Convention:**
+- Create a subfolder matching the post slug (filename without date and extension)
+- Example: Post `2025-10-10-my-awesome-post.md` → Images in `/assets/images/my-awesome-post/`
+- Reference in markdown: `![alt text]({{ "/assets/images/my-awesome-post/image.png" | relative_url }})`
 
 ### `/_data/`
 Site data files
@@ -82,4 +90,33 @@ SCSS/Sass stylesheets
 ✅ **Logical grouping** - Related files organized together  
 ✅ **Easier maintenance** - Know exactly where to find each type of content  
 ✅ **Backward compatible** - All existing URLs continue to work  
-✅ **Scalable** - Easy to add more pages or images without cluttering root
+✅ **Scalable** - Easy to add more pages or images without cluttering root  
+✅ **Organized assets** - Post images grouped by post title for easy management
+
+## Best Practices for Adding New Content
+
+### Adding a New Blog Post
+
+1. Create post file: `_posts/YYYY-MM-DD-post-title.md`
+2. Create image folder: `assets/images/post-title/`
+3. Add images to the folder
+4. Reference images in post: `![alt]({{ "/assets/images/post-title/image.png" | relative_url }})`
+
+### Adding a New Page
+
+1. Create page file: `pages/page-name.md`
+2. Add front matter with permalink: `permalink: /page-name.html`
+3. Jekyll will automatically make it available at that URL
+
+### Adding Images
+
+1. **For blog posts**: Always create a subfolder in `/assets/images/` matching the post slug
+2. **For site assets** (logo, icons): Use `/images/` folder in root
+3. **Always use `relative_url` filter** in Liquid templates for proper baseurl handling
+
+### Naming Conventions
+
+- **Post slugs**: lowercase, hyphen-separated (matches filename without date)
+- **Image folders**: match the post slug exactly
+- **Pages**: lowercase, hyphen-separated
+- **Archives**: `category-name-archive.md` format

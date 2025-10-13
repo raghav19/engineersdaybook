@@ -35,11 +35,11 @@ in this write-up, we will see how we can us `headlamp`(kubernetes sig project) a
 > **note:** oidc flow would be showcased in a separate post_
 
 - from headlamp ui -> add cluster -> load from kubeconfig
-![headlamp add cluster]({{ "/assets/image_1758878520002_0.png" | relative_url }})
-![load from kubeconfig]({{ "/assets/image_1758878566648_0.png" | relative_url }})
+![headlamp add cluster]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758878520002_0.png" | relative_url }})
+![load from kubeconfig]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758878566648_0.png" | relative_url }})
 
 - once added, you can see your cluster getting listed in `home`\
-![cluster listed in home]({{ "/assets/image_1758878628349_0.png" | relative_url }})
+![cluster listed in home]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758878628349_0.png" | relative_url }})
 
 ### verify trivy
 ```shell
@@ -80,13 +80,13 @@ the specific settings around this can be found in the trivy operator [values.yam
 ### observe on headlamp dashboard
 
 - **compliance reports**
-![compliance reports overview]({{ "/assets/image_1758879507809_0.png" | relative_url }})
-![compliance report details]({{ "/assets/image_1758879532544_0.png" | relative_url }})
-![compliance report analysis]({{ "/assets/image_1758879574806_0.png" | relative_url }})
-![compliance report results]({{ "/assets/image_1758879598485_0.png" | relative_url }})
+![compliance reports overview]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758879507809_0.png" | relative_url }})
+![compliance report details]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758879532544_0.png" | relative_url }})
+![compliance report analysis]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758879574806_0.png" | relative_url }})
+![compliance report results]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758879598485_0.png" | relative_url }})
 
 - **vulnerability reports**
-![vulnerability reports]({{ "/assets/image_1758879654311_0.png" | relative_url }})
+![vulnerability reports]({{ "/assets/images/low-cost-alternative-to-k8s-security-dashboard/image_1758879654311_0.png" | relative_url }})
 
 ### value additions
 - 0 cost k8s security posture management with addon based integration
