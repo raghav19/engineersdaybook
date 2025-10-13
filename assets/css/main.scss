@@ -156,13 +156,17 @@ body[a="dark"] .social-links {
   color: inherit;
   padding: 0.5rem 1rem;
   border-radius: 4px;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .post-nav-prev:hover,
-.post-nav-next:hover,
-.post-nav-home:hover {
+.post-nav-next:hover {
   background-color: #f0f0f0;
+}
+
+.post-nav-home:hover {
+  background-color: #000000;
+  color: #ffffff;
 }
 
 .post-nav-home {
@@ -180,9 +184,13 @@ body[a="dark"] .post-nav {
 }
 
 body[a="dark"] .post-nav-prev:hover,
-body[a="dark"] .post-nav-next:hover,
-body[a="dark"] .post-nav-home:hover {
+body[a="dark"] .post-nav-next:hover {
   background-color: #2d2d2d;
+}
+
+body[a="dark"] .post-nav-home:hover {
+  background-color: #ffffff;
+  color: #000000;
 }
 
 body[a="dark"] .post-nav-disabled {
@@ -195,9 +203,13 @@ body[a="dark"] .post-nav-disabled {
   }
 
   body[a="auto"] .post-nav-prev:hover,
-  body[a="auto"] .post-nav-next:hover,
-  body[a="auto"] .post-nav-home:hover {
+  body[a="auto"] .post-nav-next:hover {
     background-color: #2d2d2d;
+  }
+
+  body[a="auto"] .post-nav-home:hover {
+    background-color: #ffffff;
+    color: #000000;
   }
 
   body[a="auto"] .post-nav-disabled {
