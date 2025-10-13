@@ -46,6 +46,24 @@ header+p {
   line-height: 1.6;
 }
 
+/* Emoji styling - preserve natural colors */
+.emoji {
+  color: transparent !important;
+  text-shadow: 0 0 0 rgba(0, 0, 0, 1);
+  font-style: normal !important;
+  -webkit-text-fill-color: transparent;
+  filter: none !important;
+}
+
+/* Alternative emoji fix */
+span.emoji {
+  display: inline-block;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  line-height: 1;
+}
+
 /* Force emoji to use system colors, not theme colors */
 header+p::first-line {
   color: inherit;
