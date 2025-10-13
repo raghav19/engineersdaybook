@@ -104,6 +104,7 @@ postman, readyapi, robot framework
 - developed ui test automation suites with selenium webdriver
 
 - developed test suites for data integrity checks on apache kafka/spark big data platform (contract: netapp india)
+
 ---
 
 ### education
