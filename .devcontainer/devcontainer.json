@@ -1,8 +1,8 @@
 {
   "name": "engineersdaybook",
   "image": "mcr.microsoft.com/devcontainers/base:debian",
-  "workspaceFolder": "/home/code/workspace",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/code/workspace,type=bind",
+  "workspaceFolder": "/home/vscode/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/workspace,type=bind",
   "features": {
     "ghcr.io/devcontainers-extra/features/starship:1": {},
     "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
@@ -12,12 +12,12 @@
     }
   },
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/code/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/code/.gitconfig,type=bind,consistency=cached",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/code/.bash_history,type=bind,consistency=cached"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh/,target=/home/vscode/.ssh/,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/vscode/.bash_history,type=bind,consistency=cached"
   ],
   "customizations": {
-    "vscode": {
+    "vsvscode": {
       "extensions": [
         "streetsidesoftware.code-spell-checker",
         "GitHub.copilot",
