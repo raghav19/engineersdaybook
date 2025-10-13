@@ -42,7 +42,7 @@ infrastructure and devops engineer with 12 years hands-on experience in multi-cl
 
 - led design and implementation of 150k+ loc security saas platform deployment on aws/azure with a 10+ member devsecops team, scaling to 1m+ requests/day for intel trust authority using terraform/terraform modules, ansible, python
 - led design and implementation of 10k+ loc deployment with 5-member team, shipped as cnab, supporting 1m+ requests/day for intel trust authority on enterprise on-prem using kustomize, porter(cnab), python, flux cd
-- co-designed and implemented full cicd with cost savings of 40% ($200k→$120k) with advanced traffic management using istio for ephemeral sandbox environments reducing developer toil without replicating full deployments per namespace in kubernetes across actively running 35 microservices/50 developers/8hours/5days/52week span
+- co-designed and implemented ephemeral sandbox env for continuous integration with fluxCD enabling cost savings of 40%($200K->$120K) with advanced traffic management using Istio reducing developer toil without replicating full deployments per namespace in Kubernetes across actively running 35 microservices/50 developers/8hours/5days/52week span
 - designed and implemented cni networking with calico for eks & aks on aws & azure clusters as part of hybrid infrastructure setup
 - implemented 0-downtime node maintenance through automated security patching of amis(eks) and maintenance windows(aks), increasing operational efficiency by 90% across 15 clusters on aws and azure (4 hours → 25min)
 - enabled on-demand confidential compute infrastructure provisioning on azure(aks, vms) via self-service
