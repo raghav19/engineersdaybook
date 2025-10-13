@@ -18,11 +18,17 @@ infrastructure and devops engineer with 12 years hands-on experience in multi-cl
 ### skills
 
 **cloud platforms:** aws (eks, ecr, s3, lambda, cloudfront, route53, rds, msk, apigw, iam, opensearch, cloudwatch, bedrock) · azure (aks, acr, vault, confidential compute vms, openai foundry) · on-prem (rancher/k3s, openstack, vmware) · docker · kubernetes
+
 **infrastructure as code:** terraform · helm · kustomize · ansible · python · groovy · bash
+
 **cicd:** fluxcd · github actions · jenkins · gitlab · teamcity
+
 **service mesh:** istio (traffic management/security)
+
 **policy as code:** kyverno
+
 **observability:** prometheus · grafana · kiali · fluentbit · elasticsearch
+
 **qa automation:** postman · readyapi · robot framework
 
 ### current role
