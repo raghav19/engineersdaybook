@@ -9,7 +9,7 @@ categories:
 ---
 security is a layered approach and in the kubernetes world, its has so many layers to deal with. as organizations increase their security focused initiatives especially from a security posture management standpoint, we see that there are lot of off-the-shell software that are used in this space. (e.g. wiz.io). although these do provide a very broad view of your entire stack beyond k8s and do bring in lot of value to the table to observe and reconcile across your tech stack and fix issues, we also see an opportunity to achieve some of this in a lot more simpler and robust manner for security operations
 
-in this write-up, we will see how we can us `headlamp`(kubernetes sig project) as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance with ease in a dashboard
+in this write-up, we will see how we can use `headlamp`(kubernetes sig project) as a off-the-shelf security dashboard integrating with `trivy` running in cluster to generate and visualize the vulnerability/compliance reports with ease in a dashboard
 
 ### setup local machine
 > **note:** assumes you have cloud provider CLI and config setup in your local
