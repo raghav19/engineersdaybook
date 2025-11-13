@@ -1,4 +1,4 @@
-today we deploy large amount of microservices all the way till production with kubernetes as the cloud-native platform of choice for a plethora of workloads. however when it comes to providing developer feedback using the same platform for continuous integration(merging into the trunk) for microservices , it becomes a daunting task. as a general workflow, if a developer modifies just 2 microservices amongst 50+ interconnected microservices in a distributed system, some core workflow aspects that would constitute a developer feedback loop would be 
+today we deploy large amount of microservices all the way till production with kubernetes as the cloud-native platform of choice for a plethora of workloads. however when it comes to providing developer feedback using the same platform for continuous integration(merging into the trunk) for microservices , it becomes a daunting task. as a general workflow, if a developer modifies just 2 microservices amongst 50+ interconnected microservices in a distributed system, some core workflow aspects that would constitute a developer feedback loop would be
 
 - the system is able to build the affected services
 
@@ -6,13 +6,13 @@ today we deploy large amount of microservices all the way till production with k
 
 - run tests & notify
 
-in a distributed system, a pattern thats observed which does work at scale is that a dedicated environment is constantly drifted per PR and reset to baseline and this process running in a loop when there are so many PR's in the queue would lead to constant SLA breach or DevOOps in place of Devops leading to a large unfullfilled queue of pull requests thereby delaying feedback and considerably reducing developer velocity. 
+in a distributed system, a pattern thats observed which does work at scale is that a dedicated environment is constantly drifted per PR and reset to baseline and this process running in a loop when there are so many PR's in the queue would lead to constant SLA breach or DevOOps in place of Devops leading to a large unfullfilled queue of pull requests thereby delaying feedback and considerably reducing developer velocity.
 
 another pattern observed here is to replicate the microservice stack per namespace and deploy as a package in the namespace with affected and unaffected services in the mix to allow isolated testing, however this needs considerable lead time to deploy the entire chained namespace when dealing with multicloud and interacting beyond kubernetes thereby adding to considerable costs as well. imagine a large data pipeline with 100s of microservices, replication of data would need to be near real time and bring up a new environment every PR would me a never ending lead time for infrastructure setup and off the roof cloud costs
 
-so, solving this needs a novel approach that extends beyond kubernetes however keeping the cloud-native patterns intact. 
+so, solving this needs a novel approach that extends beyond kubernetes however keeping the cloud-native patterns intact.
 
-in this blog, we will see of how we can enable PR-review(preview) environments for microservices testing that can scale well in a large distributed system with `kubernetes`, `istio`,`gateway-api` and `fluxcd` for stateless services
+in this blog, we will see of how we can enable PR-review(preview) environments for microservices testing that can scale well in a large distributed system with [kubernetes](https://kubernetes.io/), [istio](https://istio.io/),[gateway-api](https://gateway-api.sigs.k8s.io/) and [fluxcd](https://fluxcd.io/) for stateless services
 
 ## the tech stack
 
@@ -25,7 +25,6 @@ in this entire work, we will use the following tech stack
 | routing                | gateway-api               |
 | gitops                 | fluxcd                    |
 | continuous integration | github-actions            |
-
 
 ## what we want our system to do
 
@@ -57,7 +56,7 @@ a typical developer experience in this architecture would look like as follows:
 
 - the manifests for deployment along with advanced routing are rendered and pushed to OCI registry
 
-- the reconcilliation manifest per PR is raised against a gitops repo 
+- the reconcilliation manifest per PR is raised against a gitops repo
 
 - the controller in the cluster looks for these changes and takes the system from actual to desired state
 
@@ -79,7 +78,7 @@ to-be-added
 
 ## tradeoffs
 
-- routing can become complex with additional layers like `authorization-policies` in `istio`
+- routing can become complex with additional layers like [authorization-policies](https://istio.io/latest/docs/reference/config/security/authorization-policy/) in `istio`
 
 ## references
 
@@ -87,6 +86,6 @@ to-be-added
 
 - additional references in this space are as below:
 
-  - https://www.uber.com/en-DE/blog/simplifying-developer-testing-through-slate/
+  - [uber-simplifying developer testing through slate](https://www.uber.com/en-DE/blog/simplifying-developer-testing-through-slate)
 
-  - https://medium.com/@signadot/sandbox-testing-the-devex-game-changer-for-microservices-f23db11250f5
+  - [signadot-sandbox testing the devex game changer for microservices](https://medium.com/@signadot/sandbox-testing-the-devex-game-changer-for-microservices-f23db11250f5)
