@@ -39,7 +39,7 @@ given we know the problem, we also want to set some clear expectations out of th
 
 ## architecture
 
-<TBA>TBA
+<TBA><TBA>TBA
 
 ## the workflow
 
@@ -58,6 +58,8 @@ a typical developer experience in this architecture would look like as follows:
 - tests are run and notification is sent with reports
 
 ## show me the code, dude!!!
+
+TBA
 
 ## value
 
