@@ -39,7 +39,7 @@ given we know the problem, we also want to set some clear expectations out of th
 
 ## architecture
 
-<TBA><TBA>TBA
+to-be-added
 
 ## the workflow
 
@@ -59,7 +59,7 @@ a typical developer experience in this architecture would look like as follows:
 
 ## show me the code, dude!!!
 
-TBA
+to-be-added
 
 ## value
 
