@@ -6,9 +6,9 @@ today we deploy large amount of microservices all the way till production with k
 
 - run tests & notify
 
-in a distributed system, a pattern thats observed which does work at scale is that a dedicated environment is constantly drifted per PR and reset to baseline and this process running in a loop when there are so many PR's in the queue would lead to constant SLA breach or DevOOps in place of Devops leading to a large unfullfilled queue of pull requests thereby delaying feedback and considerably reducing developer velocity.
+in a distributed system, a pattern thats observed which does not work at scale is that a dedicated environment is constantly drifted per PR and reset to baseline and this process running in a loop when there are so many PR's in the queue would lead to constant SLA breach or DevOOps in place of Devops leading to a large unfullfilled queue of pull requests thereby delaying feedback and considerably reducing developer velocity.
 
-another pattern observed here is to replicate the microservice stack per namespace and deploy as a package in the namespace with affected and unaffected services in the mix to allow isolated testing, however this needs considerable lead time to deploy the entire chained namespace when dealing with multicloud and interacting beyond kubernetes thereby adding to considerable costs as well. imagine a large data pipeline with 100s of microservices, replication of data would need to be near real time and bring up a new environment every PR would me a never ending lead time for infrastructure setup and off the roof cloud costs
+another pattern observed here is to replicate the microservice stack per namespace and deploy as a package in the namespace with affected and unaffected services in the mix to allow isolated testing, however this needs considerable lead time to deploy the entire chained namespace when dealing with multicloud and interacting beyond kubernetes thereby adding to considerable costs as well. imagine a large data pipeline with 100s of microservices, replication of data would need to be near real time and bring up a new environment every PR would me a never ending lead time for infrastructure setup and off the roof cloud costs.
 
 so, solving this needs a novel approach that extends beyond kubernetes however keeping the cloud-native patterns intact.
 
