@@ -46,20 +46,48 @@ header+p {
   line-height: 1.6;
 }
 
-/* Emoji styling - preserve natural colors */
-.emoji {
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  font-style: normal;
-  font-weight: normal;
-  text-decoration: none;
-  display: inline;
+/* Emoji styling - preserve natural colors and prevent filter inversion */
+.emoji,
+span.emoji,
+p .emoji,
+li .emoji,
+h1 .emoji,
+h2 .emoji,
+h3 .emoji,
+h4 .emoji,
+h5 .emoji,
+h6 .emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  text-decoration: none !important;
+  display: inline !important;
+  filter: none !important;
 }
 
 /* Prevent emoji from inheriting paragraph or link colors */
 p .emoji,
 a .emoji {
-  color: initial;
-  -webkit-text-fill-color: initial;
+  color: initial !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+/* Override dark mode filter for emojis */
+body[a="dark"] .emoji,
+body[a="dark"] span.emoji,
+body[a="dark"] p .emoji,
+body[a="dark"] li .emoji {
+  filter: invert(0) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+
+  body[a="auto"] .emoji,
+  body[a="auto"] span.emoji,
+  body[a="auto"] p .emoji,
+  body[a="auto"] li .emoji {
+    filter: invert(0) !important;
+  }
 }
 
 /* Force emoji to use system colors, not theme colors */
