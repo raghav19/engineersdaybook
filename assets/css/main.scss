@@ -986,20 +986,17 @@ article pre,
 main pre,
 div pre,
 pre {
-  background-color: #2d2d30 !important;
-  /* Much lighter gray for better contrast */
-  color: #cccccc !important;
-  padding: 20px !important;
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  padding: 1.5rem !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
-  border: 2px solid #555555 !important;
-  /* More visible border */
+  border: 1px solid #2d2d2d !important;
   margin: 1.5em 0 !important;
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1) !important;
-  /* Subtle white shadow for depth */
+  box-shadow: none !important;
 }
 
 body code,
@@ -1008,16 +1005,38 @@ article code,
 main code,
 div code,
 code {
-  background-color: #3c3c3c !important;
-  /* Darker gray for better contrast against black */
-  color: #e0e0e0 !important;
-  /* Light gray text */
-  padding: 0.3em 0.5em !important;
-  border-radius: 4px !important;
-  font-size: 90% !important;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
-  border: 1px solid #666666 !important;
-  /* Subtle border for definition */
+  background-color: #f5f5f5 !important;
+  color: #333 !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 3px !important;
+  font-size: 85% !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
+  border: 1px solid #e0e0e0 !important;
+  font-weight: normal !important;
+}
+
+/* Dark mode for inline code */
+body[a="dark"] code,
+body[a="dark"] article code,
+body[a="dark"] .post code,
+body[a="dark"] main code,
+body[a="dark"] div code {
+  background-color: #2d2d2d !important;
+  color: #d4d4d4 !important;
+  border-color: #3d3d3d !important;
+}
+
+@media (prefers-color-scheme: dark) {
+
+  body[a="auto"] code,
+  body[a="auto"] article code,
+  body[a="auto"] .post code,
+  body[a="auto"] main code,
+  body[a="auto"] div code {
+    background-color: #2d2d2d !important;
+    color: #d4d4d4 !important;
+    border-color: #3d3d3d !important;
+  }
 }
 
 /* Code inside pre should be transparent */
@@ -1042,14 +1061,13 @@ article .highlight,
 .post .highlight,
 main .highlight,
 div .highlight {
-  background-color: #2d2d30 !important;
-  /* Match the new pre background */
-  color: #cccccc !important;
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   margin: 1.5em 0 !important;
-  border: 2px solid #555555 !important;
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid #2d2d2d !important;
+  box-shadow: none !important;
 }
 
 .highlight pre,
