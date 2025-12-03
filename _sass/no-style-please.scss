@@ -114,16 +114,19 @@ td {
   padding: 0.4rem;
 }
 
+// Disable default code styling - will be overridden in main.scss
 code {
-  color: white;
-  background: black;
+  // Styling moved to main.scss
+}
+
+div.highlighter-rouge,
+.highlight,
+figure.highlight {
+  // Container styling moved to main.scss
 }
 
 div.highlighter-rouge code {
-  display: block;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  padding: 1rem;
+  // Styling moved to main.scss
 }
 
 blockquote {
