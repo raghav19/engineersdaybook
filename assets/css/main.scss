@@ -1,5 +1,5 @@
 --- 
---- 
+---
 @import "no-style-please";
 
 /* Prevent horizontal scrolling on all devices */
@@ -657,6 +657,14 @@ pre {
   box-shadow: none !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  text-indent: 0 !important;
+}
+
+/* Reset indentation for code blocks */
+pre code,
+.highlight pre code,
+div.highlighter-rouge pre code {
+  text-indent: 0 !important;
 }
 
 /* Code block styling - pre elements inside syntax highlighting containers have transparent background */
