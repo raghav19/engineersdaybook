@@ -1,5 +1,5 @@
 --- 
----
+--- 
 @import "no-style-please";
 
 /* Prevent horizontal scrolling on all devices */
@@ -776,6 +776,9 @@ div.highlighter-rouge span,
 div.highlighter-rouge * {
   background-color: transparent !important;
   background: transparent !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  text-indent: 0 !important;
 }
 
 /* Make sure code elements inside highlights also have transparent background */
