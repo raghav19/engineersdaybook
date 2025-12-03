@@ -70,8 +70,9 @@ asdf set python 3.12
 ```
 
 some of the experience aspects that it solved for me were:
-✅ fast & reproducible with `.tool-versions`
-✅ all my tooling is always there for me for any version that i need across different repos
+
+- ✅ fast & reproducible with `.tool-versions`
+- ✅ all my tooling is always there for me for any version that i need across different repos
 
 ### context based env sourcing
 
@@ -124,9 +125,10 @@ export ARTIFACTORY_PASSWORD=ENC[AES256_GCM,data:Mpk5Rk0GZviaH//ltCy+dHirytxuR5Fi
 ```
 
 my `.envrc` sourcing the `.envsecrets.json` was as follows. this allowed me to check in my variables into `git` along with `secrets`(encrypted) allowing me to solve for
-✅ all my `variables` are version controlled including `secrets`
-✅ i need not duplicate my vars or tooling across projects
-✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner which is extensible all the way till `CI/CD`
+
+- ✅ all my `variables` are version controlled including `secrets`
+- ✅ i need not duplicate my vars or tooling across projects
+- ✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner which is extensible all the way till `CI/CD`
 
 my directory structure with `direnv` for different environments looked as below
 
@@ -153,7 +155,8 @@ with this it pretty much solved everything that i needed
 ### devcontainers
 
 i also experimented with [devcontainers](https://containers.dev/) for my needs. it provided very clean separation and isolation for each project and everything was contextual inside the container specific to that project but it solved only one of things for me
-✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner which is extensible all the way till `CI/CD`
+
+- ✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner which is extensible all the way till `CI/CD`
 
 
 ### my combined stack
@@ -640,19 +643,23 @@ what a lovely approach for managing configuration at scale 💖
 for now, yes. i first got a grasp of configuration hierarchies through the `ansible` inventory patterns that can be used for large infrastructure repo and `direnv` gave me that experience for local environment, however with `mise` it has raised the bar considerably for me packaging all the goodness across the tools i experienced in a single place
 
 with this i can now, have a local env that:
-✅ can be setup fast, is reproducible and isolated
-✅ all my `variables` are version controlled including `secrets`
-✅ all my tooling is always there for me for any version that i need across different repos that i may use
-✅ i need not duplicate my vars or tooling across projects -> just inherit/override as needed
-✅ i have flexibility to run specific tasks for housekeeping or workflows around my project
-✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner
+
+- ✅ can be setup fast, is reproducible and isolated
+- ✅ all my `variables` are version controlled including `secrets`
+- ✅ all my tooling is always there for me for any version that i need across different repos that i may use
+- ✅ i need not duplicate my vars or tooling across projects -> just inherit/override as needed
+- ✅ i have flexibility to run specific tasks for housekeeping or workflows around my project
+- ✅ i have the flexibility to switch between `dev`, `pre` and `prod` in a very seamless manner
 
 other value adds that i see are:
-✅ mise tasks can be a nice addon to gitHub-actions tasks to avoid complex logic inside gh-actions
+
+- ✅ mise tasks can be a nice addon to gitHub-actions tasks to avoid complex logic inside gh-actions
 
 can this be extended to `CI/CD`? absolutely yes! and it considerably simplifies the `Dockerfile` as well allowing consistent experience and code similar to how you setup your local env
 
 overall, i am all in with [mise](https://mise.jdx.dev/) for my day to day use 
+
+i am thankful to the great work done by [jdx](https://github.com/jdx) with [mise](https://mise.jdx.dev/)
 
 ✌️
 
