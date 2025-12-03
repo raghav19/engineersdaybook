@@ -25,8 +25,9 @@
   }
 
   function addCopyButton(containerEl) {
-    // Check if button already exists using data attribute
-    if (containerEl.getAttribute('data-copy-button-added')) {
+    // Check if button already exists - check both data attribute and actual button presence
+    if (containerEl.getAttribute('data-copy-button-added') || 
+        containerEl.querySelector('.copy-code-button')) {
       return;
     }
     containerEl.setAttribute('data-copy-button-added', 'true');

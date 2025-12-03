@@ -2,9 +2,7 @@
 <html lang="{{ page.lang | default: " en" }}">
 {%- include head.html -%}
 
-<body a="{{ site.theme_config.appearance | default: " auto" }}">
-  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">⚙️</button>
-
+<body a="dark">
   <main class="page-content" aria-label="Content">
     <div class="w">
       {{ content }}
@@ -20,8 +18,6 @@
   <script type="text/javascript" src="{{ site.baseurl }}/assets/js/{{ js_file }}.js"></script>
   {% endfor %}
   {% endif %}
-
-  <script src="{{ '/assets/js/theme-switcher.js' | relative_url }}"></script>
 </body>
 
 </html>

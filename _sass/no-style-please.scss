@@ -1,4 +1,4 @@
-// -------------- THEME SWITCHER -------------- //
+// -------------- DARK MODE (ALWAYS ON) -------------- //
 @mixin dark-appearance {
   filter: invert(1);
 
@@ -21,13 +21,6 @@
 
 body[a="dark"] {
   @include dark-appearance;
-}
-
-
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] {
-    @include dark-appearance;
-  }
 }
 
 // -------------------------------------------- //

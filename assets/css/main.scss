@@ -80,16 +80,6 @@ body[a="dark"] li .emoji {
   filter: invert(0) !important;
 }
 
-@media (prefers-color-scheme: dark) {
-
-  body[a="auto"] .emoji,
-  body[a="auto"] span.emoji,
-  body[a="auto"] p .emoji,
-  body[a="auto"] li .emoji {
-    filter: invert(0) !important;
-  }
-}
-
 /* Force emoji to use system colors, not theme colors */
 header+p::first-line {
   color: inherit;
@@ -155,38 +145,9 @@ body[a="dark"] .social-icon {
   stroke: #000000 !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .social-links a {
-    background-color: #e8e8e8;
-  }
-
-  body[a="auto"] .social-links a:hover {
-    background-color: #d0d0d0;
-  }
-
-  body[a="auto"] .social-icon {
-    stroke: #000000 !important;
-  }
-}
-
-/* Light mode explicit */
-body[a="light"] .social-links a {
-  background-color: #f0f0f0;
-}
-
-body[a="light"] .social-icon {
-  stroke: #000000 !important;
-}
-
 /* Dark mode border color */
 body[a="dark"] .social-links {
   border-top-color: #555;
-}
-
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .social-links {
-    border-top-color: #555;
-  }
 }
 
 /* Mobile responsive social links */
@@ -299,16 +260,6 @@ body[a="dark"] .related-post-date {
   color: #999;
 }
 
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .related-posts {
-    border-top-color: #555;
-  }
-
-  body[a="auto"] .related-post-date {
-    color: #999;
-  }
-}
-
 /* Mobile related posts */
 @media (max-width: 768px) {
   .related-posts {
@@ -381,26 +332,6 @@ body[a="dark"] .post-nav-home:hover {
 
 body[a="dark"] .post-nav-disabled {
   color: #666;
-}
-
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .post-nav {
-    border-top-color: #555;
-  }
-
-  body[a="auto"] .post-nav-prev:hover,
-  body[a="auto"] .post-nav-next:hover {
-    background-color: #2d2d2d;
-  }
-
-  body[a="auto"] .post-nav-home:hover {
-    background-color: #ffffff;
-    color: #000000;
-  }
-
-  body[a="auto"] .post-nav-disabled {
-    color: #666;
-  }
 }
 
 /* Mobile post navigation */
@@ -508,22 +439,6 @@ body[a="dark"] .see-all-posts {
   border-top: 1px solid #444 !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] .category-list a {
-    background-color: #2d2d2d !important;
-    border: 1px solid #555 !important;
-    color: #e0e0e0 !important;
-  }
-
-  body[a="auto"] .category-list a:hover {
-    background-color: #3d3d3d !important;
-  }
-
-  body[a="auto"] .see-all-posts {
-    border-top: 1px solid #444 !important;
-  }
-}
-
 /* Heading styles - underline all headings except title (h1) */
 h2,
 h3,
@@ -542,17 +457,6 @@ body[a="dark"] h4,
 body[a="dark"] h5,
 body[a="dark"] h6 {
   border-bottom: 1px solid #555 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-
-  body[a="auto"] h2,
-  body[a="auto"] h3,
-  body[a="auto"] h4,
-  body[a="auto"] h5,
-  body[a="auto"] h6 {
-    border-bottom: 1px solid #555 !important;
-  }
 }
 
 /* Image alignment - align with text instead of centering */
@@ -765,21 +669,6 @@ body[a="dark"] code {
   border-color: #3d3d3d !important;
 }
 
-@media (prefers-color-scheme: dark) {
-
-  body[a="auto"] body code,
-  body[a="auto"] p code,
-  body[a="auto"] li code,
-  body[a="auto"] td code,
-  body[a="auto"] th code,
-  body[a="auto"] div code,
-  body[a="auto"] code {
-    background-color: #2d2d2d !important;
-    color: #d4d4d4 !important;
-    border-color: #3d3d3d !important;
-  }
-}
-
 /* Code inside pre should be transparent */
 pre code,
 div.highlighter-rouge pre code,
@@ -915,19 +804,6 @@ body[a="dark"] div code {
   background-color: #2d2d2d !important;
   color: #d4d4d4 !important;
   border-color: #3d3d3d !important;
-}
-
-@media (prefers-color-scheme: dark) {
-
-  body[a="auto"] code,
-  body[a="auto"] article code,
-  body[a="auto"] .post code,
-  body[a="auto"] main code,
-  body[a="auto"] div code {
-    background-color: #2d2d2d !important;
-    color: #d4d4d4 !important;
-    border-color: #3d3d3d !important;
-  }
 }
 
 /* Code inside pre should be transparent */
@@ -1244,12 +1120,6 @@ body[a="dark"] #toc-title {
   border-color: #555;
 }
 
-@media (prefers-color-scheme: dark) {
-  body[a="auto"] #toc-title {
-    border-color: #555;
-  }
-}
-
 /* Responsive: Show TOC on mobile in a different layout */
 @media (max-width: 1024px) {
   .post-container {
@@ -1288,13 +1158,6 @@ body[a="dark"] #toc-title {
   }
 }
 
-/* Dark mode for mobile TOC */
-@media (max-width: 1024px) and (prefers-color-scheme: dark) {
-  body[a="auto"] .toc {
-    border-bottom-color: #555;
-  }
-}
-
 body[a="dark"] .toc {
   border-bottom-color: #555 !important;
 }
@@ -1320,18 +1183,6 @@ body[a="dark"] h5:target,
 body[a="dark"] h6:target {
   background-color: #3c3c3c !important;
   color: #e0e0e0 !important;
-}
-
-@media (prefers-color-scheme: dark) {
-
-  body[a="auto"] h2:target,
-  body[a="auto"] h3:target,
-  body[a="auto"] h4:target,
-  body[a="auto"] h5:target,
-  body[a="auto"] h6:target {
-    background-color: #3c3c3c !important;
-    color: #e0e0e0 !important;
-  }
 }
 
 /* Mobile-friendly enhancements */
@@ -1525,50 +1376,4 @@ main figure.highlight *,
 .post figure.highlight * {
   background-color: transparent !important;
   background: transparent !important;
-}
-
-/* Theme Toggle Button */
-.theme-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--text);
-  border-radius: 50%;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  padding: 0;
-  line-height: 1;
-}
-
-.theme-toggle:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.theme-toggle:active {
-  transform: scale(0.95);
-}
-
-/* Ensure emoji isn't affected by dark mode filters */
-.theme-toggle {
-  filter: none !important;
-}
-
-body[a="dark"] .theme-toggle {
-  border-color: #fff;
-  background: #000;
-}
-
-body[a="light"] .theme-toggle {
-  border-color: #000;
-  background: #fff;
 }
