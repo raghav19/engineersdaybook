@@ -655,22 +655,19 @@ main.page-content {
   }
 }
 
-/* Solarized Code block styling - Clean and elegant */
+/* Code block styling - subtle gray backgrounds */
 pre,
 div.highlighter-rouge pre,
 .highlight pre {
-  background-color: #002b36 !important;
-  /* Solarized dark base03 */
-  color: #839496 !important;
-  /* Solarized dark base0 */
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
   padding: 1.5rem !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
-  border: 1px solid #073642 !important;
-  /* Solarized dark base02 */
+  border: 1px solid #2d2d2d !important;
   margin: 1.5rem 0 !important;
   box-shadow: none !important;
   position: relative !important;
@@ -688,18 +685,18 @@ code {
   font-weight: normal !important;
 }
 
-/* Dark mode for inline code */
+/* Dark mode for inline code - subtle gray */
 body[a="dark"] code {
-  background-color: #2a2a2a !important;
-  color: #e0e0e0 !important;
-  border-color: #404040 !important;
+  background-color: #2d2d2d !important;
+  color: #d4d4d4 !important;
+  border-color: #3d3d3d !important;
 }
 
 @media (prefers-color-scheme: dark) {
   body[a="auto"] code {
-    background-color: #2a2a2a !important;
-    color: #e0e0e0 !important;
-    border-color: #404040 !important;
+    background-color: #2d2d2d !important;
+    color: #d4d4d4 !important;
+    border-color: #3d3d3d !important;
   }
 }
 
@@ -1572,10 +1569,10 @@ body[a="dark"] h6:target {
   position: absolute;
   top: 0.5rem;
   left: 0.5rem;
-  background-color: rgba(0, 43, 54, 0.8);
-  border: 1px solid #073642;
+  background-color: rgba(30, 30, 30, 0.9);
+  border: 1px solid #2d2d2d;
   border-radius: 4px;
-  color: #839496;
+  color: #b0b0b0;
   cursor: pointer;
   padding: 0.4rem 0.6rem;
   font-size: 12px;
@@ -1587,9 +1584,9 @@ body[a="dark"] h6:target {
 }
 
 .collapse-code-button:hover {
-  background-color: rgba(7, 54, 66, 0.9);
-  color: #93a1a1;
-  border-color: #586e75;
+  background-color: rgba(45, 45, 45, 0.95);
+  color: #d4d4d4;
+  border-color: #3d3d3d;
 }
 
 .collapse-code-button svg {
@@ -1601,10 +1598,10 @@ body[a="dark"] h6:target {
   position: absolute;
   top: 0.5rem;
   left: 3rem;
-  background-color: rgba(0, 43, 54, 0.8);
-  border: 1px solid #073642;
+  background-color: rgba(30, 30, 30, 0.9);
+  border: 1px solid #2d2d2d;
   border-radius: 4px;
-  color: #586e75;
+  color: #888;
   padding: 0.4rem 0.6rem;
   font-size: 11px;
   z-index: 10;
@@ -1639,34 +1636,36 @@ pre.collapsed::after {
   left: 0;
   right: 0;
   height: 4rem;
-  background: linear-gradient(to bottom, transparent, #002b36);
+  background: linear-gradient(to bottom, transparent, #1e1e1e);
   pointer-events: none;
 }
 
 /* Dark mode adjustments */
 body[a="dark"] .collapse-code-button,
 body[a="dark"] .code-line-count {
-  background-color: rgba(30, 30, 30, 0.8);
-  border-color: #3c3c3c;
-  color: #e0e0e0;
+  background-color: rgba(30, 30, 30, 0.9);
+  border-color: #2d2d2d;
+  color: #b0b0b0;
 }
 
 body[a="dark"] .collapse-code-button:hover {
-  background-color: rgba(50, 50, 50, 0.9);
-  border-color: #666;
+  background-color: rgba(45, 45, 45, 0.95);
+  border-color: #3d3d3d;
+  color: #d4d4d4;
 }
 
 @media (prefers-color-scheme: dark) {
 
   body[a="auto"] .collapse-code-button,
   body[a="auto"] .code-line-count {
-    background-color: rgba(30, 30, 30, 0.8);
-    border-color: #3c3c3c;
-    color: #e0e0e0;
+    background-color: rgba(30, 30, 30, 0.9);
+    border-color: #2d2d2d;
+    color: #b0b0b0;
   }
 
   body[a="auto"] .collapse-code-button:hover {
-    background-color: rgba(50, 50, 50, 0.9);
-    border-color: #666;
+    background-color: rgba(45, 45, 45, 0.95);
+    border-color: #3d3d3d;
+    color: #d4d4d4;
   }
 }
