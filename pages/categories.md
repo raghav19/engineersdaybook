@@ -28,7 +28,7 @@ Browse all posts organized by their categories:
   {% endfor %}
 </ul>
 
-[View {{ category_name }} archive](archives/{{ category_name }}-archive.html)
+[View {{ category_name }} archive](archives/{{ category_name | slugify }}-archive.html)
 
 {% endfor %}
 
