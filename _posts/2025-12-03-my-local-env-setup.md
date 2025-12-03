@@ -182,12 +182,11 @@ it also allows me to enable further nesting into directories if needed and load 
 ### asdf and direnv
 
 although, it was pretty utilitarian with `asdf` and `direnv` , i missed the following aspects
+
 - ✖️ *no `make` like experience* -> ability to run custom `tasks` around my project
 - ✖️ *tool dependencies* -> cases where a certain tool like `sops` is needed before decryption can work due to cyclic dependency
 - ✖️ *additional package needs* -> `asdf` python builds are from source, needing lot of additional dev packages on the system which needs separate cleanup, this inside a container also adds bloat
-
 - ✖️ `direnv` needs explicit `source_up` directive to know what files to source from parent
-
 - ✖️ *no binary installs via gh releases* -> doesn't support `github` releases binary URLs, needed in case plugin is not available
 
 ### devcontainers

@@ -588,23 +588,21 @@ li blockquote p {
   text-align: left !important;
 }
 
-/* Italic text in list items (notes) - simple italic with indentation */
+/* Italic text in list items (notes) - keep inline by default */
 li em {
-  display: block !important;
-  margin: 0.3rem 0 0.5rem 0 !important;
+  display: inline !important;
+  margin: 0 !important;
   font-style: italic !important;
   color: inherit !important;
-  text-align: left !important;
 }
 
-/* Bold italic text (like **note:**) - simple italic with indentation */
+/* Bold italic text (like **note:**) - keep inline by default */
 li strong em,
 li em strong {
-  display: block !important;
-  margin: 0.3rem 0 0.5rem 0 !important;
+  display: inline !important;
+  margin: 0 !important;
   font-style: italic !important;
   color: inherit !important;
-  text-align: left !important;
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
@@ -685,20 +683,28 @@ pre,
 div.highlighter-rouge pre,
 .highlight pre,
 figure.highlight pre {
-  background-color: #1e1e1e !important;
+  background-color: transparent !important;
   color: #d4d4d4 !important;
   padding: 1.5rem !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
-  border: 1px solid #2d2d2d !important;
-  margin: 1.5rem 0 !important;
+  border: none !important;
+  margin: 0 !important;
   box-shadow: none !important;
   position: relative !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* Standalone pre elements (not in highlight containers) */
+pre:not(.highlight pre):not(div.highlighter-rouge pre):not(figure.highlight pre) {
+  background-color: #1e1e1e !important;
+  border: 1px solid #2d2d2d !important;
+  border-radius: 8px !important;
+  margin: 1.5rem 0 !important;
 }
 
 /* Inline code styling - override theme defaults */
@@ -771,15 +777,16 @@ div.highlighter-rouge code {
   padding: 0 !important;
 }
 
-/* Syntax highlighting containers - remove styling to prevent double blocks */
+/* Syntax highlighting containers - ensure they have the gray background */
 .highlight,
-div.highlighter-rouge {
-  background: none !important;
-  color: inherit !important;
-  border-radius: 0 !important;
+div.highlighter-rouge,
+figure.highlight {
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  border-radius: 8px !important;
   overflow: visible !important;
-  margin: 0 !important;
-  border: none !important;
+  margin: 1.5rem 0 !important;
+  border: 1px solid #2d2d2d !important;
   box-shadow: none !important;
   padding: 0 !important;
   max-width: 100% !important;
