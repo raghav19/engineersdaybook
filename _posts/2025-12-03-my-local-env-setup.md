@@ -182,22 +182,22 @@ it also allows me to enable further nesting into directories if needed and load 
 ### asdf and direnv
 
 although, it was pretty utilitarian with `asdf` and `direnv` , i missed the following aspects
-✖️ *no `make` like experience* -> ability to run custom `tasks` around my project
-✖️ *tool dependencies* -> cases where a certain tool like `sops` is needed before decryption can work due to cyclic dependency
-✖️ *additional package needs* -> `asdf` python builds are from source, needing lot of additional dev packages on the system which needs separate cleanup, this inside a container also adds bloat
+- ✖️ *no `make` like experience* -> ability to run custom `tasks` around my project
+- ✖️ *tool dependencies* -> cases where a certain tool like `sops` is needed before decryption can work due to cyclic dependency
+- ✖️ *additional package needs* -> `asdf` python builds are from source, needing lot of additional dev packages on the system which needs separate cleanup, this inside a container also adds bloat
 
-✖️ `direnv` needs explicit `source_up` directive to know what files to source from parent
+- ✖️ `direnv` needs explicit `source_up` directive to know what files to source from parent
 
-✖️ *no binary installs via gh releases* -> doesn't support `github` releases binary URLs, needed in case plugin is not available
+- ✖️ *no binary installs via gh releases* -> doesn't support `github` releases binary URLs, needed in case plugin is not available
 
 ### devcontainers
 
 devcontainers are indeed very promising in this regard allowing you to use the same container for `development` and `CI/CD` workflows, however
-✖️ *bloated `CI/CD` image* -> devcontainer from devex standpoint needs lot of additional tools unlike `CI/CD` where this would make the image size large
-✖️ *pull consumes time* -> pulls take considerable time especially when you are using devcontainer with lot of tools, like in my case
-✖️ *rebuild hell* -> happens for small updates in the devcontainer `Dockerfile` or `devcontainer.json` , slowing the overall speed
-✖️ *config hierarchies not supported* -> env variables for each project level devcontainer needs to be defined though they might be common
-✖️ *needs regular pruning locally* -> at times i have run out of disk space in my laptop 
+- ✖️ *bloated `CI/CD` image* -> devcontainer from devex standpoint needs lot of additional tools unlike `CI/CD` where this would make the image size large
+- ✖️ *pull consumes time* -> pulls take considerable time especially when you are using devcontainer with lot of tools, like in my case
+- ✖️ *rebuild hell* -> happens for small updates in the devcontainer `Dockerfile` or `devcontainer.json` , slowing the overall speed
+- ✖️ *config hierarchies not supported* -> env variables for each project level devcontainer needs to be defined though they might be common
+- ✖️ *needs regular pruning locally* -> at times i have run out of disk space in my laptop 
 
 
 ## where i am now
