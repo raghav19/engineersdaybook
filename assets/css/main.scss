@@ -241,7 +241,6 @@ body[a="dark"] .social-links {
   margin-top: 3rem;
   padding-top: 2rem;
   border-top: 1px solid #ddd;
-  text-align: center;
 }
 
 .related-posts h3 {
@@ -256,8 +255,6 @@ body[a="dark"] .social-links {
   list-style: none;
   padding-left: 0;
   margin: 0;
-  display: inline-block;
-  text-align: left;
 }
 
 .related-posts li {
@@ -275,7 +272,7 @@ body[a="dark"] .social-links {
 }
 
 .related-posts a {
-  text-decoration: none;
+  text-decoration: underline;
   color: inherit;
 }
 
