@@ -580,7 +580,7 @@ auto_install = false
 trusted_config_paths = ['~/projects/']
 ```
 
-```json
+```text
 // .envsecrets.json
 {
   "AWS_SECRET_ACCESS_KEY": "ENC[AES256_GCM,data:LJbRr0KvaDYDkOYzxExSg+HPjnmUZQiiaQnN3HSrhBs09BOkcxYmBA==,iv:CHy1d4GYpnzzD/Kzx5dnFUbtS4ntmso6YcvRGitPA/M=,tag:8baq9dYejZGOlUFxESf83A==,type:str]",
