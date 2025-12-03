@@ -606,6 +606,9 @@ li em strong {
 }
 
 /* TARGET THE CORRECT THEME SELECTORS - Dynamic responsive layout */
+main.page-content .w,
+main .w,
+div.w,
 .w {
   max-width: none !important;
   width: 98% !important;
@@ -621,6 +624,10 @@ main.page-content {
 
 /* Responsive padding and width based on screen size */
 @media (min-width: 480px) {
+
+  main.page-content .w,
+  main .w,
+  div.w,
   .w {
     width: 97% !important;
     padding: 1.5rem !important;
@@ -628,6 +635,10 @@ main.page-content {
 }
 
 @media (min-width: 768px) {
+
+  main.page-content .w,
+  main .w,
+  div.w,
   .w {
     width: 96% !important;
     padding: 2rem !important;
@@ -635,6 +646,10 @@ main.page-content {
 }
 
 @media (min-width: 1024px) {
+
+  main.page-content .w,
+  main .w,
+  div.w,
   .w {
     width: 95% !important;
     padding: 2.5rem !important;
@@ -642,6 +657,10 @@ main.page-content {
 }
 
 @media (min-width: 1440px) {
+
+  main.page-content .w,
+  main .w,
+  div.w,
   .w {
     width: 94% !important;
     padding: 3rem !important;
@@ -649,6 +668,10 @@ main.page-content {
 }
 
 @media (min-width: 1920px) {
+
+  main.page-content .w,
+  main .w,
+  div.w,
   .w {
     width: 93% !important;
     padding: 3.5rem !important;
