@@ -1,5 +1,5 @@
----
----
+--- 
+--- 
 @import "no-style-please";
 
 /* Prevent horizontal scrolling on all devices */
@@ -714,7 +714,7 @@ pre {
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  font-size: 14px !important;
+  font-size: 16px !important;
   line-height: 1.5 !important;
   border: 1px solid #2d2d2d !important;
   margin: 1.5rem 0 !important;
@@ -870,256 +870,6 @@ figure.highlight:hover .copy-code-button {
   opacity: 0.7;
 }
 
-/* Solarized syntax highlighting colors */
-.highlight .c,
-/* Comment */
-.highlight .cm,
-/* Comment.Multiline */
-.highlight .cp,
-/* Comment.Preproc */
-.highlight .c1,
-/* Comment.Single */
-.highlight .cs
-
-/* Comment.Special */
-  {
-  color: #586e75 !important;
-  /* Solarized dark base01 */
-  font-style: italic !important;
-}
-
-.highlight .k,
-/* Keyword */
-.highlight .kc,
-/* Keyword.Constant */
-.highlight .kd,
-/* Keyword.Declaration */
-.highlight .kn,
-/* Keyword.Namespace */
-.highlight .kp,
-/* Keyword.Pseudo */
-.highlight .kr,
-/* Keyword.Reserved */
-.highlight .kt
-
-/* Keyword.Type */
-  {
-  color: #859900 !important;
-  /* Solarized green */
-  font-weight: bold !important;
-}
-
-.highlight .s,
-/* String */
-.highlight .sb,
-/* String.Backtick */
-.highlight .sc,
-/* String.Char */
-.highlight .sd,
-/* String.Doc */
-.highlight .s2,
-/* String.Double */
-.highlight .se,
-/* String.Escape */
-.highlight .sh,
-/* String.Heredoc */
-.highlight .si,
-/* String.Interpol */
-.highlight .sx,
-/* String.Other */
-.highlight .sr,
-/* String.Regex */
-.highlight .s1
-
-/* String.Single */
-  {
-  color: #2aa198 !important;
-  /* Solarized cyan */
-}
-
-.highlight .m,
-/* Number */
-.highlight .mf,
-/* Number.Float */
-.highlight .mh,
-/* Number.Hex */
-.highlight .mi,
-/* Number.Integer */
-.highlight .mo
-
-/* Number.Oct */
-  {
-  color: #d33682 !important;
-  /* Solarized magenta */
-}
-
-.highlight .n,
-/* Name */
-.highlight .na,
-/* Name.Attribute */
-.highlight .nb,
-/* Name.Builtin */
-.highlight .nc,
-/* Name.Class */
-.highlight .nd,
-/* Name.Decorator */
-.highlight .ne,
-/* Name.Exception */
-.highlight .nf,
-/* Name.Function */
-.highlight .ni,
-/* Name.Entity */
-.highlight .nl,
-/* Name.Label */
-.highlight .nn,
-/* Name.Namespace */
-.highlight .nt,
-/* Name.Tag */
-.highlight .nv,
-/* Name.Variable */
-.highlight .nx
-
-/* Name.Other */
-  {
-  color: #268bd2 !important;
-  /* Solarized blue */
-}
-
-.highlight .o,
-/* Operator */
-.highlight .ow
-
-/* Operator.Word */
-  {
-  color: #859900 !important;
-  /* Solarized green */
-}
-
-/* Additional syntax highlighting rules */
-/* Keyword.Declaration */
-.highlight .kn,
-/* Keyword.Namespace */
-.highlight .kp,
-/* Keyword.Pseudo */
-.highlight .kr,
-/* Keyword.Reserved */
-.highlight .kt
-
-/* Keyword.Type */
-  {
-  color: #569cd6 !important;
-  /* Blue keywords */
-  font-weight: bold !important;
-}
-
-.highlight .s,
-/* String */
-.highlight .sb,
-/* String.Backtick */
-.highlight .sc,
-/* String.Char */
-.highlight .sd,
-/* String.Doc */
-.highlight .s2,
-/* String.Double */
-.highlight .se,
-/* String.Escape */
-.highlight .sh,
-/* String.Heredoc */
-.highlight .si,
-/* String.Interpol */
-.highlight .sx,
-/* String.Other */
-.highlight .sr,
-/* String.Regex */
-.highlight .s1
-
-/* String.Single */
-  {
-  color: #ce9178 !important;
-  /* Orange strings */
-}
-
-.highlight .m,
-/* Number */
-.highlight .mf,
-/* Number.Float */
-.highlight .mh,
-/* Number.Hex */
-.highlight .mi,
-/* Number.Integer */
-.highlight .mo
-
-/* Number.Oct */
-  {
-  color: #b5cea8 !important;
-  /* Light green numbers */
-}
-
-.highlight .n,
-/* Name */
-.highlight .na,
-/* Name.Attribute */
-.highlight .nb,
-/* Name.Builtin */
-.highlight .nc,
-/* Name.Class */
-.highlight .no,
-/* Name.Constant */
-.highlight .nd,
-/* Name.Decorator */
-.highlight .ni,
-/* Name.Entity */
-.highlight .ne,
-/* Name.Exception */
-.highlight .nf,
-/* Name.Function */
-.highlight .nl,
-/* Name.Label */
-.highlight .nn,
-/* Name.Namespace */
-.highlight .nx,
-/* Name.Other */
-.highlight .py,
-/* Name.Property */
-.highlight .nt,
-/* Name.Tag */
-.highlight .nv
-
-/* Name.Variable */
-  {
-  color: #d4d4d4 !important;
-  /* Default light gray */
-}
-
-.highlight .o,
-/* Operator */
-.highlight .ow
-
-/* Operator.Word */
-  {
-  color: #d4d4d4 !important;
-  /* Light gray operators */
-}
-
-/* Special highlighting for YAML and shell commands */
-.highlight .l-Scalar-Plain {
-  color: #ce9178 !important;
-  /* Orange for YAML values */
-}
-
-.highlight .gp {
-  /* Generic.Prompt */
-  color: #6a9955 !important;
-  /* Green for shell prompts */
-}
-
-.highlight .go {
-  /* Generic.Output */
-  color: #d4d4d4 !important;
-  /* Default for output */
-}
-
 /* IMPROVED Code block styling with better contrast against black background */
 body pre,
 article pre,
@@ -1133,7 +883,7 @@ pre {
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  font-size: 14px !important;
+  font-size: 16px !important;
   line-height: 1.5 !important;
   border: 1px solid #2d2d2d !important;
   margin: 1.5em 0 !important;
@@ -1775,11 +1525,6 @@ main figure.highlight *,
 .post figure.highlight * {
   background-color: transparent !important;
   background: transparent !important;
-}
-
-/* Except for copy button */
-.copy-code-button {
-  background-color: rgba(30, 30, 30, 0.9) !important;
 }
 
 /* Theme Toggle Button */
