@@ -820,6 +820,14 @@ figure.highlight {
   max-width: 100% !important;
 }
 
+/* Ensure all syntax highlighting spans have no background */
+.highlight span,
+div.highlighter-rouge span,
+.highlight code,
+div.highlighter-rouge code {
+  background-color: transparent !important;
+}
+
 /* Solarized syntax highlighting colors */
 .highlight .c,
 /* Comment */
@@ -1151,7 +1159,12 @@ body .highlight,
 article .highlight,
 .post .highlight,
 main .highlight,
-div .highlight {
+div .highlight,
+div.highlighter-rouge,
+body div.highlighter-rouge,
+article div.highlighter-rouge,
+.post div.highlighter-rouge,
+main div.highlighter-rouge {
   background-color: #1e1e1e !important;
   color: #d4d4d4 !important;
   border-radius: 8px !important;
@@ -1159,6 +1172,7 @@ div .highlight {
   margin: 1.5em 0 !important;
   border: 1px solid #2d2d2d !important;
   box-shadow: none !important;
+  padding: 0 !important;
 }
 
 .highlight pre,
@@ -1166,11 +1180,16 @@ body .highlight pre,
 article .highlight pre,
 .post .highlight pre,
 main .highlight pre,
-div .highlight pre {
+div .highlight pre,
+div.highlighter-rouge pre,
+body div.highlighter-rouge pre,
+article div.highlighter-rouge pre,
+.post div.highlighter-rouge pre,
+main div.highlighter-rouge pre {
   margin: 0 !important;
   background-color: transparent !important;
   border: none !important;
-  padding: 16px !important;
+  padding: 1.5rem !important;
 }
 
 /* Language-specific syntax highlighting with highest specificity */
