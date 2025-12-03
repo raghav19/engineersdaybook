@@ -3,8 +3,8 @@ layout: post
 title: "my local env setup"
 date: 2025-12-03
 categories: 
-  - platform engineering
-  - configuration management
+  - platform-engineering
+  - configuration-management
   - devsecops
 ---
 today, i would like delve into my local environment setup and my experiments/approaches/dabbling with the same in this write up

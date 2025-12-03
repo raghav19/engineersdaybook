@@ -1,5 +1,5 @@
 ---
 layout: archive
-which_category: platform engineering
+which_category: platform-engineering
 title: all posts about platform engineering
 ---
