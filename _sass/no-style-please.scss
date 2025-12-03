@@ -145,47 +145,5 @@ img {
   margin: 0 auto;
 }
 
-// -------------- COPY CODE BUTTON -------------- //
-div.highlighter-rouge,
-div.highlight,
-figure.highlight {
-  position: relative;
-}
-
-.copy-code-button {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.4rem;
-  background: white;
-  color: black;
-  border: thin solid black;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-
-  svg {
-    display: block;
-  }
-
-  &:hover {
-    opacity: 1 !important;
-  }
-
-  &:active {
-    background: black;
-    color: white;
-  }
-}
-
-div.highlighter-rouge:hover .copy-code-button,
-div.highlight:hover .copy-code-button,
-figure.highlight:hover .copy-code-button {
-  opacity: 0.7;
-}
-
-// -------------------------------------------- //
+// Copy code button styling moved to main.scss
+// Code block styling moved to main.scss

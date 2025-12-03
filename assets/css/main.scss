@@ -818,14 +818,57 @@ figure.highlight {
   box-shadow: none !important;
   padding: 0 !important;
   max-width: 100% !important;
+  position: relative !important;
 }
 
-/* Ensure all syntax highlighting spans have no background */
+/* Ensure all syntax highlighting spans and elements have no background */
 .highlight span,
 div.highlighter-rouge span,
 .highlight code,
-div.highlighter-rouge code {
+div.highlighter-rouge code,
+.highlight *,
+div.highlighter-rouge * {
   background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Copy code button styling */
+.copy-code-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.5rem;
+  background-color: rgba(45, 45, 45, 0.9) !important;
+  color: #d4d4d4 !important;
+  border: 1px solid #3d3d3d !important;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  z-index: 10;
+}
+
+.copy-code-button svg {
+  display: block;
+}
+
+.copy-code-button:hover {
+  opacity: 1 !important;
+  background-color: rgba(60, 60, 60, 0.95) !important;
+}
+
+.copy-code-button:active {
+  background-color: rgba(30, 30, 30, 0.95) !important;
+}
+
+div.highlighter-rouge:hover .copy-code-button,
+div.highlight:hover .copy-code-button,
+figure.highlight:hover .copy-code-button {
+  opacity: 0.7;
 }
 
 /* Solarized syntax highlighting colors */
