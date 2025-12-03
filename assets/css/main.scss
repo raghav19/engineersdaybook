@@ -650,8 +650,7 @@ pre {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 16px !important;
   line-height: 1.5 !important;
-  border: 1px solid #d2d2d2 !important;
-  /* Light border that inverts to #2d2d2d */
+  border: none !important;
   margin: 1.5rem 0 !important;
   box-shadow: none !important;
   max-width: 100% !important;
@@ -735,8 +734,7 @@ figure.highlight {
   border-radius: 8px !important;
   overflow: visible !important;
   margin: 1.5rem 0 !important;
-  border: 1px solid #d2d2d2 !important;
-  /* Light border that inverts to #2d2d2d */
+  border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
   max-width: 100% !important;
@@ -764,8 +762,7 @@ div.highlighter-rouge * {
   /* Light gray that inverts to dark */
   color: #2b2b2b !important;
   /* Dark text that inverts to light */
-  border: 1px solid #c2c2c2 !important;
-  /* Light border that inverts to dark */
+  border: none !important;
   border-radius: 4px;
   cursor: pointer;
   opacity: 0;
