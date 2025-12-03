@@ -15,6 +15,12 @@
   }
 
   function addCollapseButton(containerEl) {
+    // Check if button already exists using data attribute
+    if (containerEl.getAttribute('data-collapse-button-added')) {
+      return;
+    }
+    containerEl.setAttribute('data-collapse-button-added', 'true');
+    
     const codeEl = containerEl.querySelector('pre');
     if (!codeEl) return;
 
