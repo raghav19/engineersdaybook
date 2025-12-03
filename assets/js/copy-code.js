@@ -54,7 +54,23 @@
     containerEl.appendChild(copyBtn);
   }
 
-  // Add copy button to code blocks
-  var highlightBlocks = document.querySelectorAll('div.highlighter-rouge, div.highlight, figure.highlight');
-  Array.prototype.forEach.call(highlightBlocks, addCopyButton);
+  // Add copy button to code blocks - be more specific to avoid nested duplicates
+  var highlightBlocks = document.querySelectorAll('div.highlighter-rouge:not(.highlight div.highlighter-rouge), div.highlight:not(figure.highlight div.highlight), figure.highlight');
+  
+  // Additional safety: filter out any nested elements
+  var topLevelBlocks = Array.prototype.filter.call(highlightBlocks, function(block) {
+    // Check if this block is inside another highlight block
+    var parent = block.parentElement;
+    while (parent) {
+      if (parent.classList && (parent.classList.contains('highlight') || 
+          parent.classList.contains('highlighter-rouge') || 
+          parent.tagName === 'FIGURE' && parent.classList.contains('highlight'))) {
+        return false; // This is a nested block, skip it
+      }
+      parent = parent.parentElement;
+    }
+    return true; // This is a top-level block
+  });
+  
+  Array.prototype.forEach.call(topLevelBlocks, addCopyButton);
 })();

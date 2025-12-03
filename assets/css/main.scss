@@ -616,17 +616,20 @@ main.page-content {
   }
 }
 
-/* Standalone pre elements get the gray background */
+/* Standalone pre elements - use light colors that invert to dark in dark mode */
 pre {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
+  background-color: #e1e1e1 !important;
+  /* Light gray that inverts to #1e1e1e */
+  color: #2b2b2b !important;
+  /* Dark text that inverts to #d4d4d4 */
   padding: 1.5rem !important;
   border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 16px !important;
   line-height: 1.5 !important;
-  border: 1px solid #2d2d2d !important;
+  border: 1px solid #d2d2d2 !important;
+  /* Light border that inverts to #2d2d2d */
   margin: 1.5rem 0 !important;
   box-shadow: none !important;
   max-width: 100% !important;
@@ -699,16 +702,19 @@ div.highlighter-rouge code {
   padding: 0 !important;
 }
 
-/* Syntax highlighting containers - ensure they have the gray background */
+/* Syntax highlighting containers - use light colors that invert to dark in dark mode */
 .highlight,
 div.highlighter-rouge,
 figure.highlight {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
+  background-color: #e1e1e1 !important;
+  /* Light gray that inverts to #1e1e1e */
+  color: #2b2b2b !important;
+  /* Dark text that inverts to #d4d4d4 */
   border-radius: 8px !important;
   overflow: visible !important;
   margin: 1.5rem 0 !important;
-  border: 1px solid #2d2d2d !important;
+  border: 1px solid #d2d2d2 !important;
+  /* Light border that inverts to #2d2d2d */
   box-shadow: none !important;
   padding: 0 !important;
   max-width: 100% !important;
@@ -726,15 +732,18 @@ div.highlighter-rouge * {
   background: transparent !important;
 }
 
-/* Copy code button styling */
+/* Copy code button styling - colors that work with dark mode inversion */
 .copy-code-button {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
   padding: 0.5rem;
-  background-color: rgba(45, 45, 45, 0.9) !important;
-  color: #d4d4d4 !important;
-  border: 1px solid #3d3d3d !important;
+  background-color: rgba(210, 210, 210, 0.9) !important;
+  /* Light gray that inverts to dark */
+  color: #2b2b2b !important;
+  /* Dark text that inverts to light */
+  border: 1px solid #c2c2c2 !important;
+  /* Light border that inverts to dark */
   border-radius: 4px;
   cursor: pointer;
   opacity: 0;
@@ -752,37 +761,19 @@ div.highlighter-rouge * {
 
 .copy-code-button:hover {
   opacity: 1 !important;
-  background-color: rgba(60, 60, 60, 0.95) !important;
+  background-color: rgba(195, 195, 195, 0.95) !important;
+  /* Slightly darker on hover */
 }
 
 .copy-code-button:active {
-  background-color: rgba(30, 30, 30, 0.95) !important;
+  background-color: rgba(225, 225, 225, 0.95) !important;
+  /* Lighter on click */
 }
 
 div.highlighter-rouge:hover .copy-code-button,
 div.highlight:hover .copy-code-button,
 figure.highlight:hover .copy-code-button {
   opacity: 0.7;
-}
-
-/* IMPROVED Code block styling with better contrast against black background */
-body pre,
-article pre,
-.post pre,
-main pre,
-div pre,
-pre {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
-  padding: 1.5rem !important;
-  border-radius: 8px !important;
-  overflow-x: auto !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  font-size: 16px !important;
-  line-height: 1.5 !important;
-  border: 1px solid #2d2d2d !important;
-  margin: 1.5em 0 !important;
-  box-shadow: none !important;
 }
 
 body code,
@@ -827,44 +818,8 @@ div pre code {
   border: none !important;
 }
 
-/* Syntax highlighting containers */
-.highlight,
-body .highlight,
-article .highlight,
-.post .highlight,
-main .highlight,
-div .highlight,
-div.highlighter-rouge,
-body div.highlighter-rouge,
-article div.highlighter-rouge,
-.post div.highlighter-rouge,
-main div.highlighter-rouge {
-  background-color: #1e1e1e !important;
-  color: #d4d4d4 !important;
-  border-radius: 8px !important;
-  overflow-x: auto !important;
-  margin: 1.5em 0 !important;
-  border: 1px solid #2d2d2d !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-.highlight pre,
-body .highlight pre,
-article .highlight pre,
-.post .highlight pre,
-main .highlight pre,
-div .highlight pre,
-div.highlighter-rouge pre,
-body div.highlighter-rouge pre,
-article div.highlighter-rouge pre,
-.post div.highlighter-rouge pre,
-main div.highlighter-rouge pre {
-  margin: 0 !important;
-  background-color: transparent !important;
-  border: none !important;
-  padding: 1.5rem !important;
-}
+/* Code inside pre should be transparent */
+pre code,
 
 /* Language-specific syntax highlighting with highest specificity */
 .highlight .c,
