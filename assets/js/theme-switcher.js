@@ -1,5 +1,5 @@
 /**
- * Theme Switcher - Toggle between light, dark, and auto modes
+ * Theme Switcher - Toggle between light and dark modes
  */
 (function() {
   'use strict';
@@ -9,7 +9,22 @@
 
   // Get current theme from localStorage or body attribute
   function getCurrentTheme() {
-    return localStorage.getItem(THEME_KEY) || body.getAttribute('a') || 'auto';
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'light' || saved === 'dark') {
+      return saved;
+    }
+    
+    // Default to system preference
+    const bodyTheme = body.getAttribute('a');
+    if (bodyTheme === 'light' || bodyTheme === 'dark') {
+      return bodyTheme;
+    }
+    
+    // Detect system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
   }
 
   // Set theme and save to localStorage
@@ -19,44 +34,40 @@
     updateButton(theme);
   }
 
-  // Update button icon based on current theme
-  function updateButton(theme) {
+  // Update button icon to show the OPPOSITE theme (what clicking will switch to)
+  function updateButton(currentTheme) {
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
 
-    const icons = {
-      light: '☀️',
-      dark: '🌙',
-      auto: '⚙️'
-    };
-
-    btn.textContent = icons[theme] || icons.auto;
-    btn.setAttribute('aria-label', `Current theme: ${theme}. Click to change.`);
-    btn.setAttribute('title', `Theme: ${theme}`);
+    // Show moon if currently light (will switch to dark)
+    // Show sun if currently dark (will switch to light)
+    if (currentTheme === 'light') {
+      btn.textContent = '🌙';
+      btn.setAttribute('aria-label', 'Switch to dark mode');
+      btn.setAttribute('title', 'Switch to dark mode');
+    } else {
+      btn.textContent = '☀️';
+      btn.setAttribute('aria-label', 'Switch to light mode');
+      btn.setAttribute('title', 'Switch to light mode');
+    }
   }
 
-  // Cycle through themes: auto -> light -> dark -> auto
-  function cycleTheme() {
+  // Toggle between light and dark
+  function toggleTheme() {
     const current = getCurrentTheme();
-    const themes = ['auto', 'light', 'dark'];
-    const currentIndex = themes.indexOf(current);
-    const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
+    const newTheme = current === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
   }
 
   // Initialize theme on page load
   function init() {
-    const savedTheme = localStorage.getItem(THEME_KEY);
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      updateButton(getCurrentTheme());
-    }
+    const currentTheme = getCurrentTheme();
+    setTheme(currentTheme);
 
     // Add click handler to button
     const btn = document.getElementById('theme-toggle');
     if (btn) {
-      btn.addEventListener('click', cycleTheme);
+      btn.addEventListener('click', toggleTheme);
     }
   }
 
