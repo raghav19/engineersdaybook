@@ -82,8 +82,30 @@ body[a="dark"] h3 .emoji,
 body[a="dark"] h4 .emoji,
 body[a="dark"] h5 .emoji,
 body[a="dark"] h6 .emoji,
-body[a="dark"] a .emoji {
+body[a="dark"] a .emoji,
+body[a="dark"] article .emoji,
+body[a="dark"] .post .emoji,
+body[a="dark"] .post-content .emoji,
+body[a="dark"] main .emoji,
+body[a="dark"] div .emoji,
+body[a="dark"] header .emoji {
   filter: invert(1) !important;
+}
+
+/* Force emoji font family on all text elements to ensure proper emoji rendering */
+body[a="dark"] h1,
+body[a="dark"] h2,
+body[a="dark"] h3,
+body[a="dark"] h4,
+body[a="dark"] h5,
+body[a="dark"] h6,
+body[a="dark"] p,
+body[a="dark"] li,
+body[a="dark"] a,
+body[a="dark"] span,
+body[a="dark"] div {
+  /* Ensure emoji font is available but don't force it */
+  font-family: inherit, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 /* Force emoji to use system colors, not theme colors */
