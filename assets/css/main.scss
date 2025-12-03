@@ -1566,3 +1566,106 @@ body[a="dark"] h6:target {
     text-align: center !important;
   }
 }
+
+/* Code block collapse/expand functionality */
+.collapse-code-button {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background-color: rgba(0, 43, 54, 0.8);
+  border: 1px solid #073642;
+  border-radius: 4px;
+  color: #839496;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  font-size: 12px;
+  z-index: 10;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.collapse-code-button:hover {
+  background-color: rgba(7, 54, 66, 0.9);
+  color: #93a1a1;
+  border-color: #586e75;
+}
+
+.collapse-code-button svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.code-line-count {
+  position: absolute;
+  top: 0.5rem;
+  left: 3rem;
+  background-color: rgba(0, 43, 54, 0.8);
+  border: 1px solid #073642;
+  border-radius: 4px;
+  color: #586e75;
+  padding: 0.4rem 0.6rem;
+  font-size: 11px;
+  z-index: 10;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, monospace;
+}
+
+/* Make room for the collapse button and line count */
+div.highlighter-rouge,
+div.highlight,
+figure.highlight {
+  position: relative;
+  padding-top: 2.5rem;
+}
+
+div.highlighter-rouge pre,
+div.highlight pre,
+figure.highlight pre {
+  margin-top: 0 !important;
+}
+
+/* Collapsed state - limit height and add gradient */
+pre.collapsed {
+  max-height: calc(1.5em * 10 + 3rem) !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+pre.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4rem;
+  background: linear-gradient(to bottom, transparent, #002b36);
+  pointer-events: none;
+}
+
+/* Dark mode adjustments */
+body[a="dark"] .collapse-code-button,
+body[a="dark"] .code-line-count {
+  background-color: rgba(30, 30, 30, 0.8);
+  border-color: #3c3c3c;
+  color: #e0e0e0;
+}
+
+body[a="dark"] .collapse-code-button:hover {
+  background-color: rgba(50, 50, 50, 0.9);
+  border-color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  body[a="auto"] .collapse-code-button,
+  body[a="auto"] .code-line-count {
+    background-color: rgba(30, 30, 30, 0.8);
+    border-color: #3c3c3c;
+    color: #e0e0e0;
+  }
+
+  body[a="auto"] .collapse-code-button:hover {
+    background-color: rgba(50, 50, 50, 0.9);
+    border-color: #666;
+  }
+}
