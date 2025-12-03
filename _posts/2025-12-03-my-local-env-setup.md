@@ -652,7 +652,8 @@ with this i can now, have a local env that:
 
 other value adds that i see are:
 
-- ✅ mise tasks can be a nice addon to gitHub-actions tasks to avoid complex logic inside gh-actions
+- ✅ mise tasks can be a nice addon to gh-actions tasks to avoid complex logic inside gh-actions
+- ✅ considerable amount of disk space is saved locally
 
 can this be extended to `CI/CD`? absolutely yes! and it considerably simplifies the `Dockerfile` as well allowing consistent experience and code similar to how you setup your local env
 
