@@ -706,33 +706,32 @@ main.page-content {
   }
 }
 
-/* Code block styling - subtle gray backgrounds */
-pre,
-div.highlighter-rouge pre,
-.highlight pre,
-figure.highlight pre {
-  background-color: transparent !important;
+/* Standalone pre elements get the gray background */
+pre {
+  background-color: #1e1e1e !important;
   color: #d4d4d4 !important;
   padding: 1.5rem !important;
-  border-radius: 0 !important;
+  border-radius: 8px !important;
   overflow-x: auto !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
   font-size: 14px !important;
   line-height: 1.5 !important;
-  border: none !important;
-  margin: 0 !important;
+  border: 1px solid #2d2d2d !important;
+  margin: 1.5rem 0 !important;
   box-shadow: none !important;
-  position: relative !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
-/* Standalone pre elements (not in highlight containers) */
-pre:not(.highlight pre):not(div.highlighter-rouge pre):not(figure.highlight pre) {
-  background-color: #1e1e1e !important;
-  border: 1px solid #2d2d2d !important;
-  border-radius: 8px !important;
-  margin: 1.5rem 0 !important;
+/* Code block styling - pre elements inside syntax highlighting containers have transparent background */
+div.highlighter-rouge pre,
+.highlight pre,
+figure.highlight pre {
+  background-color: transparent !important;
+  padding: 1.5rem !important;
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
 }
 
 /* Inline code styling - override theme defaults */
