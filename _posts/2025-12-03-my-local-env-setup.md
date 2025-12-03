@@ -85,10 +85,10 @@ my `.envrc` looked as below:
 ```shell
 export HTTPS_PROXY='<redacted>'
 export HTTP_PROXY='<redacted>'
-export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8,.eks.amazonaws.com,.es.amazonaws.com'
+export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8'
 export http_proxy='<redacted>'
 export https_proxy='<redacted>'
-export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8,.eks.amazonaws.com,.es.amazonaws.com'
+export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8'
 export REGISTRY_BASE_URL='<redacted>'
 export REGISTRY_NAMESPACE='devops'
 export AWS_ACCESS_KEY_ID='AIKMJPGCFLFSVUQABCD1234'
