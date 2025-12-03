@@ -715,6 +715,22 @@ figure.highlight pre code {
   white-space: pre !important;
 }
 
+/* Override dark mode inline code for code inside pre blocks */
+body[a="dark"] pre code,
+body[a="dark"] div.highlighter-rouge pre code,
+body[a="dark"] .highlight pre code,
+body[a="dark"] figure.highlight pre code,
+body[a="dark"] body pre code,
+body[a="dark"] article pre code,
+body[a="dark"] .post pre code,
+body[a="dark"] main pre code,
+body[a="dark"] div pre code {
+  background-color: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
 /* Override theme's div.highlighter-rouge code display block */
 div.highlighter-rouge code {
   display: inline !important;
@@ -821,24 +837,6 @@ body[a="dark"] div code {
   color: #d4d4d4 !important;
   border-color: #3d3d3d !important;
 }
-
-/* Code inside pre should be transparent */
-pre code,
-body pre code,
-article pre code,
-.post pre code,
-main pre code,
-div pre code {
-  background-color: transparent !important;
-  color: inherit !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  font-size: inherit !important;
-  border: none !important;
-}
-
-/* Code inside pre should be transparent */
-pre code,
 
 /* Language-specific syntax highlighting with highest specificity */
 .highlight .c,
