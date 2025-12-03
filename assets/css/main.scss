@@ -699,13 +699,14 @@ body[a="dark"] code {
   border-color: #3d3d3d !important;
 }
 
-/* Code inside pre should be transparent */
+/* Code inside pre should be transparent background but inherit text color from pre */
 pre code,
 div.highlighter-rouge pre code,
 .highlight pre code,
 figure.highlight pre code {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #2b2b2b !important;
+  /* Dark text that inverts to #d4d4d4 in dark mode */
   padding: 0 !important;
   border-radius: 0 !important;
   font-size: inherit !important;
@@ -726,7 +727,8 @@ body[a="dark"] .post pre code,
 body[a="dark"] main pre code,
 body[a="dark"] div pre code {
   background-color: transparent !important;
-  color: inherit !important;
+  color: #2b2b2b !important;
+  /* Same dark text that inverts to light in dark mode */
   padding: 0 !important;
   border: none !important;
 }
