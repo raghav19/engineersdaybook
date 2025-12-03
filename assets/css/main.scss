@@ -705,8 +705,8 @@ div.highlighter-rouge pre code,
 .highlight pre code,
 figure.highlight pre code {
   background-color: transparent !important;
-  color: #606060 !important;
-  /* Medium gray that inverts to visible light gray */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to #4f4f4f (dark gray) */
   padding: 0 !important;
   border-radius: 0 !important;
   font-size: inherit !important;
@@ -727,8 +727,8 @@ body[a="dark"] .post pre code,
 body[a="dark"] main pre code,
 body[a="dark"] div pre code {
   background-color: transparent !important;
-  color: #606060 !important;
-  /* Medium gray that inverts to visible light */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
   padding: 0 !important;
   border: none !important;
 }
@@ -773,8 +773,8 @@ div.highlighter-rouge * {
 div.highlighter-rouge code {
   background-color: transparent !important;
   background: transparent !important;
-  color: #606060 !important;
-  /* Medium gray that inverts properly */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
 }
 
 /* Copy code button styling - colors that work with dark mode inversion */
