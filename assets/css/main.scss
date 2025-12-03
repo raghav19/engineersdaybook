@@ -1,6 +1,4 @@
----
----
-@import "no-style-please";
+--- --- @import "no-style-please";
 
 /* Prevent horizontal scrolling on all devices */
 html {
@@ -733,6 +731,7 @@ body[a="dark"] code {
 }
 
 @media (prefers-color-scheme: dark) {
+
   body[a="auto"] body code,
   body[a="auto"] p code,
   body[a="auto"] li code,
