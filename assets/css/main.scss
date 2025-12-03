@@ -1844,3 +1844,48 @@ body[a="dark"] .collapse-code-button:hover {
     color: #d4d4d4;
   }
 }
+
+/* ============================================
+   FINAL OVERRIDE - Code Block Backgrounds
+   ============================================ */
+
+/* Force containers to have solid gray background */
+body div.highlighter-rouge,
+body .highlight,
+body figure.highlight,
+article div.highlighter-rouge,
+article .highlight,
+article figure.highlight,
+main div.highlighter-rouge,
+main .highlight,
+main figure.highlight,
+.post div.highlighter-rouge,
+.post .highlight,
+.post figure.highlight {
+  background-color: #1e1e1e !important;
+  background: #1e1e1e !important;
+}
+
+/* Force all child elements to be transparent */
+body div.highlighter-rouge *,
+body .highlight *,
+body figure.highlight *,
+article div.highlighter-rouge *,
+article .highlight *,
+article figure.highlight *,
+main div.highlighter-rouge *,
+main .highlight *,
+main figure.highlight *,
+.post div.highlighter-rouge *,
+.post .highlight *,
+.post figure.highlight * {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Except for buttons */
+.copy-code-button,
+.collapse-code-button,
+.code-line-count {
+  background-color: rgba(30, 30, 30, 0.9) !important;
+}
