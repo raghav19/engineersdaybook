@@ -1889,3 +1889,49 @@ main figure.highlight *,
 .code-line-count {
   background-color: rgba(30, 30, 30, 0.9) !important;
 }
+
+/* Theme Toggle Button */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Ensure emoji isn't affected by dark mode filters */
+.theme-toggle {
+  filter: none !important;
+}
+
+body[a="dark"] .theme-toggle {
+  border-color: #fff;
+  background: #000;
+}
+
+body[a="light"] .theme-toggle {
+  border-color: #000;
+  background: #fff;
+}
