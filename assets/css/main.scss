@@ -728,7 +728,7 @@ body[a="dark"] main pre code,
 body[a="dark"] div pre code {
   background-color: transparent !important;
   color: #b0b0b0 !important;
-  /* Light gray that inverts to dark gray */
+  /* Light gray inverts to dark gray #4f4f4f */
   padding: 0 !important;
   border: none !important;
 }
@@ -747,8 +747,8 @@ div.highlighter-rouge,
 figure.highlight {
   background-color: #e1e1e1 !important;
   /* Light gray that inverts to #1e1e1e */
-  color: #606060 !important;
-  /* Medium gray that inverts to visible light */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
   border-radius: 8px !important;
   overflow: visible !important;
   margin: 1.5rem 0 !important;
@@ -995,8 +995,8 @@ body .highlight .nx,
 body .highlight .py,
 body .highlight .nt,
 body .highlight .nv {
-  color: #606060 !important;
-  /* Medium gray that inverts to visible light */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
 }
 
 .highlight .o,
@@ -1005,8 +1005,8 @@ body .highlight .nv {
 /* Operator.Word */
 body .highlight .o,
 body .highlight .ow {
-  color: #606060 !important;
-  /* Medium gray that inverts to visible light */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
 }
 
 /* Special highlighting for YAML */
@@ -1027,8 +1027,8 @@ body .highlight .gp {
 
 .highlight .go,
 body .highlight .go {
-  color: #606060 !important;
-  /* Medium gray */
+  color: #b0b0b0 !important;
+  /* Light gray that inverts to dark gray */
 }
 
 /* Generic.Output */
