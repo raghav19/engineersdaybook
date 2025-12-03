@@ -62,7 +62,6 @@ h6 .emoji {
   font-weight: normal !important;
   text-decoration: none !important;
   display: inline !important;
-  filter: none !important;
 }
 
 /* Prevent emoji from inheriting paragraph or link colors */
@@ -72,12 +71,19 @@ a .emoji {
   -webkit-text-fill-color: initial !important;
 }
 
-/* Override dark mode filter for emojis */
+/* Override dark mode filter for emojis - invert them back to original colors */
 body[a="dark"] .emoji,
 body[a="dark"] span.emoji,
 body[a="dark"] p .emoji,
-body[a="dark"] li .emoji {
-  filter: invert(0) !important;
+body[a="dark"] li .emoji,
+body[a="dark"] h1 .emoji,
+body[a="dark"] h2 .emoji,
+body[a="dark"] h3 .emoji,
+body[a="dark"] h4 .emoji,
+body[a="dark"] h5 .emoji,
+body[a="dark"] h6 .emoji,
+body[a="dark"] a .emoji {
+  filter: invert(1) !important;
 }
 
 /* Force emoji to use system colors, not theme colors */
