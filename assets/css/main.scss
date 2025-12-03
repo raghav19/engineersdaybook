@@ -1,6 +1,4 @@
---- 
---- 
-@import "no-style-please";
+--- --- @import "no-style-please";
 
 /* Prevent horizontal scrolling on all devices */
 html {
@@ -1657,6 +1655,7 @@ body[a="dark"] .collapse-code-button:hover {
 }
 
 @media (prefers-color-scheme: dark) {
+
   body[a="auto"] .collapse-code-button,
   body[a="auto"] .code-line-count {
     background-color: rgba(30, 30, 30, 0.8);
