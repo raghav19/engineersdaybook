@@ -759,15 +759,22 @@ figure.highlight {
   position: relative !important;
 }
 
-/* Ensure all syntax highlighting spans and elements have no background */
+/* Ensure all syntax highlighting spans and elements have no background but keep color */
 .highlight span,
 div.highlighter-rouge span,
-.highlight code,
-div.highlighter-rouge code,
 .highlight *,
 div.highlighter-rouge * {
   background-color: transparent !important;
   background: transparent !important;
+}
+
+/* Make sure code elements inside highlights also have transparent background */
+.highlight code,
+div.highlighter-rouge code {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: #2b2b2b !important;
+  /* Ensure base text color that inverts properly */
 }
 
 /* Copy code button styling - colors that work with dark mode inversion */
@@ -840,7 +847,7 @@ body[a="dark"] div code {
   border-color: #3d3d3d !important;
 }
 
-/* Language-specific syntax highlighting with highest specificity */
+/* Language-specific syntax highlighting - use inverted colors that work in dark mode */
 .highlight .c,
 /* Comment */
 .highlight .cm,
@@ -856,7 +863,8 @@ body .highlight .cm,
 body .highlight .cp,
 body .highlight .c1,
 body .highlight .cs {
-  color: #6a9955 !important;
+  color: #9566aa !important;
+  /* Inverted from #6a9955 - will become green in dark mode */
   font-style: italic !important;
 }
 
@@ -881,7 +889,8 @@ body .highlight .kn,
 body .highlight .kp,
 body .highlight .kr,
 body .highlight .kt {
-  color: #569cd6 !important;
+  color: #a96329 !important;
+  /* Inverted from #569cd6 - will become blue in dark mode */
   font-weight: bold !important;
 }
 
@@ -918,7 +927,8 @@ body .highlight .si,
 body .highlight .sx,
 body .highlight .sr,
 body .highlight .s1 {
-  color: #ce9178 !important;
+  color: #316e87 !important;
+  /* Inverted from #ce9178 - will become orange/tan in dark mode */
 }
 
 .highlight .m,
@@ -936,7 +946,8 @@ body .highlight .mf,
 body .highlight .mh,
 body .highlight .mi,
 body .highlight .mo {
-  color: #b5cea8 !important;
+  color: #4a3157 !important;
+  /* Inverted from #b5cea8 - will become light green in dark mode */
 }
 
 .highlight .n,
@@ -984,7 +995,8 @@ body .highlight .nx,
 body .highlight .py,
 body .highlight .nt,
 body .highlight .nv {
-  color: #d4d4d4 !important;
+  color: #2b2b2b !important;
+  /* Inverted from #d4d4d4 - will become light in dark mode */
 }
 
 .highlight .o,
@@ -993,26 +1005,30 @@ body .highlight .nv {
 /* Operator.Word */
 body .highlight .o,
 body .highlight .ow {
-  color: #d4d4d4 !important;
+  color: #2b2b2b !important;
+  /* Inverted from #d4d4d4 - will become light in dark mode */
 }
 
 /* Special highlighting for YAML */
 .highlight .l-Scalar-Plain,
 body .highlight .l-Scalar-Plain {
-  color: #ce9178 !important;
+  color: #316e87 !important;
+  /* Inverted from #ce9178 - will become orange/tan in dark mode */
 }
 
 /* Special highlighting for shell/bash */
 .highlight .gp,
 body .highlight .gp {
-  color: #6a9955 !important;
+  color: #9566aa !important;
+  /* Inverted from #6a9955 - will become green in dark mode */
 }
 
 /* Generic.Prompt */
 
 .highlight .go,
 body .highlight .go {
-  color: #d4d4d4 !important;
+  color: #2b2b2b !important;
+  /* Inverted from #d4d4d4 - will become light in dark mode */
 }
 
 /* Generic.Output */
