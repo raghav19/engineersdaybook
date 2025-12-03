@@ -143,7 +143,7 @@ my directory structure with `direnv` for different environments looked as below
 └── .envsecrets.prod
 ```
 
-and my main `.envrc` looked as below, allowing me to switch between specific vars as needed
+and my main `.envrc` looked as below, allowing me to switch between specific env as needed
 
 ```shell
 export ENV=${ENV:-dev}  # Default to dev; override via ENV=prod direnv reload
