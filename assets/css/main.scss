@@ -676,28 +676,30 @@ div.highlighter-rouge pre,
   position: relative !important;
 }
 
-/* Inline code styling */
+/* Inline code styling - subtle background */
 code {
-  background-color: #e8e8e8 !important;
+  background-color: #f5f5f5 !important;
   color: #333 !important;
   padding: 0.2em 0.4em !important;
   border-radius: 3px !important;
   font-size: 85% !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace !important;
-  border: none !important;
+  border: 1px solid #e0e0e0 !important;
   font-weight: normal !important;
 }
 
 /* Dark mode for inline code */
 body[a="dark"] code {
-  background-color: #3c3c3c !important;
+  background-color: #2a2a2a !important;
   color: #e0e0e0 !important;
+  border-color: #404040 !important;
 }
 
 @media (prefers-color-scheme: dark) {
   body[a="auto"] code {
-    background-color: #3c3c3c !important;
+    background-color: #2a2a2a !important;
     color: #e0e0e0 !important;
+    border-color: #404040 !important;
   }
 }
 
