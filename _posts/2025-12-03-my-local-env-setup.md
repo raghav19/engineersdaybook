@@ -85,7 +85,7 @@ my `.envrc` looked as below:
 ```shell
 export HTTPS_PROXY='<redacted>'
 export HTTP_PROXY='<redacted>'
-export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8'
+export NO_PROXY='localhost,127.0.0.0/8,10.0.0.0/8'
 export http_proxy='<redacted>'
 export https_proxy='<redacted>'
 export no_proxy='localhost,127.0.0.0/8,10.0.0.0/8'
@@ -336,7 +336,7 @@ and my global `mise.toml` & `.envsecrets.json` is as below:
 [env]
 HTTPS_PROXY = '<redacted>'
 HTTP_PROXY = '<redacted>'
-no_proxy = 'localhost,127.0.0.0/8,10.0.0.0/8'
+NO_PROXY = 'localhost,127.0.0.0/8,10.0.0.0/8'
 http_proxy = '<redacted>'
 https_proxy = '<redacted>'
 no_proxy = 'localhost,127.0.0.0/8,10.0.0.0/8'
