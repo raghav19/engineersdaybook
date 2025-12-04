@@ -230,10 +230,11 @@ when i entire my project directory with the `export MISE_ENV=dev` set, all my to
 
 my `mise.dev.toml` looks as below
 
+{% raw %}
 ```toml
 # mise.dev.toml
 [env]
-PROJECT_ROOT = "{{env.PWD}}"
+PROJECT_ROOT = "{{env.PWD }}"
 TF_LOG = "ERROR"
 TF_LOG_PATH = "/tmp/terraform-run.log"
 ANSIBLE_VAULT_PASSWORD_FILE = "{{env.PROJECT_ROOT}}/.vault-pass"
@@ -243,7 +244,6 @@ UV_PROJECT_ENVIRONMENT = "{{env.PROJECT_ROOT}}/.venv"
 _.python.venv = { path = "{{env.VIRTUAL_ENV}}", create = true, python = "3.11" }
 _.file = { path = "{{env.PROJECT_ROOT}}/.envsecrets.json", redact = true }
 _.path = { path = ["{{env.PROJECT_ROOT}}/.venv/bin"] }
-_.source = { path = "{{env.PROJECT_ROOT}}/tools/utils.sh", tools = true }
 
 
 [tools]
@@ -324,12 +324,14 @@ python.uv_venv_auto = true
 aqua.github_attestations = false
 not_found_auto_install = false
 ```
+{% endraw %}
 
 
 and my global `mise.toml` & `.envsecrets.json` is as below:
 
 > NOTE: some values are `<redacted>` due to sensitive nature of enterprise env
 
+{% raw %}
 ```toml
 [env]
 HTTPS_PROXY = '<redacted>'
@@ -579,6 +581,7 @@ aqua.github_attestations = false
 auto_install = false
 trusted_config_paths = ['~/projects/']
 ```
+{% endraw %}
 
 ```text
 // .envsecrets.json
