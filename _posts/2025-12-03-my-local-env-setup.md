@@ -234,16 +234,16 @@ my `mise.dev.toml` looks as below
 ```toml
 # mise.dev.toml
 [env]
-PROJECT_ROOT = "{{env.PWD }}"
+PROJECT_ROOT = "{{ env.PWD }}"
 TF_LOG = "ERROR"
 TF_LOG_PATH = "/tmp/terraform-run.log"
-ANSIBLE_VAULT_PASSWORD_FILE = "{{env.PROJECT_ROOT}}/.vault-pass"
-ANSIBLE_COLLECTIONS_PATH = "{{env.PROJECT_ROOT}}/.ansible/collections"
-VIRTUAL_ENV = "{{env.PROJECT_ROOT}}/.venv"
-UV_PROJECT_ENVIRONMENT = "{{env.PROJECT_ROOT}}/.venv"
-_.python.venv = { path = "{{env.VIRTUAL_ENV}}", create = true, python = "3.11" }
-_.file = { path = "{{env.PROJECT_ROOT}}/.envsecrets.json", redact = true }
-_.path = { path = ["{{env.PROJECT_ROOT}}/.venv/bin"] }
+ANSIBLE_VAULT_PASSWORD_FILE = "{{ env.PROJECT_ROOT }}/.vault-pass"
+ANSIBLE_COLLECTIONS_PATH = "{{ env.PROJECT_ROOT }}/.ansible/collections"
+VIRTUAL_ENV = "{{ env.PROJECT_ROOT }}/.venv"
+UV_PROJECT_ENVIRONMENT = "{{ env.PROJECT_ROOT }}/.venv"
+_.python.venv = { path = "{{ env.VIRTUAL_ENV }}", create = true, python = "3.11" }
+_.file = { path = "{{ env.PROJECT_ROOT }}/.envsecrets.json", redact = true }
+_.path = { path = ["{{ env.PROJECT_ROOT }}/.venv/bin"] }
 
 
 [tools]
@@ -269,8 +269,8 @@ run = "npm install -g @angular/cli@17.1.2"
 [tasks.install-ansible-collections]
 description = "install ansible galaxy collections from tools/requirements.yaml"
 run = [
-  "ansible-galaxy collection install -r {{env.PROJECT_ROOT}}/tools/requirements.yaml",
-  "uv pip install --no-cache-dir -r {{env.ANSIBLE_COLLECTIONS_PATH}}/ansible_collections/azure/azcollection/requirements.txt",
+  "ansible-galaxy collection install -r {{ env.PROJECT_ROOT }}/tools/requirements.yaml",
+  "uv pip install --no-cache-dir -r {{ env.ANSIBLE_COLLECTIONS_PATH }}/ansible_collections/azure/azcollection/requirements.txt",
   "uv pip install --no-cache-dir msal==1.34.0 msal-extensions==1.3.1",
 ]
 
@@ -642,7 +642,7 @@ what a lovely approach for managing configuration at scale 💖
 
 ## is this my golden setup?
 
-for now, yes. i first got a grasp of configuration hierarchies through the `ansible` inventory patterns that can be used for large infrastructure repo and `direnv` gave me that experience for local environment, however with `mise` it has raised the bar considerably for me packaging all the goodness across the tools i experienced in a single place
+for now, yes. i first got a grasp of configuration hierarchies through the `ansible` inventory patterns that can be used for large infrastructure repos and `direnv` gave me that experience for local environment, however with `mise` it has raised the bar considerably for me packaging all the goodness across the tools i experienced in a single place
 
 with this i can now, have a local env that:
 
@@ -656,7 +656,7 @@ with this i can now, have a local env that:
 other value adds that i see are:
 
 - ✅ mise tasks can be a nice addon to gh-actions tasks to avoid complex logic inside gh-actions
-- ✅ considerable amount of disk space is saved locally
+- ✅ considerable amount of disk space is saved locally in comparison to `devcontainers`
 
 can this be extended to `CI/CD`? absolutely yes! and it considerably simplifies the `Dockerfile` as well allowing consistent experience and code similar to how you setup your local env
 
