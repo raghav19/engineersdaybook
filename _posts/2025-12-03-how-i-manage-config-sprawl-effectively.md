@@ -637,7 +637,7 @@ uv                       0.9.13   ~/mise.toml                          0.9
 yq                       4.45.4   ~/mise.toml                          4.45
 ```
 
-what a lovely approach for managing configuration at scale 💖
+what a lovely approach for managing configuration at scale 💖 with effective simplification of config sprawl in context of where you are
 
 
 ## is this my golden setup?
