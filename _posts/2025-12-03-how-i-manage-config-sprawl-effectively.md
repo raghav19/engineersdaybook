@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "my local env setup"
+title: "how i manage config sprawl effectively in my local env & projects"
 date: 2025-12-03
 categories: 
   - platform-engineering
