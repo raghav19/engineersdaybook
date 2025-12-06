@@ -610,7 +610,7 @@ trusted_config_paths = ['~/projects/']
 
 all my tools, env, tasks are inherited via configuration hierarchies for ease of use w.r.t switching between versions & overriding variables in a seamless way and one config file provides me with all the capabilities i need
 
-my `mise ls` gives me the below inside my `project` -> *inheriting/overriding via configuration hierarchies*
+my `mise ls` gives me the below inside my `project` and `mise env` would list the env vars -> *inheriting/overriding via configuration hierarchies*
 
 ```text
 ❯ mise ls
