@@ -50,7 +50,7 @@ although, this was great initially as we started with our infrastructure where o
 
   {% raw %}
   ```yaml
-  # each component in the arch had parent keyword representing the 
+  # each component in the arch had parent keyword in the inventory
   # inventories/DEV/group_vars/dev01.yaml
   eks:
    #...omitted for brevity
@@ -121,7 +121,6 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   ├── msk.yaml
 │   │   ├── rds.yaml
 │   │   ├── vault.yaml                                                      # encrypted
-#...omitted for brevity
 ```
 {% endraw %}
 
