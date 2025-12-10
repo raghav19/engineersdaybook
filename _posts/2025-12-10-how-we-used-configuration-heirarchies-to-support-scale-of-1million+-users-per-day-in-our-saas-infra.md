@@ -106,7 +106,8 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   │   │       ├── feature_flags.yaml                                  # app related
 │   │   │   │       ├── product_management.yaml
 │   │   │   │       ├── release.yaml
-│   │   │   │       ├── user_onboarding.yaml\
+│   │   │   │       ├── user_onboarding.yaml
+│   │   │   │
 │	  │		│		└── vault_dev01_user1_secrets.yaml                              # encrypted
 │   │		└── hosts
 └── hosts
