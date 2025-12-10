@@ -108,7 +108,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   │   │       ├── release.yaml
 │   │   │   │       ├── user_onboarding.yaml
 |   |   |   ├── vault_dev01_user1_secrets.yaml                             # encrypted                              
-│   │		├── hosts
+|   |   ├── hosts
 └── hosts
 ├── group_vars
 │   ├── all
