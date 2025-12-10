@@ -32,6 +32,7 @@ although, this was great initially as we started with our infrastructure where o
 
 - duplication of configuration across components
 
+  {% raw %}
   ```yaml
   # below both dev01 and dev02 have same pattern for cluster name but are duplicated at 2 places
   
@@ -43,9 +44,11 @@ although, this was great initially as we started with our infrastructure where o
   eks:
     cluster_name: "{{ application | lower }}-eks-{{ aws_region }}-{{ env }}"
   ```
+  {% endraw %}
 
 - large yaml files to work with
 
+  {% raw %}
   ```yaml
   # each component in the arch had parent keyword representing the 
   # inventories/DEV/group_vars/dev01.yaml
@@ -57,6 +60,7 @@ although, this was great initially as we started with our infrastructure where o
    
   # ... 15+ components
   ```
+  {% endraw %}
 
 - nesting of configuration/component -> each of components listed had too much nesting underneath parent, causing a simple structural variable movement an extremely daunting task/effort
 
@@ -133,6 +137,7 @@ this means:
 - dev01 -> env level configs defined here (infra)
 - user1 -> user specific customizations defined here (app/release)
 
+{% raw %}
 ```yaml
 # NOTE: some values are marked <redacted> due to the sensitive nature of the enterprise env
 # inventories/DEV/dev01/user1/hosts
@@ -172,8 +177,8 @@ all:
                 <redacted>_host:
   vars:
     ansible_python_interpreter: /usr/bin/env python3
-
 ```
+{% endraw %}
 
 ### converged configuration
 
