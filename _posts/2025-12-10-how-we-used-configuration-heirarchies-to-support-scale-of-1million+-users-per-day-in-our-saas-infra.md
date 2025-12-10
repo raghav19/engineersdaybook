@@ -1,5 +1,3 @@
-# how we used configuration hierarchies at scale to support 1million+ users per day for our SaaS infra
-
 ansible is a great configuration management tool and especially at scale it becomes imperative to use patterns and well tread paths to define/apply/operate on your infrastructure, but can it provide great orchestration capabilities as well?
 
 in this write-up, i will go into the config pattern that scaled for us for our infra codebase that spans for supporting *<u>1 Million+ users per day, currently at 200K+ LOC</u>* all the way from dev to prod with our infrastructure tooling stack -> `terraform`, `ansible` and `python`
@@ -12,7 +10,7 @@ before i go any further, i would like to extend my sincere thanks to my colleagu
 
 in our project which is multi-cloud involved a bunch of components ranging from AWS to Azure, a rough view of the architecture is as shown below:
 
-![infra](../images/infra.jpg)
+![infra]({{ site.baseurl }}/images/infra.jpg)
 
 our infrastructure and operations around DEV & TEST stacks involved a [dedicated gateway](https://istio.io/latest/docs/setup/additional-setup/gateway/#dedicated-application-gateway) model, allowing isolated application development and feature explorations per developer. orchestration of these components which involves some brownfield and mostly greenfield applications, we needed a declarative and at some places imperative model of operating infrastructure. 
 
