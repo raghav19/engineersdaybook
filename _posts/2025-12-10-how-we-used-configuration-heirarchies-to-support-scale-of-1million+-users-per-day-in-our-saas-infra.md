@@ -74,6 +74,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 
 ### inventory structure
 
+{% raw %}
 ```
 .
 ├── DEV
@@ -101,7 +102,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   │   │       ├── feature_flags.yaml                                  # app related
 │   │   │   │       ├── product_management.yaml
 │   │   │   │       ├── release.yaml
-│   │   │   │       ├── user_onboarding.yaml
+│   │   │   │       ├── user_onboarding.yaml\
 │	  │		│		└── vault_dev01_user1_secrets.yaml                              # encrypted
 │   │		└── hosts
 └── hosts
@@ -118,6 +119,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   ├── vault.yaml                                                      # encrypted
 #...omitted for brevity
 ```
+{% endraw %}
 
 ### solving for duplication
 
@@ -179,7 +181,7 @@ convergence of configuration came out as a side effect of the `inventory/hosts` 
 
 ansible merges configuration finally at [per host level](https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_inventory.html#inheriting-variable-values-group-variables-for-groups-of-groups) which you specify in your `tasks` file which can be observed as below
 
-
+{% raw %}
 ```
 // DEV -> ACCOUNT LEVEL CONFIGURATION
 // ansible-inventory -i inventories/DEV --host deploy_host_local
@@ -233,6 +235,7 @@ ansible merges configuration finally at [per host level](https://docs.ansible.co
 // omitted for brevity
 }
 ```
+{% endraw %}
 
 ### flattening the config
 
