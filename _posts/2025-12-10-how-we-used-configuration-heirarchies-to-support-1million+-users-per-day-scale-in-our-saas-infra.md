@@ -12,7 +12,7 @@ before i go any further, i would like to extend my sincere thanks to my colleagu
 
 in our project which is multi-cloud involved a bunch of components ranging from AWS to Azure, a rough view of the architecture is as shown below:
 
-![ita-infra](C:\Users\raghave2\OneDrive - Intel Corporation\Desktop\ita-infra.jpg)
+![infra](../images/infra.jpg)
 
 our infrastructure and operations around DEV & TEST stacks involved a [dedicated gateway](https://istio.io/latest/docs/setup/additional-setup/gateway/#dedicated-application-gateway) model, allowing isolated application development and feature explorations per developer. orchestration of these components which involves some brownfield and mostly greenfield applications, we needed a declarative and at some places imperative model of operating infrastructure. 
 
@@ -215,7 +215,7 @@ ansible merges configuration finally at [per host level](https://docs.ansible.co
 // ansible-inventory -i inventories/DEV/dev01/user1 --host deploy_host_local 
 {
 // omitted for brevity
-27   │     "feature_flags_enable_marketplace": true,
+27   │     "feature_flags_enable_test_feature_2": true,
 29   │     "feature_flags_enable_test_feature_1": true,
 30   │     "feature_flags_enable_cdc": false,
 35   │     "feature_flags_enable_open_telemetry": false,
