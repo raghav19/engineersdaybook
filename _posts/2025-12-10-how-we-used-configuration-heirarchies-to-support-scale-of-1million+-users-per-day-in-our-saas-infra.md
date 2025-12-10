@@ -98,12 +98,12 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   │   │   └── user1
 │   │   │   │       ├── control-plane.yaml
 │   │   │   │       ├── data-plane.yaml
-│   │   │   │       ├── feature_flags.yaml                                   # app related
+│   │   │   │       ├── feature_flags.yaml                                  # app related
 │   │   │   │       ├── product_management.yaml
 │   │   │   │       ├── release.yaml
 │   │   │   │       ├── user_onboarding.yaml
-│	│	│	│		└── vault_dev02_user1_secrets.yaml                       # encrypted
-│   │	│	└── hosts
+│	  │		│		└── vault_dev02_user1_secrets.yaml                              # encrypted
+│   │		└── hosts
 └── hosts
 ├── group_vars
 │   ├── all
