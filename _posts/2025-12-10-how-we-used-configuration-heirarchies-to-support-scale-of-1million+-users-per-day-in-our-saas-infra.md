@@ -306,4 +306,6 @@ now in the playbooks, you could define specific stacks together to be provisione
 
 overall, it has been a roller coaster ride through the trenches and finally finding a deeply fulfilling pattern that worked for us at scale. its not perfect but it brought us to a much better place than what we were in the beginning with trade-offs that we have the appetite to digest
 
+more about our SaaS -> [Intel® Trust Authority](https://www.intel.com/content/www/us/en/security/trust-authority.html)
+
 ✌️
