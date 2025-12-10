@@ -1,8 +1,20 @@
+---
+layout: post
+title: "how we used configuration heirarchies to support a scale of 1million+ users per day in our saas-infra"
+date: 2025-12-10
+categories: 
+  - platform-engineering
+  - configuration-management
+  - devsecops
+  - ansible
+  - aws
+  - azure
+---
 ansible is a great configuration management tool and especially at scale it becomes imperative to use patterns and well tread paths to define/apply/operate on your infrastructure, but can it provide great orchestration capabilities as well?
 
 in this write-up, i will go into the config pattern that scaled for us for our infra codebase that spans for supporting *<u>1 Million+ users per day, currently at 200K+ LOC</u>* all the way from dev to prod with our infrastructure tooling stack -> `terraform`, `ansible` and `python`
 
-before i go any further, i would like to extend my sincere thanks to my colleagues and amazing engineers i have had the privilege to work with in this regard, [adam stenka](https://www.linkedin.com/in/adamstenka) and [wrobel wojciech](https://www.linkedin.com/in/wojciech-wrobel) whose deep expertise and knowledge allowed us orchestrate this chaos together at scale
+before i go any further, i would like to extend my sincere thanks to my colleagues and amazing engineers i have had the privilege to work with in this regard, [adam stenka](https://www.linkedin.com/in/adamstenka) and [wrobel wojciech](https://www.linkedin.com/in/wojciech-wrobel-3b8a30195) whose deep expertise and knowledge allowed us orchestrate this chaos together at scale
 
 ## where we started
 
