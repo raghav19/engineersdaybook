@@ -74,12 +74,13 @@ the inventory structure that scaled for us in this regard looked as below. each 
 
 ### inventory structure
 
+{% raw %}
 ```text
 .
 ├── DEV
 │   ├── dev02
 │   │   ├── group_vars
-│   │   │   ├── DEV -> ../../../group_vars/DEV/                              # symlinked
+│   │   │   ├── DEV -> ../../../group_vars/DEV/                             # symlinked
 │   │   │   ├── dev01
 │   │   │   │   ├── aks.yaml
 │   │   │   │   ├── control-plane.yaml
@@ -87,7 +88,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   │   │   |── cdn.yaml
 │   │   │   │   ├── eks.yaml
 │   │   │   │   ├── env.yaml
-│   │   │   │   ├── feature_flags.yaml                                       # infrastructure related
+│   │   │   │   ├── feature_flags.yaml                                      # infrastructure related
 │   │   │   │   ├── istio.yaml
 │   │   │   │   ├── rds.yaml
 │   │   ├── hosts
@@ -118,6 +119,7 @@ the inventory structure that scaled for us in this regard looked as below. each 
 │   │   ├── vault.yaml                                                      # encrypted
 #...omitted for brevity
 ```
+{% endraw %}
 
 ### solving for duplication
 
@@ -179,6 +181,8 @@ convergence of configuration came out as a side effect of the `inventory/hosts` 
 
 ansible merges configuration finally at [per host level](https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_inventory.html#inheriting-variable-values-group-variables-for-groups-of-groups) which you specify in your `tasks` file which can be observed as below
 
+
+{% raw %}
 ```json
 // DEV -> ACCOUNT LEVEL CONFIGURATION
 // ansible-inventory -i inventories/DEV --host deploy_host_local
@@ -232,6 +236,7 @@ ansible merges configuration finally at [per host level](https://docs.ansible.co
 // omitted for brevity
 }
 ```
+{% endraw %}
 
 ### flattening the config
 
