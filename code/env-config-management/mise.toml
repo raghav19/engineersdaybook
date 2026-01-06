@@ -1,0 +1,45 @@
+[env]
+REGISTRY_NAMESPACE = 'devops'
+AWS_ACCESS_KEY_ID = 'AIKMJPGCFLFSVUQABCD1234'
+AWS_ROLE_ARN = 'arn:aws:iam::771978901234:role/iam_devops_role'
+AWS_ROLE_SESSION_NAME = 'AWS-CLI-devops'
+AWS_DEFAULT_OUTPUT_FORMAT = 'json'
+AWS_DEFAULT_REGION = 'us-east-1'
+AWS_REGION = 'us-east-1'
+AWS_ROLE_DURATION_SECONDS = '28800'
+ARM_CLIENT_ID = '5454665tf-7958-4bbd-qwer-a511075abcd-1234'
+ARM_SUBSCRIPTION_ID = '77773434-88b0-43f7-a8a5-abcdqwertgb'
+ARM_TENANT_ID = '44446yhu-e344-4ed4-8496-abcdtyuikmnh'
+AZURE_DEFAULTS_LOCATION = 'eastus'
+_.file = { path = ".envsecrets.json", redact = true }
+
+
+[tools]
+usage = 'latest'
+python = "3.11"
+helm = "4.0"
+kubectl = "1.33"
+kustomize = "5.6"
+flux2 = "2.7"
+uv = "0.9"
+yq = "4.45"
+jq = "1.8"
+age = "1.2.1"
+sops = "3.11"
+aws = "2.11.27"
+pipx = "1.8"
+
+
+[tasks.install-apt-packages]
+confirm = 'this would prompt for sudo password for installation, are you ready to proceed?'
+description = 'setup local environment'
+run = [
+  'sudo apt-get update',
+  'sudo apt-get install -y fastfetch bsdextrautils fastfetch bpytop tree fzf procs du-dust bat starship lsd kubectx',
+]
+
+[settings]
+jobs = 4
+aqua.github_attestations = false
+auto_install = false
+trusted_config_paths = ['~/my-project/']

@@ -1,0 +1,91 @@
+# mise.dev.toml
+[env]
+PROJECT_ROOT = "{{ env.PWD }}"
+TF_LOG = "ERROR"
+TF_LOG_PATH = "/tmp/terraform-run.log"
+ANSIBLE_VAULT_PASSWORD_FILE = "{{ env.PROJECT_ROOT }}/.vault-pass"
+ANSIBLE_COLLECTIONS_PATH = "{{ env.PROJECT_ROOT }}/.ansible/collections"
+VIRTUAL_ENV = "{{ env.PROJECT_ROOT }}/.venv"
+UV_PROJECT_ENVIRONMENT = "{{ env.PROJECT_ROOT }}/.venv"
+_.python.venv = { path = "{{ env.VIRTUAL_ENV }}", create = true, python = "3.11" }
+_.file = { path = "{{ env.PROJECT_ROOT }}/.envsecrets.dev.json", redact = true }
+_.path = { path = ["{{ env.PROJECT_ROOT }}/.venv/bin"] }
+
+
+[tools]
+node = "20.19"
+terraform = "1.3"
+terraform-docs = "0.17"
+gomigrate = "4.17"
+trivy = "0.67"
+pandoc = "3.1"
+"github:jphastings/jwker" = "0.2.2"
+
+
+[tasks.install-pip-modules]
+description = "install python modules from tools/requirements.txt"
+run = "uv pip install --no-cache-dir -r {{env.PROJECT_ROOT}}/tools/requirements.txt"
+
+
+[tasks.install-node-modules]
+description = "install node modules"
+run = "npm install -g @angular/cli@17.1.2"
+
+
+[tasks.install-ansible-collections]
+description = "install ansible galaxy collections from tools/requirements.yaml"
+run = [
+  "ansible-galaxy collection install -r {{ env.PROJECT_ROOT }}/tools/requirements.yaml",
+  "uv pip install --no-cache-dir -r {{ env.ANSIBLE_COLLECTIONS_PATH }}/ansible_collections/azure/azcollection/requirements.txt",
+  "uv pip install --no-cache-dir msal==1.34.0 msal-extensions==1.3.1",
+]
+
+
+[tasks.install-addon-tools]
+# ref: https://www.postgresql.org/download/linux/debian/
+confirm = 'this would prompt for sudo password for installation, are you ready to proceed?'
+description = "install addon tools - postgresql-client"
+run = [
+  # install packages
+  "sudo apt-get update && sudo apt-get install ca-certificates curl -y",
+
+  # setup postgres repo
+  "sudo install -d /usr/share/postgresql-common/pgdg",
+  "sudo -E curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc",
+  """sudo bash -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'""",
+
+  # install postgresql-cli
+  "sudo apt-get update",
+  "sudo apt-get install -y postgresql-client-15",
+]
+
+
+[tasks.generate-terraform-plugin-cache-config]
+description = "setup local terraform plugin cache config"
+run = '''
+mkdir -p {{ env.HOME }}/.terraform.d/plugin-cache
+cat << EOF > {{ env.HOME }}/.terraformrc
+plugin_cache_dir   = "{{ env.HOME }}/.terraform.d/plugin-cache"
+disable_checkpoint = true
+EOF
+'''
+
+
+[tasks.setup]
+description = "setup local environment"
+run = [
+  { tasks = [
+    "install-pip-modules",
+    "install-node-modules",
+    "install-addon-tools",
+    "generate-terraform-plugin-cache-config",
+  ] }, # runs in parallel
+  { task = "install-ansible-collections" },
+]
+
+
+[settings]
+jobs = 5
+python.uv_venv_auto = true
+aqua.github_attestations = false
+not_found_auto_install = false

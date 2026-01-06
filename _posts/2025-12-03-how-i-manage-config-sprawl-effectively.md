@@ -640,6 +640,9 @@ yq                       4.45.4   ~/mise.toml                          4.45
 what a lovely approach for managing configuration at scale 💖 with effective simplification of config sprawl in context of where you are
 
 
+## show me the code 🧑‍💻
+some sample configs and a README is available here for trying this out -> 
+
 ## is this my golden setup?
 
 for now, yes. i first got a grasp of configuration hierarchies through the `ansible` inventory patterns that can be used for large infrastructure repos and `direnv` gave me that experience for local environment, however with `mise` it has raised the bar considerably for me packaging all the goodness across the tools i experienced in a single place
