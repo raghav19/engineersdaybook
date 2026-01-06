@@ -1,6 +1,6 @@
 # env-config-management
 
-this shows some sample configs of my local env management with the pattern of configuration hierarchies. more about this can be read in my blog -> [how i manage config sprawl effectively](https://raghav19.github.io/engineersdaybook/how-i-manage-config-sprawl-effectively)
+sample configs of my local env management with `configuration heirarchy` pattern. more about this can be read in my blog -> [how i manage config sprawl effectively](https://raghav19.github.io/engineersdaybook/how-i-manage-config-sprawl-effectively)
 
 ## setup
 
