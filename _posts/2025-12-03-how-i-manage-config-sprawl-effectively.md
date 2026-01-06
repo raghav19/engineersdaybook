@@ -641,7 +641,7 @@ what a lovely approach for managing configuration at scale 💖 with effective s
 
 
 ## show me the code 🧑‍💻
-some sample configs and a README is available here for trying this out -> 
+some sample configs are available [here](https://github.com/raghav19/engineersdaybook/tree/main/code/env-config-management) for trying this out
 
 ## is this my golden setup?
 
