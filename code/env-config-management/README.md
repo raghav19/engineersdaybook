@@ -8,7 +8,6 @@ sample configs of my local env management with `configuration heirarchy` pattern
 - install [mise](https://mise.jdx.dev/getting-started.html)
 - fork/clone my repo and navigate to `./code/env-config-management`
 
-
 ### in action: config hierarchy level 0 -> global
 - install tools and setup env
 ```shell
@@ -87,5 +86,10 @@ mise run <task-name>
 ```
 
 - more on this [here](https://mise.jdx.dev/tasks/) 
+
+## other references
+- [supported ecosystems/package-managers](https://mise.jdx.dev/dev-tools/backends/)
+- [configuration heirarchy](https://mise.jdx.dev/configuration.html#configuration-hierarchy)
+- [secrets management](https://mise.jdx.dev/environments/secrets/)
 
 ✌️
