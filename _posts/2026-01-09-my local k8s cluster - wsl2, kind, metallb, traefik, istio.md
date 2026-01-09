@@ -34,13 +34,13 @@ checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/c
 
 ## screenshots
 
-![image-20260109094120747](/assets/images/my-local-k8s-cluster/image-20260109094120747.png)
+![image-20260109094120747]({{ "/assets/images/my-local-k8s-cluster/image-20260109094120747.png" | relative_url }})
 
-![image-20260109094845115](/assets/images/my-local-k8s-cluster/image-20260109094845115.png)
+![image-20260109094845115]({{ "/assets/images/my-local-k8s-cluster/image-20260109094845115.png" | relative_url }})
 
-![image-20260109093952350](/assets/images/my-local-k8s-cluster/image-20260109093952350.png)
+![image-20260109093952350]({{ "/assets/images/my-local-k8s-cluster/image-20260109093952350.png" | relative_url }})
 
-![image-20260109094003427](/assets/images/my-local-k8s-cluster/image-20260109094003427.png)
+![image-20260109094003427]({{ "/assets/images/my-local-k8s-cluster/image-20260109094003427.png" | relative_url }})
 
  ## value
 
