@@ -13,7 +13,7 @@ with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarati
 
 ## show me the code 🧑‍💻
 
-
+the manifest & deploy steps are available here -> https://github.com/raghav19/engineersdaybook/tree/main/code/devk8s-kind-wsl2
 
 ## what's available
 
@@ -27,13 +27,13 @@ with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarati
 
 ## screenshots
 
-![image-20260109094120747](C:\Users\raghave2\AppData\Roaming\Typora\typora-user-images\image-20260109094120747.png)
+![image-20260109094120747](../images/image-20260109094120747.png)
 
-![image-20260109094845115](C:\Users\raghave2\AppData\Roaming\Typora\typora-user-images\image-20260109094845115.png)
+![image-20260109094845115](../images/image-20260109094845115.png)
 
-![image-20260109093952350](C:\Users\raghave2\AppData\Roaming\Typora\typora-user-images\image-20260109093952350.png)
+![image-20260109093952350](../images/image-20260109093952350.png)
 
-![image-20260109094003427](C:\Users\raghave2\AppData\Roaming\Typora\typora-user-images\image-20260109094003427.png)
+![image-20260109094003427](../images/image-20260109094003427.png)
 
  ## value
 
@@ -52,4 +52,3 @@ with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarati
 ## tradeoffs
 
 ➖ need little beefy laptop with at least 32GB RAM
-

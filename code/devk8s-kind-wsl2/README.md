@@ -106,14 +106,12 @@ http://localhost/grafana
 #### prometheus
 
 ```http
-# from windows browser
 http://localhost/prometheus
 ```
 
 #### kibana
 
 ```http
-# from windows browser
 http://localhost/kibana
 ```
 
