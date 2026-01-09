@@ -20,7 +20,7 @@ with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarati
 
 ## show me the code 🧑‍💻
 
-the manifest & deploy steps are available here -> https://github.com/raghav19/engineersdaybook/tree/main/code/devk8s-kind-wsl2
+checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/code/devk8s-kind-wsl2)
 
 ## what's available
 
