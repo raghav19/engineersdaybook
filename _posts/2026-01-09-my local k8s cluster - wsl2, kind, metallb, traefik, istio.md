@@ -34,13 +34,13 @@ the manifest & deploy steps are available here -> https://github.com/raghav19/en
 
 ## screenshots
 
-![image-20260109094120747](../images/image-20260109094120747.png)
+![image-20260109094120747](/assets/images/my-local-k8s-cluster/image-20260109094120747.png)
 
-![image-20260109094845115](../images/image-20260109094845115.png)
+![image-20260109094845115](/assets/images/my-local-k8s-cluster/image-20260109094845115.png)
 
-![image-20260109093952350](../images/image-20260109093952350.png)
+![image-20260109093952350](/assets/images/my-local-k8s-cluster/image-20260109093952350.png)
 
-![image-20260109094003427](../images/image-20260109094003427.png)
+![image-20260109094003427](/assets/images/my-local-k8s-cluster/image-20260109094003427.png)
 
  ## value
 
