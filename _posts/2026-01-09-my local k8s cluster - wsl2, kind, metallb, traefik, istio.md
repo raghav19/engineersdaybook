@@ -1,5 +1,12 @@
-## my local k8s cluster - wsl2, kind, traefik, istio, gateway API and more...
-
+---
+layout: post
+title: "my local k8s cluster - wsl2, kind, traefik, istio, gateway API and more..."
+date: 2026-01-09
+categories: 
+  - platform-engineering
+  - kubernetes
+  - cloud-native
+---
 as a proponent of developer productivity and velocity, i have been involved with plethora of experience building initiatives for microservices deployments on kubernetes. in my experience to make this possible i have played with many kubernetes setups over time starting with [kubeadm](https://kubernetes.io/docs/reference/setup-tools/kubeadm/) , [microk8s](https://canonical.com/microk8s) and [k3s](https://k3s.io/) however these fell short for me overtime
 
 although no one size fits all and things can be worked out in an opinionated way with specific approaches and solutions, i have always been on the lookout for what intrigues me to complete this experience with some aspects that i hold close to me as below
