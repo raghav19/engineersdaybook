@@ -18,10 +18,6 @@ although no one size fits all and things can be worked out in an opinionated way
 
 with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarative local-stack completely running inside WSL2 and it has been the best one to date i have ever built
 
-## show me the code 🧑‍💻
-
-checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/code/devk8s-kind-wsl2)
-
 ## what's available
 
 - [cloud-native postgres](https://cloudnative-pg.io/docs/1.28/)
@@ -41,6 +37,10 @@ checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/c
 ![image-20260109093952350]({{ "/assets/images/my-local-k8s-cluster/image-20260109093952350.png" | relative_url }})
 
 ![image-20260109094003427]({{ "/assets/images/my-local-k8s-cluster/image-20260109094003427.png" | relative_url }})
+
+## show me the code 🧑‍💻
+
+checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/code/devk8s-kind-wsl2)
 
 ## value
 
