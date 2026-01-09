@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "my local k8s cluster - wsl2, kind, traefik, istio, gateway API and more..."
+title: "my local k8s cluster - wsl2, kind, traefik, gateway API and more..."
 date: 2026-01-09
 categories: 
   - platform-engineering
@@ -26,7 +26,6 @@ with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarati
 - [cert-manager](https://cert-manager.io/)
 - [helm-controller](https://github.com/k3s-io/helm-controller)
 - [elastic search & kibana](https://www.elastic.co/docs/deploy-manage/deploy/cloud-on-k8s/managing-deployments-using-helm-chart)
-- [istio](https://istio.io/latest/docs/)
 
 ## screenshots
 
