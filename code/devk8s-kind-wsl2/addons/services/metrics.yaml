@@ -1,0 +1,111 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  chart: metrics-server
+  targetNamespace: kube-system
+  createNamespace: false
+  repo: https://kubernetes-sigs.github.io/metrics-server/
+  version: 3.13.0
+  valuesContent: |-
+    args:
+      - --kubelet-insecure-tls
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: prometheus
+  namespace: kube-system
+spec:
+  chart: kube-prometheus-stack
+  targetNamespace: observability
+  createNamespace: true
+  repo: https://prometheus-community.github.io/helm-charts
+  version: 80.4.1
+  valuesContent: |
+    kubeStateMetrics:
+      enabled: true
+    kube-state-metrics:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+      limits:
+        cpu: 100m
+        memory: 256Mi
+    grafana:
+      enabled: true
+      persistence:
+        enabled: true
+        size: 500Mi
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 100m
+          memory: 256Mi
+      adminPassword: admin
+      ingress:
+        enabled: false
+      grafana.ini:
+        auth:
+          anonymous:
+            enabled: true
+            org_role: Viewer
+        server:
+          domain: localhost
+          root_url: http://localhost/grafana
+          serve_from_sub_path: true
+    alertmanager:
+      enabled: false
+    prometheus-node-exporter:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        readOnlyRootFilesystem: true
+    prometheus:
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        runAsUser: 1000
+        readOnlyRootFilesystem: true
+      ingress:
+        enabled: false
+      prometheusSpec:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        routePrefix: /prometheus
+        externalUrl: http://localhost/prometheus
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 2Gi
+              storageClassName: standard
+        retention: 3d
+        retentionSize: 1.5GiB
+    prometheusOperator:
+      admissionWebhooks:
+        certManager:
+          enabled: false
+        patch:
+          enabled: true
+          podAnnotations:
+            sidecar.istio.io/inject: "false"
+        create:
+          enabled: true
+          podAnnotations:
+            sidecar.istio.io/inject: "false"

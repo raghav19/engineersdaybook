@@ -1,0 +1,36 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  chart: traefik
+  targetNamespace: traefik
+  createNamespace: true
+  repo: https://traefik.github.io/charts
+  version: 37.4.0
+  valuesContent: |
+    logs:
+      access:
+        enabled: true
+    providers:
+      kubernetesIngress:
+        enabled: false
+      kubernetesGateway:
+        enabled: true
+    gateway:
+      namespace: traefik
+      name: traefik
+      listeners:
+        web:
+          port: 80
+          namespacePolicy:
+            from: All
+    ports:
+      web:
+        # match gateway listener
+        port: 80
+        nodePort: 30080
+        exposedPort: 80
+        protocol: TCP

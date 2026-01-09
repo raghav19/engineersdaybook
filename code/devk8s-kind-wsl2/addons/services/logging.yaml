@@ -1,0 +1,110 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: elasticsearch-es-elastic-user
+  namespace: observability
+stringData:
+  elastic: elasticPassword
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: es-ilm-policy
+  namespace: observability
+data:
+  ilm-policy.json: |
+    {
+      "policy": "logs-policy",
+      "phases": {
+        "hot": {
+          "min_age": "0ms",
+          "actions": {
+            "rollover": {
+              "max_primary_size": "500mb",
+              "max_age": "1d"
+            }
+          }
+        },
+        "delete": {
+          "min_age": "3d",
+          "actions": {
+            "delete": {}
+          }
+        }
+      }
+    }
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: observability
+spec:
+  version: 9.2.3
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+          - name: elasticsearch
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "250m"
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+            storageClassName: standard
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true  
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana
+  namespace: observability
+spec:
+  version: 9.2.3
+  count: 1
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        env:
+        - name: NODE_OPTIONS
+          value: "--max-old-space-size=1024" 
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 500m
+          limits:
+            memory: 1.5Gi
+            cpu: 1000m
+  config:
+    telemetry.optIn: false
+    telemetry.enabled: false
+    server.basePath: "/kibana"
+    server.xsrf.allowlist: ["/kibana"]
+    server.rewriteBasePath: true
+    xpack.fleet.enabled: false
+  elasticsearchRef:
+    name: elasticsearch
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true

@@ -1,0 +1,15 @@
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: headlamp
+  namespace: kube-system
+spec:
+  chart: headlamp
+  targetNamespace: kube-system
+  createNamespace: false
+  repo: https://kubernetes-sigs.github.io/headlamp/
+  version: 0.39.0
+  valuesContent: |-
+    serviceAccount:
+      name: headlamp-admin
