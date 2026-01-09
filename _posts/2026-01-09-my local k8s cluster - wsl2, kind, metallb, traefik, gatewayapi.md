@@ -16,7 +16,7 @@ although no one size fits all and things can be worked out in an opinionated way
 *  ✅ works on local WSL2
 *  ✅ provides dashboards and other batteries accessible via ingress
 
-with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarative local-stack completely running inside WSL2 and it has been the best one to date i have ever built
+with [kind](https://kind.sigs.k8s.io/) , i was able to build a simple, declarative local-stack completely running inside [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) and it has been the best one to date i have ever built
 
 ## what's available
 
