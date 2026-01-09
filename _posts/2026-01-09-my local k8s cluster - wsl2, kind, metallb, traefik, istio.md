@@ -42,7 +42,7 @@ checkout my repo [here](https://github.com/raghav19/engineersdaybook/tree/main/c
 
 ![image-20260109094003427]({{ "/assets/images/my-local-k8s-cluster/image-20260109094003427.png" | relative_url }})
 
- ## value
+## value
 
 ✅ allows self-service k8s clusters locally
 
