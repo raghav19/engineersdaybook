@@ -1,0 +1,7 @@
+eks_cluster_version: "1.34"
+eks_ssm_parameter_name: "/aws/service/eks/optimized-ami/{{ eks_cluster_version }}/amazon-linux-2023/x86_64/standard/recommended/release_version"
+eks_network_calico_version: 3.31.2
+eks_nodes_version: "1.34"
+eks_nodes_instance_types:
+  - m7i-flex.xlarge
+eks_nodes_ami_type: AL2023_x86_64_STANDARD

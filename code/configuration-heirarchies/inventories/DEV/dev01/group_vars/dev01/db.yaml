@@ -1,0 +1,4 @@
+rds_parameter_group_family: postgres15
+rds_allocated_storage: 32
+rds_max_allocated_storage: 64
+rds_engine_version: "15.7"

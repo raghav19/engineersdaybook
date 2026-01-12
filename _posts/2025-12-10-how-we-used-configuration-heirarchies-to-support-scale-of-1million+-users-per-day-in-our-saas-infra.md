@@ -181,7 +181,7 @@ all:
 
 ### converged configuration
 
-convergence of configuration came out as a side effect of the `inventory/hosts` pattern that was gave with `parent/child` relationship
+convergence of configuration came out as a side effect of the `inventory/hosts` pattern that came with `parent/child` relationship
 
 ansible merges configuration finally at [per host level](https://docs.ansible.com/projects/ansible/latest/inventory_guide/intro_inventory.html#inheriting-variable-values-group-variables-for-groups-of-groups) which you specify in your `tasks` file which can be observed as below
 
@@ -283,6 +283,9 @@ now in the playbooks, you could define specific stacks together to be provisione
 # Deploying app (user1)
 # ansible-playbook -i inventories/DEV/dev01/user1 playbooks/aws/control-plane/create.yml
 ```
+
+## show me the code 🧑‍💻
+sample code to understand the pattern is available here -> 
 
 ## value additions
 
