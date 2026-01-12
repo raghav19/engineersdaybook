@@ -285,7 +285,7 @@ now in the playbooks, you could define specific stacks together to be provisione
 ```
 
 ## show me the code 🧑‍💻
-sample code to understand the pattern is available here -> 
+sample code to understand the pattern is available [here](https://github.com/raghav19/engineersdaybook/tree/main/code/configuration-heirarchies)
 
 ## value additions
 
