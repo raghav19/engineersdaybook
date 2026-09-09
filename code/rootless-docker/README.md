@@ -1,10 +1,24 @@
 # sandboxing with rootless docker
 
-a setup to show how `rootless` docker helps in creating a fully secure sandbox for application execution
+when you harden a container you probably reach for the same things I do. run as non-root, drop all capabilities, no-new-privileges, maybe a seccomp profile
 
-read more about this [here]
+changing what the docker daemon itself runs as is usually the last thing on that list & often it’s not on it
+
+i went looking for cases where that decision actually mattered — three real container escapes
+
+→ [CVE-2019–5736](https://www.cve.org/CVERecord?id=CVE-2019-5736) — blocked. the maintainer noted default apparmor and selinux policy did not stop it, user namespaces did.
+
+→ [CVE-2025–52881](https://www.cve.org/CVERecord?id=CVE-2025-52881) — blocked. the runc advisory says LSM profiles “likely do not provide much protection,” and that rootless containers “entirely mitigated” the escalation.
+
+→ [CVE-2024–21626](https://www.cve.org/CVERecord?id=CVE-2024-21626) — downgraded, not prevented. the escape still lands. it just lands as your user
+
+the rule underneath all three — rootless blocks an escape when the final step needs a write to something only host root owns
+
+read more about this [here](https://medium.com/@sairam19/rootless-docker-the-hardening-step-you-reach-for-last-and-cves-that-argue-you-shouldnt-1d3e6fa7e63a?sharedUserId=sairam19)
 
 ## getting started
+
+my setup is `omarchy` - arch based
 
 ### pre-reqs 
 ```shell
