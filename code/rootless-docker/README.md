@@ -132,17 +132,15 @@ curl --max-time 5 http://localhost:80/ # nothing -> FAILED
 - **Solution 2:** Enable host-wide access to 80 for any unpriviledged process
 ```shell
 echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-rootless-port80.conf
-
 sudo sysctl --system #restart
 
-
-# 3. Confirm the setting, then retry
+# verify
 sysctl net.ipv4.ip_unprivileged_port_start   # expect: = 80
 
+# test with nginx container
 docker run --rm -d -p 80:80 --name port-test nginx
-
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:80   # expect: 200
 
-
+# cleanup
 docker stop port-test
 ```
