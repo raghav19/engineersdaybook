@@ -1,0 +1,17 @@
+[env]
+ANTHROPIC_BASE_URL="http://localhost:8787"
+
+[tasks.setup-skills]
+description = 'Setup skills for the project'
+run = """
+#!/usr/bin/env bash
+
+npx skills add mattpocock/skills \
+        --agent claude-code \
+        --yes
+
+npx skills add danyuchn/asd-ste100-skill \
+        --agent claude-code \
+        --yes
+
+"""
