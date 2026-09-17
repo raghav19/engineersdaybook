@@ -1,0 +1,47 @@
+{% assign maxRelated = 3 %}
+{% assign minCommonTags = 1 %}
+{% assign maxRelatedCounter = 0 %}
+
+<!-- Find posts with common categories or tags -->
+{% assign relatedPosts = "" | split: "" %}
+
+<!-- First, check for posts in the same series (matching series tag) -->
+{% if page.series %}
+{% for post in site.posts %}
+{% if post.series == page.series and post.url != page.url %}
+{% assign relatedPosts = relatedPosts | push: post %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+<!-- If no series posts, find posts with common categories -->
+{% if relatedPosts.size == 0 %}
+{% for post in site.posts %}
+{% if post.url != page.url %}
+{% assign commonCategories = 0 %}
+{% for category in post.categories %}
+{% if page.categories contains category %}
+{% assign commonCategories = commonCategories | plus: 1 %}
+{% endif %}
+{% endfor %}
+{% if commonCategories >= minCommonTags %}
+{% assign relatedPosts = relatedPosts | push: post %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+<!-- Display related posts if any found -->
+{% if relatedPosts.size > 0 %}
+<div class="related-posts">
+  <h3>related posts</h3>
+  <ul>
+    {% for post in relatedPosts limit: maxRelated %}
+    <li>
+      <span class="related-post-date">{{ post.date | date: site.theme_config.date_format }}</span>
+      <a href="{{ post.url | relative_url }}">{{ post.title | downcase }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
