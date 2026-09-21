@@ -1,0 +1,146 @@
+---
+name: terragrunt-skill
+description: |
+  Use this skill when working with Terragrunt infrastructure configurations. Triggers include:
+  - Setting up a new Terragrunt infrastructure catalog from scratch
+  - Creating or managing Terragrunt stacks (terragrunt.stack.hcl)
+  - Creating units that wrap OpenTofu modules from separate repos
+  - Configuring live infrastructure repositories with root.hcl hierarchy
+  - Setting up remote state backends (S3 with native lockfile or DynamoDB locking)
+  - Multi-account/multi-environment deployments with cross-account role assumption
+  - Working with classic Gruntwork-style live repos (account/region/env hierarchy, _envcommon includes)
+  - Migrating a monolithic Terraform/OpenTofu repo (terralith) to Terragrunt
+  - Exploring or auditing an existing Terragrunt repository (find, list, dag graph)
+  - Wiring unit dependencies (values pattern or autoinclude blocks)
+  - Speeding up clones/fetches or making catalog stacks self-contained with the Content Addressable Store (CAS, update_source_with_cas)
+---
+
+# Terragrunt Infrastructure Skill
+
+## Overview
+
+This skill provides guidance for infrastructure using Terragrunt with OpenTofu, following a three-repository pattern:
+
+1. **Infrastructure Catalog** - Units and stacks that reference modules from separate repos
+2. **Infrastructure Live** - Environment-specific deployments consuming the catalog
+3. **Module Repos** - Separate repositories for each OpenTofu module (independent versioning)
+
+## Choosing an Architecture
+
+**Default recommendation: explicit stacks** — the catalog + `terragrunt.stack.hcl` + values pattern this skill teaches. Units are generated from stack files; configuration flows through `values`; no per-unit boilerplate.
+
+**Supported alternative: classic implicit stacks** — the original Gruntwork pattern: `account/region/env/component` directory hierarchy, per-level `.hcl` variable files, shared component config in `_envcommon/` via `include` + `expose`. Any directory of units is an implicit stack. Use it when the repo already follows it, when the footprint is too small to justify a catalog, or when the team isn't ready for stacks. See [classic-live-structure.md](references/classic-live-structure.md).
+
+**Orthogonal choice: module organization** — modules monorepo (`modules/` + `examples/`, one tag versions all, `//modules/x?ref=` sourcing) vs module-per-repo (independent versioning). Either works with either architecture. See [modules-monorepo.md](references/modules-monorepo.md).
+
+Migrating classic → stacks: follow the official [Terralith to Terragrunt guide](https://docs.terragrunt.com/guides/terralith-to-terragrunt/).
+
+## Quick Navigation
+
+| Topic | Reference |
+|-------|-----------|
+| Naming conventions | [naming.md](references/naming.md) |
+| Catalog structure | [catalog-structure.md](references/catalog-structure.md) |
+| Live repo structure | [live-structure.md](references/live-structure.md) |
+| Classic live structure (implicit stacks) | [classic-live-structure.md](references/classic-live-structure.md) |
+| Modules monorepo | [modules-monorepo.md](references/modules-monorepo.md) |
+| Discovery commands (find/list/dag) | [discovery-commands.md](references/discovery-commands.md) |
+| Root/account/env configs | [root-config.md](references/root-config.md) |
+| Unit dependencies | [dependencies.md](references/dependencies.md) |
+| Catalog scaffolding | [catalog-scaffolding.md](references/catalog-scaffolding.md) |
+| Stack commands | [stack-commands.md](references/stack-commands.md) |
+| Patterns & best practices | [patterns.md](references/patterns.md) |
+| State management | [state-management.md](references/state-management.md) |
+| Multi-account setup | [multi-account.md](references/multi-account.md) |
+| Performance optimization | [performance.md](references/performance.md) |
+| Content Addressable Store (CAS) | [cas.md](references/cas.md) |
+| CI/CD pipelines (shared + IAM/OIDC setup) | [cicd-pipelines.md](references/cicd-pipelines.md) |
+| GitLab CI pipelines | [cicd-gitlab.md](references/cicd-gitlab.md) |
+| GitHub Actions pipelines | [cicd-github.md](references/cicd-github.md) |
+
+## Core Concepts
+
+### Values Pattern
+
+Units receive configuration through `values.xxx`:
+
+```hcl
+inputs = {
+  name        = values.name
+  environment = values.environment
+  instance_class = try(values.instance_class, "db.t3.medium")  # Optional with default
+}
+```
+
+### Reference Resolution
+
+Units resolve symbolic references like `"../acm"` to dependency outputs:
+
+```hcl
+inputs = {
+  acm_certificate_arn = try(values.acm_certificate_arn, "") == "../acm" ?
+    dependency.acm.outputs.acm_certificate_arn :
+    values.acm_certificate_arn
+}
+```
+
+Terragrunt 1.1+ adds `autoinclude` blocks as an alternative — dependencies declared in the stack file, catalog units stay dependency-agnostic. See [dependencies.md](references/dependencies.md) for choosing between them.
+
+### Module Sourcing
+
+Units reference modules via Git URL with version from values:
+
+```hcl
+terraform {
+  source = "git::git@github.com:YOUR_ORG/modules/rds.git//app?ref=${values.version}"
+}
+```
+
+For catalog-internal references (units/stacks/modules in the same repo), Terragrunt 1.1+ allows plain relative paths with `update_source_with_cas = true` — `stack generate` rewrites them to content-addressed references, so no URL pinning or version plumbing is needed. See [cas.md](references/cas.md).
+
+## Common Operations
+
+### Create New Unit
+
+1. Create `units/<name>/terragrunt.hcl`
+2. Reference module via Git URL with `${values.version}`
+3. Use `values.xxx` for inputs
+4. Add dependencies with mock outputs
+5. Implement reference resolution for `"../unit"` patterns
+
+### Create New Stack
+
+1. Create `stacks/<name>/terragrunt.stack.hcl`
+2. Define `locals` for computed values
+3. Add `unit` blocks referencing catalog units
+4. Pass values including version and dependency paths
+
+### Deploy to New Environment
+
+1. Create environment directory structure
+2. Add `env.hcl` with `state_bucket_suffix`
+3. Run `terragrunt run --all -- backend bootstrap` to create state resources
+4. Add stack files referencing catalog
+
+## Best Practices
+
+1. **Pin module versions** - Use Git tags in `values.version`
+2. **Pin catalog versions** - Use refs in unit source URLs
+3. **Use reference resolution** - `"../unit"` → dependency outputs
+4. **Provide mock outputs** - Enable plan/validate without dependencies
+5. **Auto-detect features** - `length(keys(try(values.X, {}))) > 0`
+6. **Override paths** - `try(values.X_path, "../default")`
+7. **Separate state per environment** - Use `state_bucket_suffix`
+
+## Common Pitfalls
+
+1. **Git refspec error** - Use `//path?ref=branch` NOT `?ref=branch//path`
+2. **Heredoc in ternary** - Wrap in parentheses: `condition ? (\n<<-EOF\n...\nEOF\n) : ""`
+3. **Missing mock outputs** - Always provide for plan/validate
+4. **Hardcoded paths** - Use local paths only for testing
+
+## Version Management
+
+- **Development:** Branch refs (`ref=feature-branch`)
+- **Testing:** RC tags (`ref=v1.0.0-rc1`)
+- **Production:** Stable tags (`ref=v1.0.0`)
