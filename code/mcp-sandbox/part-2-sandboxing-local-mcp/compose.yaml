@@ -1,0 +1,69 @@
+services:
+  squid:
+    image: ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+    container_name: mcp-egress-proxy
+    restart: unless-stopped
+    user: "13:13"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # `--read-only` leaves squid nowhere to put its pid file, cache dirs or
+    # logs. All three are scratch, so tmpfs, owned by the uid above.
+    tmpfs:
+      - /run:uid=13,gid=13
+      - /var/spool/squid:uid=13,gid=13
+      - /var/log/squid:uid=13,gid=13
+
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+
+    networks:
+      - mcp-egress-github
+      - mcp-egress-upstream
+
+networks:
+  # One sealed network per server. There is one server here, so there is one
+  # network — but the allowlist is scoped to it by source subnet rather than
+  # applied globally, because that is the shape the design needs as servers
+  # are added, and it is the cost Part 3 argues against.
+  #
+  # `internal: true` is the line the whole design rests on. A container
+  # attached only to this has no route off-box, so the proxy is not a setting
+  # it can decline — it is the only way out that exists.
+  #
+  # Choosing the range — squid.conf matches an ACL on this subnet, so it must
+  # be pinned, and pinned to something nothing else will ever claim:
+  #
+  #   1. Stay out of Docker's default-address-pools. Unset means
+  #      172.17.0.0/12 + 192.168.0.0/16; Docker auto-allocates from there, so a
+  #      subnet pinned inside them collides once enough networks exist
+  #      ("Pool overlaps with other one on this address space").
+  #   2. Stay out of anything already routed on the host — LAN, VPN, kind
+  #      (172.18.0.0/16 by default), other CNI ranges.
+  #   3. Avoid 10.88.0.0/16 and 10.89.0.0/16: podman's default bridge and its
+  #      auto-allocation range.
+  #   4. That leaves most of 10.0.0.0/8. A /24 per server is ample, and
+  #      numbering them 10.123.N.0/24 keeps "one subnet per server" readable
+  #      as servers are added.
+  #
+  # Verify before picking:
+  #   ip -4 route | awk '{print $1}'
+  #   docker network ls -q | xargs -r -n1 \
+  #     docker network inspect -f '{{.Name}} {{range .IPAM.Config}}{{.Subnet}} {{end}}'
+  #
+  # Changing the subnet here means changing the matching acl in squid.conf.
+  # The two cannot be edited independently.
+  mcp-egress-github:
+    name: mcp-egress-github
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.123.2.0/24
+
+  # The proxy's own route out. No MCP server is ever attached to this, and no
+  # acl matches it, so its address does not matter — left unpinned.
+  mcp-egress-upstream:
+    name: mcp-egress-upstream
