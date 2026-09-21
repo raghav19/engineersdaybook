@@ -1,5 +1,8 @@
 [env]
 ANTHROPIC_BASE_URL="http://localhost:8787"
+MCP_GH_KEY_PATH="{{ env.HOME }}/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem"
+MCP_GH_APP_ID="4999686"
+MCP_GH_INSTALLATION_ID="162969352"
 
 [tasks.setup-skills]
 description = 'Setup skills for the project'
@@ -14,4 +17,26 @@ npx skills add danyuchn/asd-ste100-skill \
         --agent claude-code \
         --yes
 
+npx skills add jfr992/terragrunt-skill \
+        --agent claude-code \
+        --yes
+
+npx skills add antonbabenko/agent-plugins \
+        --agent claude-code \
+        --yes
+
+npx skills add aws/agent-toolkit-for-aws/skills \
+        --agent claude-code \
+        --skill aws-containers \
+        --skill aws-compute \
+        --skill aws-iam \
+        --skill aws-networking \
+        --skill aws-security \
+        --skill aws-storage \
+        --skill aws-auth \
+        --yes
+
+npx skills add fluxcd/agent-skills \
+        --agent claude-code \
+        --yes
 """

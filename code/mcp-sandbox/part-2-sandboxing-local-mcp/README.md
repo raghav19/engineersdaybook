@@ -6,7 +6,7 @@ sandboxing local MCP servers
 
 - Rootless Docker. See [`code/rootless-docker`](../../rootless-docker) for the setup this builds on.
 - A [GitHub App](https://docs.github.com/en/apps/creating-github-apps)
-- Once github app is registered, ensure to download the private key, installation ID and app ID. Refer [mise.toml](../../../mise.toml)
+- Once github app is registered, ensure to download the private key, installation ID and app ID. Refer [mise.toml](./mise.toml)
 
 ## Run it
 
