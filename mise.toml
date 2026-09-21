@@ -1,8 +1,5 @@
 [env]
 ANTHROPIC_BASE_URL="http://localhost:8787"
-MCP_GH_KEY_PATH="{{ env.HOME }}/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem"
-MCP_GH_APP_ID="4999686"
-MCP_GH_INSTALLATION_ID="162969352"
 
 [tasks.setup-skills]
 description = 'Setup skills for the project'
