@@ -1,0 +1,51 @@
+# syntax=docker/sandbox-kit:3
+# dev-agent-sandbox: a jailed Claude Code sandbox for developers of this repo.
+# One set kit: the Claude workload plus this repo's own capabilities.
+# No arguments: nothing here is specific to a person. The GitHub App id,
+# installation id and key stay on the developer's host (see the Taskfile).
+schemaVersion: "3"
+displayName: dev-agent-sandbox
+description: >-
+  Claude Code in a microVM for developers of this repository. GitHub is
+  reached only through the hosted GitHub MCP server, with a host-minted
+  GitHub App token that the sbx proxy injects.
+kind: set
+version: "0.1.0"
+
+kits:
+  - ref: docker.io/docker/sbx-kit-claude-mixin:2.1.285
+  - ref: docker.io/docker/sbx-kit-shell:1.0.0
+
+capabilities:
+  # Egress rules for the sandboxed environment.
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - api.githubcopilot.com
+          - mcp.draw.io
+          - schemas.fluxoperator.dev
+
+  # The GitHub credential. Inject-only: no apiKey.name, so no environment variable and
+  # nothing at all inside the VM. The value lives on the host (the Taskfile stores
+  # `sbx secret set github --sandbox ... --command <minter>`, which mints a short-lived
+  # required
+  - type: com.docker.sandbox/credential@1
+    config:
+      service: github
+      phase: runtime
+      apiKey:
+        proxyManaged: true
+        inject:
+          - domain: api.githubcopilot.com
+            header: Authorization
+            format: "Bearer %s"
+
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      content: |
+        You are running inside a jailed sandbox (a microVM) for developers of this repository.
+        GitHub access is provided by the hosted GitHub MCP server in the repository's .mcp.json.
+        You hold no GitHub credential: the host injects a short-lived token, only on requests to
+        the MCP server. Use the MCP tools for anything on GitHub; git push, gh and direct API
+        calls from here have no credential and will fail.

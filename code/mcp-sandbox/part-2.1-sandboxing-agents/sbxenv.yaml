@@ -1,0 +1,45 @@
+---
+# declarative specification of the dev-agent sandbox environment.
+# Run it with `task sandbox:run` from the Taskfile
+schemaVersion: "1"
+agent: dev-agent-sandbox # the kit's name; a kit reference here is rejected (docker/sbx-releases#614)
+workspace: ../../.. # the repo root, relative to this file
+args:
+  kitDigest:
+    description: Digest of the dev-agent-sandbox kit (digests.json, "kit").
+    required: true
+    pattern: ^sha256:[0-9a-f]{64}$
+  minterDigest:
+    description: Digest of the GitHub App token minter that sbx runs on the host (digests.json, "minter").
+    required: true
+    pattern: ^sha256:[0-9a-f]{64}$
+  appId:
+    description: GitHub App id. Not a secret.
+    default: "4999686"
+  installationId:
+    description: GitHub App installation id. Not a secret.
+    default: "162969352"
+  keyPath:
+    description: Path to the GitHub App private key on the host. A path, never its contents.
+    default: $HOME/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem
+kits:
+  - ghcr.io/raghav19/dev-agent-sandbox@${{ env.args.kitDigest }}
+sandboxOptions:
+  cpus: 2
+  memory: 512m
+lifecycle:
+  initialize:
+    # Runs on the host, so the script sbx re-runs for the token is always the pinned one.
+    - name: fetch pinned minter
+      workdir: . # this directory, where mise provides oras
+      command: oras pull ghcr.io/raghav19/mcp-gh-minter@${{ env.args.minterDigest }} -o $HOME/.config/mcp-gh && chmod 700 $HOME/.config/mcp-gh/mint-gh-app-token.sh
+secrets:
+  github:
+    # Not secrets: the App key is a path, never its contents.
+    command: $HOME/.config/mcp-gh/mint-gh-app-token.sh ${{ env.args.appId }} ${{ env.args.installationId }} ${{ env.args.keyPath }}
+    refresh: 55m
+bindings:
+  github:
+    apiKey:
+      domains:
+        - api.githubcopilot.com
