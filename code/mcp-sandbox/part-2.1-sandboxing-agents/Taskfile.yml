@@ -57,3 +57,9 @@ tasks:
         --env-arg kitDigest="$(jq -er .kit digests.json)"
         --env-arg minterDigest="$(jq -er .minter digests.json)"
         {{.CLI_ARGS}}
+
+  sandbox:ide:
+    desc: Developer. Open VS Code on the sandbox's clone over Remote-SSH (run sandbox:run first so the sandbox exists)
+    cmds:
+      # The clone sits at the same absolute path as the repo on the host. A stopped sandbox starts on connect.
+      - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"

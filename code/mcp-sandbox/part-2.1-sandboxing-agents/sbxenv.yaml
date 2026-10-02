@@ -3,7 +3,12 @@
 # Run it with `task sandbox:run` from the Taskfile
 schemaVersion: "1"
 agent: dev-agent-sandbox # the kit's name; a kit reference here is rejected (docker/sbx-releases#614)
-workspace: ../../.. # the repo root, relative to this file
+# The repo root, relative to this file. clone: true mounts it read-only and the agent works on a private clone
+# inside the VM, so it cannot touch your files, .git/hooks or .github on the host. Its commits come back
+# through the sandbox-<name> git remote; only committed files are in the clone.
+workspace:
+  path: ../../..
+  clone: true
 args:
   kitDigest:
     description: Digest of the dev-agent-sandbox kit (digests.json, "kit").
@@ -34,12 +39,12 @@ lifecycle:
       workdir: . # this directory, where mise provides oras
       command: oras pull ghcr.io/raghav19/mcp-gh-minter@${{ env.args.minterDigest }} -o $HOME/.config/mcp-gh && chmod 700 $HOME/.config/mcp-gh/mint-gh-app-token.sh
 secrets:
-  github:
+  github-mcp:
     # Not secrets: the App key is a path, never its contents.
     command: $HOME/.config/mcp-gh/mint-gh-app-token.sh ${{ env.args.appId }} ${{ env.args.installationId }} ${{ env.args.keyPath }}
     refresh: 55m
 bindings:
-  github:
+  github-mcp:
     apiKey:
       domains:
         - api.githubcopilot.com
