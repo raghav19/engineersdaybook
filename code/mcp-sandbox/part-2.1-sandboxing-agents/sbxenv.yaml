@@ -16,7 +16,7 @@ args:
     description: Path to the GitHub App private key on the host. A path, never its contents.
     default: $HOME/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem
 kits:
-  - ghcr.io/raghav19/dev-agent-sandbox@sha256:76522806dcd790811a823ee951027fe99f5e5048da0779d47c5962fabc3d9221 # written by task sandbox:pin
+  - ghcr.io/raghav19/dev-agent-sandbox@sha256:0c3f875bd43d5c25e4ee605e5878c277b32fec8a8ffada12ce334ddb08066b10 # written by task sandbox:pin
 sandboxOptions:
   cpus: 2
   memory: 2g
