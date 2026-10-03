@@ -1,50 +1,45 @@
 version: '3'
 
-# sandbox:build  maintainer: build the kit, push it to ghcr.io and pin its digest in sbxenv.yaml (sandbox:pin)
-# sandbox:run    developer: `sbx env run . --detached`, then open VS Code on the sandbox (sandbox:ide)
-# sandbox:ide    developer: reopen VS Code on the running sandbox
-# sandbox:claude developer: attach Claude Code to the running sandbox in this terminal
+# sandbox:build  maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in sbxenv.yaml
+# sandbox:run    developer: `sbx env run . --detached`, then open VS Code on the sandbox
 #
-# sbxenv.yaml declares the sandbox (kit digest, GitHub secret, clone workspace). `sbx env run` prints that plan and
+# sbxenv.yaml declares the sandbox (kits, GitHub secret, clone workspace). `sbx env run` prints that plan and
 # asks for approval. Registry logins are done once per machine, see the README.
 
 silent: true
 
 vars:
-  REGISTRY_REPO: ghcr.io/raghav19/dev-agent-sandbox
+  KIT_REPO: ghcr.io/raghav19/dev-agent-sandbox/dev-tools
   KIT_VERSION: 0.1.0
   NAME:
     sh: yq .name sbxenv.yaml
 
 tasks:
   sandbox:build:
-    desc: Maintainer. Build the kit, push it to ghcr.io and pin its digest in sbxenv.yaml
+    desc: Maintainer. Build and push the dev-tools kit and pin its digest in sbxenv.yaml
     cmds:
-      - docker buildx build . -f agent-sandbox.yaml --push -t {{.REGISTRY_REPO}}:{{.KIT_VERSION}}
-      - task: sandbox:pin
-
-  sandbox:pin:
-    desc: Maintainer. Write the digest the registry holds for the kit tag into sbxenv.yaml
-    vars:
-      # Evaluated when this task starts, so after the push. A failed lookup stops the task before the write.
-      DIGEST:
-        sh: docker buildx imagetools inspect {{.REGISTRY_REPO}}:{{.KIT_VERSION}} --format '{{`{{.Manifest.Digest}}`}}'
-    cmds:
-      - yq -i '.kits[0] = "{{.REGISTRY_REPO}}@{{.DIGEST}}" | .kits[0] line_comment = "written by task sandbox:pin"' sbxenv.yaml
-      - echo "pinned {{.DIGEST}}"
+      # The build context is the repo root, so the kit is built from the same files the repo uses.
+      - >-
+        docker buildx build "$(git rev-parse --show-toplevel)"
+        -f dev-tools/dev-tools.yaml
+        --push
+        -t {{.KIT_REPO}}:{{.KIT_VERSION}}
+        --metadata-file /tmp/dev-tools-push.json
+      # The digest comes from buildx's metadata file. yq matches nothing without failing, so grep checks that it landed.
+      - |
+        export digest=$(jq -r '."containerimage.digest"' /tmp/dev-tools-push.json)
+        yq -i '(.kits[] | select(contains("dev-tools"))) = "{{.KIT_REPO}}@" + strenv(digest)' sbxenv.yaml
+        grep -q "$digest" sbxenv.yaml
+        echo "pinned dev-tools $digest"
 
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
     cmds:
-      - sbx env run . --detached {{.CLI_ARGS}}
-      - task: sandbox:ide
-
-  sandbox:ide:
-    desc: Developer. Reopen VS Code on the running sandbox
-    cmds:
+      # sbx cannot read host variables, so the values mise.toml loads are passed as its args. ${VAR:?} stops with a message if one is unset.
+      - >-
+        sbx env run . --detached
+        --env-arg appId=${GH_APP_ID:?set in mise.toml}
+        --env-arg installationId=${GH_APP_INSTALLATION_ID:?set in mise.toml}
+        --env-arg keyPath=${GH_APP_KEY_PATH:?set in mise.toml}
+        {{.CLI_ARGS}}
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
-
-  sandbox:claude:
-    desc: Developer. Attach Claude Code to the running sandbox in this terminal
-    cmds:
-      - sbx run --name {{.NAME}}

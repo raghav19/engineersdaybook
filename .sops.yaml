@@ -1,0 +1,10 @@
+# sops creation rules for the whole repo. Run sops from the repo root: it looks for this file upward from the
+# directory it runs in, and matches path_regex against the file's path relative to this file.
+# One rule per encrypted file name or project. This one covers every .env.secrets.json in the repo (one shared recipient);
+# put a project-specific rule above it to give that project its own key (the first matching rule wins). There is deliberately no
+# catch-all rule, so a path nobody listed fails instead of being encrypted to someone else's key.
+# Add a rule here when a project needs its own secrets file; decrypt it only in the process that needs it
+# (sops exec-env, or a folder-scoped mise.toml `_.file`), never through a root mise.toml.
+creation_rules:
+  - path_regex: (^|/)\.env\.secrets\.json$
+    age: age1vprcp74tc3hytglx4jjh6ps0mnwsw7uzwhqp3mzrm5axpludcp9quv45pe

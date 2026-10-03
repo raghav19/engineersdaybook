@@ -1,0 +1,4 @@
+# The build context is the repo root. Keep only what the build in dev-tools.yaml copies.
+*
+!mise.toml
+!code/mcp-sandbox/part-2.1-sandboxing-agents/dev-tools/tasks.toml

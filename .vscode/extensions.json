@@ -1,6 +1,10 @@
 {
   "recommendations": [
     "anthropic.claude-code",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    "isontheline.vscode-sysmon",
+    "ms-python.python",
+    "kennylong.kubernetes-yaml-formatter",
+    "yzhang.markdown-all-in-one"
   ]
 }

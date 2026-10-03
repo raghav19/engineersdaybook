@@ -35,18 +35,18 @@ Only two things cross the boundary: the repo (mounted read-only, with the agent 
 
 ```text
 code/mcp-sandbox/part-2.1-sandboxing-agents/
-├── sbxenv.yaml           the sandbox: kit digest, secret, binding
-├── agent-sandbox.yaml    the kit: Claude, egress rules, credential
-├── mint-gh-app-token.sh  host minter: App key -> installation token
-├── Taskfile.yml          sandbox:run, :build, :pin, :ide
-├── mise.toml             tool versions: task, yq
+├── sbxenv.yaml           the sandbox: kits, secret, binding
+├── dev-tools/            the kit: tools, completions, shell, egress policy, credential
+├── scripts/              host minter: mint-gh-app-token.sh (App key -> installation token)
+├── Taskfile.yml          sandbox:run, :build
+├── mise.toml             host env: GH_APP_* for sbx, and loads .env.secrets.json
+├── .env.secrets.json     sops-encrypted GITHUB_TOKEN, loaded by mise.toml (rules in the repo-root .sops.yaml)
 └── README.md
 
 Outside this directory
 ├── .mcp.json                       (repo root) GitHub MCP entry, no token
-├── mise.toml                       (repo root) tools and sandbox:* tasks
+├── mise.toml                       (repo root) exact tool versions
 ├── .vscode/                        (repo root) extensions, settings
-├── .sbx/                           (repo root) shell and extension setup
 ├── AGENTS.md                       (repo root) tells Claude to use MCP tools
 ├── ~/.config/mcp-gh/               (host) App private key
 └── ~/.config/sbx/credentials.yaml  (host) approved bindings, no secrets
@@ -57,7 +57,8 @@ Outside this directory
 ```text
 PUBLISH (maintainer, when the kit changes)
 
-  task sandbox:build    kit image ──push──▶ ghcr.io ──digest──▶ sbxenv.yaml
+  task sandbox:build
+    dev-tools kit ──push──▶ ghcr.io ──digest──▶ sbxenv.yaml
 
 RUN (developer)
 
@@ -65,10 +66,10 @@ RUN (developer)
     │
     ├─ 1. sbx reads sbxenv.yaml and prints the plan (kit digest, secret
     │     command) ──▶ you approve
-    ├─ 2. sbx creates the microVM from kit@digest and clones the repo into it
-    ├─ 3. sbx stores the `github-mcp` secret: command = mint-gh-app-token.sh
+    ├─ 2. sbx creates the microVM from the kits and clones the repo into it
+    ├─ 3. sbx stores the `github-mcp` secret: command = scripts/mint-gh-app-token.sh
     │     (run on the host, from this directory), refresh 55m
-    ├─ 4. sbx env run returns; task sandbox:ide opens VS Code on the sandbox
+    ├─ 4. sbx env run returns; task sandbox:run opens VS Code on the sandbox
     ▼
   Claude starts inside the VM
 
@@ -86,8 +87,9 @@ EVERY GITHUB MCP CALL
   proxy adds `Authorization: Bearer <App token>` and forwards the request
 ```
 
-- `sbxenv.yaml` declares the sandbox, including the kit digest that `task sandbox:pin` writes. The registry is fixed
-  in the file, so a digest can only name an image from your repository.
+- `sbxenv.yaml` declares the sandbox: the Docker shell workload and Claude mixin (by tag), and your `dev-tools` kit, which carries the egress
+  policy and the GitHub credential. `task sandbox:build` writes the `dev-tools` digest. The registry is fixed in the file, so a digest
+  can only name an image from your repository.
 - The minter, `mint-gh-app-token.sh`, runs on your host from the repo. The dev sandbox cannot change it: its repo
   is a read-only clone.
 - `.mcp.json` only narrows the tool list. The proxy adds the `Authorization` header.
@@ -101,7 +103,7 @@ EVERY GITHUB MCP CALL
 mise install
 ```
 
-2. Put the GitHub App private key at `~/.config/mcp-gh/<gh-private-key>` (or change `keyPath` in `sbxenv.yaml`).
+2. Put the GitHub App private key at `~/.config/mcp-gh/<gh-private-key>` (or change `GH_APP_KEY_PATH` in `mise.toml`).
 
 3. Log in to ghcr.io once, with a personal access token that has `read:packages` and `write:packages`. The kit is a
    private package, so two tools need the login: docker pushes it (`task sandbox:build`) and sbx pulls it (`sbx env run`).
@@ -137,70 +139,107 @@ code --install-extension ms-vscode-remote.remote-ssh
 ## Run it and open VS Code
 
 ```shell
-task sandbox:build   # maintainer, when the kit changes: build, push, then pin the digest in sbxenv.yaml
+task sandbox:build   # maintainer, when the kit or the tools change: build and push the dev-tools kit, pin its digest
 task sandbox:run     # developer: create or start the sandbox and open VS Code on it, then return
-task sandbox:claude  # optional: attach Claude Code to the running sandbox in this terminal
 ```
 
-`task sandbox:run` runs `sbx env run . --detached`, then `task sandbox:ide`. `sbx env run` reads `sbxenv.yaml`, prints a plan
+`task sandbox:run` runs `sbx env run . --detached`, then opens VS Code on the sandbox. sbx cannot read host environment variables, so
+the task passes the values `mise.toml` loads (`GH_APP_ID`, `GH_APP_INSTALLATION_ID`, `GH_APP_KEY_PATH`) as `--env-arg appId=…`, `installationId=…` and `keyPath=…`.
+Run `mise trust` in this directory once. If you call `sbx env run` or `sbx env plan` yourself, pass the same `--env-arg` flags, or sbx stops with
+"requires 3 arguments". `sbx env run` reads `sbxenv.yaml`, prints a plan
 and asks you to approve it, then creates the sandbox `dev-agent-sbx` from the pinned kit, clones the repo into it, stores
 the GitHub secret and returns. The task then opens VS Code on the sandbox over Remote-SSH. The plan's one host command
-is the GitHub token minter. Run Claude Code in the VS Code terminal, or attach it here with `task sandbox:claude`.
-`task sandbox:ide` reopens the window.
-`task sandbox:pin` is only the pin step of the build: it writes the registry's current digest for the kit tag into
-`sbxenv.yaml`.
+is the GitHub token minter. Run Claude Code in the VS Code terminal.
+Run `task sandbox:run` again, or connect to `dev-agent-sbx.sbx` with Remote-SSH, to reopen the window.
+`task sandbox:build` also pins: after the push it writes the registry's digest for the tag into `sbxenv.yaml`. An existing sandbox keeps
+its old kit, so remove it and run `task sandbox:run` again to get the new one.
+
+**Secret:** `.env.secrets.json` is sops-encrypted, and `mise.toml` loads it with mise's native sops support (`_.file`). mise decrypts it with the
+age key at `~/.config/mise/age.txt`, so `GITHUB_TOKEN` is in the environment of every process mise starts in this folder. Do not start an agent
+session here with mise active, and note that `redact` only hides the value in task output, not in `mise env`. Without the key every mise call here
+fails. To edit the file run sops from the repo root, so the root `.sops.yaml` applies: `sops .env.secrets.json`. The sops CLI finds the key at
+`~/.config/sops/age/keys.txt`, a symlink to the mise path.
 
 The window shows the **VM's clone**, the same folder the agent edits, so you see its changes live and it sees yours. Your
 host working tree is not touched, and a VS Code window on the host shows only host files until you fetch. Terminals,
 extensions and `.vscode/tasks.json` run inside the VM. Commit on a branch there and use the next section to bring the work
 to your host.
 
-If `code` is not on your PATH, `task sandbox:ide` fails after the sandbox is up: in VS Code run **Remote-SSH: Connect to Host...**, type
+If `code` is not on your PATH, `task sandbox:run` fails to open the window after the sandbox is up: in VS Code run **Remote-SSH: Connect to Host...**, type
 `dev-agent-sbx.sbx`, and open the repo folder (same path as on your host). SSH ends at the sbx daemon, there is no SSH
 server in the VM, and a stopped sandbox starts when you connect. The generated SSH config forwards no agent and uses
 your Docker login, not a key.
 
 If VS Code reports "the remote host may not meet VS Code Server's prerequisites for glibc and libstdc++", the image has no
-`/etc/ld.so.cache`, so `ldconfig` finds nothing. The `sandbox:system` task builds it at every boot (with `sudo`). A sandbox
-created from an older kit gets it from its own hook, or once by hand: `ssh dev-agent-sbx.sbx -- sudo ldconfig`.
+`/etc/ld.so.cache`, so `ldconfig` finds nothing. The `dev-tools` startup command runs `ldconfig` at every boot. A sandbox
+created from an older kit needs it once by hand: `ssh dev-agent-sbx.sbx -- sudo ldconfig`.
 
 ### Tools, shell and extensions in the sandbox
 
-The sandbox is set up from files in the repo, so the kit stays small. At every boot its startup hook installs
-[mise](https://mise.jdx.dev) if it is missing and runs `mise run sandbox:setup`:
+The developer environment is **baked into the `dev-tools` kit**, an OCI image that `task sandbox:build` builds and pushes,
+so a boot installs nothing. The image is built from files in this repo, so they stay the single source:
 
 | File | What it does |
 |---|---|
-| `mise.toml` `[tools]` | the tools (fzf, starship, fd, kubectl, helm, kustomize), installed by mise in parallel |
-| `mise.toml` `sandbox:*` tasks | `sandbox:setup` runs `sandbox:system`, `sandbox:shell`, `sandbox:completions` and `sandbox:extensions` in parallel |
-| `.sbx/shellrc` | sourced from `~/.bashrc`: tools on PATH, completions, fzf key bindings, the starship prompt |
-| `.vscode/extensions.json` | the extensions, also recommended by your host VS Code |
+| `mise.toml` | the tools in `[tools]`, at exact versions (fzf, starship, fd, kubectl, helm, kustomize, Node, Python 3.13, uv, task, yq), installed into `/opt/mise` at build. It is also copied to `/etc/mise/config.toml`, so the tools resolve from any directory |
+| `.vscode/extensions.json` | the extensions your host VS Code recommends. They are not baked into the image: see **VS Code Server and extensions** below |
+| `dev-tools/dev-tools.yaml` | the kit in one file: the descriptor (egress policy, GitHub credential, agent context), the build recipe, and the boot setup. The shell setup is a `files` entry, `~/.dev-tools-shellrc` (completions, fzf key bindings, the starship prompt), and one inline startup command (root, every boot) runs `ldconfig`, sets bash as the login shell and sources that file from `~/.bashrc` |
+| `dev-tools/tasks.toml` | the build's mise task, loaded by `task_config` in `mise.toml`: `sandbox:completions` writes the bash completions |
 | `.vscode/settings.json` | workspace settings: the terminal uses bash |
 
-To change any of them: edit the file, **commit it** (the clone only has committed files), then `sbx stop` and
-`task sandbox:run`. The kit does not need a rebuild. `.vscode/extensions.json` must be plain JSON (no comments), because the task reads it with `jq`. The first boot took about two minutes in my test, the six tools
-take about 20 seconds of that, and the two extensions use about 300 MB.
+To change a tool version or the shell setup (inline in `dev-tools.yaml`): edit the file, **commit it**, run `task sandbox:build` and
+`task sandbox:run` on a new sandbox, because the image is built, not read from the clone. Pin every tool in `mise.toml` to an
+exact version, since the image carries those versions and the shims in the VM use them as they are.
 
-**VS Code Server:** your first connect downloads the VS Code server (about 200 MB, 640 MB unpacked) into the VM's
-`~/.vscode-server`. It stays on the VM's disk, so `sbx stop` and `task sandbox:run` reuse it and nothing is downloaded
-again. `sbx rm` deletes it, so the next connect downloads a server again, and a VS Code update needs a new one for its
-commit. `sandbox:extensions` keeps a server of its own in `~/.cache/vscode-server` (downloaded once, so a second
-640 MB on disk) and runs its `--install-extension` for the ids in `.vscode/extensions.json`. The extensions are there before
-you connect, and a later boot takes about 4 seconds.
+What a boot does now, measured in a scratch sandbox with the same image content (2 vCPU, 2 GiB):
+
+| Step | Time |
+|---|---|
+| VM created and answering | 3 to 25 s (the first create extracts the image) |
+| `dev-tools` startup command | 4 s, measured with the older script that also linked the VS Code files; not re-measured |
+
+The image was **2.7 GB uncompressed** before the VS Code server and extensions were left out of it, and its new size is not
+measured. It builds in about 2.5 minutes (2 m 24 s locally), once per change, instead of on every sandbox.
+
+**VS Code Server and extensions:** neither is in the image. Remote-SSH downloads the server on the first connect (about 215 MB,
+from `update.code.visualstudio.com`, which the kit allows), and the boot command only runs `ldconfig` so that server can start.
+The extensions come from `remote.SSH.defaultExtensions` in your **host user settings**, which installs them on every SSH host at connect time.
+It is read only from user settings (reports say a workspace `.vscode/settings.json` or a non-default profile is ignored), so it is
+set once on your machine, with the IDs from `.vscode/extensions.json`, and is not part of this repo. Reconnect to a running sandbox to
+install them.
 
 **Memory:** `sbxenv.yaml` gives the sandbox 2 GiB. With 512 MiB the VM ran out of memory under VS Code, and SSH timed out.
 
+**Python tools with uv:** `[settings] pipx.uvx = true` makes mise install `pipx:` tools with uv, as the
+[mise cookbook](https://mise.jdx.dev/mise-cookbook/python.html) recommends, and `uv` is in `[tools]`. The image installs
+`mise.toml` as it is. The host's headroom CLI (`pipx:headroom-ai`, about 550 MB) is declared in `~/mise.toml`, not in this repo,
+so the image never installs it.
+
 Notes:
-- **Not `mise activate`:** `.sbx/shellrc` puts the tools on PATH with `mise bin-paths`. Activating mise would also
-  apply the `[env]` of `mise.toml` (`ANTHROPIC_BASE_URL`, a host-only proxy), which would break Claude in the VM.
-- **bash:** the image's login shell is `/bin/sh`, so `sandbox:system` sets bash, and `.vscode/settings.json` selects it in the
-  VS Code terminal. VS Code treats that setting as restricted, so it applies after you trust the folder. It also
-  applies to terminals on your host in this repo.
-- **Network:** the kit allows the hosts these steps use: `mise.run`, `mise.jdx.dev`, `github.com` (tool releases),
-  `dl.k8s.io` (kubectl), `get.helm.sh` (helm), `update.code.visualstudio.com` and the marketplace
-  (`**.vsassets.io`). A failed step only prints a warning in `/var/log/sbx-kit-startup.log`.
-- **On the host:** `mise install` in the repo installs the same tools. The `sandbox:*` tasks refuse to run outside
-  the sandbox.
+- **Skills:** this repo commits its skills (`.claude/skills`, `skills-lock.json`), so every clone and sandbox already has them and
+  the sandbox installs nothing at boot. To refresh them, run `mise run setup-skills` on the host (it fetches the latest upstream and
+  rewrites the tracked files, so review and commit the diff). Tested on this repo: running it over the committed skills changed 31 files,
+  and `npx skills experimental_install` took about 3 minutes, reported "No valid skills found", edited the lock file and created
+  1052 untracked files under `.agents/`.
+- **Shims, and no `[env]`:** the image's `ENV` puts `/opt/mise/shims` on PATH, so mise picks each tool's version. Shims apply the
+  `[env]` of `mise.toml`, which sets `ANTHROPIC_BASE_URL=http://localhost:8787` for the host's headroom proxy and would reach every tool
+  in the VM, where nothing listens on that port. So the image sets `MISE_NO_ENV=1` (tested: Node sees no `ANTHROPIC_BASE_URL`). Do not
+  drop it. `MISE_TRUSTED_CONFIG_PATHS` trusts the clone's `mise.toml`, at the `workspace` build arg of `dev-tools/dev-tools.yaml`
+  (the repo's path on your host). A `mise.toml` in any other directory is untrusted and its tools fail with a trust error.
+- **bash:** the image's login shell is `/bin/sh`, and VS Code's terminal follows `$SHELL`, which is `/bin/sh` over SSH. So
+  the boot command sets bash as the login shell, and `.vscode/settings.json` selects bash in the VS Code terminal. VS Code
+  treats that setting as restricted, so it applies once you trust the folder (it asks when you open it). It also applies to
+  terminals on your host in this repo.
+- **Network:** nothing is installed at boot, so the kit no longer allows the install hosts (`mise.run`, `mise.jdx.dev`,
+  `github.com` release assets, `dl.k8s.io`, `get.helm.sh`). It keeps `update.code.visualstudio.com`, the VS Code server download host and
+  the marketplace (`**.vsassets.io`), which Remote-SSH needs on the first connect and for the extensions. A tool the image lacks, such as
+  a version you bump in `mise.toml` without a rebuild, fails to run in the VM.
+- **Not tested:** the published path end to end (this README's numbers come from a scratch sandbox built from the same image,
+  because sbx needs an HTTPS registry for v3 kits); a real Remote-SSH connection to a sandbox built from this image, which covers the
+  server download, `remote.SSH.defaultExtensions` and the shims on the sandbox's PATH. The tools were run in a plain Debian container as
+  a non-root user with the image's `ENV`. Also untested in a running VM: the `files` entry (`~/.dev-tools-shellrc`), which sbx accepts
+  (`sbx kit inspect` counts 1 init file) but which I have not seen written, and the startup command appending to `~/.bashrc`.
+- **On the host:** `mise install` in the repo installs the same tools. `sandbox:completions` only works inside the image build.
 
 ## Getting the agent's work
 
@@ -266,10 +305,8 @@ provider.
   gateway (Part 3) or on GitHub (App permissions, branch rules).
 - **The App's permissions are the real boundary:** this token has write access to `contents`, `issues` and
   `pull_requests` on one repository.
-- **Boot hooks trust the clone:** `mise.toml`, `.sbx/` and `.vscode/extensions.json` are read from the VM's clone,
-  which the agent can edit, and `mise run sandbox:setup` runs them as the agent user at every boot (inside the
-  VM, with its network access). They are no longer pinned by the kit digest. Nothing reaches your host until you
-  merge, so read changes to those files in the diff.
+- **No boot hooks from the clone:** the tools, completions and shell come from the digest-pinned `dev-tools` image, so the agent
+  cannot change them by editing the clone, and the kit runs nothing from the clone at boot.
 - **The minter runs from the repo:** `mint-gh-app-token.sh` is run by sbx on your host every 55 minutes. The dev
   sandbox cannot edit it, because its repo is a read-only clone. Any other sandbox that mounts this repo read-write
   (the `ai-ops-*` ones do) could, so keep those on `--clone` as well.
