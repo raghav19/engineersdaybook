@@ -1,0 +1,6 @@
+{
+  "recommendations": [
+    "anthropic.claude-code",
+    "tamasfe.even-better-toml"
+  ]
+}

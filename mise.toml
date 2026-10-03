@@ -1,6 +1,64 @@
 [env]
 ANTHROPIC_BASE_URL="http://localhost:8787"
 
+[tools]
+fzf = "0.74"
+starship = "1.26"
+fd = "10"
+kubectl = "1.37"
+helm = "4.3"
+kustomize = "5.8"
+task = "3.54.0"
+yq = "4.54.1"
+
+# The sbx sandbox runs `mise run sandbox:setup` at every boot (see code/mcp-sandbox/part-2.1-sandboxing-agents).
+# Tasks start with the tools above on PATH, and the sandbox user has passwordless sudo.
+[tasks."sandbox:setup"]
+description = "Set up the sbx sandbox: system, shell, completions and VS Code extensions (inside the sandbox only)"
+run = [
+  '[ -d /usr/share/sandbox ] || { echo "run this inside the sbx sandbox"; exit 1; }',
+  { tasks = ["sandbox:system", "sandbox:shell", "sandbox:completions", "sandbox:extensions"] },
+]
+
+[tasks."sandbox:system"]
+description = "Root setup: the ld cache VS Code Server needs, and bash as the login shell"
+run = '''
+sudo ldconfig                           # the image ships no /etc/ld.so.cache, so libstdc++ is not found
+sudo usermod -s /bin/bash "$(id -un)"   # SSH sessions would otherwise start sh
+'''
+
+[tasks."sandbox:shell"]
+description = "Load .sbx/shellrc (PATH, completions, fzf, starship) from ~/.bashrc and make bash the VS Code terminal"
+run = '''
+line=". $MISE_PROJECT_ROOT/.sbx/shellrc"
+grep -qxF "$line" ~/.bashrc || echo "$line" >> ~/.bashrc
+
+# SSH sessions set SHELL=/bin/sh, which VS Code follows. The remote's own settings (no workspace trust needed) name bash,
+# once: a value you set yourself is kept.
+f=~/.vscode-server/data/Machine/settings.json
+mkdir -p "$(dirname "$f")"; [ -s "$f" ] || echo '{}' > "$f"
+jq '. + ({"terminal.integrated.defaultProfile.linux": "bash"} + .)' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+'''
+
+[tasks."sandbox:completions"]
+description = "Generate bash completions for the tools"
+run = '''
+d=~/.config/sandbox/completions; mkdir -p $d
+kubectl completion bash > $d/kubectl
+helm completion bash > $d/helm
+kustomize completion bash > $d/kustomize
+starship completions bash > $d/starship
+fd --gen-completions bash > $d/fd
+'''
+
+[tasks."sandbox:extensions"]
+description = "Install the extensions in .vscode/extensions.json with VS Code's server command"
+run = '''
+srv=~/.cache/vscode-server
+[ -x $srv/bin/code-server ] || { mkdir -p $srv; curl -fsSL https://update.code.visualstudio.com/latest/server-linux-x64/stable | tar xz -C $srv --strip-components=1; }
+$srv/bin/code-server $(jq -r '.recommendations[] | "--install-extension " + .' .vscode/extensions.json)
+'''
+
 [tasks.setup-skills]
 description = 'Setup skills for the project'
 run = """

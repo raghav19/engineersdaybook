@@ -27,6 +27,19 @@ capabilities:
           - api.githubcopilot.com
           - mcp.draw.io
           - schemas.fluxoperator.dev
+          - mise.run
+          - mise.jdx.dev
+          - mise-versions.jdx.dev
+          - github.com
+          - objects.githubusercontent.com
+          - release-assets.githubusercontent.com
+          - dl.k8s.io # kubectl
+          - cdn.dl.k8s.io
+          - get.helm.sh # helm
+          - update.code.visualstudio.com
+          - vscode.download.prss.microsoft.com
+          - marketplace.visualstudio.com
+          - "**.vsassets.io"
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
@@ -48,6 +61,23 @@ capabilities:
           - domain: api.githubcopilot.com
             header: Authorization
             format: "Bearer %s"
+
+  # The VM's dev environment comes from the repo: mise.toml gives the tools and the `sandbox:setup` task (system, shell,
+  # completions, VS Code extensions). The one hook installs mise and runs that task at every boot. It cannot fail the
+  # sandbox: it only warns (see /var/log/sbx-kit-startup.log).
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      startup: # every boot, so a committed change to mise.toml or the files it reads applies after a restart
+        - command:
+            - sh
+            - -c
+            - |
+              export HOME=/home/agent PATH="/home/agent/.local/bin:$PATH"
+              cd "$WORKSPACE_DIR" || exit 0
+              command -v mise >/dev/null || curl -fsSL https://mise.run | sh
+              mise trust -q && mise run sandbox:setup || echo "warning: sandbox setup failed" >&2
+          user: "1000"
+          env: [WORKSPACE_DIR, HTTP_PROXY, HTTPS_PROXY, http_proxy, https_proxy, NO_PROXY, no_proxy, SSL_CERT_FILE, REQUESTS_CA_BUNDLE, NODE_USE_ENV_PROXY, NODE_EXTRA_CA_CERTS]
 
   - type: com.docker.sandbox/agent-context@1
     config:

@@ -1,0 +1,5 @@
+{
+  // Workspace settings. The sbx sandbox's terminal uses bash (its login shell is sh over SSH).
+  // This is a restricted setting: VS Code applies it once you trust the folder.
+  "terminal.integrated.defaultProfile.linux": "bash"
+}

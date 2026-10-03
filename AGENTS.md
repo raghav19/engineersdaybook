@@ -76,6 +76,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Issues and specs live as GitHub issues on `raghav19/engineersdaybook`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
+Inside the dev-agent-sandbox microVM (started by `task sandbox:run`), use the GitHub MCP tools (`mcp__github__*`) for GitHub operations instead of `gh` or direct API calls such as `curl`. The `gh` commands in the tracker doc then map to the matching MCP tools. Outside the sandbox, use `gh` as described.
+
 ### Triage labels
 
 Default five canonical roles, label strings equal to their names (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.

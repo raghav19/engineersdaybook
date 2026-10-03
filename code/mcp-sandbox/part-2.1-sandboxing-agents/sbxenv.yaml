@@ -1,23 +1,11 @@
 ---
-# declarative specification of the dev-agent sandbox environment.
-# Run it with `task sandbox:run` from the Taskfile
 schemaVersion: "1"
-agent: dev-agent-sandbox # the kit's name; a kit reference here is rejected (docker/sbx-releases#614)
-# The repo root, relative to this file. clone: true mounts it read-only and the agent works on a private clone
-# inside the VM, so it cannot touch your files, .git/hooks or .github on the host. Its commits come back
-# through the sandbox-<name> git remote; only committed files are in the clone.
+name: dev-agent-sbx
+agent: dev-agent-sandbox
 workspace:
   path: ../../..
   clone: true
 args:
-  kitDigest:
-    description: Digest of the dev-agent-sandbox kit (digests.json, "kit").
-    required: true
-    pattern: ^sha256:[0-9a-f]{64}$
-  minterDigest:
-    description: Digest of the GitHub App token minter that sbx runs on the host (digests.json, "minter").
-    required: true
-    pattern: ^sha256:[0-9a-f]{64}$
   appId:
     description: GitHub App id. Not a secret.
     default: "4999686"
@@ -28,20 +16,13 @@ args:
     description: Path to the GitHub App private key on the host. A path, never its contents.
     default: $HOME/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem
 kits:
-  - ghcr.io/raghav19/dev-agent-sandbox@${{ env.args.kitDigest }}
+  - ghcr.io/raghav19/dev-agent-sandbox@sha256:76522806dcd790811a823ee951027fe99f5e5048da0779d47c5962fabc3d9221 # written by task sandbox:pin
 sandboxOptions:
   cpus: 2
-  memory: 512m
-lifecycle:
-  initialize:
-    # Runs on the host, so the script sbx re-runs for the token is always the pinned one.
-    - name: fetch pinned minter
-      workdir: . # this directory, where mise provides oras
-      command: oras pull ghcr.io/raghav19/mcp-gh-minter@${{ env.args.minterDigest }} -o $HOME/.config/mcp-gh && chmod 700 $HOME/.config/mcp-gh/mint-gh-app-token.sh
+  memory: 2g
 secrets:
   github-mcp:
-    # Not secrets: the App key is a path, never its contents.
-    command: $HOME/.config/mcp-gh/mint-gh-app-token.sh ${{ env.args.appId }} ${{ env.args.installationId }} ${{ env.args.keyPath }}
+    command: ${{ env.fileDir }}/mint-gh-app-token.sh ${{ env.args.appId }} ${{ env.args.installationId }} ${{ env.args.keyPath }}
     refresh: 55m
 bindings:
   github-mcp:

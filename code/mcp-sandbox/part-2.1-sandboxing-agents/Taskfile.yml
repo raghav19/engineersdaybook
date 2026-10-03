@@ -1,65 +1,50 @@
 version: '3'
 
-# sandbox:build         maintainer: push the kit to ghcr.io and pin its sha256 digest in digests.json
-# sandbox:build-minter  maintainer: push the token minter to ghcr.io and pin its digest in digests.json
-# sandbox:run           developer: Claude in the jail on the repo root, as declared in sbxenv.yaml
+# sandbox:build  maintainer: build the kit, push it to ghcr.io and pin its digest in sbxenv.yaml (sandbox:pin)
+# sandbox:run    developer: `sbx env run . --detached`, then open VS Code on the sandbox (sandbox:ide)
+# sandbox:ide    developer: reopen VS Code on the running sandbox
+# sandbox:claude developer: attach Claude Code to the running sandbox in this terminal
 #
-# sbxenv.yaml declares the sandbox: the kit and the minter (both required args, read from digests.json), the
-# GitHub secret and the host step that fetches the pinned minter. `sbx env run` shows that plan and asks
-# for approval before applying it.
-#
-# The one secret, the ghcr.io token, lives encrypted in .secrets.env. sops decrypts it straight
-# into the stdin of the single command that needs it: no env var, no file, nothing printed.
+# sbxenv.yaml declares the sandbox (kit digest, GitHub secret, clone workspace). `sbx env run` prints that plan and
+# asks for approval. Registry logins are done once per machine, see the README.
 
 silent: true
 
 vars:
-  KIT_DIR: ./
   REGISTRY_REPO: ghcr.io/raghav19/dev-agent-sandbox
   KIT_VERSION: 0.1.0
-  MINTER_REPO: ghcr.io/raghav19/mcp-gh-minter
-  REGISTRY_USERNAME: raghav19
   NAME:
-    sh: echo dev-agent-$(id -un)
+    sh: yq .name sbxenv.yaml
 
 tasks:
   sandbox:build:
-    desc: Maintainer. Push the kit to ghcr.io and pin its sha256 digest in digests.json
-    vars:
-      DOCKER_CFG:
-        sh: mktemp -d
+    desc: Maintainer. Build the kit, push it to ghcr.io and pin its digest in sbxenv.yaml
     cmds:
-      - defer: rm -rf {{.DOCKER_CFG}}
-      - sops decrypt --extract '["GITHUB_TOKEN"]' .secrets.env | sbx secret set -f --registry ghcr.io --username {{.REGISTRY_USERNAME}} --password-stdin
-      - sops decrypt --extract '["GITHUB_TOKEN"]' .secrets.env | docker --config {{.DOCKER_CFG}} login ghcr.io -u {{.REGISTRY_USERNAME}} --password-stdin
-      - docker --config {{.DOCKER_CFG}} buildx build {{.KIT_DIR}} -f {{.KIT_DIR}}/agent-sandbox.yaml --push -t {{.REGISTRY_REPO}}:{{.KIT_VERSION}} --metadata-file {{.DOCKER_CFG}}/push.json
-      - |
-        jq -s '.[0] + {kit: (.[1]["containerimage.digest"] // error("push.json has no digest"))}' digests.json {{.DOCKER_CFG}}/push.json > {{.DOCKER_CFG}}/d.json && mv {{.DOCKER_CFG}}/d.json digests.json
+      - docker buildx build . -f agent-sandbox.yaml --push -t {{.REGISTRY_REPO}}:{{.KIT_VERSION}}
+      - task: sandbox:pin
 
-  sandbox:build-minter:
-    desc: Maintainer. Push the token minter to ghcr.io and pin its sha256 digest in digests.json
+  sandbox:pin:
+    desc: Maintainer. Write the digest the registry holds for the kit tag into sbxenv.yaml
     vars:
-      DOCKER_CFG:
-        sh: mktemp -d
+      # Evaluated when this task starts, so after the push. A failed lookup stops the task before the write.
+      DIGEST:
+        sh: docker buildx imagetools inspect {{.REGISTRY_REPO}}:{{.KIT_VERSION}} --format '{{`{{.Manifest.Digest}}`}}'
     cmds:
-      - defer: rm -rf {{.DOCKER_CFG}}
-      - sops decrypt --extract '["GITHUB_TOKEN"]' .secrets.env | docker --config {{.DOCKER_CFG}} login ghcr.io -u {{.REGISTRY_USERNAME}} --password-stdin
-      - oras push {{.MINTER_REPO}}:latest mint-gh-app-token.sh --registry-config {{.DOCKER_CFG}}/config.json --format json > {{.DOCKER_CFG}}/push.json
-      - |
-        jq -s '.[0] + {minter: (.[1].digest // error("push.json has no digest"))}' digests.json {{.DOCKER_CFG}}/push.json > {{.DOCKER_CFG}}/d.json && mv {{.DOCKER_CFG}}/d.json digests.json
+      - yq -i '.kits[0] = "{{.REGISTRY_REPO}}@{{.DIGEST}}" | .kits[0] line_comment = "written by task sandbox:pin"' sbxenv.yaml
+      - echo "pinned {{.DIGEST}}"
 
   sandbox:run:
-    desc: Developer. Claude in the jail on the repo root; creates the sandbox, or reattaches to it
+    desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
     cmds:
-      - sops decrypt --extract '["GITHUB_TOKEN"]' .secrets.env | sbx secret set -f --registry ghcr.io --username {{.REGISTRY_USERNAME}} --password-stdin
-      - >-
-        sbx env run . --name {{.NAME}}
-        --env-arg kitDigest="$(jq -er .kit digests.json)"
-        --env-arg minterDigest="$(jq -er .minter digests.json)"
-        {{.CLI_ARGS}}
+      - sbx env run . --detached {{.CLI_ARGS}}
+      - task: sandbox:ide
 
   sandbox:ide:
-    desc: Developer. Open VS Code on the sandbox's clone over Remote-SSH (run sandbox:run first so the sandbox exists)
+    desc: Developer. Reopen VS Code on the running sandbox
     cmds:
-      # The clone sits at the same absolute path as the repo on the host. A stopped sandbox starts on connect.
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
+
+  sandbox:claude:
+    desc: Developer. Attach Claude Code to the running sandbox in this terminal
+    cmds:
+      - sbx run --name {{.NAME}}

@@ -1,0 +1,11 @@
+# Interactive bash setup for the sbx sandbox. `mise run sandbox:shell` sources this file from ~/.bashrc.
+[[ $- == *i* ]] || return
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+# The tools on PATH, without `mise activate`: that would also apply the repo's [env], which is host-only.
+export PATH="$HOME/.local/bin:$PATH"
+command -v mise >/dev/null && export PATH="$(mise -C "$root" bin-paths | paste -sd: -):$PATH"
+
+for f in ~/.config/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
+command -v fzf >/dev/null && eval "$(fzf --bash)"
+command -v starship >/dev/null && eval "$(starship init bash)"
