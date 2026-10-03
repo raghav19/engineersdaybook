@@ -22,8 +22,8 @@ tasks:
       - >-
         docker buildx build "$(git rev-parse --show-toplevel)"
         -f dev-tools/dev-tools.yaml
-        --push
         -t {{.KIT_REPO}}:{{.KIT_VERSION}}
+        --output type=registry,compression=zstd,compression-level=9,force-compression=true
         --metadata-file /tmp/dev-tools-push.json
       # The digest comes from buildx's metadata file. yq matches nothing without failing, so grep checks that it landed.
       - |

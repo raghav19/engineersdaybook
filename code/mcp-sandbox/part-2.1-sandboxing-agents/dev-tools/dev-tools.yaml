@@ -6,7 +6,7 @@ schemaVersion: "3"
 kind: mixin
 displayName: dev-tools
 description: >-
-  Exact-version dev tools from the repo's mise.toml (kubectl, helm, kustomize, node, python, uv, fzf, starship, fd),
+  Exact-version dev tools from the repo's mise.toml (kubectl, helm, kustomize, fzf, starship, fd, task, yq),
   their bash completions and the bash setup, plus the egress policy and the GitHub MCP credential.
 version: "0.1.0"
 

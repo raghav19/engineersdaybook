@@ -1,14 +1,10 @@
-[env]
-ANTHROPIC_BASE_URL="http://localhost:8787"
-
-[settings]
-pipx.uvx = true
 
 # The tasks that build the sbx sandbox image live in the dev-tools kit.
 [task_config]
 includes = ["code/mcp-sandbox/part-2.1-sandboxing-agents/dev-tools/tasks.toml"]
 
 # Exact versions: the sandbox image bakes exactly these (code/mcp-sandbox/part-2.1-sandboxing-agents/dev-tools).
+# node, python and uv are not here: the sandbox's shell kit ships them.
 [tools]
 fzf = "0.74"
 starship = "1.26"
@@ -16,11 +12,11 @@ fd = "10.5"
 kubectl = "1.37"
 helm = "4.3"
 kustomize = "5.8"
-node = "lts"
-python = "3.13"
 task = "3.54"
 yq = "4.54"
-uv = "0.12"
+terragrunt = "1.1"
+terraform = "1.16"
+flux2 = "2.9"
 
 [tasks.setup-skills]
 description = 'Setup skills for the project'
