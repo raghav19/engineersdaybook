@@ -1,6 +1,6 @@
 ---
 schemaVersion: "1"
-name: dev-agent-sbx
+name: sandbox-dev
 agent: sbx-kit-shell
 workspace:
   path: ../../..
