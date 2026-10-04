@@ -6,7 +6,8 @@ schemaVersion: "3"
 kind: mixin
 displayName: dev-tools
 description: >-
-  Exact-version dev tools from the repo's mise.toml (kubectl, helm, kustomize, fzf, starship, fd, task, yq),
+  Exact-version dev tools from the repo's mise.toml (kubectl, helm, kustomize, fzf, starship, fd, task, yq, terraform,
+  terragrunt, flux),
   their bash completions and the bash setup, plus the egress policy and the GitHub MCP credential.
 version: "0.1.0"
 
@@ -32,6 +33,8 @@ capabilities:
           - vscode.download.prss.microsoft.com
           - marketplace.visualstudio.com
           - "**.vsassets.io"
+          - registry.terraform.io      # Terraform provider index
+          - releases.hashicorp.com     # Terraform provider downloads
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
@@ -50,6 +53,13 @@ capabilities:
           - domain: api.githubcopilot.com
             header: Authorization
             format: "Bearer %s"
+
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in the repo's mise.toml), one per sandbox. sbx keeps it across
+  # stop and start and deletes it with the sandbox. It comes up root-owned, so the boot command below gives it to agent.
+  - type: com.docker.sandbox/volume@1
+    config:
+      path: /home/agent/.cache/terraform-providers
+      size: 5g
 
   # The shell setup is a file in the agent's home (written at every start, as the agent user), sourced from ~/.bashrc by
   # the boot command below. The tools are on PATH as mise shims (the image's ENV), so no `mise activate`.
@@ -72,8 +82,12 @@ capabilities:
               usermod -s /bin/bash agent  # an SSH session otherwise starts /bin/sh
               grep -qs 'dev-tools-shellrc' /home/agent/.bashrc || echo '. /home/agent/.dev-tools-shellrc' >> /home/agent/.bashrc
               chown agent:agent /home/agent/.bashrc
+              # The provider cache volume, and ~/.cache, which sbx creates as root to mount it (mise writes its own cache there).
+              chown agent:agent /home/agent/.cache /home/agent/.cache/terraform-providers
+              # mkfs leaves a root-only lost+found in the volume, and Terraform fails to scan a cache it cannot read.
+              rm -rf /home/agent/.cache/terraform-providers/lost+found
           user: "0"
-          description: Set bash as the login shell and source the shell setup from ~/.bashrc
+          description: Set bash as the login shell, source the shell setup from ~/.bashrc, give agent the provider cache
 
   - type: com.docker.sandbox/agent-context@1
     config:
@@ -121,9 +135,8 @@ build: |
   FROM scratch
   COPY --from=build /out /
   ARG WORKSPACE
-  # The tools are the mise shims. MISE_NO_ENV keeps the repo's [env] (ANTHROPIC_BASE_URL, for the host) out of the tools.
-  # MISE_TRUSTED_CONFIG_PATHS trusts the clone's mise.toml, which nothing else would.
+  # The tools are the mise shims, which also apply the repo's [env]. MISE_TRUSTED_CONFIG_PATHS trusts the clone's mise.toml,
+  # which nothing else would.
   ENV PATH=/opt/mise/shims \
       MISE_DATA_DIR=/opt/mise \
-      MISE_NO_ENV=1 \
       MISE_TRUSTED_CONFIG_PATHS=$WORKSPACE

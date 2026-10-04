@@ -1,4 +1,9 @@
 
+# Applied by the mise shims, on the host and in the sandbox. In the sandbox the provider cache is a volume of the dev-tools kit.
+[env]
+TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
+CHECKPOINT_DISABLE = "1"  # no Terraform version check to checkpoint-api.hashicorp.com
+
 # The tasks that build the sbx sandbox image live in the dev-tools kit.
 [task_config]
 includes = ["code/mcp-sandbox/part-2.1-sandboxing-agents/dev-tools/tasks.toml"]
