@@ -1,4 +1,10 @@
 Host sandbox-*
+    User _default_user_
+    ProxyCommand ~/.docker/sbx/bin/sbx ssh proxy %n
+    IdentityAgent none
+    IdentitiesOnly yes
+    UserKnownHostsFile ~/.config/sandboxes/sandboxes/ssh/known_hosts
+    KnownHostsCommand /bin/sh -c "exec $HOME/.docker/sbx/bin/sbx ssh known-hosts %H"
     ControlMaster auto
     ControlPersist yes
     ControlPath .vscode/.ssh-sockets/%r@%h-%p
