@@ -34,12 +34,18 @@ tasks:
 
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
+    env:
+      GH_APP_ID:
+        sh: mise get GH_APP_ID
+      GH_APP_INSTALLATION_ID:
+        sh: mise get GH_APP_INSTALLATION_ID
+      GH_APP_KEY_PATH:
+        sh: mise get GH_APP_KEY_PATH
     cmds:
-      # sbx cannot read host variables, so the values mise.toml loads are passed as its args. ${VAR:?} stops with a message if one is unset.
       - >-
         sbx env run . --detached
-        --env-arg appId=${GH_APP_ID:?set in mise.toml}
-        --env-arg installationId=${GH_APP_INSTALLATION_ID:?set in mise.toml}
-        --env-arg keyPath=${GH_APP_KEY_PATH:?set in mise.toml}
+        --env-arg appId={{.GH_APP_ID}}
+        --env-arg installationId={{.GH_APP_INSTALLATION_ID}}
+        --env-arg keyPath={{.GH_APP_KEY_PATH}}
         {{.CLI_ARGS}}
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"

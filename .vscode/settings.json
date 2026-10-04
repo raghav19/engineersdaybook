@@ -1,12 +1,20 @@
 {
   "terminal.integrated.defaultProfile.linux": "bash",
   "extensions.ignoreRecommendations": true,
+  "remote.downloadExtensionsLocally": true,
+  "workbench.startupEditor": "none",
+  "workbench.settings.enableNaturalLanguageSearch": false,
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.cache/**": true
+  },
+  "search.exclude": {
     "**/node_modules": true,
-    "**/.git": true,
     "**/dist": true,
-    "**/build": true
+    "**/.cache": true
   }
 }

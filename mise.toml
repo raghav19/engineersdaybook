@@ -23,6 +23,52 @@ terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.9"
 
+
+[tasks.vscode-ssh-setup]
+description = "Link workspace SSH config + apply global Remote-SSH settings (Linux)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+WORKSPACE_DIR="${MISE_PROJECT_ROOT:-$(pwd)}"
+REPO_SSH_CONFIG="$WORKSPACE_DIR/.vscode/ssh_config"
+VSCODE_SETTINGS="$HOME/.config/Code/User/settings.json"
+
+if [ ! -f "$REPO_SSH_CONFIG" ]; then
+    echo "❌ No SSH config found at: $REPO_SSH_CONFIG"
+    exit 1
+fi
+
+echo "🚀 VSCode Remote-SSH setup for: $WORKSPACE_DIR"
+
+# ─── 1. VSCode Settings (app scope + configFile pointer) ─
+mkdir -p "$(dirname "$VSCODE_SETTINGS")"
+[ -f "$VSCODE_SETTINGS" ] || echo '{}' > "$VSCODE_SETTINGS"
+
+PERF=$(jq -n \
+  --arg cfg "$REPO_SSH_CONFIG" \
+  '{
+    "remote.SSH.configFile": $cfg,
+    "remote.SSH.useLocalServer": true,
+    "remote.SSH.useExecServer": false,
+    "remote.SSH.enableDynamicForwarding": false,
+    "remote.SSH.enableAgentForwarding": false,
+    "remote.SSH.connectTimeout": 30,
+    "remote.SSH.showLoginTerminal": false,
+    "remote.SSH.localServerDownload": "always",
+  }')
+
+MERGED=$(jq --argjson p "$PERF" '. * $p' "$VSCODE_SETTINGS")
+if [ "$MERGED" != "$(cat "$VSCODE_SETTINGS")" ]; then
+    echo "$MERGED" | jq '.' > "$VSCODE_SETTINGS"
+    echo "✅ VSCode settings updated (configFile → $REPO_SSH_CONFIG)"
+else
+    echo "ℹ️  VSCode settings already optimal"
+fi
+
+echo "🎉 Done! Restart VSCode to apply."
+"""
+
 [tasks.setup-skills]
 description = 'Setup skills for the project'
 run = """

@@ -1,0 +1,10 @@
+Host sandbox-*
+    ControlMaster auto
+    ControlPersist yes
+    ControlPath .vscode/.ssh-sockets/%r@%h-%p
+    Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    StrictHostKeyChecking accept-new
+    ConnectTimeout 10
