@@ -7,7 +7,7 @@ Host sandbox-*
     KnownHostsCommand /bin/sh -c "exec $HOME/.docker/sbx/bin/sbx ssh known-hosts %H"
     ControlMaster auto
     ControlPersist yes
-    ControlPath .vscode/.ssh-sockets/%r@%h-%p
+    ControlPath /run/user/%i/ssh-%C
     Ciphers chacha20-poly1305@openssh.com,aes128-gcm@openssh.com
     KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
     ServerAliveInterval 60

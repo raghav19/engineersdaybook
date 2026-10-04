@@ -18,7 +18,7 @@ args:
 kits:
   - docker.io/docker/sbx-kit-shell:1.0.0
   - docker.io/docker/sbx-kit-claude-mixin:2.1.285
-  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:80ff86d09ac3561be6c9ac658be4d69c83a80710a64afd21e9022ad12d6c3c2c # task sandbox:build pins this to the digest it pushed
+  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:7b75337b3d815ddae40bd8f571cff5bec6997ba4fb80468fccfd5890648584c2 # task sandbox:build pins this to the digest it pushed
 sandboxOptions:
   cpus: 2
   memory: 2g
