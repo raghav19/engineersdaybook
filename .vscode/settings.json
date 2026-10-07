@@ -3,6 +3,7 @@
   "extensions.ignoreRecommendations": true,
   "remote.downloadExtensionsLocally": true,
   "workbench.settings.enableNaturalLanguageSearch": false,
+   "markdown.preview.fontFamily": "JetBrains Mono",
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "files.watcherExclude": {
