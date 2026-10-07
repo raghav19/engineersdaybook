@@ -19,9 +19,11 @@ args:
     buildArg: WORKSPACE
 
 capabilities:
-  # The egress for the credential below, and only that: an injection domain must be in a network policy this kit declares, or
-  # `sbx kit inspect` refuses the kit. Every other rule is in the policy/allow and policy/deny kits, so a rule change needs no image
-  # rebuild. Allow entries from all kits add up.
+  # Egress rules for the sandboxed environment. @2 adds method and path rules; deny wins over any allow,
+  # including the host's own sbx policy. The deny below stops gh or curl from using the injected token to
+  # delete repositories through the REST API. It does not block other writes: add methods to widen it.
+  # The credential's own host (api.githubcopilot.com) must stay in this allow list: sbx refuses a kit whose credential
+  # injects on a host that the kit's own network policy does not allow.
   - type: com.docker.sandbox/network-policy@2
     config:
       runtime:
@@ -37,7 +39,6 @@ capabilities:
           - hosts: [api.github.com]
             methods: [DELETE]
             paths: [/repos/**]
-
 
   # The GitHub credential. Inject-only: no apiKey.name, so no environment variable and nothing at all inside the VM.
   # The service is named github-mcp, not github: `github` is an sbx built-in whose default domains include
