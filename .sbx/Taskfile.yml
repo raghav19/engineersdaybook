@@ -1,6 +1,7 @@
 version: '3'
 
-# Included by the root Taskfile.yml as `sandbox:`, with this folder as the working directory.
+# Included by the root Taskfile.yml (dir: .sbx, flatten: true), so the task names carry the `sandbox:` prefix themselves and work from the
+# repo root, from any subfolder and from this folder.
 #
 # sandbox:login           once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
 # sandbox:install-skills  once per machine: install the agent skills into the sbx store that every sandbox shares
@@ -22,16 +23,16 @@ vars:
     sh: yq .name sbxenv.yaml
 
 tasks:
-  login:
+  sandbox:login:
     desc: Once per machine. Log docker and sbx in to ghcr.io with the token in .env.secrets.json (the kit is a private package)
     cmds:
       # The token stays in this script's own variable and goes to the two tools on stdin: it is never in a process environment or an argument.
       - |
-        token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.ROOT_DIR}}/.env.secrets.json")
+        token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.TASKFILE_DIR}}/../.env.secrets.json")
         printf %s "$token" | docker login ghcr.io -u {{.GHCR_USER}} --password-stdin
         printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{.GHCR_USER}} --password-stdin
 
-  install-skills:
+  sandbox:install-skills:
     desc: Once per machine. Install the agent skills into the sbx store, which every sandbox links in read-only at its start
     cmds:
       # sbx has no declarative skills list, so this list is it. --force replaces a skill without asking.
@@ -45,20 +46,28 @@ tasks:
         --skill aws-containers --skill aws-compute --skill aws-iam --skill aws-networking
         --skill aws-security --skill aws-storage --skill aws-auth
 
-  update-skills:
+  sandbox:update-skills:
     desc: Refresh the skills in the sbx store to upstream's latest (a sandbox picks them up on its next start)
     cmds:
       - sbx skills update
 
-  build:
+  sandbox:build:
     desc: Maintainer. Build and push the dev-tools kit and pin its digest in sbxenv.yaml
+    vars:
+      # The time of the last commit that touched a build input, so the image changes only when its inputs do.
+      SOURCE_DATE_EPOCH:
+        sh: git log -1 --format=%ct -- dev-tools.yaml dev-tools.yaml.dockerignore tools.toml ../mise.toml
     cmds:
-      # The build context is the repo root, so the kit is built from the same files the repo uses.
+      # The build context is the repo root, so the kit is built from the same files the repo uses. No provenance or SBOM attestation: buildx adds a
+      # new one on every build, which changed the pushed index digest (and so the pin below) while the image itself stayed identical. The fixed
+      # SOURCE_DATE_EPOCH with rewrite-timestamp makes a build from scratch give the same digest too (tested: two cold builds, same digest).
       - >-
         docker buildx build "$(git rev-parse --show-toplevel)"
         -f dev-tools.yaml
         -t {{.KIT_REPO}}:{{.KIT_VERSION}}
-        --output type=registry,compression=zstd,compression-level=9,force-compression=true
+        --provenance=false --sbom=false
+        --build-arg SOURCE_DATE_EPOCH={{default "0" .SOURCE_DATE_EPOCH}}
+        --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true
         --metadata-file /tmp/dev-tools-push.json
       # The digest comes from buildx's metadata file. yq matches nothing without failing, so grep checks that it landed.
       - |
@@ -67,7 +76,7 @@ tasks:
         grep -q "$digest" sbxenv.yaml
         echo "pinned dev-tools $digest"
 
-  setup-vscode:
+  sandbox:setup-vscode:
     desc: Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
     cmds:
       - |
@@ -87,9 +96,9 @@ tasks:
         }' "$f")
         if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi
 
-  run:
+  sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
-    deps: [setup-vscode]
+    deps: [sandbox:setup-vscode]
     cmds:
       - sbx env run . --detached {{.CLI_ARGS}}
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"

@@ -4,3 +4,4 @@ includes:
   sandbox:
     taskfile: .sbx/Taskfile.yml
     dir: .sbx
+    flatten: true

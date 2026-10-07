@@ -120,6 +120,8 @@ build: |
   RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
   WORKDIR /repo
   COPY mise.toml ./
+  # sbx is a host tool. It is in the root mise.toml for the host, and the image has no use for it, so its line is dropped from this copy.
+  RUN sed -i '/sbx-releases/d' mise.toml
   COPY .sbx/tools.toml /etc/mise/conf.d/sandbox.toml
   RUN mise trust /repo/mise.toml && mise install --yes
 
@@ -127,7 +129,7 @@ build: |
   RUN mise run sandbox:completions
 
   # The two files are also the VM's system config (config.toml and conf.d, both loaded), so the shims resolve from any directory.
-  COPY mise.toml /out/etc/mise/config.toml
+  RUN mkdir -p /out/etc/mise && cp /repo/mise.toml /out/etc/mise/config.toml
   COPY .sbx/tools.toml /out/etc/mise/conf.d/sandbox.toml
   RUN mkdir -p /out/usr/local/bin && cp -a /opt/mise /out/opt/mise && cp /usr/local/bin/mise /out/usr/local/bin/mise \
    && chown -R 0:0 /out
