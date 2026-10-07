@@ -2,7 +2,6 @@
   "terminal.integrated.defaultProfile.linux": "bash",
   "extensions.ignoreRecommendations": true,
   "remote.downloadExtensionsLocally": true,
-  "workbench.startupEditor": "none",
   "workbench.settings.enableNaturalLanguageSearch": false,
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
