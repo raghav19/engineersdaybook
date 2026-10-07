@@ -1,0 +1,18 @@
+# syntax=docker/sandbox-kit:3
+# Requests the dev sandbox is refused even when an allow entry matches: deny wins over every allow, in every kit and in the host's own
+# sbx policy. The deny below stops gh or curl from using an injected token to delete repositories through the REST API. It does not
+# block other writes: add methods to widen it. A kit directory holds exactly one descriptor, so this is separate from ../allow.
+schemaVersion: "3"
+kind: mixin
+displayName: dev-sandbox egress deny
+description: Requests the dev sandbox is refused, whatever an allow entry says.
+version: "0.1.0"
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@2
+    config:
+      runtime:
+        deny:
+          - hosts: [api.github.com]
+            methods: [DELETE]
+            paths: [/repos/**]

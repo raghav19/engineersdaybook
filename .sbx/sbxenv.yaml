@@ -1,0 +1,32 @@
+---
+schemaVersion: "1"
+name: sandbox-dev
+agent: sbx-kit-shell
+workspace:
+  path: ..
+  clone: true
+args:
+  appId:
+    description: GitHub App id. Not a secret.
+    default: "4999686"
+  installationId:
+    description: GitHub App installation id. Not a secret.
+    default: "162969352"
+kits:
+  - docker.io/docker/sbx-kit-shell:1.0.0
+  - docker.io/docker/sbx-kit-claude-mixin:2.1.285
+  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:91650f4b5562f3c737dd93dd9a31c54c6227802e9a357c1ddc8f786fc9639e39 # task sandbox:build pins this to the digest it pushed
+  - ./policy/allow # egress allow and deny are kits of their own, built on the host at create: a rule change needs no image rebuild
+  - ./policy/deny
+sandboxOptions:
+  cpus: 2
+  memory: 2g
+secrets:
+  github-mcp:
+    command: ${{ env.fileDir }}/scripts/mint-gh-app-token.sh ${{ env.args.appId }} ${{ env.args.installationId }}
+    refresh: 55m
+bindings:
+  github-mcp:
+    apiKey:
+      domains:
+        - api.githubcopilot.com

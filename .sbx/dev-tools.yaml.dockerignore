@@ -1,0 +1,4 @@
+# The build context is the repo root. Keep only what the build in dev-tools.yaml copies.
+*
+!mise.toml
+!.sbx/tools.toml

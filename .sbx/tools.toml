@@ -1,0 +1,33 @@
+# Everything the sandbox adds to the host's generic tools (the root mise.toml): the dev tools, the Terraform cache settings and the bash
+# completions. dev-tools.yaml bakes these exact versions into the image (as /etc/mise/conf.d/sandbox.toml), layered on the root list.
+# It is not named mise.toml on purpose: the host's mise would load it from this folder and ask to trust it.
+# node, python and uv are not here: the sandbox's shell kit ships them.
+
+# Applied by the mise shims in the sandbox. The provider cache is a volume of the dev-tools kit.
+[env]
+TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
+CHECKPOINT_DISABLE = "1"  # no Terraform version check to checkpoint-api.hashicorp.com
+
+[tools]
+fzf = "0.74"
+starship = "1.26"
+fd = "10.5"
+kubectl = "1.37"
+helm = "4.3"
+kustomize = "5.8"
+terragrunt = "1.1"
+terraform = "1.16"
+flux2 = "2.9"
+herdr = "0.8"
+
+# dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
+[tasks."sandbox:completions"]
+description = "Write the bash completions that the shell setup in dev-tools.yaml sources into $COMPLETIONS_DIR"
+run = [
+  'mkdir -p "$COMPLETIONS_DIR"',
+  'kubectl completion bash > "$COMPLETIONS_DIR/kubectl"',
+  'helm completion bash > "$COMPLETIONS_DIR/helm"',
+  'kustomize completion bash > "$COMPLETIONS_DIR/kustomize"',
+  'starship completions bash > "$COMPLETIONS_DIR/starship"',
+  'fd --gen-completions bash > "$COMPLETIONS_DIR/fd"',
+]

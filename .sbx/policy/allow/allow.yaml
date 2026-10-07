@@ -1,0 +1,21 @@
+# syntax=docker/sandbox-kit:3
+# The hosts the dev sandbox may reach. A kit of its own so a change here needs no image rebuild: sbxenv.yaml lists this folder,
+# sbx builds it on the host when the sandbox is created. Allow entries from all kits add up, and the deny kit next to this one wins.
+schemaVersion: "3"
+kind: mixin
+displayName: dev-sandbox egress allow
+description: Hosts the dev sandbox may reach at runtime.
+version: "0.1.0"
+
+capabilities:
+  - type: com.docker.sandbox/network-policy@2
+    config:
+      runtime:
+        allow:
+          # api.githubcopilot.com is allowed by the dev-tools kit, next to the credential that is injected on it.
+          - mcp.draw.io
+          - schemas.fluxoperator.dev
+          - marketplace.visualstudio.com
+          - "**.vsassets.io"
+          - registry.terraform.io      # Terraform provider index
+          - releases.hashicorp.com     # Terraform provider downloads
