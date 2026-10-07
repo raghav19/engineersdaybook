@@ -27,6 +27,16 @@ capabilities:
       runtime:
         allow:
           - api.githubcopilot.com
+          - mcp.draw.io
+          - schemas.fluxoperator.dev
+          - marketplace.visualstudio.com
+          - "**.vsassets.io"
+          - registry.terraform.io      # Terraform provider index
+          - releases.hashicorp.com     # Terraform provider downloads
+        deny:
+          - hosts: [api.github.com]
+            methods: [DELETE]
+            paths: [/repos/**]
 
 
   # The GitHub credential. Inject-only: no apiKey.name, so no environment variable and nothing at all inside the VM.
