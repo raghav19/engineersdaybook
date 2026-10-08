@@ -1,9 +1,5 @@
 {
   "mcpServers": {
-    "drawio": {
-      "type": "http",
-      "url": "https://mcp.draw.io/mcp"
-    },
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
@@ -11,10 +7,6 @@
         "X-MCP-Toolsets": "context,issues,pull_requests,repos",
         "X-MCP-Exclude-Tools": "create_repository,fork_repository,get_teams,get_team_members,list_repository_collaborators"
       }
-    },
-    "flux-schema-catalog": {
-      "type": "http",
-      "url": "https://schemas.fluxoperator.dev/mcp"
     }
   }
 }

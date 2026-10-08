@@ -29,8 +29,6 @@ capabilities:
       runtime:
         allow:
           - api.githubcopilot.com
-          - mcp.draw.io
-          - schemas.fluxoperator.dev
           - marketplace.visualstudio.com
           - "**.vsassets.io"
           - registry.terraform.io      # Terraform provider index
