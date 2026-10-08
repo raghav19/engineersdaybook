@@ -57,14 +57,15 @@ tasks:
     desc: Once per machine. Register GitHub on the sbx MCP gateway as the GitHub App's OAuth client and authorize it (browser)
     cmds:
       # sbxenv.yaml cannot declare headers or an OAuth client, so GitHub is registered here. The gateway sets the headers, so the agent cannot
-      # change them. X-MCP-Toolsets limits the toolsets; X-MCP-Exclude-Tools removes tools by name (add names to widen it).
+      # change them. X-MCP-Toolsets limits the toolsets; X-MCP-Exclude-Tools removes tools by name. Re-running re-registers, so a changed filter applies.
       # The App needs the callback URL http://127.0.0.1:8765/callback and "Expire user authorization tokens" on; the token is limited to
       # the App's permissions on the repositories it is installed on. The client secret stays in the sops file and goes to sbx on stdin.
       - |
-        sbx mcp ls | grep -q '^github ' || sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
+        sbx mcp rm --force github >/dev/null 2>&1 || true
+        sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
           --client-id {{.GITHUB_APP_CLIENT_ID}} --no-scope --skip-auth --callback-port 8765 \
           --header 'X-MCP-Toolsets: context,issues,pull_requests,repos' \
-          --header 'X-MCP-Exclude-Tools: delete_repository'
+          --header 'X-MCP-Exclude-Tools: delete_repository,delete_file,merge_pull_request,create_repository,fork_repository'
         sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' "{{.TASKFILE_DIR}}/../.env.secrets.json" | sbx secret set mcp:github:client_secret
         sbx mcp auth github --no-scope
 

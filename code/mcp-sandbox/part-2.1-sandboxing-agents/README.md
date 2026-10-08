@@ -186,7 +186,7 @@ planned, so its column shows what the design covers.
 | Environment | Files that run on your host | ❌ | ⚠️ (gap: you must review what you merge) | ❌ |
 | Environment | Tampered images or scripts | ✅ | ✅ | ❌ |
 | Model | Injected instructions | ❌ | ❌ | ⚠️ (gap: limits reach, doesn't detect) |
-| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, and today it excludes just `delete_repository`; no per-argument rules) | ✅ |
+| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, no per-argument rules; `create_or_update_file` and `push_files` can still overwrite files) | ✅ |
 | External content | Poisoned tool results | ❌ | ❌ | ⚠️ (gap: redacts secrets, doesn't detect injection) |
 | External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists in the VM until it is removed) | ❌ |
 | Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: `mcp.log` has server and tool name, no arguments, session or sandbox) | ✅ |
@@ -214,7 +214,7 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   Without paid org governance the gateway allows every tool, so these lines record decisions, they do not enforce anything.
 - **Tool filter:** GitHub's server reads the `X-MCP-Toolsets`, `X-MCP-Exclude-Tools`, `X-MCP-Tools` (allow list) and `X-MCP-Readonly` headers and rejects a
   filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:mcp-github` sets
-  the toolsets and excludes only `delete_repository`. An allow list (`X-MCP-Tools`) is stricter than an exclude list: a tool GitHub adds later is allowed by the latter.
+  the toolsets and excludes `delete_repository`, `delete_file`, `merge_pull_request`, `create_repository` and `fork_repository`. An allow list (`X-MCP-Tools`) is stricter than an exclude list: a tool GitHub adds later is allowed by the latter.
 - **GitHub authenticates with the App's OAuth flow:** `sbx mcp auth` refreshes the user token itself. An installation token from the minter cannot be
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
   repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
