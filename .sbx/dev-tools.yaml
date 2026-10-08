@@ -35,6 +35,8 @@ capabilities:
           - hosts: [api.github.com]
             methods: [DELETE]
             paths: [/repos/**]
+          # The host's baseline allows *.githubcopilot.com. GitHub MCP goes through the host gateway only, so close the direct path.
+          - hosts: [api.githubcopilot.com]
 
   # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in .sbx/tools.toml), one per sandbox. sbx keeps it across
   # stop and start and deletes it with the sandbox. It comes up root-owned, so the boot command below gives it to agent.
