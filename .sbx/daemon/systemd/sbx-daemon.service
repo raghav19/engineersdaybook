@@ -1,0 +1,16 @@
+# Installed by `task sandbox:install-daemon`. See ../README.md.
+[Unit]
+Description=Docker Sandboxes daemon (sandboxd), with its temp files on disk
+# The daemon's egress goes through the squid proxy (sbx setting proxy.daemon), so it must not start without it. Stopping the proxy unit stops the daemon too.
+Requires=sbx-daemon-egress.service
+After=sbx-daemon-egress.service
+# /tmp is a RAM disk on some machines; kit assembly unpacks the kit images into TMPDIR and can fill it.
+
+[Service]
+Environment=TMPDIR=%h/.cache/sbx-tmp
+ExecStartPre=/usr/bin/mkdir -p %h/.cache/sbx-tmp
+ExecStart=%h/.docker/sbx/bin/sbx daemon start
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

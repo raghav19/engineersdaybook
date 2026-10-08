@@ -1,0 +1,15 @@
+# Installed by `task sandbox:install-daemon`, which fills in the path of this clone's .sbx/daemon/egress below. See ../README.md.
+[Unit]
+Description=Egress proxy (squid) for the sbx daemon
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=DOCKER_HOST=unix://%t/docker.sock
+ExecStart=/usr/bin/docker compose -f @EGRESS_DIR@/compose.yaml up -d --wait
+ExecStop=/usr/bin/docker compose -f @EGRESS_DIR@/compose.yaml down
+
+[Install]
+WantedBy=default.target

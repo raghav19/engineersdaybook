@@ -3,6 +3,7 @@ version: '3'
 # Daemon policy: what the sbx daemon and the MCP gateway inside it may reach. Included by ../Taskfile.yml with flatten, so the task names keep the
 # `sandbox:` prefix. The VM's own traffic is the agent policy (../agent/) and is not touched here.
 #
+# sandbox:install-daemon    once per machine: install the proxy and sbx daemon systemd units from this repo and point the daemon at the proxy
 # sandbox:install-mcp       register & attach MCP servers to the sandbox
 
 silent: true
@@ -33,3 +34,28 @@ tasks:
       - sbx mcp load drawio --sandbox {{.NAME}}
       - sbx mcp load flux-schema-catalog --sandbox {{.NAME}}
       - sbx mcp load github --sandbox {{.NAME}}
+
+  sandbox:install-daemon:
+    desc: Once per machine. Install the proxy and sbx daemon systemd units from this repo and point the daemon at the proxy (restarts the sbx daemon)
+    preconditions:
+      - sh: systemctl --user is-enabled docker.service
+        msg: "Rootless Docker is not an enabled user service. Run: systemctl --user enable --now docker.service (see .sbx/daemon/README.md)"
+      - sh: loginctl show-user "$USER" -p Linger | grep -q yes
+        msg: "Linger is off, so user services would not start at boot. Run: loginctl enable-linger $USER (see .sbx/daemon/README.md)"
+    cmds:
+      # The proxy unit has to point at this clone's compose.yaml and systemd has no way for a unit to name its own directory, so the path is filled in here.
+      # Re-running updates the installed units from the repo. Restarting the sbx daemon ends running sandboxes.
+      - |
+        set -eu
+        dir="$HOME/.config/systemd/user"
+        src="{{.ROOT_DIR}}/.sbx/daemon/systemd"
+        mkdir -p "$dir"
+        sed 's#@EGRESS_DIR@#{{.ROOT_DIR}}/.sbx/daemon/egress#' "$src/sbx-daemon-egress.service" > "$dir/sbx-daemon-egress.service"
+        grep -q '{{.ROOT_DIR}}/.sbx/daemon/egress/compose.yaml' "$dir/sbx-daemon-egress.service"
+        cp "$src/sbx-daemon.service" "$dir/sbx-daemon.service"
+        systemctl --user daemon-reload
+        systemctl --user enable --now sbx-daemon-egress.service
+        sbx settings set proxy.daemon http://127.0.0.1:3128
+        systemctl --user enable sbx-daemon.service
+        sbx daemon stop >/dev/null 2>&1 || true
+        systemctl --user restart sbx-daemon.service

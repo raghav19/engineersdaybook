@@ -99,15 +99,8 @@ code --install-extension ms-vscode-remote.remote-ssh
 task sandbox:install-skills
 ```
 
-7. Send the sbx daemon's own egress through the squid proxy, once. First install the two systemd units from
-   [The daemon's egress proxy](#the-daemons-egress-proxy) below, then:
-
-```shell
-sbx settings set proxy.daemon http://127.0.0.1:3128    # leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too
-systemctl --user restart sbx-daemon                    # not `sbx daemon restart`: that starts the daemon outside its unit
-```
-
-   Undo: `sbx settings unset proxy.daemon`, then `systemctl --user restart sbx-daemon`.
+7. Set up the sbx daemon's proxy and units on the host. Follow [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md), which is a prerequisite for the
+   tasks below. In short: `task sandbox:install-daemon` (it restarts the sbx daemon).
 
 ## Run it
 
@@ -135,7 +128,9 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 │   ├── dev-tools.yaml              the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
 │   └── tools.toml                  the sandbox's tools at exact versions, Terraform cache settings, the completions task
 └── daemon/                         DAEMON POLICY: what the sbx daemon and its MCP gateway may reach
-    ├── Taskfile.yml                sandbox:install-mcp
+    ├── README.md                   what is set up on the host and how (read first: it is a prerequisite for the tasks)
+    ├── Taskfile.yml                sandbox:install-daemon (once per machine), sandbox:install-mcp
+    ├── systemd/                    the two user units: the proxy and the sbx daemon (installed by sandbox:install-daemon)
     └── egress/
         ├── compose.yaml            squid for the daemon on 127.0.0.1:3128
         └── squid.conf              the allowlist: the one file to edit to change what the daemon may reach
@@ -230,7 +225,7 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
   repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
 - **The daemon's egress proxy:** the sbx egress policy covers only the VM. The gateway's calls to the MCP servers, kit pulls and Docker sign-in leave from the
-  sbx daemon on your host, so they go through a squid allowlist set with `proxy.daemon` (setup step 7). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon
+  sbx daemon on your host, so they go through a squid allowlist set with `proxy.daemon` (setup step 7, [daemon README](../../../.sbx/daemon/README.md)). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon
   may reach, then `docker compose -f .sbx/daemon/egress/compose.yaml restart` (`up -d` alone does not pick up a conf edit). Tested: with a host removed from the allowlist,
   squid denied it (403) and the gateway's call failed; the VM's own traffic never appears in squid's log. Squid sees the host and port of a tunnel, not paths or tool
   names, and logs a tunnel only when it closes (`docker logs -f sbx-daemon-egress`); the gateway's connections stay open, so they appear late. `proxy.daemon` is an experimental sbx setting.
@@ -242,43 +237,6 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   are host-global, so register only what any sandbox may use.
 - **The App's permissions are the real boundary:** the App has write access to `contents`, `issues` and `pull_requests`, and no administration. The
   installation covers one repository.
-
-### The daemon's egress proxy
-
-Squid has to be running before the sbx daemon starts. Two systemd user units make that true at every boot and keep the daemon from starting without it.
-They live outside the repo, in `~/.config/systemd/user/`. Change the paths to match your clone.
-
-```ini
-# ~/.config/systemd/user/sbx-daemon-egress.service
-[Unit]
-Description=Egress proxy (squid) for the sbx daemon
-Requires=docker.service
-After=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-Environment=DOCKER_HOST=unix://%t/docker.sock
-ExecStart=/usr/bin/docker compose -f %h/Projects/engineersdaybook/.sbx/daemon/egress/compose.yaml up -d --wait
-ExecStop=/usr/bin/docker compose -f %h/Projects/engineersdaybook/.sbx/daemon/egress/compose.yaml down
-
-[Install]
-WantedBy=default.target
-```
-
-```ini
-# ~/.config/systemd/user/sbx-daemon.service.d/egress.conf   (a drop-in for the existing sbx-daemon.service)
-[Unit]
-Requires=sbx-daemon-egress.service
-After=sbx-daemon-egress.service
-```
-
-```shell
-systemctl --user daemon-reload
-systemctl --user enable --now sbx-daemon-egress.service
-```
-
-`Requires` means stopping or restarting the proxy unit also stops the daemon and ends running sandboxes; that is the fail-closed choice.
 
 ## What is left ahead
 
