@@ -9,8 +9,9 @@ Earlier parts: [Part 1](../part-1-lethal-trifecta/README.md) shows the attack an
 
 ## The solution
 
-Claude Code runs inside an `sbx` microVM, on a private clone of the repo, and holds no real credential. The host adds a short-lived GitHub token
-only on requests to the GitHub MCP server. Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/dev-tools.yaml`).
+Claude Code runs inside an `sbx` microVM, on a private clone of the repo, and holds no real credential. The MCP servers (GitHub, draw.io, the Flux schema catalog) are registered on the host's sbx MCP gateway, so the agent
+reaches them only through it. The gateway holds GitHub's OAuth token and sets the tool filter headers where the agent cannot change them.
+Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/dev-tools.yaml`).
 
 This follows Anthropic's [How we contain Claude across products](https://www.anthropic.com/engineering/how-we-contain-claude) (May 25, 2026): enforce hard limits in the environment (sandbox, egress controls, credentials kept out) instead of relying on the model. The quotes and the layer-by-layer mapping are in the [notes](docs/research/readme-notes.md).
 
@@ -30,9 +31,9 @@ HOST (your machine)
 │                               ▼                                        │
 │ ┌─ host proxy ───────────────────────────────────────────────────────┐ │
 │ │ 1. egress policy: the allow and deny lists + your sbx policy       │ │
-│ │ 2. credential injection: only on the domains you approved in       │ │
-│ │    credentials.yaml, swapping the placeholder for the real value   │ │
-│ │    from the host secret store (never inside the VM)                │ │
+│ │ 2. MCP gateway: GitHub, draw.io and Flux go through it. It holds   │ │
+│ │    the OAuth token (never inside the VM), sets the tool filter     │ │
+│ │    headers and logs each tool call in sandboxd/mcp/mcp.log         │ │
 │ └─────────────────────────────┬──────────────────────────────────────┘ │
 │                               │                                        │
 └────────────────────────────────────────────────────────────────────────┘
@@ -66,7 +67,10 @@ On other distributions, use the tarball from [github.com/docker/sbx-releases](ht
 mise trust && mise install
 ```
 
-2. Put the GitHub App private key at `~/.config/mcp-gh/mcp-gh-local.2026-09-19.private-key.pem`. The App id and installation id are in `.sbx/sbxenv.yaml`.
+2. Set up the GitHub App (`mcp-gh-local`) as the OAuth client for the gateway. In its settings, add the callback URL `http://127.0.0.1:8765/callback`,
+   turn on **Expire user authorization tokens**, and generate a client secret into `.env.secrets.json` as `GITHUB_APP_CLIENT_SECRET`
+   (`sops .env.secrets.json`). Install the App on only the repository the agent needs, with only the permissions it needs.
+   The App's private key is no longer used.
 
 3. Log in to the registry. The token is in the encrypted `.env.secrets.json`, and your age key decrypts it:
 
@@ -95,10 +99,16 @@ code --install-extension ms-vscode-remote.remote-ssh
 task sandbox:install-skills
 ```
 
+7. Register GitHub on the sbx MCP gateway and authorize it. This opens a browser for GitHub's consent page:
+
+```shell
+task sandbox:mcp-github
+```
+
 ## Run it
 
 ```shell
-task sandbox:run        # create or start the sandbox and open VS Code on it
+task sandbox:run        # create or start the sandbox, load GitHub into it and open VS Code
 ```
 
 The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
@@ -114,16 +124,16 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 
 ```text
 .sbx/                               everything that spawns the sandbox
-├── Taskfile.yml                    sandbox:login, :install-skills, :update-skills, :build, :setup-vscode, :run
+├── Taskfile.yml                    sandbox:login, :install-skills, :update-skills, :mcp-github, :build, :setup-vscode, :run
 ├── sbxenv.yaml                     the sandbox: kits, GitHub App secret, binding
-├── dev-tools.yaml                  the kit: tools, completions, shell, egress allow and deny lists, credential (+ its .dockerignore)
+├── dev-tools.yaml                  the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
 ├── tools.toml                      the sandbox's tools at exact versions, Terraform cache settings, the completions task
-└── scripts/mint-gh-app-token.sh    host minter: App key -> installation token
+└── scripts/mint-gh-app-token.sh    host minter: App key -> installation token. Unused since GitHub moved to the gateway, kept as a fallback
 ```
 
 This folder keeps the README, `docs/` and the handoffs.
 
-Repo-root files (`Taskfile.yml`, `mise.toml`, `.env.secrets.json`, `.mcp.json`, `.vscode/`, `AGENTS.md`) and the host paths are listed in the [notes](docs/research/readme-notes.md).
+Repo-root files (`Taskfile.yml`, `mise.toml`, `.env.secrets.json`, `.vscode/`, `AGENTS.md`) and the host paths are listed in the [notes](docs/research/readme-notes.md).
 
 ### How it works
 
@@ -131,18 +141,20 @@ Repo-root files (`Taskfile.yml`, `mise.toml`, `.env.secrets.json`, `.mcp.json`, 
 EVERY GITHUB MCP CALL
 
   Claude (in the VM)
-    │ request to api.githubcopilot.com
+    │ tool call to the one MCP endpoint, mcp-gateway.docker.internal
     ▼
-  host proxy: domain on the allow list? ──no──▶ 403
-    │ yes
+  host MCP gateway (sbx): logs "invokeTool server=github target=<tool>"
+    │ adds the OAuth token (refreshed by sbx) and the X-MCP-* headers
     ▼
-  token older than 55 min? ──yes──▶ minter runs on the host: signs a JWT with
-    │ no                            the App key, gets a short-lived token
+  GitHub's MCP server: unknown or excluded tool ──▶ "unknown tool" error
+    │ allowed tool
     ▼
-  proxy adds `Authorization: Bearer <App token>` and forwards the request
+  runs with the App's permissions on the repositories it is installed on
+
+  Direct route: the VM's request to api.githubcopilot.com ──▶ 403 (kit deny rule, no credential either)
 ```
 
-The kit, egress policy and token minter are explained in the [notes](docs/research/readme-notes.md).
+The kit, egress policy and gateway setup are explained in the [notes](docs/research/readme-notes.md).
 
 ### Getting the agent's work
 
@@ -171,14 +183,14 @@ planned, so its column shows what the design covers.
 | Environment | Compromised MCP server code | ✅ | ✅ | ✅ |
 | Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: broad baseline domains) | ⚠️ (gap: gateway covers MCP only) |
 | Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ | ✅ |
-| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ token only on the MCP host | ✅ |
+| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ token stays on the host gateway, direct route denied | ✅ |
 | Environment | Files that run on your host | ❌ | ⚠️ (gap: you must review what you merge) | ❌ |
 | Environment | Tampered images or scripts | ✅ | ✅ | ❌ |
 | Model | Injected instructions | ❌ | ❌ | ⚠️ (gap: limits reach, doesn't detect) |
-| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: MCP tools unrestricted, one shared token) | ✅ |
+| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, and today it excludes just `delete_repository`; no per-argument rules) | ✅ |
 | External content | Poisoned tool results | ❌ | ❌ | ⚠️ (gap: redacts secrets, doesn't detect injection) |
 | External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists in the VM until it is removed) | ❌ |
-| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: hosts only) | ✅ |
+| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: `mcp.log` has server and tool name, no arguments, session or sandbox) | ✅ |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
 provider.
@@ -195,16 +207,23 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
 - **The sandbox remote:** the agent's commits are served at `sandbox-<name>` on `127.0.0.1` at a random port. It is
   read-only (a push from the host was refused). Fetching from it is like fetching from any third-party remote, so
   review before you merge.
-- **MCP guardrails need the gateway:** the `DELETE /repos/**` deny in `dev-tools.yaml` on `api.github.com` is now defense in depth,
-  since `gh` has no token there. The token goes only to the MCP host, where GitHub's server does the work after a `POST`,
-  so an MCP `delete_file` or `merge_pull_request` call is invisible to the proxy (tested). Network rules cannot see
-  tool names, and the `X-MCP-*` headers in `.mcp.json` are only client-side guidance. Enforcement has to sit at the
-  gateway (Part 3) or on GitHub (App permissions, branch rules).
-- **The App's permissions are the real boundary:** this token has write access to `contents`, `issues` and
-  `pull_requests` on one repository.
+- **MCP goes through the host gateway:** GitHub, draw.io and Flux are registered with `sbx mcp`, so the agent has one endpoint and no direct route. Tested:
+  the VM's request to `api.githubcopilot.com` returns 403 (a kit deny rule overrides the host baseline, which allows `*.githubcopilot.com`), and the
+  gateway call works. The network proxy still cannot see tool names, but the gateway logs them.
+- **Where tool calls are logged:** `~/.local/state/sandboxes/sandboxes/sandboxd/mcp/mcp.log` has one line per call, such as
+  `mcp policy: allowed action=invokeTool server=github target=list_issues`. `sbx policy log` shows only the gateway alias with a count, never tool names.
+  Without paid org governance the gateway allows every tool, so these lines record decisions, they do not enforce anything.
+- **Tool filter:** GitHub's server reads the `X-MCP-Toolsets`, `X-MCP-Exclude-Tools`, `X-MCP-Tools` (allow list) and `X-MCP-Readonly` headers and rejects a
+  filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:mcp-github` sets
+  the toolsets and excludes only `delete_repository`. An allow list (`X-MCP-Tools`) is stricter than an exclude list: a tool GitHub adds later is allowed by the latter.
+- **GitHub authenticates with the App's OAuth flow:** `sbx mcp auth` refreshes the user token itself. An installation token from the minter cannot be
+  used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
+  repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
+- **The App's permissions are the real boundary:** the App has write access to `contents`, `issues` and `pull_requests`, and no administration. The
+  installation covers one repository.
 
 ## What is left ahead
 
-**Part 3, the gateway.** This setup cannot see tool calls: a network rule sees a request to the MCP host, not whether it is `delete_file` or
-`merge_pull_request`. A gateway in front of the MCP server can limit each tool (delete, merge, per repo or per user) and log every call with its
-tool name.
+**Part 3, a gateway with rules.** The host gateway now routes the calls and logs each tool name, but it enforces nothing by itself: sbx's own per-tool
+rules (Cedar policies) need a paid Docker org subscription, and the log has no arguments. A gateway of your own can limit each tool (delete, merge, per repo
+or per user), look at the arguments and log every call in full.
