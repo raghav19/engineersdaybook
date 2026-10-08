@@ -9,6 +9,7 @@ After=sbx-daemon-egress.service
 [Service]
 Environment=TMPDIR=%h/.cache/sbx-tmp
 ExecStartPre=/usr/bin/mkdir -p %h/.cache/sbx-tmp
+# The path of the Docker installer's sbx. If `command -v sbx` prints another path, put it here.
 ExecStart=%h/.docker/sbx/bin/sbx daemon start
 Restart=on-failure
 

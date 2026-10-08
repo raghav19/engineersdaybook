@@ -116,9 +116,9 @@ Run these in order, from the repo root.
    task sandbox:login
    ```
 
-4. Set up the daemon's proxy and units on the host. This restarts the sbx daemon, so do it before you start a sandbox. What it installs and how to undo it:
-   [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md). The daemon unit runs `~/.docker/sbx/bin/sbx`: if `command -v sbx` prints another path, change `ExecStart` in
-   `.sbx/daemon/systemd/sbx-daemon.service` to it first.
+4. Set up the daemon's proxy and units on the host. This restarts the sbx daemon, so do it before you start a sandbox. How the parts fit:
+   [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md). The steps, checks, logs and undo are the comments above `sandbox:install-daemon` in `.sbx/daemon/Taskfile.yml`.
+   The daemon unit runs `~/.docker/sbx/bin/sbx`: if `command -v sbx` prints another path, change `ExecStart` in `.sbx/daemon/systemd/sbx-daemon.service` to it first.
 
    ```shell
    task sandbox:install-daemon
@@ -261,7 +261,7 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
 - **The daemon's egress proxy:** the sbx egress policy covers only the VM. The daemon's own calls (MCP servers, kit pulls, Docker sign-in) go through a squid allowlist
   set with the experimental sbx setting `proxy.daemon`; `proxy` and `proxy.sandbox` stay empty, or the VM's traffic would go through squid too. Tested: a host removed from the
   allowlist is denied (403) and the gateway's call fails, and the VM's traffic never appears in squid's log. Squid sees the host and port of a tunnel, not paths or tool names.
-  Operating it (logs, adding a host, undo): [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md).
+  How it fits together: [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md). Logs, adding a host and undo: comments in `.sbx/daemon/Taskfile.yml` and `egress/squid.conf`.
 - **Fail closed:** systemd starts the proxy at login and orders the daemon after it, and the daemon stops with it. If squid is down while `proxy.daemon` is set, the daemon cannot
   pull kits, sign in or reach the MCP servers until it is back; Docker restarts it after a crash but not after a manual stop.
 - **Dynamic MCP mode:** `sbx env run` has no `--static-mcp`, so the agent can attach any server registered on your host with the gateway's `mcp-add`. Registrations

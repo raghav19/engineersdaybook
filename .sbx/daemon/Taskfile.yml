@@ -35,16 +35,33 @@ tasks:
       - sbx mcp load flux-schema-catalog --sandbox {{.NAME}}
       - sbx mcp load github --sandbox {{.NAME}}
 
+  # Once per machine. Sets up what the sbx daemon needs on the host. The picture of how the parts fit is in README.md in this folder.
+  #
+  # Needs (the preconditions below check the first two): rootless Docker as an enabled user service, and linger on so user services start at boot.
+  # It also needs sbx in ~/.docker/sbx/bin: the daemon unit's ExecStart points there (edit systemd/sbx-daemon.service if yours is elsewhere).
+  #
+  # What it does, in order:
+  #   1. copies the two units into ~/.config/systemd/user, with this clone's path filled into the proxy unit (a unit cannot name its own directory);
+  #   2. starts the squid proxy and keeps it running (sbx-daemon-egress.service);
+  #   3. sets the sbx setting proxy.daemon to the proxy. Leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too;
+  #   4. restarts the daemon under its unit. It is ordered after the proxy and stops with it. This ends running sandboxes.
+  # Safe to run again: it re-copies the units from the repo.
+  #
+  # Check:  systemctl --user is-active sbx-daemon-egress sbx-daemon                              both active
+  #         DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock docker ps --filter name=sbx-daemon-egress   healthy
+  #         sbx settings get proxy.daemon                                                         http://127.0.0.1:3128
+  # Logs:   docker logs -f sbx-daemon-egress   (a line appears when a connection closes, so the MCP servers' long-lived ones show up late)
+  # Undo:   sbx settings unset proxy.daemon
+  #         systemctl --user disable --now sbx-daemon-egress.service && rm ~/.config/systemd/user/sbx-daemon-egress.service
+  #         then put back a plain sbx-daemon.service (no Requires=/After=) or delete it and run `sbx daemon start`; systemctl --user daemon-reload
   sandbox:install-daemon:
     desc: Once per machine. Install the proxy and sbx daemon systemd units from this repo and point the daemon at the proxy (restarts the sbx daemon)
     preconditions:
       - sh: systemctl --user is-enabled docker.service
-        msg: "Rootless Docker is not an enabled user service. Run: systemctl --user enable --now docker.service (see .sbx/daemon/README.md)"
+        msg: "Rootless Docker is not an enabled user service. Run: systemctl --user enable --now docker.service"
       - sh: loginctl show-user "$USER" -p Linger | grep -q yes
-        msg: "Linger is off, so user services would not start at boot. Run: loginctl enable-linger $USER (see .sbx/daemon/README.md)"
+        msg: "Linger is off, so user services would not start at boot. Run: loginctl enable-linger $USER"
     cmds:
-      # The proxy unit has to point at this clone's compose.yaml and systemd has no way for a unit to name its own directory, so the path is filled in here.
-      # Re-running updates the installed units from the repo. Restarting the sbx daemon ends running sandboxes.
       - |
         set -eu
         dir="$HOME/.config/systemd/user"
