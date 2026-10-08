@@ -8,7 +8,7 @@ displayName: dev-tools
 description: >-
   Exact-version dev tools from the repo's mise.toml and .sbx/tools.toml (kubectl, helm, kustomize, fzf, starship, fd, task, yq, terraform,
   terragrunt, flux),
-  their bash completions and the bash setup, plus the GitHub MCP credential.
+  their bash completions and the bash setup.
 version: "0.1.0"
 
 args:
@@ -20,15 +20,13 @@ args:
 
 capabilities:
   # Egress rules for the sandboxed environment. @2 adds method and path rules; deny wins over any allow,
-  # including the host's own sbx policy. The deny below stops gh or curl from using the injected token to
-  # delete repositories through the REST API. It does not block other writes: add methods to widen it.
-  # The credential's own host (api.githubcopilot.com) must stay in this allow list: sbx refuses a kit whose credential
-  # injects on a host that the kit's own network policy does not allow.
+  # including the host's own sbx policy. The MCP servers (GitHub, draw.io, the Flux schema catalog) are not listed:
+  # the agent reaches them only through the host's sbx MCP gateway, which holds their credentials.
+  # The deny below is defense in depth: it stops a DELETE on a repository through the REST API.
   - type: com.docker.sandbox/network-policy@2
     config:
       runtime:
         allow:
-          - api.githubcopilot.com
           - marketplace.visualstudio.com
           - "**.vsassets.io"
           - registry.terraform.io      # Terraform provider index
@@ -37,20 +35,6 @@ capabilities:
           - hosts: [api.github.com]
             methods: [DELETE]
             paths: [/repos/**]
-
-  # The GitHub credential. Inject-only: no apiKey.name, so no environment variable and nothing at all inside the VM.
-  # The service is named github-mcp, not github: `github` is an sbx built-in whose default domains include
-  # api.github.com, so gh and git would also get the token. A custom name is injected only on the domains below.
-  - type: com.docker.sandbox/credential@1
-    config:
-      service: github-mcp
-      phase: runtime
-      apiKey:
-        proxyManaged: true
-        inject:
-          - domain: api.githubcopilot.com
-            header: Authorization
-            format: "Bearer %s"
 
   # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in .sbx/tools.toml), one per sandbox. sbx keeps it across
   # stop and start and deletes it with the sandbox. It comes up root-owned, so the boot command below gives it to agent.
@@ -91,11 +75,11 @@ capabilities:
     config:
       content: |
         You are running inside a jailed sandbox (a microVM) for developers of this repository.
-        GitHub access is provided by the hosted GitHub MCP server in the repository's .mcp.json.
-        You hold no GitHub credential: the host injects a short-lived token, only on requests to
-        the MCP server. Use the MCP tools for anything on GitHub; git push, gh and direct API
-        calls from here have no credential and will fail. Your repository is a private clone:
-        commit your work on a branch, and the developer fetches it from the sandbox remote.
+        GitHub access is provided by the host's MCP gateway (the mcp-gateway server), which holds the
+        credential and applies a tool filter. You hold no GitHub credential. Use the gateway's GitHub
+        tools for anything on GitHub; git push, gh and direct API calls from here have no credential and
+        will fail. Your repository is a private clone: commit your work on a branch, and the developer
+        fetches it from the sandbox remote.
 
 # The content recipe. Everything is staged under /out and lands on the workload as-is (see the create-v3-kit RECIPES.md).
 # The build context is the repo root; dev-tools.yaml.dockerignore keeps only mise.toml and .sbx/tools.toml.

@@ -6,9 +6,10 @@ version: '3'
 # sandbox:login           once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
 # sandbox:install-skills  once per machine: install the agent skills into the sbx store that every sandbox shares
 # sandbox:update-skills   refresh the skills the store already has to upstream's latest
+# sandbox:mcp-github      once per machine: register GitHub on the host's sbx MCP gateway and authorize it in the browser
 # sandbox:build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in sbxenv.yaml
 # sandbox:setup-vscode    write the Remote-SSH and update settings into your host VS Code user settings (sandbox:run does it first)
-# sandbox:run             developer: `sbx env run . --detached`, then open VS Code on the sandbox
+# sandbox:run             developer: `sbx env run . --detached`, load GitHub into the sandbox, then open VS Code on it
 #
 # sbxenv.yaml declares the sandbox (kits, GitHub secret, clone workspace). `sbx env run` prints that plan and
 # asks for approval. The README has the one-time setup.
@@ -19,6 +20,7 @@ vars:
   KIT_REPO: ghcr.io/raghav19/dev-agent-sandbox/dev-tools
   KIT_VERSION: 0.1.0
   GHCR_USER: raghav19
+  GITHUB_APP_CLIENT_ID: Iv23liVvjK9IHk8lWmIh  # the GitHub App's client id, not a secret
   NAME:
     sh: yq .name sbxenv.yaml
 
@@ -50,6 +52,21 @@ tasks:
     desc: Refresh the skills in the sbx store to upstream's latest (a sandbox picks them up on its next start)
     cmds:
       - sbx skills update
+
+  sandbox:mcp-github:
+    desc: Once per machine. Register GitHub on the sbx MCP gateway as the GitHub App's OAuth client and authorize it (browser)
+    cmds:
+      # sbxenv.yaml cannot declare headers or an OAuth client, so GitHub is registered here. The gateway sets the headers, so the agent cannot
+      # change them. X-MCP-Toolsets limits the toolsets; X-MCP-Exclude-Tools removes tools by name (add names to widen it).
+      # The App needs the callback URL http://127.0.0.1:8765/callback and "Expire user authorization tokens" on; the token is limited to
+      # the App's permissions on the repositories it is installed on. The client secret stays in the sops file and goes to sbx on stdin.
+      - |
+        sbx mcp ls | grep -q '^github ' || sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
+          --client-id {{.GITHUB_APP_CLIENT_ID}} --no-scope --skip-auth --callback-port 8765 \
+          --header 'X-MCP-Toolsets: context,issues,pull_requests,repos' \
+          --header 'X-MCP-Exclude-Tools: delete_repository'
+        sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' "{{.TASKFILE_DIR}}/../.env.secrets.json" | sbx secret set mcp:github:client_secret
+        sbx mcp auth github --no-scope
 
   sandbox:build:
     desc: Maintainer. Build and push the dev-tools kit and pin its digest in sbxenv.yaml
@@ -101,4 +118,6 @@ tasks:
     deps: [sandbox:setup-vscode]
     cmds:
       - sbx env run . --detached {{.CLI_ARGS}}
+      # GitHub is registered on the host gateway by sandbox:mcp-github but not declared in sbxenv.yaml, so it is loaded into the sandbox here.
+      - sbx mcp load github --sandbox {{.NAME}} || echo "GitHub MCP is not registered; run task sandbox:mcp-github"
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
