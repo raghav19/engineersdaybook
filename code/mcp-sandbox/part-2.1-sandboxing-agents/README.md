@@ -99,20 +99,20 @@ code --install-extension ms-vscode-remote.remote-ssh
 task sandbox:install-skills
 ```
 
-7. `task sandbox:run` starts the daemon's egress proxy and installs the MCP servers on its own, so there is nothing to run here. The first run opens a
-   browser once for GitHub's consent. To run the two steps alone:
+7. Send the sbx daemon's own egress through the squid proxy, once. First install the two systemd units from
+   [The daemon's egress proxy](#the-daemons-egress-proxy) below, then:
 
 ```shell
-task sandbox:egress-preflight    # squid up and proven, then sbx's proxy.daemon pointed at it (restarts the sbx daemon once)
-task sandbox:install-mcp         # draw.io, Flux and GitHub registered on the sbx MCP gateway and attached to the running sandbox
+sbx settings set proxy.daemon http://127.0.0.1:3128    # leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too
+systemctl --user restart sbx-daemon                    # not `sbx daemon restart`: that starts the daemon outside its unit
 ```
 
-8. Keep the proxy running across reboots. See [the daemon's egress proxy](#the-daemons-egress-proxy) for the two systemd units.
+   Undo: `sbx settings unset proxy.daemon`, then `systemctl --user restart sbx-daemon`.
 
 ## Run it
 
 ```shell
-task sandbox:run        # proxy up, MCP servers registered, sandbox created or started, servers attached, VS Code opened
+task sandbox:run        # create or start the sandbox, register and attach the MCP servers, open VS Code
 ```
 
 The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
@@ -135,7 +135,7 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 │   ├── dev-tools.yaml              the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
 │   └── tools.toml                  the sandbox's tools at exact versions, Terraform cache settings, the completions task
 └── daemon/                         DAEMON POLICY: what the sbx daemon and its MCP gateway may reach
-    ├── Taskfile.yml                sandbox:install-mcp, :egress-up/-check/-apply/-preflight/-status/-open/-log/-off
+    ├── Taskfile.yml                sandbox:install-mcp
     └── egress/
         ├── compose.yaml            squid for the daemon on 127.0.0.1:3128
         └── squid.conf              the allowlist: the one file to edit to change what the daemon may reach
@@ -230,15 +230,14 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
   repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
 - **The daemon's egress proxy:** the sbx egress policy covers only the VM. The gateway's calls to the MCP servers, kit pulls and Docker sign-in leave from the
-  sbx daemon on your host, so they go through a squid allowlist set with `sbx settings set proxy.daemon http://127.0.0.1:3128` (`proxy` and `proxy.sandbox` stay empty:
-  `proxy` alone would send the VM's traffic through squid too). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon may reach. Tested: with a host
-  removed from the allowlist, squid denied it (403) and the gateway's call failed; the VM's own traffic never appears in squid's log. Squid sees the host and
-  port of a tunnel, not paths or tool names, and logs a tunnel only when it closes: `task sandbox:egress-open` lists the ones open now, which is where the
-  gateway's long-lived connections show up. `proxy.daemon` is an experimental sbx setting.
-- **Fail closed, with a way out:** if the proxy is down while `proxy.daemon` is set, the daemon cannot pull kits, sign in or reach the MCP servers (tested: a gateway
-  call failed while the proxy was stopped). `sandbox:run` starts and proves the proxy first, in order: up and healthy, allowed host tunnels and a denied host gets 403,
-  then `proxy.daemon` is set and the daemon restarted, then the sandbox starts. `task sandbox:egress-off` unsets the setting without needing the proxy. Docker restarts
-  squid after a crash (tested, about 7 s) but not after a manual `docker stop` or `docker kill`.
+  sbx daemon on your host, so they go through a squid allowlist set with `proxy.daemon` (setup step 7). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon
+  may reach, then `docker compose -f .sbx/daemon/egress/compose.yaml restart` (`up -d` alone does not pick up a conf edit). Tested: with a host removed from the allowlist,
+  squid denied it (403) and the gateway's call failed; the VM's own traffic never appears in squid's log. Squid sees the host and port of a tunnel, not paths or tool
+  names, and logs a tunnel only when it closes (`docker logs -f sbx-daemon-egress`); the gateway's connections stay open, so they appear late. `proxy.daemon` is an experimental sbx setting.
+- **Fail closed, started by systemd:** the proxy is started at login by a systemd unit, and the daemon unit is ordered after it and stops with it (tested: starting only the
+  daemon unit started the proxy first). `sandbox:run` does not start or check the proxy. If squid is down while `proxy.daemon` is set, the daemon cannot pull kits, sign in or
+  reach the MCP servers until it is back. Docker restarts squid after a crash (tested, about 7 s) but not after a manual `docker stop` or `docker kill`: start it again with
+  `docker compose -f .sbx/daemon/egress/compose.yaml up -d`.
 - **Dynamic MCP mode:** `sbx env run` has no `--static-mcp`, so the agent can attach any server registered on your host with the gateway's `mcp-add`. Registrations
   are host-global, so register only what any sandbox may use.
 - **The App's permissions are the real boundary:** the App has write access to `contents`, `issues` and `pull_requests`, and no administration. The

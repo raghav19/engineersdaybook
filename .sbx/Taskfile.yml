@@ -5,10 +5,10 @@ version: '3'
 #
 # This file only orchestrates. The two policies live in their own folders, each with its own Taskfile included below:
 #   agent/    what runs inside the VM: the kit, its egress allow and deny lists, the tools, the skills
-#   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations and the squid allowlist
+#   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations and the squid allowlist (started by systemd)
 #
 # sandbox:login   once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
-# sandbox:run     developer: egress preflight, MCP registration, `sbx env run . --detached`, attach the MCP servers, open VS Code on it
+# sandbox:run     developer: `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
 #
 # sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
 
@@ -40,9 +40,8 @@ tasks:
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
     cmds:
-      # Order matters, so these are sequential steps, not deps (deps run in parallel). The daemon's egress proxy must be up and proven before the
-      # daemon is pointed at it, and the daemon must be settled before the sandbox is created.
-      - task: sandbox:egress-preflight
+      # Sequential steps, not deps (deps run in parallel): the MCP servers are attached to the sandbox, so it has to exist first.
+      # The daemon's egress proxy is not started here: systemd does that (see the README).
       - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}}
       - task: sandbox:install-mcp
       - task: sandbox:setup-vscode
