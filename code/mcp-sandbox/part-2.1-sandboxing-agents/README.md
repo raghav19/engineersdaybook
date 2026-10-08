@@ -95,10 +95,12 @@ Have these in place before the first command in [Getting started](#getting-start
 
 Run these in order, from the repo root.
 
-1. Install the host tools:
+1. Install the host tools, and activate mise in your shell so `task` is on the PATH (add the `eval` line to your shell rc to keep it; a new shell needs it too):
 
    ```shell
    mise trust && mise install
+   eval "$(mise activate bash)"      # zsh: eval "$(mise activate zsh)"
+   task --list                       # the sandbox:* tasks appear when you are in the repo root
    ```
 
 2. Set sbx once:
@@ -115,7 +117,8 @@ Run these in order, from the repo root.
    ```
 
 4. Set up the daemon's proxy and units on the host. This restarts the sbx daemon, so do it before you start a sandbox. What it installs and how to undo it:
-   [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md).
+   [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md). The daemon unit runs `~/.docker/sbx/bin/sbx`: if `command -v sbx` prints another path, change `ExecStart` in
+   `.sbx/daemon/systemd/sbx-daemon.service` to it first.
 
    ```shell
    task sandbox:install-daemon
