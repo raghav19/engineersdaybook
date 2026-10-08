@@ -12,108 +12,139 @@ Earlier parts: [Part 1](../part-1-lethal-trifecta/README.md) shows the attack an
 Claude Code runs inside an `sbx` microVM, on a private clone of the repo, and holds no real credential. The MCP servers (GitHub, draw.io, the Flux schema catalog) are registered on the host's sbx MCP gateway, so the agent
 reaches them only through it. The gateway holds GitHub's OAuth token and sets the tool filter headers where the agent cannot change them.
 Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/agent/dev-tools.yaml`).
+The sbx daemon runs on the host, outside the VM, and makes the MCP calls and kit pulls itself, so its own outbound calls go through a squid allowlist
+that systemd keeps running (`.sbx/daemon/`).
 
 This follows Anthropic's [How we contain Claude across products](https://www.anthropic.com/engineering/how-we-contain-claude) (May 25, 2026): enforce hard limits in the environment (sandbox, egress controls, credentials kept out) instead of relying on the model. The quotes and the layer-by-layer mapping are in the [notes](docs/research/readme-notes.md).
 
-### How the sandbox is laid out
+### How it is laid out
 
 ```text
 HOST (your machine)
-┌────────────────────────────────────────────────────────────────────────┐
-│ sbx daemon: creates and manages the sandboxes                          │
-│                                                                        │
-│ ┌─ microVM: one per sandbox, own kernel, Docker daemon, packages ────┐ │
-│ │ agent: Claude Code. Holds placeholders, no real credential.        │ │
-│ │ repo: a private clone; the host repo is read-only.                 │ │
-│ │ Nothing else of yours: no ~/.ssh, ~/.aws or host secrets.          │ │
-│ └─────────────────────────────┬──────────────────────────────────────┘ │
-│                               │  every outbound request                │
-│                               ▼                                        │
-│ ┌─ host proxy ───────────────────────────────────────────────────────┐ │
-│ │ 1. egress policy: the allow and deny lists + your sbx policy       │ │
-│ │ 2. MCP gateway: GitHub, draw.io and Flux go through it. It holds   │ │
-│ │    the OAuth token (never inside the VM), sets the tool filter     │ │
-│ │    headers and logs each tool call in sandboxd/mcp/mcp.log         │ │
-│ └─────────────────────────────┬──────────────────────────────────────┘ │
-│                               │                                        │
-└────────────────────────────────────────────────────────────────────────┘
-                                ▼
-                        internet: allow-listed domains only
+┌────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ┌─ microVM: one per sandbox, own kernel ─────────────────────────────────────────────────┐ │
+│ │ agent: Claude Code. No real credential. Works on a private clone of the repo.          │ │
+│ │ The host repo is read-only. Nothing else of yours: no ~/.ssh, ~/.aws or host secrets.  │ │
+│ └────────────────────┬───────────────────────────────────────────────┬───────────────────┘ │
+│                      │ VM network calls                              │ MCP tool calls      │
+│                      │ (everything the VM does)                      │ (only MCP endpoint) │
+│                      ▼                                               ▼                     │
+│ ┌─ sbx egress proxy ─────────────────────┐      ┌─ sbx MCP gateway ──────────────────────┐ │
+│ │ AGENT POLICY                           │      │ holds GitHub's OAuth token             │ │
+│ │ kit allow and deny lists               │      │ sets the X-MCP-* tool filter           │ │
+│ │ .sbx/agent/dev-tools.yaml              │      │ logs each tool call (mcp.log)          │ │
+│ │ applies to the VM only                 │      │ runs inside the sbx daemon             │ │
+│ └────────────────────┬───────────────────┘      └────────────────────┬───────────────────┘ │
+│                      │                           daemon's own calls: │                     │
+│                      │                           MCP, kit pulls,     │                     │
+│                      │                           Docker sign-in      ▼                     │
+│                      │                          ┌─ squid proxy 127.0.0.1:3128 ───────────┐ │
+│                      │                          │ DAEMON POLICY                          │ │
+│                      │                          │ allowlist: egress/squid.conf           │ │
+│                      │                          │ systemd keeps it running; the          │ │
+│                      │                          │ sbx daemon starts only after it        │ │
+│                      │                          └────────────────────┬───────────────────┘ │
+└──────────────────────┬───────────────────────────────────────────────┬─────────────────────┘
+                       ▼                                               ▼
+        internet: hosts on the kit                      draw.io, Flux, GitHub MCP, registries
+        allow list only                                 (hosts on the squid allowlist only)
 ```
 
-Only two things cross the boundary: the repo (mounted read-only, with the agent working on a private clone) and outbound requests, which go through the proxy.
+| Who controls what | Applies to | Where to change it |
+|---|---|---|
+| Agent policy: the kit's egress allow and deny lists | what the VM itself connects to | `.sbx/agent/dev-tools.yaml` |
+| MCP gateway: OAuth token, tool filter, tool-call log | every MCP call from the agent | `.sbx/daemon/Taskfile.yml` (vars), `task sandbox:install-mcp` |
+| Daemon policy: squid allowlist | what the sbx daemon itself connects to (MCP servers, kit pulls, Docker sign-in) | `.sbx/daemon/egress/squid.conf` |
 
-## Setup
+## Prerequisites
 
-You need sbx, [mise](https://mise.jdx.dev), VS Code, Docker (to build the kit), a GitHub App for the agent's token, and a GitHub token for the ghcr.io
-image registry. Install sbx first.
+Have these in place before the first command in [Getting started](#getting-started).
 
-### Install sbx first
+1. **Host tools.** [mise](https://mise.jdx.dev) (installs `task`, `yq`, `jq` and `sops` from the root `mise.toml`), VS Code, and Docker (to build the kit).
+2. **sbx.** Follow Docker's [install guide](https://docs.docker.com/ai/sandboxes/install/) for the requirements (virtualization, `/dev/kvm`, sign-in, disk) and run `sbx diagnose`.
+   On Ubuntu 24.04 or later:
 
-Follow Docker's [install guide](https://docs.docker.com/ai/sandboxes/install/) for the requirements (virtualization, `/dev/kvm`, sign-in, disk) and run `sbx diagnose` to check them. On Ubuntu 24.04 or later:
+   ```shell
+   curl -fsSL https://get.docker.com | sudo REPO_ONLY=1 sh
+   sudo apt install docker-sbx
+   ```
 
-```shell
-curl -fsSL https://get.docker.com | sudo REPO_ONLY=1 sh
-sudo apt install docker-sbx
-```
+   On other distributions, use the tarball from [github.com/docker/sbx-releases](https://github.com/docker/sbx-releases). That is not a Docker-supported setup; this repo was built that way on Omarchy (Arch-based). When sbx asks for a default network policy, choose **Balanced**: the kit's allow and deny lists are applied on top.
+3. **Rootless Docker as a user service, and linger.** The daemon's proxy runs in it and user services must start at boot.
+   See [`code/rootless-docker`](../../rootless-docker). Check:
 
-On other distributions, use the tarball from [github.com/docker/sbx-releases](https://github.com/docker/sbx-releases). That is not a Docker-supported setup; this repo was built that way on Omarchy (Arch-based). When sbx asks for a default network policy, choose **Balanced**: the kit's allow and deny lists are applied on top.
+   ```shell
+   systemctl --user is-enabled docker.service     # enabled
+   loginctl show-user "$USER" -p Linger           # Linger=yes
+   ```
 
-### Then, in this repo
+4. **A GitHub App** (`mcp-gh-local`), set up once in GitHub. The agent's GitHub access is this App's OAuth token, held by the gateway, never in the VM.
+   - Install it on only the repository the agent needs, with only the permissions it needs (today: contents, issues, pull requests: write; no administration).
+   - Add the callback URL `http://127.0.0.1:8765/callback`, turn on **Expire user authorization tokens**, and generate a client secret.
+   - Its client id is in `.sbx/daemon/Taskfile.yml` (not a secret). The App's private key is not used.
+5. **Secrets.** Two live in the sops-encrypted `.env.secrets.json` at the repo root; edit it with `sops .env.secrets.json`.
 
-1. Install the host tools (`task`, `yq`, `jq`, `sops`):
+   | Secret | Stored in | Used by |
+   |---|---|---|
+   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | `.env.secrets.json` | `task sandbox:login`, once |
+   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | `.env.secrets.json` | `task sandbox:install-mcp`, piped into sbx's secret store, never printed |
+   | GitHub's OAuth token | sbx's host credential store, created by the browser consent | the gateway; never inside the VM |
+   | your age key (decrypts the file) | `~/.config/sops/age/keys.txt` | `sops` |
 
-```shell
-mise trust && mise install
-```
+## Getting started
 
-2. Set up the GitHub App (`mcp-gh-local`) as the OAuth client for the gateway. In its settings, add the callback URL `http://127.0.0.1:8765/callback`,
-   turn on **Expire user authorization tokens**, and generate a client secret into `.env.secrets.json` as `GITHUB_APP_CLIENT_SECRET`
-   (`sops .env.secrets.json`). Install the App on only the repository the agent needs, with only the permissions it needs.
-   The App's private key is no longer used.
+Run these in order, from the repo root.
 
-3. Log in to the registry. The token is in the encrypted `.env.secrets.json`, and your age key decrypts it:
+1. Install the host tools:
 
-```shell
-task sandbox:login
-```
+   ```shell
+   mise trust && mise install
+   ```
 
-4. Set sbx once:
+2. Set sbx once:
 
-```shell
-sbx settings set kit.allowedSources '["docker.io/","ghcr.io/raghav19/dev-agent-sandbox"]'
-sbx settings set ssh.agentForwardingEnabled false    # do not forward your SSH agent into the sandbox
-sbx daemon restart                                   # applies the setting and ends running sandboxes
-```
+   ```shell
+   sbx settings set kit.allowedSources '["docker.io/","ghcr.io/raghav19/dev-agent-sandbox"]'
+   sbx settings set ssh.agentForwardingEnabled false    # do not forward your SSH agent into the sandbox
+   ```
 
-5. Connect VS Code:
+3. Log in to the registry (reads `GITHUB_TOKEN`, needs your age key):
 
-```shell
-sbx setup ssh
-code --install-extension ms-vscode-remote.remote-ssh
-```
+   ```shell
+   task sandbox:login
+   ```
 
-6. Install the agent skills:
+4. Set up the daemon's proxy and units on the host. This restarts the sbx daemon, so do it before you start a sandbox. What it installs and how to undo it:
+   [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md).
 
-```shell
-task sandbox:install-skills
-```
+   ```shell
+   task sandbox:install-daemon
+   ```
 
-7. Set up the sbx daemon's proxy and units on the host. Follow [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md), which is a prerequisite for the
-   tasks below. In short: `task sandbox:install-daemon` (it restarts the sbx daemon).
+5. Install the agent skills:
 
-## Run it
+   ```shell
+   task sandbox:install-skills
+   ```
 
-```shell
-task sandbox:run        # create or start the sandbox, register and attach the MCP servers, open VS Code
-```
+6. Connect VS Code:
 
-The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
-to reopen the window.
+   ```shell
+   sbx setup ssh
+   code --install-extension ms-vscode-remote.remote-ssh
+   ```
 
-Other tasks: `task sandbox:build` (maintainer: rebuild and push the tools image) and `task sandbox:update-skills` (refresh the skills).
+7. Start the sandbox. Commit first: only committed files are in the clone.
 
-Egress rules live in the kit image: after changing them, run `task sandbox:build` and create a new sandbox. An existing sandbox keeps the rules it was made with.
+   ```shell
+   task sandbox:run
+   ```
+
+   The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
+to reopen the window. The first run also opens a browser once for GitHub's consent. Run Claude Code in the VS Code terminal: it runs inside the sandbox.
+
+Day to day: run `task sandbox:run` again to reopen the window. `task sandbox:build` (maintainer) rebuilds and pushes the tools image, `task sandbox:update-skills`
+refreshes the skills. Egress rules for the VM live in the kit image, so after changing them run `task sandbox:build` and create a new sandbox.
 
 ## Reference
 
@@ -186,7 +217,7 @@ planned, so its column shows what the design covers.
 | Layer | Threat | Part 2: container + proxy | Part 2.1: microVM | Part 3: gateway |
 |---|---|---|---|---|
 | Environment | Compromised MCP server code | ✅ | ✅ | ✅ |
-| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: broad baseline domains) | ⚠️ (gap: gateway covers MCP only) |
+| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: broad baseline domains; the daemon's own calls are on a squid allowlist) | ⚠️ (gap: gateway covers MCP only) |
 | Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ | ✅ |
 | Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ token stays on the host gateway, direct route denied | ✅ |
 | Environment | Files that run on your host | ❌ | ⚠️ (gap: you must review what you merge) | ❌ |
@@ -195,7 +226,7 @@ planned, so its column shows what the design covers.
 | External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, no per-argument rules; `create_or_update_file` and `push_files` can still overwrite files) | ✅ |
 | External content | Poisoned tool results | ❌ | ❌ | ⚠️ (gap: redacts secrets, doesn't detect injection) |
 | External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists in the VM until it is removed) | ❌ |
-| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: `mcp.log` has server and tool name, no arguments, session or sandbox) | ✅ |
+| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: `mcp.log` has server and tool name, no arguments, session or sandbox; squid logs the daemon's hosts) | ✅ |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
 provider.
@@ -224,15 +255,12 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
 - **GitHub authenticates with the App's OAuth flow:** `sbx mcp auth` refreshes the user token itself. An installation token from the minter cannot be
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
   repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
-- **The daemon's egress proxy:** the sbx egress policy covers only the VM. The gateway's calls to the MCP servers, kit pulls and Docker sign-in leave from the
-  sbx daemon on your host, so they go through a squid allowlist set with `proxy.daemon` (setup step 7, [daemon README](../../../.sbx/daemon/README.md)). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon
-  may reach, then `docker compose -f .sbx/daemon/egress/compose.yaml restart` (`up -d` alone does not pick up a conf edit). Tested: with a host removed from the allowlist,
-  squid denied it (403) and the gateway's call failed; the VM's own traffic never appears in squid's log. Squid sees the host and port of a tunnel, not paths or tool
-  names, and logs a tunnel only when it closes (`docker logs -f sbx-daemon-egress`); the gateway's connections stay open, so they appear late. `proxy.daemon` is an experimental sbx setting.
-- **Fail closed, started by systemd:** the proxy is started at login by a systemd unit, and the daemon unit is ordered after it and stops with it (tested: starting only the
-  daemon unit started the proxy first). `sandbox:run` does not start or check the proxy. If squid is down while `proxy.daemon` is set, the daemon cannot pull kits, sign in or
-  reach the MCP servers until it is back. Docker restarts squid after a crash (tested, about 7 s) but not after a manual `docker stop` or `docker kill`: start it again with
-  `docker compose -f .sbx/daemon/egress/compose.yaml up -d`.
+- **The daemon's egress proxy:** the sbx egress policy covers only the VM. The daemon's own calls (MCP servers, kit pulls, Docker sign-in) go through a squid allowlist
+  set with the experimental sbx setting `proxy.daemon`; `proxy` and `proxy.sandbox` stay empty, or the VM's traffic would go through squid too. Tested: a host removed from the
+  allowlist is denied (403) and the gateway's call fails, and the VM's traffic never appears in squid's log. Squid sees the host and port of a tunnel, not paths or tool names.
+  Operating it (logs, adding a host, undo): [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md).
+- **Fail closed:** systemd starts the proxy at login and orders the daemon after it, and the daemon stops with it. If squid is down while `proxy.daemon` is set, the daemon cannot
+  pull kits, sign in or reach the MCP servers until it is back; Docker restarts it after a crash but not after a manual stop.
 - **Dynamic MCP mode:** `sbx env run` has no `--static-mcp`, so the agent can attach any server registered on your host with the gateway's `mcp-add`. Registrations
   are host-global, so register only what any sandbox may use.
 - **The App's permissions are the real boundary:** the App has write access to `contents`, `issues` and `pull_requests`, and no administration. The

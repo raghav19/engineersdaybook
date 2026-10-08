@@ -37,16 +37,8 @@ ls ~/.docker/sbx/bin/sbx                       # sbx is installed (see the main 
 task sandbox:install-daemon
 ```
 
-This **restarts the sbx daemon, which ends any running sandbox**. Run it again any time you change the files in `systemd/`; it is safe to repeat. By hand, the task does this:
+This **restarts the sbx daemon, which ends any running sandbox**. Run it again any time you change the files in `systemd/`
 
-```shell
-# 1. copy the two units into ~/.config/systemd/user/ (the proxy one with the path to egress/compose.yaml filled in)
-systemctl --user daemon-reload
-systemctl --user enable --now sbx-daemon-egress.service      # 2. start the proxy and keep it running
-sbx settings set proxy.daemon http://127.0.0.1:3128         # 3. point the daemon at it (leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too)
-systemctl --user enable sbx-daemon.service
-systemctl --user restart sbx-daemon.service                  # 4. start the daemon under its unit (not `sbx daemon restart`, which starts it outside the unit)
-```
 
 ## Check that it worked
 
@@ -73,13 +65,3 @@ rm ~/.config/systemd/user/sbx-daemon-egress.service
 # put back a plain sbx-daemon.service without Requires=/After=, or delete it and start the daemon with `sbx daemon start`
 systemctl --user daemon-reload
 ```
-
-## The MCP servers
-
-`task sandbox:install-mcp` (run by `task sandbox:run` after the sandbox starts) registers draw.io, the Flux catalog and GitHub with the daemon's MCP gateway and attaches them to the
-sandbox. The agent in the VM only ever talks to the gateway, never to those servers directly. GitHub needs two things set up on the GitHub App once:
-
-- the callback URL `http://127.0.0.1:8765/callback`, and **Expire user authorization tokens** turned on (so sbx can refresh the token by itself);
-- the App's client secret in `.env.secrets.json` as `GITHUB_APP_CLIENT_SECRET` (`sops .env.secrets.json`).
-
-Adding GitHub runs GitHub's OAuth consent, which opens a browser tab. The task adds GitHub on every run, so the tab appears each time, but once the App is authorized GitHub finishes it without a click. The tool filter for GitHub (which tools the agent may call) is set in the vars at the top of `Taskfile.yml`.
