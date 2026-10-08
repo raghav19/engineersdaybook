@@ -6,3 +6,6 @@ task = "3.54"
 yq = "4.54"
 jq = "1.8"
 sops = "3.13"
+
+[env]
+EDITOR="code --wait"
