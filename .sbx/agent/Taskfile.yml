@@ -1,0 +1,80 @@
+version: '3'
+
+# Agent policy: everything that shapes what runs inside the VM (the kit, its egress allow and deny lists, the tools, the skills).
+# Included by ../Taskfile.yml with flatten, so the task names keep the `sandbox:` prefix.
+#
+# sandbox:install-skills  once per machine: install the agent skills into the sbx store that every sandbox shares
+# sandbox:update-skills   refresh the skills the store already has to upstream's latest
+# sandbox:build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
+# sandbox:setup-vscode    write the Remote-SSH and update settings into your host VS Code user settings (sandbox:run does it first)
+
+silent: true
+
+vars:
+  KIT_REPO: ghcr.io/raghav19/dev-agent-sandbox/dev-tools
+  KIT_VERSION: 0.1.0
+
+tasks:
+  sandbox:install-skills:
+    desc: Once per machine. Install the agent skills into the sbx store, which every sandbox links in read-only at its start
+    cmds:
+      # sbx has no declarative skills list, so this list is it. --force replaces a skill without asking.
+      - sbx skills add --force mattpocock/skills
+      - sbx skills add --force danyuchn/asd-ste100-skill
+      - sbx skills add --force jfr992/terragrunt-skill
+      - sbx skills add --force antonbabenko/agent-plugins
+      - sbx skills add --force fluxcd/agent-skills
+      - >-
+        sbx skills add --force aws/agent-toolkit-for-aws
+        --skill aws-containers --skill aws-compute --skill aws-iam --skill aws-networking
+        --skill aws-security --skill aws-storage --skill aws-auth
+
+  sandbox:update-skills:
+    desc: Refresh the skills in the sbx store to upstream's latest (a sandbox picks them up on its next start)
+    cmds:
+      - sbx skills update
+
+  sandbox:build:
+    desc: Maintainer. Build and push the dev-tools kit and pin its digest in sbxenv.yaml
+    vars:
+      # The time of the last commit that touched a build input, so the image changes only when its inputs do.
+      SOURCE_DATE_EPOCH:
+        sh: git log -1 --format=%ct -- {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml.dockerignore {{.ROOT_DIR}}/.sbx/agent/tools.toml {{.ROOT_DIR}}/mise.toml
+    cmds:
+      # The build context is the repo root, so the kit is built from the same files the repo uses. No provenance or SBOM attestation: buildx adds a
+      # new one on every build, which changed the pushed index digest (and so the pin below) while the image itself stayed identical. The fixed
+      # SOURCE_DATE_EPOCH with rewrite-timestamp makes a build from scratch give the same digest too (tested: two cold builds, same digest).
+      - >-
+        docker buildx build "$(git rev-parse --show-toplevel)"
+        -f {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml
+        -t {{.KIT_REPO}}:{{.KIT_VERSION}}
+        --provenance=false --sbom=false
+        --build-arg SOURCE_DATE_EPOCH={{default "0" .SOURCE_DATE_EPOCH}}
+        --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true
+        --metadata-file /tmp/dev-tools-push.json
+      # The digest comes from buildx's metadata file. yq matches nothing without failing, so grep checks that it landed.
+      - |
+        export digest=$(jq -r '."containerimage.digest"' /tmp/dev-tools-push.json)
+        yq -i '(.kits[] | select(contains("dev-tools"))) = "{{.KIT_REPO}}@" + strenv(digest)' {{.ROOT_DIR}}/.sbx/sbxenv.yaml
+        grep -q "$digest" {{.ROOT_DIR}}/.sbx/sbxenv.yaml
+        echo "pinned dev-tools $digest"
+
+  sandbox:setup-vscode:
+    desc: Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
+    cmds:
+      - |
+        f="$HOME/.config/Code/User/settings.json"
+        mkdir -p "$(dirname "$f")"
+        [ -f "$f" ] || echo '{}' > "$f"
+        merged=$(jq '. * {
+          "remote.SSH.useExecServer": false,
+          "remote.SSH.enableDynamicForwarding": false,
+          "remote.SSH.enableAgentForwarding": false,
+          "remote.SSH.connectTimeout": 30,
+          "remote.SSH.showLoginTerminal": false,
+          "remote.SSH.localServerDownload": "always",
+          "update.mode": "none",
+          "extensions.autoUpdate": "off",
+          "extensions.autoCheckUpdates": false
+        }' "$f")
+        if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi

@@ -1,0 +1,137 @@
+version: '3'
+
+# Daemon policy: what the sbx daemon and the MCP gateway inside it may reach. Included by ../Taskfile.yml with flatten, so the task names keep the
+# `sandbox:` prefix. The VM's own traffic is the agent policy (../agent/) and is not touched here.
+#
+# sandbox:mcp               register draw.io, Flux and GitHub on the sbx MCP gateway; authorize GitHub in the browser if it is not yet
+# sandbox:mcp-load          attach the three servers to the running sandbox
+# sandbox:egress-up         start the squid proxy for the daemon and wait until it is healthy
+# sandbox:egress-check      prove the proxy tunnels an allowed host and refuses a denied one
+# sandbox:egress-apply      point the daemon at the proxy (sbx settings proxy.daemon) and restart it, only if not already
+# sandbox:egress-preflight  the three above, in that order. sandbox:run starts with it
+# sandbox:egress-status     proxy health, the proxy.daemon setting and the last denied hosts
+# sandbox:egress-open       the tunnels open right now (the gateway's connections to the MCP servers stay open, so the log has them only after they close)
+# sandbox:egress-log        follow the proxy's access log
+# sandbox:egress-off        escape hatch: stop sending the daemon's traffic through the proxy
+
+silent: true
+
+vars:
+  EGRESS_DIR: '{{.ROOT_DIR}}/.sbx/daemon/egress'
+  PROXY_URL: http://127.0.0.1:3128
+  GITHUB_APP_CLIENT_ID: Iv23liVvjK9IHk8lWmIh  # the GitHub App's client id, not a secret
+  # GitHub's tool filter. The gateway sets these headers, so the agent cannot change them; GitHub's server rejects a filtered tool at call time.
+  GITHUB_TOOLSETS: context,issues,pull_requests,repos
+  GITHUB_EXCLUDE_TOOLS: delete_repository,delete_file,merge_pull_request,create_repository,fork_repository
+
+tasks:
+  sandbox:mcp:
+    desc: Register the remote MCP servers on the sbx gateway (idempotent) and authorize GitHub in the browser if needed
+    cmds:
+      # sbxenv.yaml cannot declare headers or an OAuth client, and one place for all three is easier to read than two. Registrations are host-global.
+      # A server that already matches is left alone: removing GitHub's registration drops its OAuth token and would ask for browser consent again.
+      # The GitHub App needs the callback URL http://127.0.0.1:8765/callback and "Expire user authorization tokens" on. The client secret stays in
+      # the sops file and goes to sbx on stdin.
+      - |
+        set -eu
+        ensure() {  # ensure NAME URL [HEADER...] [-- extra sbx mcp add flags]: (re)register unless the URL and every header already match
+          name=$1 url=$2; shift 2
+          headers=(); flags=()
+          while [ $# -gt 0 ]; do case $1 in --) shift; flags=("$@"); break;; *) headers+=("$1"); shift;; esac; done
+          have=$(sbx mcp inspect "$name" 2>/dev/null || true)
+          ok=1; printf '%s' "$have" | grep -qF "$url" || ok=0
+          for h in "${headers[@]}"; do printf '%s' "$have" | grep -qF "$h" || ok=0; done
+          if [ "$ok" = 1 ]; then echo "mcp $name: up to date"; return; fi
+          sbx mcp rm --force "$name" >/dev/null 2>&1 || true
+          args=(); for h in "${headers[@]}"; do args+=(--header "$h"); done
+          sbx mcp add "$name" --url "$url" "${args[@]}" "${flags[@]}"
+        }
+        ensure drawio https://mcp.draw.io/mcp
+        ensure flux-schema-catalog https://schemas.fluxoperator.dev/mcp
+        sbx secret ls 2>/dev/null | grep -q 'mcp:github:client_secret' \
+          || sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' "{{.ROOT_DIR}}/.env.secrets.json" | sbx secret set mcp:github:client_secret
+        ensure github https://api.githubcopilot.com/mcp/ \
+          "X-MCP-Toolsets: {{.GITHUB_TOOLSETS}}" "X-MCP-Exclude-Tools: {{.GITHUB_EXCLUDE_TOOLS}}" \
+          -- --client-id {{.GITHUB_APP_CLIENT_ID}} --no-scope --skip-auth --callback-port 8765
+        if sbx mcp auth status github 2>&1 | grep -q unauthorized; then sbx mcp auth github --no-scope; fi
+
+  sandbox:mcp-load:
+    desc: Attach the three registered MCP servers to the running sandbox
+    cmds:
+      - |
+        name=$(yq .name {{.ROOT_DIR}}/.sbx/sbxenv.yaml)
+        for s in drawio flux-schema-catalog github; do
+          sbx mcp load "$s" --sandbox "$name" || echo "mcp $s is not registered; run task sandbox:mcp"
+        done
+
+  sandbox:egress-up:
+    desc: Start the squid proxy for the sbx daemon and wait until it is healthy
+    env:
+      DOCKER_HOST: unix://{{.XDG_RUNTIME_DIR}}/docker.sock
+    cmds:
+      - docker compose -f {{.EGRESS_DIR}}/compose.yaml up -d --wait
+
+  sandbox:egress-check:
+    desc: Prove the proxy tunnels an allowed host and refuses a denied one (aborts before sbx settings are touched)
+    cmds:
+      - |
+        set -u
+        if ! curl -sS -o /dev/null --max-time 20 -x {{.PROXY_URL}} https://mcp.draw.io/ 2>/tmp/egress-check.err; then
+          echo "egress-check: the proxy did not tunnel an allowed host (mcp.draw.io):"; cat /tmp/egress-check.err; exit 1
+        fi
+        if curl -sS -o /dev/null --max-time 20 -x {{.PROXY_URL}} https://example.com/ 2>/tmp/egress-check.err; then
+          echo "egress-check: the proxy tunnelled a host that is not on the allowlist (example.com)"; exit 1
+        fi
+        grep -q 403 /tmp/egress-check.err || { echo "egress-check: expected a 403 for example.com:"; cat /tmp/egress-check.err; exit 1; }
+        echo "egress-check: allowed host tunnels, denied host gets 403"
+
+  sandbox:egress-apply:
+    desc: Point the sbx daemon at the proxy (proxy.daemon) and restart it, only when the setting is not already there
+    cmds:
+      # proxy and proxy.sandbox are left alone on purpose: setting plain `proxy` would send the VM's traffic through squid as well.
+      - |
+        set -eu
+        if [ "$(sbx settings get proxy.daemon 2>/dev/null)" = "{{.PROXY_URL}}" ]; then echo "proxy.daemon already {{.PROXY_URL}}"; exit 0; fi
+        sbx settings set proxy.daemon {{.PROXY_URL}}
+        sbx daemon restart
+        for i in $(seq 1 30); do sbx ls >/dev/null 2>&1 && exit 0; sleep 1; done
+        echo "egress-apply: the sbx daemon did not come back"; exit 1
+
+  sandbox:egress-preflight:
+    desc: Proxy up and healthy, allowlist proven, then the daemon pointed at it, in that order
+    cmds:
+      - task: sandbox:egress-up
+      - task: sandbox:egress-check
+      - task: sandbox:egress-apply
+
+  sandbox:egress-status:
+    desc: Proxy health, the proxy.daemon setting and the last denied hosts
+    env:
+      DOCKER_HOST: unix://{{.XDG_RUNTIME_DIR}}/docker.sock
+    cmds:
+      - |
+        echo "container: $(docker inspect -f '{{`{{.State.Status}} ({{if .State.Health}}{{.State.Health.Status}}{{end}})`}}' sbx-daemon-egress 2>&1)"
+        echo "proxy.daemon: $(sbx settings get proxy.daemon)"
+        echo "last denied hosts:"; docker logs --tail 500 sbx-daemon-egress 2>&1 | grep -E 'TCP_DENIED' | awk '{print $7}' | sort | uniq -c | sort -rn | head
+
+  sandbox:egress-open:
+    desc: The tunnels the daemon holds open right now (squid logs a tunnel only when it closes)
+    env:
+      DOCKER_HOST: unix://{{.XDG_RUNTIME_DIR}}/docker.sock
+    cmds:
+      - |
+        docker exec sbx-daemon-egress bash -c 'exec 3<>/dev/tcp/127.0.0.1/3128; printf "GET /squid-internal-mgr/active_requests HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; cat <&3' \
+          | awk '$1=="uri" && $2 !~ /squid-internal-mgr/ {print $2}' | sort | uniq -c
+
+  sandbox:egress-log:
+    desc: Follow the proxy's access log (every tunnel the daemon opens, allowed or denied)
+    env:
+      DOCKER_HOST: unix://{{.XDG_RUNTIME_DIR}}/docker.sock
+    cmds:
+      - docker logs -f sbx-daemon-egress
+
+  sandbox:egress-off:
+    desc: Escape hatch. Stop sending the daemon's traffic through the proxy (does not need the proxy to be running)
+    cmds:
+      - sbx settings unset proxy.daemon
+      - sbx daemon restart

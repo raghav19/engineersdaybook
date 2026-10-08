@@ -11,7 +11,7 @@ Earlier parts: [Part 1](../part-1-lethal-trifecta/README.md) shows the attack an
 
 Claude Code runs inside an `sbx` microVM, on a private clone of the repo, and holds no real credential. The MCP servers (GitHub, draw.io, the Flux schema catalog) are registered on the host's sbx MCP gateway, so the agent
 reaches them only through it. The gateway holds GitHub's OAuth token and sets the tool filter headers where the agent cannot change them.
-Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/dev-tools.yaml`).
+Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/agent/dev-tools.yaml`).
 
 This follows Anthropic's [How we contain Claude across products](https://www.anthropic.com/engineering/how-we-contain-claude) (May 25, 2026): enforce hard limits in the environment (sandbox, egress controls, credentials kept out) instead of relying on the model. The quotes and the layer-by-layer mapping are in the [notes](docs/research/readme-notes.md).
 
@@ -99,16 +99,20 @@ code --install-extension ms-vscode-remote.remote-ssh
 task sandbox:install-skills
 ```
 
-7. Register GitHub on the sbx MCP gateway and authorize it. This opens a browser for GitHub's consent page:
+7. Start the daemon's egress proxy and register the MCP servers. `task sandbox:run` does both before it starts the sandbox, so this step is
+   only needed to run them alone, or to do the one-time GitHub consent (it opens a browser):
 
 ```shell
-task sandbox:mcp-github
+task sandbox:egress-preflight    # squid up and proven, then sbx's proxy.daemon pointed at it (restarts the sbx daemon once)
+task sandbox:mcp                 # draw.io, Flux and GitHub on the sbx MCP gateway; GitHub's browser consent the first time
 ```
+
+8. Keep the proxy running across reboots. See [the daemon's egress proxy](#the-daemons-egress-proxy) for the two systemd units.
 
 ## Run it
 
 ```shell
-task sandbox:run        # create or start the sandbox, load GitHub into it and open VS Code
+task sandbox:run        # proxy up, MCP servers registered, sandbox created or started, servers attached, VS Code opened
 ```
 
 The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
@@ -124,10 +128,17 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 
 ```text
 .sbx/                               everything that spawns the sandbox
-├── Taskfile.yml                    sandbox:login, :install-skills, :update-skills, :mcp-github, :build, :setup-vscode, :run
-├── sbxenv.yaml                     the sandbox: kits, MCP servers
-├── dev-tools.yaml                  the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
-└── tools.toml                      the sandbox's tools at exact versions, Terraform cache settings, the completions task
+├── Taskfile.yml                    orchestration: sandbox:login and sandbox:run (the ordered start); includes the two folders below
+├── sbxenv.yaml                     the sandbox: kits, size, clone workspace
+├── agent/                          AGENT POLICY: what runs inside the VM
+│   ├── Taskfile.yml                sandbox:build, :install-skills, :update-skills, :setup-vscode
+│   ├── dev-tools.yaml              the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
+│   └── tools.toml                  the sandbox's tools at exact versions, Terraform cache settings, the completions task
+└── daemon/                         DAEMON POLICY: what the sbx daemon and its MCP gateway may reach
+    ├── Taskfile.yml                sandbox:mcp, :mcp-load, :egress-up/-check/-apply/-preflight/-status/-open/-log/-off
+    └── egress/
+        ├── compose.yaml            squid for the daemon on 127.0.0.1:3128
+        └── squid.conf              the allowlist: the one file to edit to change what the daemon may reach
 ```
 
 This folder keeps the README, `docs/` and the handoffs.
@@ -213,13 +224,62 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   `mcp policy: allowed action=invokeTool server=github target=list_issues`. `sbx policy log` shows only the gateway alias with a count, never tool names.
   Without paid org governance the gateway allows every tool, so these lines record decisions, they do not enforce anything.
 - **Tool filter:** GitHub's server reads the `X-MCP-Toolsets`, `X-MCP-Exclude-Tools`, `X-MCP-Tools` (allow list) and `X-MCP-Readonly` headers and rejects a
-  filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:mcp-github` sets
+  filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:mcp` sets
   the toolsets and excludes `delete_repository`, `delete_file`, `merge_pull_request`, `create_repository` and `fork_repository`. An allow list (`X-MCP-Tools`) is stricter than an exclude list: a tool GitHub adds later is allowed by the latter.
 - **GitHub authenticates with the App's OAuth flow:** `sbx mcp auth` refreshes the user token itself. An installation token from the minter cannot be
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the
   repositories it is installed on, not to everything the user can do. `sbx` can narrow nothing else per request.
+- **The daemon's egress proxy:** the sbx egress policy covers only the VM. The gateway's calls to the MCP servers, kit pulls and Docker sign-in leave from the
+  sbx daemon on your host, so they go through a squid allowlist set with `sbx settings set proxy.daemon http://127.0.0.1:3128` (`proxy` and `proxy.sandbox` stay empty:
+  `proxy` alone would send the VM's traffic through squid too). Edit `.sbx/daemon/egress/squid.conf` to change what the daemon may reach. Tested: with a host
+  removed from the allowlist, squid denied it (403) and the gateway's call failed; the VM's own traffic never appears in squid's log. Squid sees the host and
+  port of a tunnel, not paths or tool names, and logs a tunnel only when it closes: `task sandbox:egress-open` lists the ones open now, which is where the
+  gateway's long-lived connections show up. `proxy.daemon` is an experimental sbx setting.
+- **Fail closed, with a way out:** if the proxy is down while `proxy.daemon` is set, the daemon cannot pull kits, sign in or reach the MCP servers (tested: a gateway
+  call failed while the proxy was stopped). `sandbox:run` starts and proves the proxy first, in order: up and healthy, allowed host tunnels and a denied host gets 403,
+  then `proxy.daemon` is set and the daemon restarted, then the sandbox starts. `task sandbox:egress-off` unsets the setting without needing the proxy. Docker restarts
+  squid after a crash (tested, about 7 s) but not after a manual `docker stop` or `docker kill`.
+- **Dynamic MCP mode:** `sbx env run` has no `--static-mcp`, so the agent can attach any server registered on your host with the gateway's `mcp-add`. Registrations
+  are host-global, so register only what any sandbox may use.
 - **The App's permissions are the real boundary:** the App has write access to `contents`, `issues` and `pull_requests`, and no administration. The
   installation covers one repository.
+
+### The daemon's egress proxy
+
+Squid has to be running before the sbx daemon starts. Two systemd user units make that true at every boot and keep the daemon from starting without it.
+They live outside the repo, in `~/.config/systemd/user/`. Change the paths to match your clone.
+
+```ini
+# ~/.config/systemd/user/sbx-daemon-egress.service
+[Unit]
+Description=Egress proxy (squid) for the sbx daemon
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=DOCKER_HOST=unix://%t/docker.sock
+ExecStart=/usr/bin/docker compose -f %h/Projects/engineersdaybook/.sbx/daemon/egress/compose.yaml up -d --wait
+ExecStop=/usr/bin/docker compose -f %h/Projects/engineersdaybook/.sbx/daemon/egress/compose.yaml down
+
+[Install]
+WantedBy=default.target
+```
+
+```ini
+# ~/.config/systemd/user/sbx-daemon.service.d/egress.conf   (a drop-in for the existing sbx-daemon.service)
+[Unit]
+Requires=sbx-daemon-egress.service
+After=sbx-daemon-egress.service
+```
+
+```shell
+systemctl --user daemon-reload
+systemctl --user enable --now sbx-daemon-egress.service
+```
+
+`Requires` means stopping or restarting the proxy unit also stops the daemon and ends running sandboxes; that is the fail-closed choice.
 
 ## What is left ahead
 

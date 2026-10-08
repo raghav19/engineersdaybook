@@ -3,26 +3,29 @@ version: '3'
 # Included by the root Taskfile.yml (dir: .sbx, flatten: true), so the task names carry the `sandbox:` prefix themselves and work from the
 # repo root, from any subfolder and from this folder.
 #
-# sandbox:login           once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
-# sandbox:install-skills  once per machine: install the agent skills into the sbx store that every sandbox shares
-# sandbox:update-skills   refresh the skills the store already has to upstream's latest
-# sandbox:mcp-github      once per machine: register GitHub on the host's sbx MCP gateway and authorize it in the browser
-# sandbox:build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in sbxenv.yaml
-# sandbox:setup-vscode    write the Remote-SSH and update settings into your host VS Code user settings (sandbox:run does it first)
-# sandbox:run             developer: `sbx env run . --detached`, load GitHub into the sandbox, then open VS Code on it
+# This file only orchestrates. The two policies live in their own folders, each with its own Taskfile included below:
+#   agent/    what runs inside the VM: the kit, its egress allow and deny lists, the tools, the skills
+#   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations and the squid allowlist
 #
-# sbxenv.yaml declares the sandbox (kits, GitHub secret, clone workspace). `sbx env run` prints that plan and
-# asks for approval. The README has the one-time setup.
+# sandbox:login   once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
+# sandbox:run     developer: egress preflight, MCP registration, `sbx env run . --detached`, attach the MCP servers, open VS Code on it
+#
+# sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
+
+includes:
+  agent:
+    taskfile: agent/Taskfile.yml
+    flatten: true
+  daemon:
+    taskfile: daemon/Taskfile.yml
+    flatten: true
 
 silent: true
 
 vars:
-  KIT_REPO: ghcr.io/raghav19/dev-agent-sandbox/dev-tools
-  KIT_VERSION: 0.1.0
   GHCR_USER: raghav19
-  GITHUB_APP_CLIENT_ID: Iv23liVvjK9IHk8lWmIh  # the GitHub App's client id, not a secret
   NAME:
-    sh: yq .name sbxenv.yaml
+    sh: yq .name {{.ROOT_DIR}}/.sbx/sbxenv.yaml
 
 tasks:
   sandbox:login:
@@ -30,95 +33,18 @@ tasks:
     cmds:
       # The token stays in this script's own variable and goes to the two tools on stdin: it is never in a process environment or an argument.
       - |
-        token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.TASKFILE_DIR}}/../.env.secrets.json")
+        token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.ROOT_DIR}}/.env.secrets.json")
         printf %s "$token" | docker login ghcr.io -u {{.GHCR_USER}} --password-stdin
         printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{.GHCR_USER}} --password-stdin
 
-  sandbox:install-skills:
-    desc: Once per machine. Install the agent skills into the sbx store, which every sandbox links in read-only at its start
-    cmds:
-      # sbx has no declarative skills list, so this list is it. --force replaces a skill without asking.
-      - sbx skills add --force mattpocock/skills
-      - sbx skills add --force danyuchn/asd-ste100-skill
-      - sbx skills add --force jfr992/terragrunt-skill
-      - sbx skills add --force antonbabenko/agent-plugins
-      - sbx skills add --force fluxcd/agent-skills
-      - >-
-        sbx skills add --force aws/agent-toolkit-for-aws
-        --skill aws-containers --skill aws-compute --skill aws-iam --skill aws-networking
-        --skill aws-security --skill aws-storage --skill aws-auth
-
-  sandbox:update-skills:
-    desc: Refresh the skills in the sbx store to upstream's latest (a sandbox picks them up on its next start)
-    cmds:
-      - sbx skills update
-
-  sandbox:mcp-github:
-    desc: Once per machine. Register GitHub on the sbx MCP gateway as the GitHub App's OAuth client and authorize it (browser)
-    cmds:
-      # sbxenv.yaml cannot declare headers or an OAuth client, so GitHub is registered here. The gateway sets the headers, so the agent cannot
-      # change them. X-MCP-Toolsets limits the toolsets; X-MCP-Exclude-Tools removes tools by name. Re-running re-registers, so a changed filter applies.
-      # The App needs the callback URL http://127.0.0.1:8765/callback and "Expire user authorization tokens" on; the token is limited to
-      # the App's permissions on the repositories it is installed on. The client secret stays in the sops file and goes to sbx on stdin.
-      - |
-        sbx mcp rm --force github >/dev/null 2>&1 || true
-        sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
-          --client-id {{.GITHUB_APP_CLIENT_ID}} --no-scope --skip-auth --callback-port 8765 \
-          --header 'X-MCP-Toolsets: context,issues,pull_requests,repos' \
-          --header 'X-MCP-Exclude-Tools: delete_repository,delete_file,merge_pull_request,create_repository,fork_repository'
-        sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' "{{.TASKFILE_DIR}}/../.env.secrets.json" | sbx secret set mcp:github:client_secret
-        sbx mcp auth github --no-scope
-
-  sandbox:build:
-    desc: Maintainer. Build and push the dev-tools kit and pin its digest in sbxenv.yaml
-    vars:
-      # The time of the last commit that touched a build input, so the image changes only when its inputs do.
-      SOURCE_DATE_EPOCH:
-        sh: git log -1 --format=%ct -- dev-tools.yaml dev-tools.yaml.dockerignore tools.toml ../mise.toml
-    cmds:
-      # The build context is the repo root, so the kit is built from the same files the repo uses. No provenance or SBOM attestation: buildx adds a
-      # new one on every build, which changed the pushed index digest (and so the pin below) while the image itself stayed identical. The fixed
-      # SOURCE_DATE_EPOCH with rewrite-timestamp makes a build from scratch give the same digest too (tested: two cold builds, same digest).
-      - >-
-        docker buildx build "$(git rev-parse --show-toplevel)"
-        -f dev-tools.yaml
-        -t {{.KIT_REPO}}:{{.KIT_VERSION}}
-        --provenance=false --sbom=false
-        --build-arg SOURCE_DATE_EPOCH={{default "0" .SOURCE_DATE_EPOCH}}
-        --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true
-        --metadata-file /tmp/dev-tools-push.json
-      # The digest comes from buildx's metadata file. yq matches nothing without failing, so grep checks that it landed.
-      - |
-        export digest=$(jq -r '."containerimage.digest"' /tmp/dev-tools-push.json)
-        yq -i '(.kits[] | select(contains("dev-tools"))) = "{{.KIT_REPO}}@" + strenv(digest)' sbxenv.yaml
-        grep -q "$digest" sbxenv.yaml
-        echo "pinned dev-tools $digest"
-
-  sandbox:setup-vscode:
-    desc: Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
-    cmds:
-      - |
-        f="$HOME/.config/Code/User/settings.json"
-        mkdir -p "$(dirname "$f")"
-        [ -f "$f" ] || echo '{}' > "$f"
-        merged=$(jq '. * {
-          "remote.SSH.useExecServer": false,
-          "remote.SSH.enableDynamicForwarding": false,
-          "remote.SSH.enableAgentForwarding": false,
-          "remote.SSH.connectTimeout": 30,
-          "remote.SSH.showLoginTerminal": false,
-          "remote.SSH.localServerDownload": "always",
-          "update.mode": "none",
-          "extensions.autoUpdate": "off",
-          "extensions.autoCheckUpdates": false
-        }' "$f")
-        if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi
-
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
-    deps: [sandbox:setup-vscode]
     cmds:
-      - sbx env run . --detached {{.CLI_ARGS}}
-      # GitHub is registered on the host gateway by sandbox:mcp-github but not declared in sbxenv.yaml, so it is loaded into the sandbox here.
-      - sbx mcp load github --sandbox {{.NAME}} || echo "GitHub MCP is not registered; run task sandbox:mcp-github"
+      # Order matters, so these are sequential steps, not deps (deps run in parallel). The daemon's egress proxy must be up and proven before the
+      # daemon is pointed at it, and the daemon must be settled before the sandbox is created.
+      - task: sandbox:egress-preflight
+      - task: sandbox:mcp
+      - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}}
+      - task: sandbox:mcp-load
+      - task: sandbox:setup-vscode
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
