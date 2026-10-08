@@ -125,10 +125,9 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 ```text
 .sbx/                               everything that spawns the sandbox
 ├── Taskfile.yml                    sandbox:login, :install-skills, :update-skills, :mcp-github, :build, :setup-vscode, :run
-├── sbxenv.yaml                     the sandbox: kits, GitHub App secret, binding
+├── sbxenv.yaml                     the sandbox: kits, MCP servers
 ├── dev-tools.yaml                  the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
-├── tools.toml                      the sandbox's tools at exact versions, Terraform cache settings, the completions task
-└── scripts/mint-gh-app-token.sh    host minter: App key -> installation token. Unused since GitHub moved to the gateway, kept as a fallback
+└── tools.toml                      the sandbox's tools at exact versions, Terraform cache settings, the completions task
 ```
 
 This folder keeps the README, `docs/` and the handoffs.
