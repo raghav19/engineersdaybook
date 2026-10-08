@@ -214,25 +214,42 @@ Fetch again after the agent commits more. Before `sbx rm`, keep what you want wi
 
 ✅ stopped · ⚠️ partly (gap in brackets) · ❌ not stopped. Rows are grouped by the layers in Anthropic's
 [How we contain Claude](https://www.anthropic.com/engineering/how-we-contain-claude): environment, model, external
-content, plus monitoring. Part 2.1 describes this directory once the kit is rebuilt and the sandbox recreated. Part 3 is
-planned, so its column shows what the design covers.
+content, plus monitoring. Part 2.1 describes this directory once the kit is rebuilt and the sandbox recreated, and its column was
+checked against a running sandbox on 2026-10-08 ([evidence](docs/research/threat-table-verification.md)). The Part 2 column was audited on 2026-10-06. Part 3 is
+planned, so its column is the design, not tested.
 
 | Layer | Threat | Part 2: container + proxy | Part 2.1: microVM | Part 3: gateway |
 |---|---|---|---|---|
-| Environment | Compromised MCP server code | ✅ | ✅ | ✅ |
-| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: broad baseline domains; the daemon's own calls are on a squid allowlist) | ⚠️ (gap: gateway covers MCP only) |
-| Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ | ✅ |
-| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ token stays on the host gateway, direct route denied | ✅ |
-| Environment | Files that run on your host | ❌ | ⚠️ (gap: you must review what you merge) | ❌ |
-| Environment | Tampered images or scripts | ✅ | ✅ | ❌ |
-| Model | Injected instructions | ❌ | ❌ | ⚠️ (gap: limits reach, doesn't detect) |
-| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, no per-argument rules; `create_or_update_file` and `push_files` can still overwrite files) | ✅ |
+| Environment | Compromised MCP server code | ✅ | ⚠️ (gap: no MCP code runs locally, but the hosted servers are trusted) | ✅ |
+| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: 194 baseline allow rules; `registry.terraform.io` and an S3 wildcard accepted a body in testing; the daemon's own calls are on a squid allowlist) | ⚠️ (gap: gateway covers MCP only) |
+| Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ only placeholders in the VM (`GH_TOKEN` returns 401) | ✅ |
+| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ⚠️ (cannot be used outside the gateway, but through it the token writes: see exfiltration below) | ✅ |
+| Environment | Files that run on your host | ❌ | ⚠️ (gap: you must review what you merge, including `.sbx/`: the unit files, `squid.conf`, `compose.yaml` and the Taskfiles run on the host) | ❌ |
+| Environment | Tampered images or scripts | ✅ | ⚠️ (kit and squid image pinned by digest, not signed: `kit.requireSignature` is off) | ❌ |
+| Model | Injected instructions | ❌ | ❌ (Part 1's two refusals were the model, not a control) | ⚠️ (gap: limits reach, doesn't detect) |
+| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter is by tool name only, no per-argument rules; `issue_write`, `push_files`, `create_or_update_file`, `create_pull_request`, `add_issue_comment` and `update_pull_request` stay open) | ✅ |
 | External content | Poisoned tool results | ❌ | ❌ | ⚠️ (gap: redacts secrets, doesn't detect injection) |
-| External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists in the VM until it is removed) | ❌ |
-| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: `mcp.log` has server and tool name, no arguments, session or sandbox; squid logs the daemon's hosts) | ✅ |
+| External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists across stop and start, until `sbx rm`) | ❌ |
+| Environment | Host files the agent can read | ❌ | ⚠️ (gap: untracked and git-ignored files in the repo directory are readable through a read-only mount; nothing outside it) | ❌ |
+| Environment | Sending data out through MCP write tools | ❌ | ❌ (a host-only file was published to a public issue in testing) | ✅ |
+| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (gap: allowed tool calls are in `mcp.log` by name; rejected calls leave no line; no arguments, session or sandbox; squid logs the daemon's hosts) | ✅ |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
 provider.
+
+#### The lethal trifecta: what the sandbox contains
+
+The trifecta is private data, untrusted content and a way to send data out, all in one agent. Tested on 2026-10-08 with canary strings and a canary GitHub issue
+([details](docs/research/threat-table-verification.md)). The sandbox shrinks it; it does not break it.
+
+| Leg | What the sandbox does | Still open |
+|---|---|---|
+| Private data | Your home, `~/.ssh`, `~/.aws` and every real credential are out of reach. | The repo directory: untracked and git-ignored files are readable. |
+| Untrusted content | Nothing. | Issues, tool results and pages reach the agent as before. |
+| A way out | Direct routes to the MCP servers and the GitHub API are blocked (403/401). | MCP write tools: the agent read a host-only file and published it in a public issue. Two policy-allowed hosts accepted a body. |
+
+So the sandbox limits the **blast radius**, and the open channel is the GitHub write tools. To close more of it: allow-list the tools (`X-MCP-Tools`) or run read-only
+(`X-MCP-Readonly`), keep secrets out of the repo directory, and log rejected calls (Part 3).
 
 Tested results and further detail: [notes](docs/research/readme-notes.md).
 
