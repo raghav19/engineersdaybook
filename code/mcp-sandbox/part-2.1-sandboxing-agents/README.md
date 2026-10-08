@@ -99,12 +99,12 @@ code --install-extension ms-vscode-remote.remote-ssh
 task sandbox:install-skills
 ```
 
-7. Start the daemon's egress proxy and register the MCP servers. `task sandbox:run` does both before it starts the sandbox, so this step is
-   only needed to run them alone, or to do the one-time GitHub consent (it opens a browser):
+7. `task sandbox:run` starts the daemon's egress proxy and installs the MCP servers on its own, so there is nothing to run here. The first run opens a
+   browser once for GitHub's consent. To run the two steps alone:
 
 ```shell
 task sandbox:egress-preflight    # squid up and proven, then sbx's proxy.daemon pointed at it (restarts the sbx daemon once)
-task sandbox:mcp                 # draw.io, Flux and GitHub on the sbx MCP gateway; GitHub's browser consent the first time
+task sandbox:install-mcp         # draw.io, Flux and GitHub registered on the sbx MCP gateway and attached to the running sandbox
 ```
 
 8. Keep the proxy running across reboots. See [the daemon's egress proxy](#the-daemons-egress-proxy) for the two systemd units.
@@ -135,7 +135,7 @@ Egress rules live in the kit image: after changing them, run `task sandbox:build
 │   ├── dev-tools.yaml              the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
 │   └── tools.toml                  the sandbox's tools at exact versions, Terraform cache settings, the completions task
 └── daemon/                         DAEMON POLICY: what the sbx daemon and its MCP gateway may reach
-    ├── Taskfile.yml                sandbox:mcp, :mcp-load, :egress-up/-check/-apply/-preflight/-status/-open/-log/-off
+    ├── Taskfile.yml                sandbox:install-mcp, :egress-up/-check/-apply/-preflight/-status/-open/-log/-off
     └── egress/
         ├── compose.yaml            squid for the daemon on 127.0.0.1:3128
         └── squid.conf              the allowlist: the one file to edit to change what the daemon may reach
@@ -224,7 +224,7 @@ Tested results and further detail: [notes](docs/research/readme-notes.md).
   `mcp policy: allowed action=invokeTool server=github target=list_issues`. `sbx policy log` shows only the gateway alias with a count, never tool names.
   Without paid org governance the gateway allows every tool, so these lines record decisions, they do not enforce anything.
 - **Tool filter:** GitHub's server reads the `X-MCP-Toolsets`, `X-MCP-Exclude-Tools`, `X-MCP-Tools` (allow list) and `X-MCP-Readonly` headers and rejects a
-  filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:mcp` sets
+  filtered tool at call time (`unknown tool`), whatever the token type. The gateway sets them, so the agent cannot remove them. `task sandbox:install-mcp` sets
   the toolsets and excludes `delete_repository`, `delete_file`, `merge_pull_request`, `create_repository` and `fork_repository`. An allow list (`X-MCP-Tools`) is stricter than an exclude list: a tool GitHub adds later is allowed by the latter.
 - **GitHub authenticates with the App's OAuth flow:** `sbx mcp auth` refreshes the user token itself. An installation token from the minter cannot be
   used, because the gateway accepts only fixed header secrets and keeps the old value until a restart. The token is limited to the App's permissions on the

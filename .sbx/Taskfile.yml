@@ -43,8 +43,7 @@ tasks:
       # Order matters, so these are sequential steps, not deps (deps run in parallel). The daemon's egress proxy must be up and proven before the
       # daemon is pointed at it, and the daemon must be settled before the sandbox is created.
       - task: sandbox:egress-preflight
-      - task: sandbox:mcp
       - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}}
-      - task: sandbox:mcp-load
+      - task: sandbox:install-mcp
       - task: sandbox:setup-vscode
       - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
