@@ -93,7 +93,8 @@ tasks:
         set -eu
         if [ "$(sbx settings get proxy.daemon 2>/dev/null)" = "{{.PROXY_URL}}" ]; then echo "proxy.daemon already {{.PROXY_URL}}"; exit 0; fi
         sbx settings set proxy.daemon {{.PROXY_URL}}
-        sbx daemon restart
+        # Through systemd when the unit is enabled, so the daemon stays under the unit that Requires the proxy; `sbx daemon restart` would start it detached.
+        if systemctl --user is-enabled sbx-daemon.service >/dev/null 2>&1; then sbx daemon stop >/dev/null 2>&1 || true; systemctl --user restart sbx-daemon.service; else sbx daemon restart; fi
         for i in $(seq 1 30); do sbx ls >/dev/null 2>&1 && exit 0; sleep 1; done
         echo "egress-apply: the sbx daemon did not come back"; exit 1
 
@@ -134,4 +135,5 @@ tasks:
     desc: Escape hatch. Stop sending the daemon's traffic through the proxy (does not need the proxy to be running)
     cmds:
       - sbx settings unset proxy.daemon
-      - sbx daemon restart
+      - |
+        if systemctl --user is-enabled sbx-daemon.service >/dev/null 2>&1; then sbx daemon stop >/dev/null 2>&1 || true; systemctl --user restart sbx-daemon.service; else sbx daemon restart; fi
