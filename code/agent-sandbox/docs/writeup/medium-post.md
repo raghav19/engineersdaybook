@@ -1,6 +1,6 @@
 # don't trust your coding agent, sandbox it
 
-*claude code in a microvm: what it can reach, what it can't, and the one thing a sandbox does not fix*
+*claude code in a microvm: what it can reach, what it can't, and where a sandbox stops*
 
 ---
 
@@ -16,7 +16,7 @@ this post is the setup, a demo with one section for each principle, and what i l
 
 ## what i built
 
-claude code running inside a docker `sbx` microvm, on a private clone of my repo.
+claude code running inside a [docker sandboxes](https://docs.docker.com/ai/sandboxes/) (`sbx`) microvm, on a private clone of my repo.
 
 - **the agent:** its own kernel, a clone of the repo, no real credentials.
 - **the mcp servers:** github, draw.io and the flux schema catalog. the agent reaches them only through a gateway on the host.
@@ -50,9 +50,14 @@ one section for each of anthropic's three principles. click the image to watch i
 
 ## where it stops
 
-the sandbox limits the blast radius. it doesn't stop the injection, and these gaps are still open:
+the sandbox limits the blast radius. there is one thing it cannot fix, and then a list of gaps in my setup that i can close or accept.
+
+**what a sandbox cannot fix**
 
 - **injected instructions.** the agent still reads issues, tool results and web pages. a hidden instruction can still fool it. that is a model-side problem, not a sandbox control.
+
+**gaps in this setup**
+
 - **writes to the one repo.** the app can write to the repo it covers. if the repo is public, so is what the agent writes: in testing, a file from my host that was never committed ended up in a public issue.
 - **allowed hosts are grants.** a dummy string reached `registry.terraform.io` and an s3 bucket nobody owns, because sbx's default list has wildcards like `**.amazonaws.com`. i have not trimmed them yet.
 - **files in the repo directory.** untracked and ignored files are readable in the vm. the rule is to keep nothing sensitive there: no `.env`, `*.pem` or `*.tfstate`, and work through the sandbox so no stray files land on the host copy.
@@ -66,3 +71,7 @@ the sandbox limits the blast radius. it doesn't stop the injection, and these ga
 everything is in the repo: the kit, the gateway setup, the squid config, the threat table and the demo script.
 
 [github.com/raghav19/engineersdaybook/tree/main/code/agent-sandbox](https://github.com/raghav19/engineersdaybook/tree/main/code/agent-sandbox)
+
+---
+
+*docker and docker sandboxes (`sbx`) are trademarks of docker, inc. this is an independent project and is not affiliated with or endorsed by docker.*
