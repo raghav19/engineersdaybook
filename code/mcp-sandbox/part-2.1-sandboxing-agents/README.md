@@ -287,10 +287,11 @@ content, plus monitoring. The Part 2.1 column was checked against a running sand
 | Environment | Host files the agent can read | ❌ | ✅ clone mode: edits stay in the clone and only the repo directory is visible, read-only; untracked and ignored files there are readable, so keep plaintext secrets out |
 | Environment | Tampered images or scripts | ✅ | ⚠️ (kit and squid image pinned by digest, not signed: `kit.requireSignature` is off) |
 | Model | Injected instructions | ❌ | ❌ not a sandbox control (Part 1's two refusals were the model) |
-| External content | Destructive tools (delete, merge, push to `main`) | ❌ | ✅ delete, merge and repo create, fork and delete are filtered out at the gateway; the writes that remain create or edit branches, PRs, issues and comments, all reversible. Relies on branch protection on `main` (pull request and one approval required), which is a GitHub setting, not the sandbox |
-| External content | Publishing data through MCP writes | ❌ | ⚠️ (by design the agent writes to the one repo the App covers; if that repo is public, whatever it writes is public. In testing it published an untracked file to a public issue. An allow list narrows it) |
+| External content | Destructive tools (delete, merge, push to `main`) | ❌ | ✅ (explicit allow/deny tool calls added)|
+| External content | Publishing data through MCP writes | ❌ | ⚠️ (agent writes to repo by design and in this case repo is public) |
 | External content | Poisoned tool results | ❌ | ❌ |
-| External content | Instructions that persist across sessions (`AGENTS.md`, memory, session history) | ❌ | ⚠️ (gap: the VM keeps its files across stop and start until `sbx rm`; changes to `AGENTS.md` reach the host only through a reviewed merge) |
+| External content | Instruction files in the repo (`AGENTS.md`) | ❌ | ✅ for your host and `main`: a change reaches them only through a merge you review. Inside the sandbox the next session obeys an edit in the clone at once (tested) |
+| External content | Instructions saved in the VM (memory, session history, unmerged edits) | ❌ | ⚠️ (gap: a new session obeyed an instruction planted in `~/.claude/CLAUDE.md`, which is not in git; it stays inside the sandbox and lasts until `sbx rm`) |
 | Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (allowed and blocked hosts: `sbx policy log`; allowed tool calls by name: `mcp.log`; the daemon's hosts: `docker logs sbx-daemon-egress`. Gap: no central log, rejected tool calls and arguments are not recorded) |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
