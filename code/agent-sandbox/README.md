@@ -27,7 +27,7 @@ This follows Anthropic's [How we contain Claude across products](https://www.ant
 
 ## Demo: the sandbox in 45 seconds
 
-[![asciicast](https://asciinema.org/a/rGA78COFnm6hs3SF.svg)](https://asciinema.org/a/rGA78COFnm6hs3SF)
+[![the sandbox demo: click to watch it on asciinema, where you can pause](docs/writeup/assets/sandbox-demo.gif)](https://asciinema.org/a/rGA78COFnm6hs3SF)
 
 One section per principle:
 

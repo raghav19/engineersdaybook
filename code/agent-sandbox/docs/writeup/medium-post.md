@@ -30,7 +30,7 @@ the vm makes two kinds of calls. network calls go through the sbx egress proxy. 
 
 ## the demo (45 seconds)
 
-[![the sandbox demo: click to watch and pause](https://asciinema.org/a/rGA78COFnm6hs3SF.svg)](https://asciinema.org/a/rGA78COFnm6hs3SF)
+[![the sandbox demo: click to watch and pause](assets/sandbox-demo.gif)](https://asciinema.org/a/rGA78COFnm6hs3SF)
 
 one section for each of anthropic's three principles. click the image to watch it on asciinema, where you can pause and read along.
 
