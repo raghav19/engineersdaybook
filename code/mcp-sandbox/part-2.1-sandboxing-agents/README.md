@@ -46,6 +46,41 @@ flowchart LR
 | MCP gateway: OAuth token, tool filter, tool-call log | every MCP call from the agent | `.sbx/daemon/Taskfile.yml` (vars), `task sandbox:install-mcp` |
 | Daemon policy: squid allowlist | what the sbx daemon itself connects to (MCP servers, kit pulls, Docker sign-in) | `.sbx/daemon/egress/squid.conf` |
 
+### What is inside the microVM
+
+What the sandbox itself contains and what stays outside it, measured on `sandbox-dev` with `sbx exec` (sbx 0.46.0, 2026-10-09). The agent has root inside (sudo, docker group); the VM
+boundary is the control, not the user inside it.
+
+```text
+┌─ YOUR MACHINE ────────────────────────────────────────────────────────────────────────────────┐
+│ sbx daemon: creates, starts and stops the VM and mounts the host repo read-only.              │
+│ The VM's only exits are the sbx egress proxy and the MCP gateway (see the diagram above).     │
+│ Never in the VM: your home, ~/.ssh, ~/.aws, the ssh agent, real tokens, MCP servers, squid.   │
+│                                                                                               │
+│ ┌─ microVM: own kernel 7.0.14, Debian 13, 2 vCPU, 2 GB RAM, one per sandbox ────────────────┐ │
+│ │ ┌─ AGENT ───────────────────┐ ┌─ TOOLS (kit image) ───────┐ ┌─ SERVICES ────────────────┐ │ │
+│ │ │ user agent, uid 1000      │ │ kubectl, helm, flux       │ │ dockerd + containerd, for │ │ │
+│ │ │ sudo and docker groups    │ │ kustomize, terraform      │ │   container builds in the │ │ │
+│ │ │ Claude Code               │ │ terragrunt, task          │ │   VM                      │ │ │
+│ │ │ bash, starship, fzf       │ │ yq, jq, sops, fd, herdr   │ │ git daemon :9418, serves  │ │ │
+│ │ │ VS Code server, fetched   │ │ mise shims, pinned        │ │   the clone read-only to  │ │ │
+│ │ │   on first connect        │ │   versions                │ │   the host                │ │ │
+│ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
+│ │                                                                                           │ │
+│ │ ┌─ WORKSPACE ───────────────┐ ┌─ VOLUMES (ext4) ──────────┐ ┌─ NETWORK: the only exit ──┐ │ │
+│ │ │ private clone of the      │ │ /var/lib/docker           │ │ eth0, point-to-point to   │ │ │
+│ │ │   repo, read-write        │ │ ~/.claude sessions and    │ │   the host                │ │ │
+│ │ │ host repo directory at    │ │   projects                │ │ HTTPS_PROXY: sbx egress   │ │ │
+│ │ │   /run/sandbox/source,    │ │ terraform provider cache  │ │   proxy                   │ │ │
+│ │ │   read-only               │ │ kept across stop and      │ │ MCP_GATEWAY_URL: MCP      │ │ │
+│ │ │ agent skills, read-only   │ │   start, deleted by sbx   │ │   gateway                 │ │ │
+│ │ │                           │ │   rm                      │ │ placeholders, no real     │ │ │
+│ │ │                           │ │                           │ │   credential              │ │ │
+│ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
+│ └───────────────────────────────────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### How it works
 
 One agent turn, with the model, the sandbox and the three control points. Direct routes from the VM to the MCP hosts are denied by the egress proxy.
