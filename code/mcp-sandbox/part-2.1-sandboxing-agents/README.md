@@ -291,7 +291,7 @@ content, plus monitoring. The Part 2.1 column was checked against a running sand
 | External content | Publishing data through MCP writes | ❌ | ⚠️ (agent writes to repo by design and in this case repo is public) |
 | External content | Poisoned tool results | ❌ | ❌ |
 | External content | Instruction files in the repo (`AGENTS.md`) | ❌ | ✅ for your host and `main`: a change reaches them only through a merge you review. Inside the sandbox the next session obeys an edit in the clone at once (tested) |
-| External content | Instructions saved in the VM (memory, session history, unmerged edits) | ❌ | ⚠️ (gap: a new session obeyed an instruction planted in `~/.claude/CLAUDE.md`, which is not in git; it stays inside the sandbox and lasts until `sbx rm`) |
+| External content | Instructions saved in the VM (memory, session history, unmerged edits) | ❌ | ✅ contained: a planted instruction can only use what the sandbox already allows (egress, gateway filter, branch protection) and lasts until `sbx rm`. A new session obeyed one planted in `~/.claude/CLAUDE.md` (tested). Detecting it is model-side (Part 3) |
 | Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (allowed and blocked hosts: `sbx policy log`; allowed tool calls by name: `mcp.log`; the daemon's hosts: `docker logs sbx-daemon-egress`. Gap: no central log, rejected tool calls and arguments are not recorded) |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
@@ -329,4 +329,5 @@ read-only (`X-MCP-Readonly`), and log rejected calls (Part 3).
   - per-tool rules: sbx's own (Cedar) need a paid Docker org subscription; a gateway of your own can limit tools by name, repo and user;
   - arguments: look at them and log every call, including rejected ones (today: allowed calls by name only);
   - per-repo write limits and an allow-list or read-only GitHub for sessions that only need to read.
+- **Model side, Part 3:** scan instruction files and memory (`AGENTS.md`, `~/.claude/CLAUDE.md`) when a session starts, since a planted instruction is reloaded each time; Anthropic's post suggests classifiers at session startup.
 - **Smaller gaps from the threat table:** `.env`, `*.pem` and `*.tfstate` in `.gitignore` (and out of the repo directory); signed kits (`kit.requireSignature`); a tighter baseline for S3.
