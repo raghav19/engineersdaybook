@@ -6,9 +6,7 @@ schemaVersion: "3"
 kind: mixin
 displayName: dev-tools
 description: >-
-  Exact-version dev tools from the repo's mise.toml and .sbx/agent/tools.toml (kubectl, helm, kustomize, fzf, starship, fd, task, yq, terraform,
-  terragrunt, flux),
-  their bash completions and the bash setup.
+  Exact-version dev tools from the repo's mise.toml and .sbx/agent/tools.toml
 version: "0.1.0"
 
 args:

@@ -31,7 +31,7 @@ tasks:
   sandbox:login:
     desc: Once per machine. Log docker and sbx in to ghcr.io with the token in .env.secrets.json (the kit is a private package)
     cmds:
-      # The token stays in this script's own variable and goes to the two tools on stdin: it is never in a process environment or an argument.
+      # Extract the GitHub token from the secrets file and use it to log in to Docker and sbx.
       - |
         token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.ROOT_DIR}}/.env.secrets.json")
         printf %s "$token" | docker login ghcr.io -u {{.GHCR_USER}} --password-stdin
@@ -40,9 +40,7 @@ tasks:
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
     cmds:
-      # Sequential steps, not deps (deps run in parallel): the MCP servers are attached to the sandbox, so it has to exist first.
-      # The daemon's egress proxy is not started here: systemd does that (see the README).
-      - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}}
-      - task: sandbox:install-mcp
-      - task: sandbox:setup-vscode
-      - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)"
+      - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}} # sandbox started
+      - task: sandbox:install-mcp # install MCP servers to running sandbox
+      - task: sandbox:setup-vscode # configure VS Code for the sandbox
+      - code --folder-uri "vscode-remote://ssh-remote+{{.NAME}}.sbx$(git rev-parse --show-toplevel)" # open VS Code on the sandbox
