@@ -1,5 +1,26 @@
 # Part 2.1: sandboxing the dev agent
 
+## What we are building
+
+A coding agent you can run on this repo without handing it your machine.
+
+- **The agent:** Claude Code, inside an `sbx` microVM, working on a private clone of the repo and holding no real credential.
+- **The MCP servers:** GitHub (OAuth, tool filter), draw.io and the Flux schema catalog. The agent reaches them only through a gateway on the host.
+- **The guardrails:** an egress allow list for the VM, a gateway that holds the GitHub token and filters its tools, and an allowlist proxy for the sbx daemon's own calls.
+
+What we take as given, so the sandbox's value shows on its own:
+
+- a Linux host with KVM, rootless Docker, systemd user services and `sbx` installed ([Prerequisites](#prerequisites));
+- one GitHub App on one repository, with `main` protected (a pull request and one approval);
+- secrets in a sops-encrypted file on the host, never in the VM;
+- review before merge as the gate for anything that reaches your host;
+- the model side (injected instructions) left to Part 3.
+
+What it shows: a fooled agent is capped to what the sandbox allows. Credentials stay out of the VM, egress is an allow list, destructive tools are filtered, and the damage stays in one repo.
+The [threat table](#threats-and-what-stops-them) records what was tested and what is still open.
+
+How to use this README: to run it, go to [Prerequisites](#prerequisites), then [Getting started](#getting-started). To understand it, read [How it is laid out](#how-it-is-laid-out). For the evidence, see the threat table.
+
 ## The problem
 
 A coding agent that runs on your machine runs as you: it can read what you can read and use what you can use. Anyone who can put text in front
@@ -46,39 +67,41 @@ flowchart LR
 | MCP gateway: OAuth token, tool filter, tool-call log | every MCP call from the agent | `.sbx/daemon/Taskfile.yml` (vars), `task sandbox:install-mcp` |
 | Daemon policy: squid allowlist | what the sbx daemon itself connects to (MCP servers, kit pulls, Docker sign-in) | `.sbx/daemon/egress/squid.conf` |
 
-### What is inside the microVM
+### Where the microVM sits on your machine
 
-What the sandbox itself contains and what stays outside it, measured on `sandbox-dev` with `sbx exec` (sbx 0.46.0, 2026-10-09). The agent has root inside (sudo, docker group); the VM
-boundary is the control, not the user inside it.
+The host-side parts around the VM and what each does, with no flow: what lives where. Measured on this machine with `ps`, `ss`, `sbx secret ls` and `sbx exec` (sbx 0.46.0, 2026-10-09).
+The VM's own contents are in the git history of this file (commit `c8b29c3`).
 
 ```text
-┌─ YOUR MACHINE ────────────────────────────────────────────────────────────────────────────────┐
-│ sbx daemon: creates, starts and stops the VM and mounts the host repo read-only.              │
-│ The VM's only exits are the sbx egress proxy and the MCP gateway (see the diagram above).     │
-│ Never in the VM: your home, ~/.ssh, ~/.aws, the ssh agent, real tokens, MCP servers, squid.   │
-│                                                                                               │
-│ ┌─ microVM: own kernel 7.0.14, Debian 13, 2 vCPU, 2 GB RAM, one per sandbox ────────────────┐ │
-│ │ ┌─ AGENT ───────────────────┐ ┌─ TOOLS (kit image) ───────┐ ┌─ SERVICES ────────────────┐ │ │
-│ │ │ • user agent, uid 1000    │ │ • kubectl, helm, flux     │ │ • dockerd + containerd,   │ │ │
-│ │ │ • sudo and docker groups  │ │ • kustomize, terraform    │ │   for container builds in │ │ │
-│ │ │ • Claude Code             │ │ • terragrunt, task        │ │   the VM                  │ │ │
-│ │ │ • bash, starship, fzf     │ │ • yq, jq, sops, fd, herdr │ │ • git daemon :9418,       │ │ │
-│ │ │ • VS Code server, fetched │ │ • mise shims, pinned      │ │   serves the clone read-  │ │ │
-│ │ │   on first connect        │ │   versions                │ │   only to the host        │ │ │
-│ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
-│ │                                                                                           │ │
-│ │ ┌─ WORKSPACE ───────────────┐ ┌─ VOLUMES (ext4) ──────────┐ ┌─ NETWORK: the only exit ──┐ │ │
-│ │ │ • private clone of the    │ │ • /var/lib/docker         │ │ • eth0, point-to-point to │ │ │
-│ │ │   repo, read-write        │ │ • ~/.claude sessions and  │ │   the host                │ │ │
-│ │ │ • host repo directory at  │ │   projects                │ │ • HTTPS_PROXY: sbx egress │ │ │
-│ │ │   /run/sandbox/source,    │ │ • terraform provider      │ │   proxy                   │ │ │
-│ │ │   read-only               │ │   cache                   │ │ • MCP_GATEWAY_URL: MCP    │ │ │
-│ │ │ • agent skills, read-only │ │ • kept across stop and    │ │   gateway                 │ │ │
-│ │ │                           │ │   start, deleted by sbx   │ │ • placeholders, no real   │ │ │
-│ │ │                           │ │   rm                      │ │   credential              │ │ │
-│ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
-│ └───────────────────────────────────────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─ YOUR MACHINE ──────────────────────────────────────────────────────────────────────────────────────┐
+│ ┌─ microVM ────────────┐ ┌─ sbx daemon (your user) ──────────────────────┐ ┌─ SQUID PROXY ────────┐ │
+│ │ • Claude Code on a   │ │ ┌─ EGRESS PROXY ─────┐ ┌─ MCP GATEWAY ──────┐ │ │ • rootless Docker,   │ │
+│ │   private clone of   │ │ │ • AGENT POLICY     │ │ • the VM's only    │ │ │   127.0.0.1:3128     │ │
+│ │   the repo           │ │ │ • every network    │ │   MCP endpoint     │ │ │   only               │ │
+│ │ • no real credential │ │ │   call from the VM │ │ • adds GitHub's    │ │ │ • DAEMON POLICY      │ │
+│ │ • its only exits:    │ │ │ • allow and deny   │ │   OAuth token and  │ │ │ • the daemon's own   │ │
+│ │   the egress proxy   │ │ │   rules            │ │   the tool filter  │ │ │   calls: MCP         │ │
+│ │   and the MCP        │ │ │ • injects the      │ │ • log: mcp.log     │ │ │   servers, kit       │ │
+│ │   gateway            │ │ │   Anthropic token  │ │                    │ │ │   pulls, sign-in     │ │
+│ └──────────────────────┘ │ │ • log: sbx policy  │ │                    │ │ │ • allowlist:         │ │
+│ ┌─ HOST REPO ──────────┐ │ │   log              │ │                    │ │ │   egress/squid.conf  │ │
+│ │ • mounted read-only  │ │ └────────────────────┘ └────────────────────┘ │ └──────────────────────┘ │
+│ │   into the VM        │ │ ┌─ SECRET STORE ─────┐ ┌─ VM RUNNER ────────┐ │ ┌─ SYSTEMD UNITS ──────┐ │
+│ │ • commits come back  │ │ │ • Anthropic and    │ │ • starts, stops    │ │ │ • sbx-daemon-egress  │ │
+│ │   through the        │ │ │   GitHub OAuth     │ │   and mounts the   │ │ │   keeps squid up     │ │
+│ │   sandbox remote     │ │ │   tokens, registry │ │   VM               │ │ │ • sbx-daemon starts  │ │
+│ └──────────────────────┘ │ │   login            │ │ • serves the clone │ │ │   only after it      │ │
+│ ┌─ STAYS ON THE HOST ──┐ │ │ • never copied     │ │   as a git remote  │ │ │                      │ │
+│ │ • .env.secrets.json, │ │ │   into the VM      │ │                    │ │ │                      │ │
+│ │   age key, ~/.ssh,   │ │ └────────────────────┘ └────────────────────┘ │ │                      │ │
+│ │   ~/.aws: never in   │ │                                               │ │                      │ │
+│ │   the VM             │ │                                               │ │                      │ │
+│ └──────────────────────┘ └───────────────────────────────────────────────┘ └──────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌─ OUTSIDE YOUR MACHINE ──────────────────────────────────────────────────────────────────────────────┐
+│ • From the egress proxy: api.anthropic.com and the kit allow list.                                  │
+│ • From squid: the GitHub MCP server, draw.io, the Flux catalog, image registries.                   │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### How it works
@@ -112,30 +135,6 @@ sequenceDiagram
     C-->>You: answer
     Note over C,E: a direct call from the VM to api.githubcopilot.com gets 403 from the egress proxy
 ```
-
-How `.sbx` sets this up and starts it:
-
-```mermaid
-flowchart TD
-    subgraph once["Once per machine (Getting started)"]
-        login["task sandbox:login<br/>registry login: .env.secrets.json + age key"]
-        daemonup["task sandbox:install-daemon<br/>.sbx/daemon/systemd + egress<br/>units, squid, proxy.daemon, daemon restart"]
-        skills["task sandbox:install-skills<br/>sbx skills store"]
-        login --> daemonup --> skills
-    end
-    subgraph every["Every start: task sandbox:run"]
-        envrun["sbx env run .sbx<br/>.sbx/sbxenv.yaml (kits)<br/>.sbx/agent/dev-tools.yaml (tools, egress rules)"]
-        mcpup["task sandbox:install-mcp<br/>.sbx/daemon/Taskfile.yml<br/>sbx mcp add and load"]
-        vscode["task sandbox:setup-vscode<br/>then VS Code opens on the sandbox"]
-        envrun --> mcpup --> vscode
-    end
-    build["task sandbox:build (maintainer)<br/>build and push the kit to ghcr.io,<br/>pin its digest in sbxenv.yaml"]
-    skills --> envrun
-    build -. "when the kit changes" .-> envrun
-```
-
-Agent policy is `.sbx/agent/`, daemon policy is `.sbx/daemon/`. Logs: `docker logs sbx-daemon-egress` (daemon side), `sbx policy log` (VM hosts), `sandboxd/mcp/mcp.log` (tool calls).
-How the daemon side fits together: [`.sbx/daemon/README.md`](../../../.sbx/daemon/README.md).
 
 ## Prerequisites
 
