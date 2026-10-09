@@ -53,6 +53,7 @@ capabilities:
           description: Interactive bash setup, sourced from ~/.bashrc
           content: |
             [[ $- == *i* ]] || return
+            eval "$(mise activate bash)"
             for f in /opt/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
             command -v fzf >/dev/null && eval "$(fzf --bash)"
             command -v starship >/dev/null && eval "$(starship init bash)"
@@ -113,7 +114,7 @@ build: |
   COPY mise.toml /out/etc/mise/config.toml
   COPY .sbx/agent/tools.toml /out/etc/mise/conf.d/sandbox.toml
   RUN mkdir -p /out/usr/local/bin && cp -a /opt/mise /out/opt/mise && cp /usr/local/bin/mise /out/usr/local/bin/mise \
-   && chown -R 0:0 /out
+   && chown -R 0:0 /out && chown -R 1000:1000 /out/opt/mise  # 1000 is agent in the shell kit: mise installs new tools as agent
 
   FROM scratch
   COPY --from=build /out /
