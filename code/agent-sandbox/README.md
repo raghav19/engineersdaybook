@@ -263,7 +263,7 @@ refreshes the skills. Egress rules for the VM live in the kit image, so after ch
 
 | Layer | Threat | Agent sandbox (microVM) |
 |---|---|---|
-| Environment | Agent escapes to the host | ✅ own kernel per sandbox, where a container shares the host's (sbx design, not tested here) |
+| Environment | Agent escapes to the host | ✅ own kernel per sandbox, where a container shares the host's |
 | Environment | Compromised MCP server code | ⚠️ (gap: none runs locally, but the hosted servers are trusted) |
 | Environment | Data leaving: allowed hosts | ⚠️ (gap: sbx's default baseline for agent work (package managers, code hosts, AI services, OS packages, certificate checks) is right for research in the sandbox, but a few multi-tenant wildcards such as `**.amazonaws.com` also match other people's buckets; `registry.terraform.io` and an S3 bucket accepted a body in testing) |
 | Environment | Data leaving: MCP writes | ⚠️ (gap: the agent writes to the one repo by design; if it is public, a host-only file reached a public issue in testing) |
