@@ -252,10 +252,10 @@ content, plus monitoring. The Part 2.1 column was checked against a running sand
 | Environment | Host files the agent can read | ❌ | ✅ clone mode: edits stay in the clone and only the repo directory is visible, read-only; untracked and ignored files there are readable, so keep plaintext secrets out |
 | Environment | Tampered images or scripts | ✅ | ⚠️ (kit and squid image pinned by digest, not signed: `kit.requireSignature` is off) |
 | Model | Injected instructions | ❌ | ❌ not a sandbox control (Part 1's two refusals were the model) |
-| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter by tool name only; `issue_write`, `push_files`, `create_or_update_file`, `create_pull_request`, `add_issue_comment` and `update_pull_request` stay open) |
-| External content | Sending data out through MCP write tools | ❌ | ⚠️ (by design the agent writes to the one repo the App covers; a host-only file was published to a public issue in testing; an allow list narrows it) |
+| External content | Destructive tools (delete, merge, push to `main`) | ❌ | ✅ delete, merge and repo create, fork and delete are filtered out at the gateway; the writes that remain create or edit branches, PRs, issues and comments, all reversible. Relies on branch protection on `main` (pull request and one approval required), which is a GitHub setting, not the sandbox |
+| External content | Publishing data through MCP writes | ❌ | ⚠️ (by design the agent writes to the one repo the App covers; if that repo is public, whatever it writes is public. In testing it published an untracked file to a public issue. An allow list narrows it) |
 | External content | Poisoned tool results | ❌ | ❌ |
-| External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists across stop and start, until `sbx rm`) |
+| External content | Instructions that persist across sessions (`AGENTS.md`, memory, session history) | ❌ | ⚠️ (gap: the VM keeps its files across stop and start until `sbx rm`; changes to `AGENTS.md` reach the host only through a reviewed merge) |
 | Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (allowed and blocked hosts: `sbx policy log`; allowed tool calls by name: `mcp.log`; the daemon's hosts: `docker logs sbx-daemon-egress`. Gap: no central log, rejected tool calls and arguments are not recorded) |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
@@ -270,7 +270,7 @@ The trifecta is private data, untrusted content and a way to send data out, all 
 |---|---|---|
 | Private data | Your home, `~/.ssh`, `~/.aws` and every real credential are out of reach. Clone mode keeps the agent on the repo, which it needs. | The repo directory, including untracked and ignored files, is readable (accepted by design: keep plaintext secrets out of it). |
 | Untrusted content | Nothing. | Issues, tool results and pages reach the agent as before; the model side is Part 3. |
-| A way out | Direct routes to the MCP servers and the GitHub API are blocked (403/401). | MCP write tools reach the one repo the App covers. In testing the agent published a host-only file to a public issue, the worst case. Two policy-allowed hosts also accepted a body. |
+| A way out | Direct routes to the MCP servers and the GitHub API are blocked (403/401). | MCP writes reach the one repo the App covers. If it is public, what the agent writes there is public: in testing it published an untracked file to a public issue (the worst case). Two policy-allowed hosts also accepted a body. |
 
 So the sandbox limits the **blast radius**, and the channel left open is the GitHub write tools, by design scoped to one repo. To narrow it: allow-list the tools (`X-MCP-Tools`) or run
 read-only (`X-MCP-Readonly`), and log rejected calls (Part 3).
@@ -285,12 +285,12 @@ read-only (`X-MCP-Readonly`), and log rejected calls (Part 3).
 - **GitHub auth:** the App's OAuth flow, refreshed by sbx; the token is limited to the App's permissions on the installed repo.
 - **Daemon proxy:** the daemon's own calls go through squid (`proxy.daemon`, experimental) and fail closed; see `.sbx/daemon/README.md`.
 - **Dynamic MCP mode:** `sbx env run` has no `--static-mcp`, so the agent can attach any server registered on the host.
-- **App permissions are the boundary:** contents, issues and pull requests (write), no administration, one repository.
+- **App permissions are the boundary:** contents, issues and pull requests (write), no administration, one repository. `main` is protected: a pull request and one approval are required.
 
 ## What is left ahead
 
 - **Part 3, a gateway with rules:**
   - per-tool rules: sbx's own (Cedar) need a paid Docker org subscription; a gateway of your own can limit tools by name, repo and user;
   - arguments: look at them and log every call, including rejected ones (today: allowed calls by name only);
-  - the write channel: allow-list or read-only GitHub, then per-repo write limits.
+  - per-repo write limits and an allow-list or read-only GitHub for sessions that only need to read.
 - **Smaller gaps from the threat table:** `.env`, `*.pem` and `*.tfstate` in `.gitignore` (and out of the repo directory); signed kits (`kit.requireSignature`); a tighter baseline for S3.
