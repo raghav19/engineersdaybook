@@ -154,8 +154,12 @@ One exception in sbx: a kit with OAuth `passthrough: true` sends the real token 
 
 Have these in place before the first command in [Getting started](#getting-started).
 
-1. **Host tools.** [mise](https://mise.jdx.dev). VS Code with its `code` command on the PATH (`command -v code`): mise cannot install it, and `sandbox:run` and step 6 use it.
-2. **sbx.** Follow Docker's [install guide](https://docs.docker.com/ai/sandboxes/install/) 
+1. **Host tools.** 
+   - [mise](https://mise.jdx.dev)
+   - VSCode
+
+2. **sbx.** Follow Docker's [install guide](https://docs.docker.com/ai/sandboxes/install/)
+
 3. **Rootless Docker as a user service, and linger.** The daemon's proxy runs in it and user services must start at boot.
    See [`code/rootless-docker`](../rootless-docker). Check:
 
@@ -168,6 +172,7 @@ Have these in place before the first command in [Getting started](#getting-start
    - Install it on only the repository the agent needs, with only the permissions it needs (today: contents, issues, pull requests: write; no administration).
    - Add the callback URL `http://127.0.0.1:8765/callback`, turn on **Expire user authorization tokens**, and generate a client secret.
    - Its client id is in `.sbx/daemon/Taskfile.yml`.
+   
 5. **Secrets.** Two live in the sops-encrypted `.env.secrets.json` at the repo root; edit it with `sops .env.secrets.json`.
 
    | Secret | Stored in | Used by |
