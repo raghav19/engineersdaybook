@@ -79,12 +79,12 @@ Nothing in the sandbox, the kit policy or the squid proxy saw it as anything but
 ## Review of the classification (2026-10-09)
 
 The measurements above are unchanged. After review, some **labels** changed: Anthropic's post ("How we contain Claude across products") treats some of these as accepted by
-design, and the Part 3 column is cumulative (the gateway is added on top of the microVM; `part-3-guardrailed-mcp-platform/specs/spike-0-results.md`: "The agent runs in an sbx microVM").
+design. The Part 3 column was removed from the README table to keep it simple (it is a design, not tested; the gateway would sit on top of the microVM, `part-3-guardrailed-mcp-platform/specs/spike-0-results.md`: "The agent runs in an sbx microVM").
 
 | Point | Verdict | Basis |
 |---|---|---|
 | Merged `.sbx/` files run on the host | not a gap | Review before merge is the default workflow, the same trust model as a devcontainer. The post does not discuss it as a gap; it notes human approval is weak (about 93% of prompts approved), so the cell says "review is the gate". |
-| Part 3 inherits Part 2.1 | table corrected | The gateway is an extra layer, not a replacement for the microVM; Part 3 had ❌ where 2.1 has ✅ or ⚠️. |
+| Part 3 column | removed | Kept simple: the table covers Part 2 and Part 2.1. Part 3 is described under "What is left ahead". |
 | Injected instructions | model side, Part 3 | Post: "protection in the model layer will never be 100% effective". Not a sandbox control. |
 | Host files the agent can read | by design, with a note | Post: reads are allowed, "writes are allowed inside the workspace", mitigated by egress controls. The agent works on the clone; untracked and ignored files are visible only through the read-only mount. |
 | Data sent through MCP write tools | ⚠️, not ❌ | Writing to the one repo the App covers is the agent's job. The measured worst case stands (a host-only file reached a public issue). The post still treats data leaving through an allowed channel as a real finding and an allowlist as "a capability grant". |
@@ -102,7 +102,7 @@ Not verified: what `sbx tui` shows; whether the source mount can be limited to t
 
 ## Not tested
 
-- A model that follows an injection in practice; the VM or VMM escape; the Part 2 and Part 3 columns; the `sbx rm` removal of VM state (documented, not run); the token-shaped
+- A model that follows an injection in practice; the VM or VMM escape; the Part 2 column; the `sbx rm` removal of VM state (documented, not run); the token-shaped
   string in a skill file (not inspected); whether the baseline allows other bodies-accepting hosts beyond the two probed.
 
 ## Cleanup done

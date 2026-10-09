@@ -240,24 +240,23 @@ Fetch again after the agent commits more. Before `sbx rm`, keep what you want wi
 ✅ stopped · ⚠️ partly (gap in brackets) · ❌ not stopped. Rows are grouped by the layers in Anthropic's
 [How we contain Claude](https://www.anthropic.com/engineering/how-we-contain-claude): environment, model, external
 content, plus monitoring. The Part 2.1 column was checked against a running sandbox on 2026-10-08 and its classification reviewed on 2026-10-09
-([evidence](docs/research/threat-table-verification.md)). The Part 2 column was audited on 2026-10-06. Part 3 is planned: its column is the design, not tested, and it sits
-**on top of** Part 2.1 (the agent stays in the microVM and the gateway is added), so its cells inherit Part 2.1's unless they say otherwise.
+([evidence](docs/research/threat-table-verification.md)). The Part 2 column was audited on 2026-10-06. Egress is enforced here with allow and deny rules and proxies, not CEL or Cedar policies; the model side is left to Part 3.
 
-| Layer | Threat | Part 2: container + proxy | Part 2.1: microVM | Part 3: gateway (design, on top of 2.1) |
-|---|---|---|---|---|
-| Environment | Compromised MCP server code | ✅ | ⚠️ (no MCP code runs locally; the hosted servers are trusted) | ⚠️ (same) |
-| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: 194 baseline allow rules; two allowed hosts accepted a body in testing; the daemon's own calls are on a squid allowlist) | ⚠️ (gap: the gateway covers MCP only) |
-| Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ only placeholders in the VM (`GH_TOKEN` returns 401) | ✅ |
-| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ the token stays in the gateway and the direct route is 403; what it may do is covered by the two MCP rows below | ✅ |
-| Environment | Files that run on your host (merged `.sbx/`, Taskfiles) | ❌ | ✅ merge review is the gate, as with a devcontainer; read `.sbx/` diffs like any host-run script | ✅ (same) |
-| Environment | Host files the agent can read | ❌ | ✅ clone mode: edits stay in the clone and only the repo directory is visible, read-only; untracked and ignored files there are readable, so keep plaintext secrets out | ✅ (same) |
-| Environment | Tampered images or scripts | ✅ | ⚠️ (kit and squid image pinned by digest, not signed: `kit.requireSignature` is off) | ⚠️ (same) |
-| Model | Injected instructions | ❌ | ❌ not a sandbox control (Part 1's two refusals were the model) | ⚠️ (gap: the LLM gateway limits reach, it does not detect) |
-| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter by tool name only; `issue_write`, `push_files`, `create_or_update_file`, `create_pull_request`, `add_issue_comment` and `update_pull_request` stay open) | ✅ per tool, repo and argument |
-| External content | Sending data out through MCP write tools | ❌ | ⚠️ (by design the agent writes to the one repo the App covers; a host-only file was published to a public issue in testing; an allow list narrows it) | ⚠️ (per-repo and per-argument limits; the channel remains) |
-| External content | Poisoned tool results | ❌ | ❌ | ⚠️ (gap: redacts secrets, doesn't detect injection) |
-| External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists across stop and start, until `sbx rm`) | ⚠️ (same) |
-| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (allowed and blocked hosts: `sbx policy log`; allowed tool calls by name: `mcp.log`; the daemon's hosts: `docker logs sbx-daemon-egress`. Gap: no central log, rejected tool calls and arguments are not recorded) | ✅ every call with its arguments |
+| Layer | Threat | Part 2: container + proxy | Part 2.1: microVM |
+|---|---|---|---|
+| Environment | Compromised MCP server code | ✅ | ⚠️ (no MCP code runs locally; the hosted servers are trusted) |
+| Environment | Data leaving the sandbox | ✅ explicit allow-list | ⚠️ (gap: 194 baseline allow rules; two allowed hosts accepted a body in testing; the daemon's own calls are on a squid allowlist) |
+| Environment | Credentials stolen | ⚠️ (gap: key inside the container) | ✅ only placeholders in the VM (`GH_TOKEN` returns 401) |
+| Environment | Credential used outside its purpose | ⚠️ (gap: the server holds the key) | ✅ the token stays in the gateway and the direct route is 403; what it may do is covered by the two MCP rows below |
+| Environment | Files that run on your host (merged `.sbx/`, Taskfiles) | ❌ | ✅ merge review is the gate, as with a devcontainer; read `.sbx/` diffs like any host-run script |
+| Environment | Host files the agent can read | ❌ | ✅ clone mode: edits stay in the clone and only the repo directory is visible, read-only; untracked and ignored files there are readable, so keep plaintext secrets out |
+| Environment | Tampered images or scripts | ✅ | ⚠️ (kit and squid image pinned by digest, not signed: `kit.requireSignature` is off) |
+| Model | Injected instructions | ❌ | ❌ not a sandbox control (Part 1's two refusals were the model) |
+| External content | Over-powered tools (delete, merge, per-repo, per-user) | ❌ | ⚠️ (gap: filter by tool name only; `issue_write`, `push_files`, `create_or_update_file`, `create_pull_request`, `add_issue_comment` and `update_pull_request` stay open) |
+| External content | Sending data out through MCP write tools | ❌ | ⚠️ (by design the agent writes to the one repo the App covers; a host-only file was published to a public issue in testing; an allow list narrows it) |
+| External content | Poisoned tool results | ❌ | ❌ |
+| External content | Poisoned memory (`AGENTS.md`, session history) | ❌ | ⚠️ (gap: persists across stop and start, until `sbx rm`) |
+| Monitoring | Record of what the agent did | ⚠️ (gap: hosts only) | ⚠️ (allowed and blocked hosts: `sbx policy log`; allowed tool calls by name: `mcp.log`; the daemon's hosts: `docker logs sbx-daemon-egress`. Gap: no central log, rejected tool calls and arguments are not recorded) |
 
 Out of scope for every part: a VM or container escape, tool descriptions that lie, a compromised GitHub or model
 provider.
