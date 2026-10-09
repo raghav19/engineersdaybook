@@ -59,23 +59,23 @@ boundary is the control, not the user inside it.
 │                                                                                               │
 │ ┌─ microVM: own kernel 7.0.14, Debian 13, 2 vCPU, 2 GB RAM, one per sandbox ────────────────┐ │
 │ │ ┌─ AGENT ───────────────────┐ ┌─ TOOLS (kit image) ───────┐ ┌─ SERVICES ────────────────┐ │ │
-│ │ │ user agent, uid 1000      │ │ kubectl, helm, flux       │ │ dockerd + containerd, for │ │ │
-│ │ │ sudo and docker groups    │ │ kustomize, terraform      │ │   container builds in the │ │ │
-│ │ │ Claude Code               │ │ terragrunt, task          │ │   VM                      │ │ │
-│ │ │ bash, starship, fzf       │ │ yq, jq, sops, fd, herdr   │ │ git daemon :9418, serves  │ │ │
-│ │ │ VS Code server, fetched   │ │ mise shims, pinned        │ │   the clone read-only to  │ │ │
-│ │ │   on first connect        │ │   versions                │ │   the host                │ │ │
+│ │ │ • user agent, uid 1000    │ │ • kubectl, helm, flux     │ │ • dockerd + containerd,   │ │ │
+│ │ │ • sudo and docker groups  │ │ • kustomize, terraform    │ │   for container builds in │ │ │
+│ │ │ • Claude Code             │ │ • terragrunt, task        │ │   the VM                  │ │ │
+│ │ │ • bash, starship, fzf     │ │ • yq, jq, sops, fd, herdr │ │ • git daemon :9418,       │ │ │
+│ │ │ • VS Code server, fetched │ │ • mise shims, pinned      │ │   serves the clone read-  │ │ │
+│ │ │   on first connect        │ │   versions                │ │   only to the host        │ │ │
 │ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
 │ │                                                                                           │ │
 │ │ ┌─ WORKSPACE ───────────────┐ ┌─ VOLUMES (ext4) ──────────┐ ┌─ NETWORK: the only exit ──┐ │ │
-│ │ │ private clone of the      │ │ /var/lib/docker           │ │ eth0, point-to-point to   │ │ │
-│ │ │   repo, read-write        │ │ ~/.claude sessions and    │ │   the host                │ │ │
-│ │ │ host repo directory at    │ │   projects                │ │ HTTPS_PROXY: sbx egress   │ │ │
-│ │ │   /run/sandbox/source,    │ │ terraform provider cache  │ │   proxy                   │ │ │
-│ │ │   read-only               │ │ kept across stop and      │ │ MCP_GATEWAY_URL: MCP      │ │ │
-│ │ │ agent skills, read-only   │ │   start, deleted by sbx   │ │   gateway                 │ │ │
-│ │ │                           │ │   rm                      │ │ placeholders, no real     │ │ │
-│ │ │                           │ │                           │ │   credential              │ │ │
+│ │ │ • private clone of the    │ │ • /var/lib/docker         │ │ • eth0, point-to-point to │ │ │
+│ │ │   repo, read-write        │ │ • ~/.claude sessions and  │ │   the host                │ │ │
+│ │ │ • host repo directory at  │ │   projects                │ │ • HTTPS_PROXY: sbx egress │ │ │
+│ │ │   /run/sandbox/source,    │ │ • terraform provider      │ │   proxy                   │ │ │
+│ │ │   read-only               │ │   cache                   │ │ • MCP_GATEWAY_URL: MCP    │ │ │
+│ │ │ • agent skills, read-only │ │ • kept across stop and    │ │   gateway                 │ │ │
+│ │ │                           │ │   start, deleted by sbx   │ │ • placeholders, no real   │ │ │
+│ │ │                           │ │   rm                      │ │   credential              │ │ │
 │ │ └───────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘ │ │
 │ └───────────────────────────────────────────────────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────────────────────────────────────────────────┘
