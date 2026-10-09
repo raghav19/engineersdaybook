@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="520" viewBox="0 0 820 520" role="img" aria-label="Agent in a microVM. Its network calls go through the sbx egress proxy. Its MCP tool calls go to the sbx MCP gateway on the host, which holds the GitHub token and filters tools, and whose outbound calls go through a squid proxy we run. Both routes reach only hosts on an allowlist.">
+      <style>
+      :root { --ink:#1c2030; --muted:#5d6479; --line:#c9cddc; --accent:#4f46e5; --card:#ffffff; --host:#eef0f7; --vm:#eceafd; --proxy:#e0f2fe; }
+      @media (prefers-color-scheme: dark) {
+        :root { --ink:#e8eaf2; --muted:#9aa1b8; --line:#2b3042; --accent:#8b87ff; --card:#1a1d29; --host:#20243a; --vm:#262a4a; --proxy:#16303f; }
+      }
+      text { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", monospace; fill: var(--ink); }
+      .sub { fill: var(--muted); font-size: 10px; }
+      .t { font-size: 11px; font-weight: 700; }
+      .arrow { stroke: var(--accent); stroke-width: 2; fill: none; }
+      .head { fill: var(--accent); }
+    </style>
+
+      <rect x="2" y="2" width="816" height="450" rx="18" fill="var(--host)" stroke="var(--line)" stroke-width="2"/>
+      <text x="22" y="26" class="t">HOST (your machine)</text>
+      <text x="22" y="44" class="sub">sbx daemon: creates the sandboxes and runs the MCP gateway</text>
+
+      <rect x="24" y="58" width="772" height="118" rx="16" fill="var(--vm)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="42" y="82" class="t">microVM: one per sandbox, own kernel, Docker daemon, packages</text>
+      <text x="42" y="108" class="sub">agent: Claude Code. Holds placeholders, no real credential.</text>
+      <text x="42" y="128" class="sub">repo: a private clone; the host repo is read-only.</text>
+      <text x="42" y="148" class="sub">Nothing else of yours: no ~/.ssh, ~/.aws or host secrets.</text>
+
+      <line x1="214" y1="176" x2="214" y2="208" class="arrow"/>
+      <polygon points="208,208 214,220 220,208" class="head"/>
+      <text x="226" y="200" class="sub">network calls</text>
+      <line x1="606" y1="176" x2="606" y2="208" class="arrow"/>
+      <polygon points="600,208 606,220 612,208" class="head"/>
+      <text x="618" y="200" class="sub">MCP tool calls</text>
+
+      <rect x="24" y="222" width="380" height="132" rx="16" fill="var(--proxy)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="42" y="246" class="t">sbx egress proxy: agent policy</text>
+      <text x="42" y="272" class="sub">1. allow and deny lists for every VM call</text>
+      <text x="42" y="290" class="sub">2. adds the model-API token from the host</text>
+      <text x="42" y="308" class="sub">    secret store (never inside the VM)</text>
+      <text x="42" y="326" class="sub">3. a direct call to an MCP host: 403</text>
+
+      <rect x="416" y="222" width="380" height="94" rx="16" fill="var(--proxy)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="434" y="246" class="t">sbx MCP gateway</text>
+      <text x="434" y="270" class="sub">the VM's only MCP endpoint; adds the GitHub App</text>
+      <text x="434" y="288" class="sub">token; tool filter: delete, merge, create-repo,</text>
+      <text x="434" y="306" class="sub">fork are excluded (unknown tool)</text>
+
+      <line x1="606" y1="316" x2="606" y2="326" class="arrow"/>
+      <polygon points="600,326 606,336 612,326" class="head"/>
+
+      <rect x="416" y="338" width="380" height="94" rx="16" fill="var(--proxy)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="434" y="362" class="t">squid proxy we run: daemon policy</text>
+      <text x="434" y="386" class="sub">the sbx daemon's own outbound calls: MCP servers,</text>
+      <text x="434" y="404" class="sub">kit pulls, sign-in. Allowlist in egress/squid.conf,</text>
+      <text x="434" y="422" class="sub">kept running by systemd</text>
+
+      <line x1="214" y1="354" x2="214" y2="462" class="arrow"/>
+      <polygon points="208,462 214,474 220,462" class="head"/>
+      <text x="226" y="420" class="sub">model API, kit allow list</text>
+      <line x1="606" y1="432" x2="606" y2="462" class="arrow"/>
+      <polygon points="600,462 606,474 612,462" class="head"/>
+      <text x="618" y="470" class="sub">MCP servers, registries</text>
+
+      <rect x="124" y="476" width="572" height="36" rx="18" fill="var(--card)" stroke="var(--accent)" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="410" y="499" text-anchor="middle" class="t">internet: only hosts on the two allowlists</text>
+    </svg>
