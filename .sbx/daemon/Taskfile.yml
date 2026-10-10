@@ -3,8 +3,18 @@ version: '3'
 # Daemon policy: what the sbx daemon and the MCP gateway inside it may reach. Included by ../Taskfile.yml with flatten, so the task names keep the
 # `sandbox:` prefix. The VM's own traffic is the agent policy (../agent/) and is not touched here.
 #
-# sandbox:install-daemon    once per machine: install the proxy and sbx daemon systemd units from this repo and point the daemon at the proxy
+# sandbox:install-egress    once per machine: pull the squid image (egress/Taskfile.yml, which also has start-egress and stop-egress)
+# sandbox:install-daemon    once per machine (and after editing the unit): install the sbx daemon systemd unit from this repo and point the daemon
+#                           at the squid proxy. Installs only, does not start or stop anything
+# sandbox:start-daemon      start the proxy (start-egress), then the daemon
+# sandbox:stop-daemon       stop the daemon, then the proxy (this ends running sandboxes)
+# sandbox:restart-daemon    stop-daemon then start-daemon, e.g. after editing squid.conf
 # sandbox:install-mcp       register & attach MCP servers to the sandbox
+
+includes:
+  egress:
+    taskfile: egress/Taskfile.yml
+    flatten: true
 
 silent: true
 
@@ -18,6 +28,7 @@ vars:
 tasks:
   sandbox:install-mcp:
     desc: Register the MCP servers on the sbx gateway and attach them to the running sandbox
+    deps: [sandbox:check-daemon, sandbox:check-egress]
     cmds:
       # register the MCP servers
       - sbx mcp add drawio --url https://mcp.draw.io/mcp
@@ -35,44 +46,79 @@ tasks:
       - sbx mcp load flux-schema-catalog --sandbox {{.NAME}}
       - sbx mcp load github --sandbox {{.NAME}}
 
-  # Once per machine. Sets up what the sbx daemon needs on the host. The picture of how the parts fit is in README.md in this folder.
+  # Once per machine, and again after editing a unit file. Puts the units on the host and points the daemon at the proxy. Installs only: it neither starts
+  # nor stops anything. Use sandbox:start-daemon after it (sandbox:restart-daemon if the daemon was already running, since it reads proxy.daemon at start).
+  # The picture of how the parts fit is in README.md in this folder.
   #
-  # Needs (the preconditions below check the first two): rootless Docker as an enabled user service, and linger on so user services start at boot.
-  # It also needs sbx in ~/.docker/sbx/bin: the daemon unit's ExecStart points there (edit systemd/sbx-daemon.service if yours is elsewhere).
+  # Needs (the preconditions below check these): rootless Docker as an enabled user service, linger on so user services start at boot, and sbx installed
+  # by mise (github:docker/sbx-releases in the root mise.toml; run `mise install`). The daemon unit's ExecStart points into the mise install dir.
   #
   # What it does, in order:
-  #   1. copies the two units into ~/.config/systemd/user, with this clone's path filled into the proxy unit (a unit cannot name its own directory);
-  #   2. starts the squid proxy and keeps it running (sbx-daemon-egress.service);
-  #   3. sets the sbx setting proxy.daemon to the proxy. Leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too;
-  #   4. restarts the daemon under its unit. It is ordered after the proxy and stops with it. This ends running sandboxes.
+  #   1. copies the unit into ~/.config/systemd/user;
+  #   2. enables it, so the daemon starts at login or boot;
+  #   3. sets the sbx setting proxy.daemon to the proxy. Leave `proxy` and `proxy.sandbox` empty, or the VM's traffic goes through squid too.
+  #      Any `sbx settings` call starts a daemon outside systemd if none is running, so the task stops that one again.
   # Safe to run again: it re-copies the units from the repo.
   #
-  # Check:  systemctl --user is-active sbx-daemon-egress sbx-daemon                              both active
-  #         DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock docker ps --filter name=sbx-daemon-egress   healthy
-  #         sbx settings get proxy.daemon                                                         http://127.0.0.1:3128
-  # Logs:   docker logs -f sbx-daemon-egress   (a line appears when a connection closes, so the MCP servers' long-lived ones show up late)
+  # Check:  systemctl --user is-enabled sbx-daemon                                                enabled
+  #         sbx settings get proxy.daemon                                                         http://127.0.0.1:3128 (starts a daemon if none runs)
   # Undo:   sbx settings unset proxy.daemon
-  #         systemctl --user disable --now sbx-daemon-egress.service && rm ~/.config/systemd/user/sbx-daemon-egress.service
-  #         then put back a plain sbx-daemon.service (no Requires=/After=) or delete it and run `sbx daemon start`; systemctl --user daemon-reload
+  #         systemctl --user disable --now sbx-daemon.service && rm ~/.config/systemd/user/sbx-daemon.service; systemctl --user daemon-reload
+  #         then run `sbx daemon start` by hand
   sandbox:install-daemon:
-    desc: Once per machine. Install the proxy and sbx daemon systemd units from this repo and point the daemon at the proxy (restarts the sbx daemon)
+    desc: Once per machine. Install the sbx daemon systemd unit from this repo and point the daemon at the squid proxy (does not start or stop it)
     preconditions:
       - sh: systemctl --user is-enabled docker.service
         msg: "Rootless Docker is not an enabled user service. Run: systemctl --user enable --now docker.service"
       - sh: loginctl show-user "$USER" -p Linger | grep -q yes
         msg: "Linger is off, so user services would not start at boot. Run: loginctl enable-linger $USER"
+      - sh: test -x "$HOME/.local/share/mise/installs/github-docker-sbx-releases/latest/sbx"
+        msg: "sbx is not installed by mise, and the daemon unit runs it from there. Run: mise install"
     cmds:
       - |
         set -eu
         dir="$HOME/.config/systemd/user"
         src="{{.ROOT_DIR}}/.sbx/daemon/systemd"
         mkdir -p "$dir"
-        sed 's#@EGRESS_DIR@#{{.ROOT_DIR}}/.sbx/daemon/egress#' "$src/sbx-daemon-egress.service" > "$dir/sbx-daemon-egress.service"
-        grep -q '{{.ROOT_DIR}}/.sbx/daemon/egress/compose.yaml' "$dir/sbx-daemon-egress.service"
         cp "$src/sbx-daemon.service" "$dir/sbx-daemon.service"
         systemctl --user daemon-reload
-        systemctl --user enable --now sbx-daemon-egress.service
-        sbx settings set proxy.daemon http://127.0.0.1:3128
         systemctl --user enable sbx-daemon.service
-        sbx daemon stop >/dev/null 2>&1 || true
-        systemctl --user restart sbx-daemon.service
+        sbx settings set proxy.daemon http://127.0.0.1:3128
+        # `sbx settings` starts a daemon outside systemd when none runs; stop that one, never the daemon under its unit
+        systemctl --user is-active --quiet sbx-daemon.service || sbx daemon stop >/dev/null 2>&1 || true
+
+  # Not run by hand: tasks that need the daemon list it under deps, so they stop with a clear message instead of a raw sbx error.
+  # `sbx daemon status` only reports, it does not start a daemon the way other sbx commands do.
+  sandbox:check-daemon:
+    internal: true
+    preconditions:
+      - sh: "sbx daemon status 2>&1 | grep -q 'Status: running'"
+        msg: "The sbx daemon is not running. Run: task sandbox:start-daemon"
+
+  # Starts the proxy and then the daemon, which sends its own traffic through it. reset-failed clears the start limit that systemd sets after 5 quick
+  # failures. A failure shows up a second or two after `start` returns, so check once more and print the journal if it is down.
+  # The reason is in the journal, not in `docker logs` (squid only).
+  sandbox:start-daemon:
+    desc: Start the egress proxy, then the sbx daemon
+    deps: [sandbox:start-egress]
+    cmds:
+      - |
+        systemctl --user reset-failed sbx-daemon.service
+        systemctl --user start sbx-daemon.service
+        sleep 2
+        systemctl --user is-active --quiet sbx-daemon.service || { journalctl --user -u sbx-daemon.service -n 20 --no-pager >&2; exit 1; }
+
+  # Stops the daemon, then any daemon running outside systemd, then the proxy. This ends running sandboxes. The unit stays enabled, so the daemon comes
+  # back at the next login or boot unless you also run: systemctl --user disable sbx-daemon
+  sandbox:stop-daemon:
+    desc: Stop the sbx daemon, then the egress proxy (ends running sandboxes)
+    cmds:
+      - systemctl --user stop sbx-daemon.service
+      - sbx daemon stop >/dev/null 2>&1 || true # a daemon started outside systemd by an `sbx` call
+      - task: sandbox:stop-egress
+
+  sandbox:restart-daemon:
+    desc: Stop, then start, the egress proxy and the sbx daemon (e.g. after editing squid.conf; ends running sandboxes)
+    cmds:
+      - task: sandbox:stop-daemon
+      - task: sandbox:start-daemon

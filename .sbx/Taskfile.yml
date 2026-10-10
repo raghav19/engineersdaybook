@@ -5,7 +5,8 @@ version: '3'
 #
 # This file only orchestrates. The two policies live in their own folders, each with its own Taskfile included below:
 #   agent/    what runs inside the VM: the kit, its egress allow and deny lists, the tools, the skills
-#   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations and the squid allowlist (started by systemd)
+#   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations, the daemon's systemd unit, and the squid allowlist and its container
+#             (daemon/egress/). Once per machine: sandbox:install-egress, sandbox:install-daemon. Then sandbox:start-daemon / stop-daemon / restart-daemon
 #
 # sandbox:login   once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
 # sandbox:run     developer: `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
@@ -39,6 +40,7 @@ tasks:
 
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
+    deps: [sandbox:check-daemon, sandbox:check-egress] # the sandbox's MCP calls go through the daemon, and the daemon's through the proxy
     cmds:
       - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}} # sandbox started
       - task: sandbox:install-mcp # install MCP servers to running sandbox
