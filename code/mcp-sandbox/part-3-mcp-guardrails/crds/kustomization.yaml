@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Applied FIRST and on its own (task crds:apply), with server-side apply:
+#   kustomize build --enable-helm crds | kubectl apply --server-side --force-conflicts -f -
+# The two layers are separate directories so either can be bumped on its own.
+resources:
+  - gateway-api
+  - agentgateway

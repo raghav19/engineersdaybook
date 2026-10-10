@@ -1,0 +1,18 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-rate-limit
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp
+  traffic:
+    rateLimit:
+      local:
+        # One tool call is several HTTP requests (initialize, notifications, list, call); size accordingly.
+        - requests: 60
+          unit: Minutes
+          burst: 10
+          key: jwt.sub

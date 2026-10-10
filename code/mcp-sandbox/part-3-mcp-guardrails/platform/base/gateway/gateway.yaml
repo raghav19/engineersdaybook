@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: agentgateway-proxy
+  namespace: agentgateway-system
+spec:
+  gatewayClassName: agentgateway
+  listeners:
+    - name: http
+      protocol: HTTP
+      # Rootless Docker cannot publish a port below 1024. The value is stamped from GATEWAY_PORT by the
+      # values-wiring component.
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same

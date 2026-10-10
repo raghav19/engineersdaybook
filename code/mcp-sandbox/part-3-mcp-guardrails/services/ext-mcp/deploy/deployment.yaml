@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ext-mcp
+  labels: {app.kubernetes.io/name: ext-mcp}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: ext-mcp}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: ext-mcp}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: ext-mcp
+          image: ext-mcp
+          ports:
+            - containerPort: 4445
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}

@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# Upstream credentials from the sops-encrypted .env.secrets.json, rendered by an exec KRM function at build time.
+# Build with: kustomize build --enable-alpha-plugins --enable-exec ...
+# On another cluster swap this component for one that renders ExternalSecret objects (same Secret name).
+generators:
+  - sops-secret.yaml

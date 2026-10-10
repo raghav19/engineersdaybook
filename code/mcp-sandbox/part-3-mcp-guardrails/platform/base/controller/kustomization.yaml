@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Controller (not the CRDs: those are installed separately, see ../../../crds). Needs `kustomize build --enable-helm`.
+helmCharts:
+  - name: agentgateway
+    repo: oci://cr.agentgateway.dev/charts
+    version: v1.6.0
+    releaseName: agentgateway
+    namespace: agentgateway-system
+    valuesFile: values.yaml

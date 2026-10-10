@@ -1,0 +1,41 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: mcp-federated
+  namespace: agentgateway-system
+spec:
+  mcp:
+    # Always: tool names are prefixed with the target name, so tool names never collide (MCP03 shadowing)
+    # and CEL rules can match on a stable name.
+    prefixMode: Always
+    targets:
+      # host/path values are stamped from values.env by the values-wiring component.
+      - name: github
+        static:
+          host: api.githubcopilot.com
+          port: 443
+          path: /mcp/
+          policies:
+            tls:
+              sni: api.githubcopilot.com
+            # The upstream credential lives only in this Secret (rendered by components/secrets-sops).
+            # Its key is `Authorization`; the client never holds it (MCP01).
+            auth:
+              secretRef:
+                name: github-upstream
+      - name: drawio
+        static:
+          host: mcp.draw.io
+          port: 443
+          path: /mcp
+          policies:
+            tls:
+              sni: mcp.draw.io
+      - name: flux
+        static:
+          host: schemas.fluxoperator.dev
+          port: 443
+          path: /mcp
+          policies:
+            tls:
+              sni: schemas.fluxoperator.dev

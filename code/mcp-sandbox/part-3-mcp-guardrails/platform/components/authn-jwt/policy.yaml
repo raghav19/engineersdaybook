@@ -1,0 +1,20 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-authn
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: mcp-guardrails.local
+          audiences:
+            - mcp-gateway
+          jwks:
+            # Public JWKS only. Stamped from JWT_JWKS in values.env.
+            inline: '{"keys":[]}'

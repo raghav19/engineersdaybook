@@ -1,0 +1,96 @@
+version: '3'
+
+# Orchestration only. Everything declarative lives in crds/, platform/, profiles/, clusters/, services/.
+# Every task takes CLUSTER (default kind-local): it loads clusters/$CLUSTER/cluster.env and builds clusters/$CLUSTER.
+#
+#   task crds:apply                 install Gateway API + agentgateway CRDs (separate, first)
+#   task cluster:up                 create the cluster (provider tasks in tasks/)
+#   task cluster:lb                 run the LoadBalancer provider (kind: cloud-provider-kind; leave it running in another terminal)
+#   task gateway:apply              build clusters/$CLUSTER and apply (secrets arrive through the sops function)
+#   task gateway:diff               server-side dry run
+#   task tests:run                  run tests/attacks against the gateway address
+#   task cluster:down
+
+silent: true
+
+includes:
+  kind:
+    taskfile: tasks/kind.yml
+    vars:
+      CLUSTER_DIR: '{{.CLUSTER_DIR}}'
+      KIND_CLUSTER: '{{.KIND_CLUSTER}}'
+
+vars:
+  CLUSTER: '{{.CLUSTER | default "kind-local"}}'
+  CLUSTER_DIR: '{{.TASKFILE_DIR}}/clusters/{{.CLUSTER}}'
+  PROVIDER:
+    sh: . {{.TASKFILE_DIR}}/clusters/{{.CLUSTER}}/cluster.env && echo $PROVIDER
+  KIND_CLUSTER:
+    sh: . {{.TASKFILE_DIR}}/clusters/{{.CLUSTER}}/cluster.env && echo ${KIND_CLUSTER:-}
+  KUBE_CONTEXT:
+    sh: . {{.TASKFILE_DIR}}/clusters/{{.CLUSTER}}/cluster.env && echo $KUBE_CONTEXT
+  PROFILE:
+    sh: yq '.resources[] | select(test("profiles/"))' {{.TASKFILE_DIR}}/clusters/{{.CLUSTER}}/kustomization.yaml | xargs basename
+
+tasks:
+  default:
+    cmds:
+      - task --list
+
+  # Provider dispatch: PROVIDER comes from clusters/$CLUSTER/cluster.env; a new provider adds tasks/<name>.yml and an include.
+  cluster:up:
+    desc: Create the cluster with its provider's tasks
+    cmds:
+      - task: '{{.PROVIDER}}:up'
+
+  cluster:down:
+    desc: Delete the cluster
+    cmds:
+      - task: '{{.PROVIDER}}:down'
+
+  cluster:lb:
+    desc: Run the cluster LoadBalancer provider (kind runs cloud-provider-kind in the foreground)
+    cmds:
+      - task: '{{.PROVIDER}}:lb'
+
+  context:check:
+    internal: true
+    desc: Refuse to touch any cluster but the one this folder names
+    preconditions:
+      - sh: '[ "$(kubectl config current-context)" = "{{.KUBE_CONTEXT}}" ]'
+        msg: "kubectl context is not {{.KUBE_CONTEXT}}; refusing to apply to the wrong cluster"
+
+  crds:apply:
+    desc: Install the CRDs on their own (Gateway API experimental + agentgateway), server-side
+    deps: [context:check]
+    cmds:
+      - kustomize build --enable-helm {{.TASKFILE_DIR}}/crds | kubectl apply --server-side --force-conflicts -f -
+      - kubectl wait --for=condition=Established crd --all --timeout=60s
+
+  gateway:diff:
+    desc: Server-side dry run of the cluster's manifests
+    deps: [context:check]
+    cmds:
+      - kustomize build --enable-helm --enable-alpha-plugins --enable-exec {{.CLUSTER_DIR}} | kubectl apply --server-side --dry-run=server -f -
+
+  gateway:apply:
+    desc: Build the cluster's manifests (profile {{.PROFILE}}) and apply them
+    deps: [context:check]
+    cmds:
+      # rendered output contains the upstream credential in plaintext: pipe only, never redirect to a file
+      - kustomize build --enable-helm --enable-alpha-plugins --enable-exec {{.CLUSTER_DIR}} | kubectl apply --server-side -f -
+      - kubectl -n agentgateway-system rollout status deploy --timeout=120s
+
+  gateway:address:
+    desc: Print the gateway's LoadBalancer address
+    cmds:
+      - kubectl -n agentgateway-system get svc agentgateway-proxy -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+  tests:run:
+    desc: Run every tests/attacks case against the gateway and print one line per OWASP id (profile {{.PROFILE}})
+    cmds:
+      - |
+        addr=$(task gateway:address)
+        for t in {{.TASKFILE_DIR}}/tests/attacks/MCP*/; do
+          bash "$t/run.sh" "http://$addr:8080/mcp" "{{.PROFILE}}"
+        done

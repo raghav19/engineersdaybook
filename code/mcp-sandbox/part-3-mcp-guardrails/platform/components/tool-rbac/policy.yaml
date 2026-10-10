@@ -1,0 +1,19 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-tool-rbac
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: agentgateway.dev
+      kind: AgentgatewayBackend
+      name: mcp-federated
+  backend:
+    mcp:
+      authorization:
+        # Require with a negated list, not Deny: the schema warns that a Deny expression that fails to
+        # evaluate fails to deny. Same tools the sbx gateway header excludes today (.sbx/daemon/Taskfile.yml).
+        action: Require
+        policy:
+          matchExpressions:
+            - '!(mcp.tool.target == "github" && mcp.tool.name in ["delete_repository","delete_file","merge_pull_request","create_repository","fork_repository"])'

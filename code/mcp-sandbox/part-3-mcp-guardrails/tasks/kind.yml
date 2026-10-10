@@ -1,0 +1,23 @@
+version: '3'
+
+# Provider tasks for PROVIDER=kind. Included by ../Taskfile.yml; vars CLUSTER_DIR, KIND_CLUSTER come from there.
+
+tasks:
+  up:
+    desc: Create the kind cluster (Kubernetes 1.37) from the cluster's kind-config.yaml
+    status:
+      - kind get clusters | grep -qx {{.KIND_CLUSTER}}
+    cmds:
+      - kind create cluster --config {{.CLUSTER_DIR}}/kind-config.yaml
+
+  down:
+    desc: Delete the kind cluster
+    cmds:
+      - kind delete cluster --name {{.KIND_CLUSTER}}
+
+  lb:
+    desc: Run cloud-provider-kind in the foreground (it assigns LoadBalancer addresses; leave it running)
+    # --gateway-channel disabled: agentgateway owns Gateway API here; cloud-provider-kind must not install its own CRDs.
+    # --enable-lb-port-mapping: spike candidate if LB container IPs are not reachable from the host on rootless Docker.
+    cmds:
+      - cloud-provider-kind --gateway-channel disabled {{.CLI_ARGS}}

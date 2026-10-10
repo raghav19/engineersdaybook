@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# agentgateway CRDs. Keep the version equal to the controller chart in platform/base/controller.
+# Needs `kustomize build --enable-helm`.
+helmCharts:
+  - name: agentgateway-crds
+    repo: oci://cr.agentgateway.dev/charts
+    version: v1.6.0
+    releaseName: agentgateway-crds
+    namespace: agentgateway-system
+    includeCRDs: true

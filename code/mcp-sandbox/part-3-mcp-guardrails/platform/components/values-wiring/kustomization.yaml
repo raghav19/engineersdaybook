@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# Stamps values from the ConfigMap `mcp-values` (platform/base/defaults, merged per cluster) into the manifests.
+# This is the only place that knows which value lands in which field.
+replacements:
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GATEWAY_PORT}
+    targets:
+      - select: {kind: Gateway, name: agentgateway-proxy}
+        fieldPaths:
+          - spec.listeners.[name=http].port
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GITHUB_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=github].static.host
+          - spec.mcp.targets.[name=github].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GITHUB_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=github].static.path
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.DRAWIO_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=drawio].static.host
+          - spec.mcp.targets.[name=drawio].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.DRAWIO_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=drawio].static.path
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.FLUX_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=flux].static.host
+          - spec.mcp.targets.[name=flux].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.FLUX_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=flux].static.path
