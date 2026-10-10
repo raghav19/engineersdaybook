@@ -1,6 +1,6 @@
 # Egress proxy for the sbx daemon: `sbx settings set proxy.daemon http://127.0.0.1:3128`.
 # Port 3128 is outside the 32768-60999 range where rootless Docker's pasta forwarder drops published ports, and the publish is loopback only.
-# systemd (sbx-daemon-egress.service) starts this at login. By hand: DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock docker compose -f <this file> up -d --wait
+# `task sandbox:start-egress` starts this (and sandbox:start-daemon runs it first); Docker restarts it at login. By hand: DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock docker compose -f <this file> up -d --wait
 services:
   sbx-daemon-egress:
     image: ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029

@@ -1,16 +1,19 @@
 # Installed by `task sandbox:install-daemon`. See ../README.md.
 [Unit]
 Description=Docker Sandboxes daemon (sandboxd), with its temp files on disk
-# The daemon's egress goes through the squid proxy (sbx setting proxy.daemon), so it must not start without it. Stopping the proxy unit stops the daemon too.
-Requires=sbx-daemon-egress.service
-After=sbx-daemon-egress.service
+# The daemon's egress goes through the squid container (sbx setting proxy.daemon), which Docker restarts at login. After= only starts Docker first;
+# starting the proxy ahead of the daemon is `task sandbox:start-daemon`, not this unit.
+Wants=docker.service
+After=docker.service
 # /tmp is a RAM disk on some machines; kit assembly unpacks the kit images into TMPDIR and can fill it.
 
 [Service]
 Environment=TMPDIR=%h/.cache/sbx-tmp
 ExecStartPre=/usr/bin/mkdir -p %h/.cache/sbx-tmp
-# The path of the Docker installer's sbx. If `command -v sbx` prints another path, put it here.
-ExecStart=%h/.docker/sbx/bin/sbx daemon start
+# sbx comes from mise (github:docker/sbx-releases in the root mise.toml). `latest` is the symlink mise keeps pointed at the installed version, so an
+# upgrade does not break this path. A unit cannot use the mise shim: it resolves the version from the current directory's mise.toml, and a unit has none.
+# Foreground on purpose: systemd supervises this process, and `--detach` would make it exit and the unit stop.
+ExecStart=%h/.local/share/mise/installs/github-docker-sbx-releases/latest/sbx daemon start
 Restart=on-failure
 
 [Install]
