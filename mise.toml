@@ -1,6 +1,6 @@
-# What the host needs to run the sandbox (the sandbox's own tools are in .sbx/tools.toml):
-# task runs the Taskfile, yq and jq are used by its tasks, sops decrypts .env.secrets.json (host secrets, never loaded into the environment).
-# sbx itself is not installed by mise: see the README in code/mcp-sandbox/part-2.1-sandboxing-agents.
+# What the host needs. The sandbox image never reads this file (its tools are in .sbx/agent/tools.toml), so a tool both sides use is listed in both.
+# task runs the Taskfile, yq and jq are used by its tasks, sops decrypts .sbx/secrets.json (never loaded into the environment).
+# kind and cloud-provider-kind run the Part 3 cluster, sbx runs the sandboxes.
 [tools]
 task = "3.54"
 yq = "4.54"
