@@ -7,8 +7,13 @@ workspace:
   clone: true
 kits:
   - docker.io/docker/sbx-kit-shell:1.0.0
+<<<<<<< HEAD
   - docker.io/docker/sbx-kit-claude-mixin:2.1.285
   - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:ccd61b4b5ddd62766fe50f4e70b2fef771b7d4f4d0b80a7275395b475f8de180 # task sandbox:build pins this to the digest it pushed
+=======
+  - docker.io/docker/sbx-kit-claude-mixin:2.1.292
+  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:98ac1e1a18614384e12f82c47e58cc1464f03e6fb23497f4dae1bf5ea9b0ca91 # task sandbox:build pins this to the digest it pushed
+>>>>>>> 3d06f4c (feat: sandbox tokens from .sbx/secrets.json, kit slimmed to tools.toml)
 sandboxOptions:
   cpus: 2
   memory: 2g
