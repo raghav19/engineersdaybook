@@ -8,6 +8,9 @@ replacements:
       - select: {kind: Gateway, name: agentgateway-proxy}
         fieldPaths:
           - spec.listeners.[name=http].port
+      - select: {kind: AgentgatewayParameters, name: agentgateway-proxy}
+        fieldPaths:
+          - spec.service.spec.ports.0.port
   - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GITHUB_HOST}
     targets:
       - select: {kind: AgentgatewayBackend, name: mcp-federated}

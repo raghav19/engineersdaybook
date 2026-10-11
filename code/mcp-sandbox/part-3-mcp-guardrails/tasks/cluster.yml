@@ -1,0 +1,17 @@
+version: '3'
+
+# The kind cluster. Included by ../Taskfile.yml with flatten; var KIND_CLUSTER comes from there.
+
+tasks:
+  cluster:up:
+    desc: Create the kind cluster (Kubernetes 1.37, one control-plane and two workers) from kind-config.yaml
+    deps: [tools:check]
+    status:
+      - kind get clusters | grep -qx {{.KIND_CLUSTER}}
+    cmds:
+      - kind create cluster --config {{.ROOT_DIR}}/kind-config.yaml
+
+  cluster:down:
+    desc: Delete the kind cluster
+    cmds:
+      - kind delete cluster --name {{.KIND_CLUSTER}}

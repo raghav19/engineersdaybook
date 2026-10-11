@@ -1,0 +1,16 @@
+version: '3'
+
+# The attack cases, run against the gateway. Included by ../Taskfile.yml with flatten; vars PROFILE, GATEWAY_URL come from there.
+
+tasks:
+  tests:run:
+    desc: Run every tests/attacks case against the gateway and print one line per OWASP id (profile {{.PROFILE}})
+    deps: [context:check]
+    preconditions:
+      - sh: '[ "$(curl -s -o /dev/null -m 3 -w "%{http_code}" {{.GATEWAY_URL}})" != 000 ]'
+        msg: "Nothing answers on {{.GATEWAY_URL}}. Run: task gateway:apply (the cluster must have been created with the port mapping in kind-config.yaml)"
+    cmds:
+      - |
+        for t in {{.ROOT_DIR}}/tests/attacks/MCP*/; do
+          bash "$t/run.sh" "{{.GATEWAY_URL}}" "{{.PROFILE}}"
+        done

@@ -9,3 +9,4 @@ resources:
   - ../../platform/base/defaults
 components:
   - ../../platform/components/secrets-sops
+  - ../../platform/components/values-wiring
