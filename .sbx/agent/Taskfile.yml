@@ -5,6 +5,7 @@ version: '3'
 #
 # sandbox:install-skills  once per machine: install the agent skills into the sbx store that every sandbox shares
 # sandbox:update-skills   refresh the skills the store already has to upstream's latest
+# sandbox:sync-secrets    set the tokens in .sbx/secrets.json as sbx custom secrets, so the VM can use them without holding them (sandbox:run does it first)
 # sandbox:build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
 # sandbox:setup-vscode    write the Remote-SSH and update settings into your host VS Code user settings (sandbox:run does it first)
 
@@ -39,7 +40,7 @@ tasks:
     vars:
       # The time of the last commit that touched a build input, so the image changes only when its inputs do.
       SOURCE_DATE_EPOCH:
-        sh: git log -1 --format=%ct -- {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml.dockerignore {{.ROOT_DIR}}/.sbx/agent/tools.toml {{.ROOT_DIR}}/mise.toml
+        sh: git log -1 --format=%ct -- {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml {{.ROOT_DIR}}/.sbx/agent/dev-tools.yaml.dockerignore {{.ROOT_DIR}}/.sbx/agent/tools.toml
     cmds:
       # The build context is the repo root, so the kit is built from the same files the repo uses. No provenance or SBOM attestation: buildx adds a
       # new one on every build, which changed the pushed index digest (and so the pin below) while the image itself stayed identical. The fixed
@@ -58,6 +59,28 @@ tasks:
         yq -i '(.kits[] | select(contains("dev-tools"))) = "{{.KIT_REPO}}@" + strenv(digest)' {{.ROOT_DIR}}/.sbx/sbxenv.yaml
         grep -q "$digest" {{.ROOT_DIR}}/.sbx/sbxenv.yaml
         echo "pinned dev-tools $digest"
+
+  sandbox:sync-secrets:
+    desc: Make the tokens in .sbx/secrets.json available to the sandbox as sbx custom secrets (sandbox:run does it first)
+    deps: [sandbox:check-daemon]
+    cmds:
+      # .sbx/secrets.json is for the sandbox and nothing else: every entry is injected, including the two the host tasks read (sandbox:login reads ghcr.io, sandbox:install-mcp reads api.githubcopilot.com).
+      # One entry per host, the host as the key and the token as the value (edit with `sops .sbx/secrets.json`):
+      #   { "api.example.com": "the-token", "*.example.org": "another-token" }
+      # The sbx proxy swaps the placeholder "placeholder-<host>" for the token on requests to that host only (exact, or *.example.com), so the VM uses
+      # that placeholder wherever it would use the token. The host must also be allowed by the egress rules in dev-tools.yaml. set-custom creates or
+      # updates, so this is safe to run every time. sbx stores the --command and sandboxd runs it outside this shell, hence the absolute sops path; the
+      # token is never stored in sbx's config. The command has no double quote on purpose: sbx 0.47 saves such a secret empty (see secret-token.sh). A hostname
+      # pattern must not be expanded by the shell, hence set -f.
+      - |
+        set -f -o pipefail
+        sops_bin=$(command -v sops)
+        file={{.ROOT_DIR}}/.sbx/secrets.json
+        "$sops_bin" -d "$file" | jq -r 'keys[]' | while read -r host; do
+          sbx secret set-custom --host "$host" --placeholder "placeholder-$host" \
+            --command "{{.ROOT_DIR}}/.sbx/agent/secret-token.sh $sops_bin $host" > /dev/null
+          echo "sbx secret placeholder-$host for $host"
+        done
 
   sandbox:setup-vscode:
     desc: Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)

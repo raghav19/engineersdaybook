@@ -8,3 +8,6 @@
 creation_rules:
   - path_regex: (^|/)\.env\.secrets\.json$
     age: age1vprcp74tc3hytglx4jjh6ps0mnwsw7uzwhqp3mzrm5axpludcp9quv45pe
+  # The tokens the sandbox may use, one per host (see .sbx/agent/Taskfile.yml, sandbox:sync-secrets). Same recipient, so the same age key opens it.
+  - path_regex: (^|/)\.sbx/secrets\.json$
+    age: age1vprcp74tc3hytglx4jjh6ps0mnwsw7uzwhqp3mzrm5axpludcp9quv45pe
