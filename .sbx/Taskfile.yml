@@ -8,8 +8,8 @@ version: '3'
 #   daemon/   what the sbx daemon and its MCP gateway may reach: the MCP registrations, the daemon's systemd unit, and the squid allowlist and its container
 #             (daemon/egress/). Once per machine: sandbox:install-egress, sandbox:install-daemon. Then sandbox:start-daemon / stop-daemon / restart-daemon
 #
-# sandbox:login   once per machine: log docker and sbx in to ghcr.io with the token in the root .env.secrets.json
-# sandbox:run     developer: `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
+# sandbox:login   once per machine: log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json
+# sandbox:run     developer: sync the secrets, `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
 #
 # sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
 
@@ -30,17 +30,18 @@ vars:
 
 tasks:
   sandbox:login:
-    desc: Once per machine. Log docker and sbx in to ghcr.io with the token in .env.secrets.json (the kit is a private package)
+    desc: Once per machine. Log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json (the kit is a private package)
     cmds:
       # Extract the GitHub token from the secrets file and use it to log in to Docker and sbx.
       - |
-        token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{.ROOT_DIR}}/.env.secrets.json")
+        token=$(sops -d --extract '["ghcr.io"]' "{{.ROOT_DIR}}/.sbx/secrets.json")
         printf %s "$token" | docker login ghcr.io -u {{.GHCR_USER}} --password-stdin
         printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{.GHCR_USER}} --password-stdin
 
   sandbox:run:
     desc: Developer. Create or start the sandbox and open VS Code on it, then return (detached)
-    deps: [sandbox:check-daemon, sandbox:check-egress] # the sandbox's MCP calls go through the daemon, and the daemon's through the proxy
+    # the sandbox's MCP calls go through the daemon, and the daemon's through the proxy; the secrets must be in sbx before the sandbox starts
+    deps: [sandbox:check-daemon, sandbox:check-egress, sandbox:sync-secrets]
     cmds:
       - sbx env run {{.ROOT_DIR}}/.sbx --detached {{.CLI_ARGS}} # sandbox started
       - task: sandbox:install-mcp # install MCP servers to running sandbox

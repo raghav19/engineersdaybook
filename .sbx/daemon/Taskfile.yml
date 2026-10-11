@@ -33,7 +33,7 @@ tasks:
       # register the MCP servers
       - sbx mcp add drawio --url https://mcp.draw.io/mcp
       - sbx mcp add flux-schema-catalog --url https://schemas.fluxoperator.dev/mcp
-      - sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' {{.ROOT_DIR}}/.env.secrets.json | sbx secret set -f mcp:github:client_secret
+      - sops -d --extract '["api.githubcopilot.com"]' {{.ROOT_DIR}}/.sbx/secrets.json | sbx secret set -f mcp:github:client_secret
       - |
         sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
                            --client-id {{.GITHUB_APP_CLIENT_ID}} \

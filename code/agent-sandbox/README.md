@@ -150,6 +150,20 @@ sequenceDiagram
 
 One exception in sbx: a kit with OAuth `passthrough: true` sends the real token into the VM. This kit does not use it.
 
+#### Tokens the sandbox uses: `.sbx/secrets.json`
+
+The VM has no age key and no `sops`, so it never decrypts anything. A token it needs lives in the sops file [`.sbx/secrets.json`](../../.sbx/secrets.json), one entry per host, the host as the key:
+
+```json
+{ "api.example.com": "the-token", "*.example.org": "another-token" }
+```
+
+`task sandbox:run` first runs `task sandbox:sync-secrets`, which registers each entry with `sbx secret set-custom`. In the VM, use `placeholder-<host>` wherever the token would go (`curl -H "Authorization: Bearer placeholder-api.example.com" https://api.example.com/...`). The proxy swaps in the real token on requests to that host and only there, and nothing in the VM can print it.
+
+- **Add or change one:** `sops .sbx/secrets.json`, then run the sync (`sandbox:run` does). No rebuild, unless the host is not yet allowed by the egress rules in `dev-tools.yaml`.
+- **Remove one:** delete the entry, then `sbx secret rm --placeholder placeholder-<host>`.
+- **Everything in the file is injected**, as a global sbx secret, and the agent can use it against that host. Today it holds `ghcr.io` (read by `sandbox:login`) and `api.githubcopilot.com` (read by `sandbox:install-mcp`).
+
 ## Prerequisites
 
 Have these in place before the first command in [Getting started](#getting-started).
@@ -158,7 +172,7 @@ Have these in place before the first command in [Getting started](#getting-start
    - [mise](https://mise.jdx.dev)
    - VSCode
 
-2. **sbx.** Follow Docker's [install guide](https://docs.docker.com/ai/sandboxes/install/)
+2. **sbx.** Installed by `mise install` in the first step below; the daemon's unit runs it from the mise install dir.
 
 3. **Rootless Docker as a user service, and linger.** The daemon's proxy runs in it and user services must start at boot.
    See [`code/rootless-docker`](../rootless-docker). Check:
@@ -173,24 +187,24 @@ Have these in place before the first command in [Getting started](#getting-start
    - Add the callback URL `http://127.0.0.1:8765/callback`, turn on **Expire user authorization tokens**, and generate a client secret.
    - Its client id is in `.sbx/daemon/Taskfile.yml`.
    
-5. **Secrets.** Two live in the sops-encrypted `.env.secrets.json` at the repo root; edit it with `sops .env.secrets.json`.
+5. **Secrets.** Two live in the sops-encrypted `.sbx/secrets.json`; edit it with `sops .sbx/secrets.json`.
 
    | Secret | Stored in | Used by |
    |---|---|---|
-   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | `.env.secrets.json` | `task sandbox:login`, once |
-   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | `.env.secrets.json` | `task sandbox:install-mcp`, piped into sbx's secret store, never printed |
+   | `ghcr.io`, a token for the ghcr.io kit image | `.sbx/secrets.json` | `task sandbox:login`, once |
+   | `api.githubcopilot.com`, the App's client secret | `.sbx/secrets.json` | `task sandbox:install-mcp`, piped into sbx's secret store, never printed |
    | GitHub's OAuth token | sbx's host credential store, created by the browser consent | the gateway; never inside the VM |
    | your age key (decrypts the file) | `~/.config/sops/age/keys.txt` | `sops` |
 
 ## Getting started
 
-Run these in order, from the repo root.
+Run these in order, from the repo root. Steps 1 to 8 are once per machine; step 9 is what you run every day.
 
-1. Install the host tools, and activate mise in your shell so `task` is on the PATH (add the `eval` line to your shell rc to keep it; a new shell needs it too):
+1. Install the host tools (this includes `sbx`), and activate mise in your shell so `task` is on the PATH (add the `eval` line to your shell rc to keep it; a new shell needs it too):
 
    ```shell
    mise trust && mise install
-   eval "$(mise activate bash)"      
+   eval "$(mise activate bash)"
    task --list
    ```
 
@@ -201,18 +215,20 @@ Run these in order, from the repo root.
    sbx settings set ssh.agentForwardingEnabled false    # do not forward your SSH agent into the sandbox
    ```
 
-3. Log in to the registry (reads `GITHUB_TOKEN`, needs your age key):
+3. Log in to the registry (reads the `ghcr.io` token from `.sbx/secrets.json`, needs your age key):
 
    ```shell
    task sandbox:login
    ```
 
-4. Set up the daemon's proxy and units on the host. This restarts the sbx daemon, so do it before you start a sandbox. How the parts fit:
-   [`.sbx/daemon/README.md`](../../.sbx/daemon/README.md). The steps, checks, logs and undo are the comments above `sandbox:install-daemon` in `.sbx/daemon/Taskfile.yml`.
-   The daemon unit runs `~/.docker/sbx/bin/sbx`: if `command -v sbx` prints another path, change `ExecStart` in `.sbx/daemon/systemd/sbx-daemon.service` to it first.
+4. Pull the proxy image, install the daemon's systemd unit, then start the proxy and the daemon. `install-daemon` only installs: it starts nothing, and `start-daemon` is what
+   brings the proxy and then the daemon up. How the parts fit: [`.sbx/daemon/README.md`](../../.sbx/daemon/README.md). The checks, logs and undo are the comments above
+   `sandbox:install-daemon` in `.sbx/daemon/Taskfile.yml`.
 
    ```shell
+   task sandbox:install-egress
    task sandbox:install-daemon
+   task sandbox:start-daemon
    ```
 
 5. Install the agent skills:
@@ -228,17 +244,31 @@ Run these in order, from the repo root.
    code --install-extension ms-vscode-remote.remote-ssh
    ```
 
-7. Start the sandbox. Commit first: only committed files are in the clone.
+7. Add the tokens the sandbox may use, if you have any beyond the two already there (see [Tokens the sandbox uses](#tokens-the-sandbox-uses-sbxsecretsjson)):
+
+   ```shell
+   sops .sbx/secrets.json
+   ```
+
+8. Commit your work. Only committed files are in the sandbox's clone.
+
+9. Start the sandbox:
 
    ```shell
    task sandbox:run
    ```
 
-   The first time, sbx shows its plan and asks you to approve it. Run Claude Code in the VS Code terminal: it runs inside the sandbox. Run the task again
-to reopen the window. The first run also opens a browser once for GitHub's consent. Run Claude Code in the VS Code terminal: it runs inside the sandbox.
+   The first time, sbx shows its plan and asks you to approve it, and a browser opens once for GitHub's consent. Run Claude Code in the VS Code terminal: it runs inside the sandbox.
 
-Day to day: run `task sandbox:run` again to reopen the window. `task sandbox:build` (maintainer) rebuilds and pushes the tools image, `task sandbox:update-skills`
-refreshes the skills. Egress rules for the VM live in the kit image, so after changing them run `task sandbox:build` and create a new sandbox.
+### What `task sandbox:run` does, in order
+
+1. **Checks and the secret sync**, as dependencies, before anything starts: the daemon is running (`check-daemon`), the proxy is healthy (`check-egress`), and the tokens in `.sbx/secrets.json` are registered with sbx (`sync-secrets`).
+2. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
+3. **`install-mcp`** registers the MCP servers on the gateway and attaches them to the sandbox.
+4. **`setup-vscode`** writes the Remote-SSH settings into your host VS Code user settings.
+5. **VS Code** opens on the sandbox.
+
+Day to day: run `task sandbox:run` again to reopen the window. `task sandbox:build` (maintainer) rebuilds and pushes the tools image, `task sandbox:update-skills` refreshes the skills. Egress rules for the VM live in the kit image, so after changing them run `task sandbox:build` and create a new sandbox.
 
 ## Reference
 
@@ -248,8 +278,10 @@ refreshes the skills. Egress rules for the VM live in the kit image, so after ch
 .sbx/                               everything that spawns the sandbox
 ├── Taskfile.yml                    orchestration: sandbox:login and sandbox:run (the ordered start); includes the two folders below
 ├── sbxenv.yaml                     the sandbox: kits, size, clone workspace
+├── secrets.json                    sops file: the tokens the sandbox may use, one per host
 ├── agent/                          AGENT POLICY: what runs inside the VM
-│   ├── Taskfile.yml                sandbox:build, :install-skills, :update-skills, :setup-vscode
+│   ├── Taskfile.yml                sandbox:build, :install-skills, :update-skills, :setup-vscode, :sync-secrets
+│   ├── secret-token.sh             prints one token from secrets.json by host: the command sbx stores for each custom secret
 │   ├── dev-tools.yaml              the kit: tools, completions, shell, egress allow and deny lists (+ its .dockerignore)
 │   └── tools.toml                  the sandbox's tools at exact versions, Terraform cache settings, the completions task
 └── daemon/                         DAEMON POLICY: what the sbx daemon and its MCP gateway may reach

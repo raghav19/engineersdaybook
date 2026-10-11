@@ -1,12 +1,12 @@
 # syntax=docker/sandbox-kit:3
 # dev-agent-sandbox tools: one mixin with everything this repo adds to the Docker Claude and shell kits.
-# The tools in the repo's mise.toml and .sbx/agent/tools.toml and their completions are baked in, so nothing is installed at boot.
+# The tools in .sbx/agent/tools.toml and their completions are baked in, so nothing is installed at boot.
 # Built with the repo root as build context, see the Taskfile.
 schemaVersion: "3"
 kind: mixin
 displayName: dev-tools
 description: >-
-  Exact-version dev tools from the repo's mise.toml and .sbx/agent/tools.toml
+  Exact-version dev tools from .sbx/agent/tools.toml
 version: "0.1.0"
 
 args:
@@ -84,7 +84,7 @@ capabilities:
         fetches it from the sandbox remote.
 
 # The content recipe. Everything is staged under /out and lands on the workload as-is (see the create-v3-kit RECIPES.md).
-# The build context is the repo root; dev-tools.yaml.dockerignore keeps only mise.toml and .sbx/agent/tools.toml.
+# The build context is the repo root; dev-tools.yaml.dockerignore keeps only .sbx/agent/tools.toml.
 build: |
   # syntax=docker/dockerfile:1
   FROM dhi.io/debian-base:trixie-dev AS build
@@ -100,18 +100,15 @@ build: |
    && apt-get install -y --no-install-recommends curl ca-certificates git xz-utils bzip2 \
    && rm -rf /var/lib/apt/lists/*
 
-  # mise, then exactly the tools in the repo's mise.toml and .sbx/agent/tools.toml, which are copied in as they are: the second is mise's system config, so mise merges the two.
+  # mise, then exactly the tools in .sbx/agent/tools.toml, which is copied in as it is: it is mise's system config.
   RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
-  WORKDIR /repo
-  COPY mise.toml ./
   COPY .sbx/agent/tools.toml /etc/mise/conf.d/sandbox.toml
-  RUN mise trust /repo/mise.toml && mise install --yes
+  RUN mise install --yes
 
   # The bash completions come from a task in .sbx/agent/tools.toml.
   RUN mise run sandbox:completions
 
-  # The two files are also the VM's system config (config.toml and conf.d, both loaded), so the shims resolve from any directory.
-  COPY mise.toml /out/etc/mise/config.toml
+  # The file is also the VM's system config, so the shims resolve from any directory.
   COPY .sbx/agent/tools.toml /out/etc/mise/conf.d/sandbox.toml
   RUN mkdir -p /out/usr/local/bin && cp -a /opt/mise /out/opt/mise && cp /usr/local/bin/mise /out/usr/local/bin/mise \
    && chown -R 0:0 /out && chown -R 1000:1000 /out/opt/mise  # 1000 is agent in the shell kit: mise installs new tools as agent
@@ -119,8 +116,9 @@ build: |
   FROM scratch
   COPY --from=build /out /
   ARG WORKSPACE
-  # The tools are the mise shims, which also apply the repo's [env]. MISE_TRUSTED_CONFIG_PATHS trusts the clone's mise.toml,
-  # which nothing else would.
+  # The tools are the mise shims. MISE_TRUSTED_CONFIG_PATHS trusts the clone's nested mise.toml files, which nothing else would.
+  # MISE_IGNORED_CONFIG_PATHS skips the clone's root mise.toml, which lists host-only tools (kind, sbx) that are not installed here.
   ENV PATH=/opt/mise/shims \
       MISE_DATA_DIR=/opt/mise \
-      MISE_TRUSTED_CONFIG_PATHS=$WORKSPACE
+      MISE_TRUSTED_CONFIG_PATHS=$WORKSPACE \
+      MISE_IGNORED_CONFIG_PATHS=$WORKSPACE/mise.toml
