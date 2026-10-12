@@ -5,6 +5,14 @@ networking:
   # rootless docker daemon
   # ref: https://kind.sigs.k8s.io/docs/user/configuration/#api-server
   apiServerPort: 6444
+# kube-proxy is privileged, and containerd hands a privileged container every device node of the node's /dev. A USB device that goes away
+# (a mouse replugged) leaves an entry runc cannot mount, and kube-proxy fails with "mount src=/dev/bus/usb/...: no such file or directory".
+# kube-proxy uses no device, so privileged containers get none. Applies at cluster creation: recreate the cluster to change it.
+# ref: containerd docs/cri/config.md, privileged_without_host_devices
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+      privileged_without_host_devices = true
 nodes:
   - role: control-plane
     image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
