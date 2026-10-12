@@ -2,11 +2,13 @@ version: '3'
 
 # The kind cluster, and the one hand-over to Flux. Included by ../Taskfile.yml with flatten; vars CLUSTER, KIND_CLUSTER, KUBE_CONTEXT come from there.
 #
-# cluster:up is the only task that changes a cluster. It runs on the host and it is safe to run again. After it applies the FluxInstance,
-# Flux reads clusters/<CLUSTER>/sync from Git and the chain artifacts from the registry. Nothing else applies to the cluster.
+# cluster:up and cluster:credentials are the only tasks that change a cluster. Both run on the host and are safe to run again.
+#   cluster:up           kind, the Flux Operator, the FluxInstance. No credential, so it always comes up. Once the FluxInstance is applied,
+#                        Flux reads clusters/<CLUSTER>/sync from Git and the chain artifacts from the registry. Nothing else applies to the cluster.
+#   cluster:credentials  the two Secrets Flux cannot get from Git: sops-age and ghcr-pull. Until they exist the chains wait, and Flux retries.
 #
-# It reads two credentials from the environment, which you decrypt only for this process:
-#   sops exec-env .env.secrets.json 'task cluster:up'
+# cluster:credentials reads two values from the environment, which you decrypt only for this process:
+#   sops exec-env .env.secrets.json 'task cluster:credentials'
 #   GHCR_USER, GHCR_PULL_TOKEN   a token with read:packages, for the private chain artifacts
 # and one file, the private age key of this cluster (created once, never in Git): AGE_KEY_FILE
 
@@ -18,21 +20,30 @@ vars:
 
 tasks:
   cluster:up:
-    desc: Create the kind cluster, install the Flux Operator, create the two credentials, and apply the FluxInstance
+    desc: Create the kind cluster, install the Flux Operator, and apply the FluxInstance. Needs no credential. Flux does the rest
     deps:
       - task: tools:check
         vars: {TOOLS: "kind kubectl helm"}
-    preconditions:
-      - sh: '[ -f "{{.AGE_KEY_FILE}}" ]'
-        msg: "No age key at {{.AGE_KEY_FILE}}. Create one: age-keygen -o {{.AGE_KEY_FILE}} (see README, Secrets)"
-      - sh: '[ -n "${GHCR_USER:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]'
-        msg: "Set GHCR_USER and GHCR_PULL_TOKEN. Run: sops exec-env .env.secrets.json 'task cluster:up'"
     cmds:
       - kind get clusters | grep -qx {{.KIND_CLUSTER}} || kind create cluster --config {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/kind-config.yaml
       - kubectl --context {{.KUBE_CONTEXT}} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
       - >-
         helm upgrade --install flux-operator {{.FLUX_OPERATOR_CHART}} --version {{.FLUX_OPERATOR_VERSION}}
         --kube-context {{.KUBE_CONTEXT}} --namespace flux-system --wait
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/sync/flux-instance.yaml
+      - 'echo "Flux is installed. It waits for the credentials: task cluster:credentials. Watch it: kubectl --context {{.KUBE_CONTEXT}} -n flux-system get kustomizations"'
+
+  cluster:credentials:
+    desc: Create the two Secrets Flux needs, sops-age (decrypt Git) and ghcr-pull (private artifacts). Run after cluster:up, safe to run again
+    deps:
+      - task: tools:check
+        vars: {TOOLS: "kubectl"}
+    preconditions:
+      - sh: '[ -f "{{.AGE_KEY_FILE}}" ]'
+        msg: "No age key at {{.AGE_KEY_FILE}}. Create one: age-keygen -o {{.AGE_KEY_FILE}} (see README, Secrets)"
+      - sh: '[ -n "${GHCR_USER:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]'
+        msg: "Set GHCR_USER and GHCR_PULL_TOKEN. Run: sops exec-env .env.secrets.json 'task cluster:credentials'"
+    cmds:
       - >-
         kubectl --context {{.KUBE_CONTEXT}} -n flux-system create secret generic sops-age
         --from-file=age.agekey={{.AGE_KEY_FILE}} --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
@@ -40,8 +51,6 @@ tasks:
         kubectl --context {{.KUBE_CONTEXT}} -n flux-system create secret docker-registry ghcr-pull
         --docker-server=ghcr.io --docker-username="$GHCR_USER" --docker-password="$GHCR_PULL_TOKEN"
         --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
-      - kubectl --context {{.KUBE_CONTEXT}} apply -f {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/sync/flux-instance.yaml
-      - 'echo "Flux takes over. Watch it: kubectl --context {{.KUBE_CONTEXT}} -n flux-system get kustomizations"'
 
   cluster:down:
     desc: Delete the kind cluster

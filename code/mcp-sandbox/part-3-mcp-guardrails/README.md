@@ -14,7 +14,7 @@ Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox]
 - **Values as data**: one flat `values.env` per layer (fleet, cluster, and a region when one exists), written into the manifests by declarative wiring rules. The same path carries Helm chart values. The rendered manifests show every value, never a secret.
 - **One artifact per independently deployable unit**: each addon, route set, MCP server registration and policy is its own OCI artifact, per cluster, in a private registry. What must change together travels inside one artifact. What must only be ready first is a `dependsOn`. Rollout and rollback of one unit is an edit of its `ref.digest` in the cluster's `stack.yaml`.
 - **Review before merge**: `task render` and `task diff` show the rendered diff and the values. `task push` publishes the changed artifacts, and a reviewer can `task review` the exact artifact. Nothing applies it until a pin in `main` names it.
-- **One imperative task**: `task cluster:up` creates the cluster and hands it to Flux. Everything else is Git and the registry.
+- **One imperative step**: `task cluster:up` creates the cluster and installs Flux; `task cluster:credentials` adds the two Secrets Flux needs. Everything else is Git and the registry.
 
 ## Architecture
 
@@ -137,7 +137,7 @@ sequenceDiagram
 
     H->>H: age-keygen (key stays on the host)
     H->>G: sops --encrypt the Secret to clusters/kind/sync/secrets/ (token from .env.secrets.json)
-    H->>K: task cluster:up creates Secret sops-age from the key file
+    H->>K: task cluster:credentials creates Secret sops-age from the key file
     G-->>F: GitRepository sync
     F->>F: decrypt with sops-age (chain `secrets`)
     F->>K: apply Secret github-upstream
@@ -211,7 +211,8 @@ Steps marked **host** run on your machine. The sandbox VM has no age key, no clu
 3. **Push the artifacts (host).** Commit, then `sops exec-env .env.secrets.json 'task push'`. It pushes every artifact that has no pin or whose render differs from it,
    and prints one `digest:` line per artifact. Put each digest in `ref.digest` of its OCIRepository in `clusters/kind/sync/stack.yaml` (remove the `tag: unpinned` line),
    commit, and push to Git. (Make the registry packages private; the pull token is for them.)
-4. **Create the cluster (host).** `sops exec-env .env.secrets.json 'task cluster:up'`. Flux syncs `clusters/kind/sync` and applies the artifacts in order. Watch:
+4. **Create the cluster (host).** `task cluster:up` creates kind, installs the Flux Operator and applies the FluxInstance. It needs no credential. Then
+   `sops exec-env .env.secrets.json 'task cluster:credentials'` creates the two Secrets Flux waits for (`sops-age`, `ghcr-pull`). Flux syncs `clusters/kind/sync` and applies the artifacts in order. Watch:
    `kubectl -n flux-system get kustomizations`. Until the branch merges, set `spec.sync.ref` in `flux-instance.yaml` to your branch.
 5. **Check the gateway.** It answers on `http://127.0.0.1:8080/mcp` (host port 8080 -> NodePort 30080); `tools/list` with the MCP Inspector should show `github_*`, `drawio_*`, `flux_*`.
 6. **Run the attacks:** `task tests:run`. The expected results follow the stack: with the policy entries (`authn-jwt` and the others) the run is the guarded one, without them it is
