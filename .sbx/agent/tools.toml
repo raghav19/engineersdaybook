@@ -25,7 +25,6 @@ kustomize = "5.8"
 terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.9"
-herdr = "0.8"
 age = "1.2"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.15"
@@ -44,7 +43,6 @@ run = [
   'flux completion bash > "$COMPLETIONS_DIR/flux"',
   'task --completion bash > "$COMPLETIONS_DIR/task"',
   'yq shell-completion bash > "$COMPLETIONS_DIR/yq"',
-  'herdr completion bash > "$COMPLETIONS_DIR/herdr"',
   'echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"',
   'echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"',
 ]
