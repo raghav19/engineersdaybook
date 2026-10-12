@@ -142,7 +142,6 @@ in the tool lists; the hook configuration is not written yet). The sandbox VM ha
 ```text
 part-3-mcp-guardrails/
 ├── README.md
-├── research.md                  background research (versions there predate the pins below)
 ├── justfile                     the entry point: `just diff`, `just cluster ...`, `just tests run`, `just <component>/<recipe>`
 ├── just/                        lib.just (build, validate, push, pin: imported by every component), cluster.just, tests.just
 ├── preview/                     kustomizations.yaml: one Flux Kustomization per component, the input of `just diff` (flate)
@@ -187,7 +186,7 @@ Latest stable at 2026-10-10, checked against the GitHub release APIs, for Kubern
 | Flux Operator chart | 0.61.0 (not checked against the registry) | `just/cluster.just` |
 | Which version a cluster runs | one tag (the commit) and one sha256 digest per artifact | `clusters/kind/sync/stack.yaml` (`ref.tag`, `ref.digest`) |
 
-agentgateway v1.6.0 lists Kubernetes 1.32 to 1.37 and Gateway API 1.4 to 1.6 as supported ([research.md](research.md)). Chart, CRD and image versions live in the component folders. The pin decides which pushed artifact a cluster runs.
+agentgateway v1.6.0 lists Kubernetes 1.32 to 1.37 and Gateway API 1.4 to 1.6 as supported. Chart, CRD and image versions live in the component folders. The pin decides which pushed artifact a cluster runs.
 
 ## Getting started
 
