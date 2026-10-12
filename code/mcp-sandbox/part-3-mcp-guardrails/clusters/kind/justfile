@@ -1,0 +1,40 @@
+set quiet
+
+# VARIABLES
+
+# flux-operator
+flux_operator_chart := 'oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator'
+flux_operator_version := '0.61.0'
+flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
+
+# ghcr
+ghcr_user := env('GHCR_USER', 'raghav19')
+ghcr_token_file := justfile_directory() / '../../../../../.sbx/secrets.json'
+
+# misc
+name := `yq .name kind-config.yaml`
+ctx := 'kind-' + name
+
+# RECIPES
+up: _host
+    kind get clusters | grep -qx {{ name }} || kind create cluster --config kind-config.yaml
+    kubectl --context {{ ctx }} wait --for=condition=Ready node --all --timeout=5m
+    kubectl --context {{ ctx }} -n kube-system rollout status daemonset/kube-proxy --timeout=5m
+    kubectl --context {{ ctx }} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
+    helm upgrade --install flux-operator {{ flux_operator_chart }} --version {{ flux_operator_version }} \
+      --kube-context {{ ctx }} --namespace flux-system --wait --timeout {{ flux_operator_timeout }}
+    kubectl --context {{ ctx }} apply -f sync/flux-instance.yaml
+    echo "Flux waits for the credentials: just credentials"
+
+credentials: _host
+    kubectl --context {{ ctx }} -n flux-system create secret generic sops-age --from-file=age.agekey="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}" --dry-run=client -o yaml \
+      | kubectl --context {{ ctx }} apply -f -
+    kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username={{ ghcr_user }} \
+      --docker-password="$(sops -d --extract '["ghcr.io"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
+      | kubectl --context {{ ctx }} apply -f -
+
+down: _host
+    kind delete cluster --name {{ name }}
+
+_host:
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): the ghcr.io token and the sops key are not usable here." >&2; exit 1; }

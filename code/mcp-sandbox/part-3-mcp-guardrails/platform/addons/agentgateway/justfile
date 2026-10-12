@@ -1,4 +1,4 @@
-import '../../../just/lib.just'
+import '../../../lib/lib.just'
 
 # the CRD chart and the controller chart are one release: the two OCIRepository tags must be equal
 _checks:
