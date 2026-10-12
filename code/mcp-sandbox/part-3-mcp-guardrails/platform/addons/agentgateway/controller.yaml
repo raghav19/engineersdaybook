@@ -27,7 +27,9 @@ spec:
     kind: OCIRepository
     name: agentgateway
   dependsOn:
-    - name: agentgateway-crds     # the CRDs first, in the same artifact
+  - name: agentgateway-crds # the CRDs first, in the same artifact
   driftDetection:
     mode: enabled
-  values: {}
+  values:
+    commonLabels:
+      team: platform
