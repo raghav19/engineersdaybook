@@ -26,10 +26,11 @@ nodes:
         hostPort: 8080
         listenAddress: 127.0.0.1
         protocol: TCP
-      # HTTPS: host 127.0.0.1:8443 -> NodePort 30443. 8443 and not 443, because rootless Docker cannot bind below 1024. Nothing answers behind
-      # 30443 until the Gateway has an HTTPS listener with a certificate and the gateway Service has a port with nodePort 30443.
+      # HTTPS: host 127.0.0.1:18443 -> NodePort 30443. Not 443, because rootless Docker cannot bind below 1024, and not 8443, which VS Code's port
+      # forwarding took on this host. Nothing answers behind 30443 until the Gateway has an HTTPS listener with a certificate and the gateway
+      # Service has a port with nodePort 30443.
       - containerPort: 30443
-        hostPort: 8443
+        hostPort: 18443
         listenAddress: 127.0.0.1
         protocol: TCP
   - role: worker
