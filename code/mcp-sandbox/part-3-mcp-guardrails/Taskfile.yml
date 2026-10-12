@@ -14,7 +14,8 @@ version: '3'
 #   task push   [CHAIN=<chain>]      host: push what changed to the registry, print the digest lines for the stack
 #   task review [CHAIN=<chain>]      pull the pinned artifact to review/ for reading
 #   task cluster:up                  host: kind, Flux Operator, FluxInstance. No credential needed. Flux applies everything else
-#   task cluster:credentials         host: the Secrets sops-age and ghcr-pull that Flux waits for (needs the age key and GHCR_*)
+#   task cluster:credentials         host: the Secrets sops-age and ghcr-pull that Flux waits for (needs the cluster age key and your sops key; no env vars)
+#   task cluster:devices             host: drop stale USB device nodes from the kind nodes (cluster:up runs it; run it after replugging a device)
 #   task tests:run                   run tests/attacks against the gateway (http://127.0.0.1:8080/mcp)
 #   task cluster:down
 
