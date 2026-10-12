@@ -28,7 +28,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 9b72349be3c4
+    digest: sha256:5bc59c1d9b349919ef88f3af28859be29b2d75d1147cd50844809c1c96a7e5ca
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -40,7 +41,7 @@ spec:
   retryInterval: 1m
   timeout: 3m
   prune: false
-  wait: true                # CRDs report Established. A removed CRD must not delete every custom resource of its kind.
+  wait: true # CRDs report Established. A removed CRD must not delete every custom resource of its kind.
   path: ./
   sourceRef: {kind: OCIRepository, name: gateway-api}
 ---
@@ -55,7 +56,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 2867ffb40bc1
+    digest: sha256:2da42f99e574c0cdf1c13e741bb5c89f4948e8fa9bc4b717cf0f62229ad35d39
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -67,7 +69,7 @@ spec:
   retryInterval: 1m
   timeout: 5m
   prune: true
-  wait: true                # both HelmReleases report Ready: helm-controller waits for the controller Deployment to roll out. Removing a HelmRelease uninstalls it and Helm leaves the chart's crds/ in place.
+  wait: true # both HelmReleases report Ready: helm-controller waits for the controller Deployment to roll out. Removing a HelmRelease uninstalls it and Helm leaves the chart's crds/ in place.
   path: ./
   sourceRef: {kind: OCIRepository, name: agentgateway}
   dependsOn:
@@ -92,7 +94,7 @@ spec:
     provider: sops
     secretRef: {name: sops-age}
   dependsOn:
-    - name: agentgateway     # the namespace of the Secret
+    - name: agentgateway # the namespace of the Secret
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -117,7 +119,7 @@ spec:
   retryInterval: 1m
   timeout: 2m
   prune: true
-  wait: true                # the Backend refers to the Secret github-upstream by name, so the secret first.
+  wait: true # the Backend refers to the Secret github-upstream by name, so the secret first.
   path: ./
   sourceRef: {kind: OCIRepository, name: mcp-servers}
   dependsOn:
@@ -147,7 +149,7 @@ spec:
   retryInterval: 1m
   timeout: 5m
   prune: true
-  wait: true                # the HTTPRoute refers to the Backend registered by mcp-servers.
+  wait: true # the HTTPRoute refers to the Backend registered by mcp-servers.
   path: ./
   sourceRef: {kind: OCIRepository, name: routes}
   dependsOn:
@@ -182,7 +184,7 @@ spec:
   retryInterval: 1m
   timeout: 5m
   prune: true
-  wait: true                # the ext-mcp Deployment rolls out. Its namespace travels in this artifact, so it waits for nothing.
+  wait: true # the ext-mcp Deployment rolls out. Its namespace travels in this artifact, so it waits for nothing.
   path: ./
   sourceRef: {kind: OCIRepository, name: ext-mcp}
 ---
@@ -209,7 +211,7 @@ spec:
   retryInterval: 1m
   timeout: 2m
   prune: true
-  wait: true                # MCP04, MCP09: only the gateway may call ext-mcp. The namespace comes from ext-mcp.
+  wait: true # MCP04, MCP09: only the gateway may call ext-mcp. The namespace comes from ext-mcp.
   path: ./
   sourceRef: {kind: OCIRepository, name: ext-mcp-isolation}
   dependsOn:
@@ -238,7 +240,7 @@ spec:
   retryInterval: 1m
   timeout: 3m
   prune: true
-  wait: true                # MCP01, MCP07. Targets the HTTPRoute.
+  wait: true # MCP01, MCP07. Targets the HTTPRoute.
   path: ./
   sourceRef: {kind: OCIRepository, name: authn-jwt}
   dependsOn:
@@ -267,7 +269,7 @@ spec:
   retryInterval: 1m
   timeout: 3m
   prune: true
-  wait: true                # MCP02, MCP10. Targets the HTTPRoute.
+  wait: true # MCP02, MCP10. Targets the HTTPRoute.
   path: ./
   sourceRef: {kind: OCIRepository, name: rate-limit}
   dependsOn:
@@ -296,7 +298,7 @@ spec:
   retryInterval: 1m
   timeout: 3m
   prune: true
-  wait: true                # MCP02. Targets the Backend.
+  wait: true # MCP02. Targets the Backend.
   path: ./
   sourceRef: {kind: OCIRepository, name: tool-rbac}
   dependsOn:
@@ -325,7 +327,7 @@ spec:
   retryInterval: 1m
   timeout: 3m
   prune: true
-  wait: true                # MCP03, 05, 06, 10. failureMode is FailClosed: without a running ext-mcp every tool call fails, so ext-mcp first.
+  wait: true # MCP03, 05, 06, 10. failureMode is FailClosed: without a running ext-mcp every tool call fails, so ext-mcp first.
   path: ./
   sourceRef: {kind: OCIRepository, name: ext-mcp-checks}
   dependsOn:
