@@ -29,6 +29,9 @@ capabilities:
           - "**.vsassets.io"
           - registry.terraform.io      # Terraform provider index
           - releases.hashicorp.com     # Terraform provider downloads
+          - api.githubcopilot.com
+          - kind.sigs.k8s.io
+          - just.systems
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
