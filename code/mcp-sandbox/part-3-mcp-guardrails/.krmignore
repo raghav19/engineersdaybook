@@ -1,0 +1,4 @@
+# Read by `flate` (just diff). Only the preview/ scaffold and the component folders are reconciled.
+clusters/
+out/
+tests/

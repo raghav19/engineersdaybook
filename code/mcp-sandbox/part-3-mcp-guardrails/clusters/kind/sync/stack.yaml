@@ -1,12 +1,13 @@
 # The stack of cluster `kind`: every artifact that runs here, in one place.
 # Per artifact, one pair:
-#   OCIRepository  the pin: which pushed artifact of this cluster runs. Rollout and rollback are an edit of ref.digest, in Git.
-#   Kustomization  the chain: how Flux applies that artifact (order, health) and which folders `task render` builds into it (the annotation).
-# `secrets` reads Git, not an artifact, so it has no pin and no folders.
+#   OCIRepository  the pin: which pushed artifact of this cluster runs. Rollout and rollback are an edit of ref, in Git.
+#   Kustomization  how Flux applies that artifact (order, health).
+# Both are named after the component folder; `just <folder>/push` pushes it and `just <folder>/pin` writes the pin. `secrets` reads Git,
+# not an artifact, so it has no pin and no folder.
 #
-# ref.tag `unpinned` means no artifact is pushed yet: the chain stays not Ready. `task push` prints the `digest:` line to put here.
+# ref.tag `unpinned` means no artifact is pushed yet: its Kustomization stays not Ready. `just <folder>/pin` writes the tag (the commit) and the digest.
 # A baseline run is this file without the ext-mcp-isolation and policy entries (authn-jwt, rate-limit, tool-rbac, ext-mcp-checks).
-# Flux never reverts a failed chain by itself: put the older digest back.
+# Flux never reverts a failed artifact by itself: put the older pin back (git revert).
 #
 #   gateway-api ──► agentgateway ──┬──► secrets ──┐
 #                                  │              ▼
@@ -23,7 +24,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/gateway-api
+  url: oci://ghcr.io/raghav19/mcp-guardrails/gateway-api
   secretRef:
     name: ghcr-pull
   ref:
@@ -34,8 +35,6 @@ kind: Kustomization
 metadata:
   name: gateway-api
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: platform/addons/gateway-api
 spec:
   interval: 10m
   retryInterval: 1m
@@ -52,7 +51,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/agentgateway
+  url: oci://ghcr.io/raghav19/mcp-guardrails/agentgateway
   secretRef:
     name: ghcr-pull
   ref:
@@ -63,8 +62,6 @@ kind: Kustomization
 metadata:
   name: agentgateway
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: platform/addons/agentgateway
 spec:
   interval: 10m
   retryInterval: 1m
@@ -88,7 +85,7 @@ spec:
   prune: true
   wait: true
   # The upstream credential, from Git (age ciphertext). The folder has no manifest until you encrypt one: see secrets/README.md.
-  # Until then this chain stays not Ready, and mcp-servers waits.
+  # Until then this Kustomization stays not Ready, and mcp-servers waits.
   path: ./code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/sync/secrets
   sourceRef: {kind: GitRepository, name: flux-system}
   decryption:
@@ -104,7 +101,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/mcp-servers
+  url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-servers
   secretRef:
     name: ghcr-pull
   ref:
@@ -115,8 +112,6 @@ kind: Kustomization
 metadata:
   name: mcp-servers
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: platform/mcp-servers
 spec:
   interval: 10m
   retryInterval: 1m
@@ -136,7 +131,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/routes
+  url: oci://ghcr.io/raghav19/mcp-guardrails/routes
   secretRef:
     name: ghcr-pull
   ref:
@@ -147,8 +142,6 @@ kind: Kustomization
 metadata:
   name: routes
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: platform/routes
 spec:
   interval: 10m
   retryInterval: 1m
@@ -173,7 +166,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp
+  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp
   secretRef:
     name: ghcr-pull
   ref:
@@ -184,8 +177,6 @@ kind: Kustomization
 metadata:
   name: ext-mcp
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: services/ext-mcp/deploy
 spec:
   interval: 10m
   retryInterval: 1m
@@ -202,7 +193,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp-isolation
+  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp-isolation
   secretRef:
     name: ghcr-pull
   ref:
@@ -213,8 +204,6 @@ kind: Kustomization
 metadata:
   name: ext-mcp-isolation
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: policies/ext-mcp-isolation
 spec:
   interval: 10m
   retryInterval: 1m
@@ -233,7 +222,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/authn-jwt
+  url: oci://ghcr.io/raghav19/mcp-guardrails/authn-jwt
   secretRef:
     name: ghcr-pull
   ref:
@@ -244,8 +233,6 @@ kind: Kustomization
 metadata:
   name: authn-jwt
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: policies/authn-jwt
 spec:
   interval: 10m
   retryInterval: 1m
@@ -264,7 +251,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/rate-limit
+  url: oci://ghcr.io/raghav19/mcp-guardrails/rate-limit
   secretRef:
     name: ghcr-pull
   ref:
@@ -275,8 +262,6 @@ kind: Kustomization
 metadata:
   name: rate-limit
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: policies/rate-limit
 spec:
   interval: 10m
   retryInterval: 1m
@@ -295,7 +280,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/tool-rbac
+  url: oci://ghcr.io/raghav19/mcp-guardrails/tool-rbac
   secretRef:
     name: ghcr-pull
   ref:
@@ -306,8 +291,6 @@ kind: Kustomization
 metadata:
   name: tool-rbac
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: policies/tool-rbac
 spec:
   interval: 10m
   retryInterval: 1m
@@ -326,7 +309,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp-checks
+  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp-checks
   secretRef:
     name: ghcr-pull
   ref:
@@ -337,8 +320,6 @@ kind: Kustomization
 metadata:
   name: ext-mcp-checks
   namespace: flux-system
-  annotations:
-    render.engineersdaybook.dev/folders: policies/ext-mcp-checks
 spec:
   interval: 10m
   retryInterval: 1m

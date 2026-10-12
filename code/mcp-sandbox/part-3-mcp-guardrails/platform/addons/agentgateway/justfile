@@ -1,0 +1,6 @@
+import '../../../just/lib.just'
+
+# the CRD chart and the controller chart are one release: the two OCIRepository tags must be equal
+_checks:
+    test "$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' crds.yaml)" = "$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' controller.yaml)" \
+      || { echo "agentgateway: the CRD chart and the controller chart differ, set the same tag" >&2; exit 1; }

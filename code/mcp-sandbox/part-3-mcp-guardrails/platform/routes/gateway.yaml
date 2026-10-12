@@ -13,8 +13,8 @@ spec:
   listeners:
     - name: http
       protocol: HTTP
-      # Rootless Docker cannot publish a port below 1024. The value is stamped from GATEWAY_PORT by the
-      # values/wiring component.
+      # Rootless Docker cannot publish a port below 1024. The fleet value is GATEWAY_PORT in values/values.env
+      # (values/wiring does not stamp it yet).
       port: 8080
       allowedRoutes:
         namespaces:

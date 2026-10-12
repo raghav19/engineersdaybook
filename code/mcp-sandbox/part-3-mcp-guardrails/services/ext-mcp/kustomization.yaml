@@ -1,0 +1,5 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The artifact of this service is its deploy/ folder. The justfile of the service sits here, next to the Dockerfile and the tests.
+resources:
+  - deploy

@@ -9,7 +9,7 @@ spec:
     # and CEL rules can match on a stable name.
     prefixMode: Always
     targets:
-      # host/path values are stamped from values.env by the values/wiring component.
+      # host/path values are the fleet values of values/values.env (values/wiring does not stamp them yet).
       - name: github
         static:
           host: api.githubcopilot.com

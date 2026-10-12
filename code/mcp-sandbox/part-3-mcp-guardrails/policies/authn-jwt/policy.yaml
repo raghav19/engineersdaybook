@@ -16,5 +16,5 @@ spec:
           audiences:
             - mcp-gateway
           jwks:
-            # Public JWKS only. Stamped from JWT_JWKS in values.env.
+            # Public JWKS only. The fleet value is JWT_JWKS in values/values.env (not stamped by values/wiring yet).
             inline: '{"keys":[]}'

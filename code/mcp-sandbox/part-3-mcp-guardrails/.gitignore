@@ -1,4 +1,2 @@
-# task render writes the rendered manifests here
+# `just <component>/build` writes the artifact of a component here, `just push` leaves the push result (out/<name>.json) next to it
 out/
-# task review pulls pinned artifacts here
-review/

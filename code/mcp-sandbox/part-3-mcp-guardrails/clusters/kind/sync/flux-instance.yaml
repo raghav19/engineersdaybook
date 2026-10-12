@@ -1,6 +1,6 @@
-# Flux itself: the version and the sync of this folder from Git. `task cluster:up` applies it once. After that Flux applies it too,
+# Flux itself: the version and the sync of this folder from Git. `just cluster up` applies it once. After that Flux applies it too,
 # because the sync folder lists it. A Flux upgrade is an edit of distribution.version.
-# The Flux Operator reads this object and installs the controllers. The operator chart version is a variable in tasks/cluster.yml.
+# The Flux Operator reads this object and installs the controllers. The operator chart version is a variable in just/cluster.just.
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
 metadata:

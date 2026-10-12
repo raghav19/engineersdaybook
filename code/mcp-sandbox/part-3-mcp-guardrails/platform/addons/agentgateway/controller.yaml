@@ -1,7 +1,6 @@
 # The agentgateway controller chart, installed by Flux (helm-controller). The version is the tag below, here only.
-# It must equal the CRD chart in crds.yaml: `task render` fails if they differ. Both belong to one chain.
-# Chart values: put fleet values under spec.values. A cluster changes one at render time, in its overlay (a wiring rule fed by a key of
-# values.env, or a patch on this object). The rendered HelmRelease then shows the value. Flux applies it as it is.
+# It must equal the CRD chart in crds.yaml: `just validate` fails if they differ. Both are one artifact.
+# Chart values: put them under spec.values. `just diff` renders the chart and shows what a value changes in the objects it creates.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
@@ -28,7 +27,7 @@ spec:
     kind: OCIRepository
     name: agentgateway
   dependsOn:
-    - name: agentgateway-crds     # the CRDs first, in the same chain
+    - name: agentgateway-crds     # the CRDs first, in the same artifact
   driftDetection:
     mode: enabled
   values: {}
