@@ -32,6 +32,8 @@ capabilities:
           - api.githubcopilot.com
           - kind.sigs.k8s.io
           - just.systems
+          - schemastore.io
+          - fluxcd.io
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
