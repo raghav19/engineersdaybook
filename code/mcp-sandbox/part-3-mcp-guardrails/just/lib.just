@@ -18,6 +18,10 @@ root := parent_directory(source_directory())
 name := file_name(justfile_directory())
 out := root / 'out' / name
 tag := `git log -1 --format=%h --abbrev=12 -- .`
+# In the sandbox VM the placeholder is enough: the sbx proxy swaps it for the ghcr.io token of .sbx/secrets.json on requests to ghcr.io.
+# On a host, export GHCR_PUSH_TOKEN (a classic PAT with write:packages) to override it.
+ghcr_user := env('GHCR_USER', 'raghav19')
+ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # list the recipes (the default when no recipe is named)
 [default]
@@ -46,7 +50,7 @@ push cluster='kind': _committed validate
     flux push artifact "$url:{{ tag }}" --path {{ out }} \
       --source "$(git remote get-url origin)" \
       --revision "$(git branch --show-current)@sha1:$(git rev-parse HEAD)" \
-      --creds "$GHCR_USER:$GHCR_PUSH_TOKEN" --output json \
+      --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" --output json \
       | jq --arg tag {{ tag }} '. + {tag: $tag}' | tee {{ root }}/out/{{ name }}.json
 
 # rollout: write the pushed tag and digest into this component's OCIRepository in stack.yaml (rollback: git revert the commit)
