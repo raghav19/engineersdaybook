@@ -27,6 +27,7 @@ flux2 = "2.9"
 age = "1.2"
 "github:home-operations/flate" = "0.6"
 prek = "0.5"
+just = "1.58"
 
 # dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
 [tasks."sandbox:completions"]
