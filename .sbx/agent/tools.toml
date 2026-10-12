@@ -23,7 +23,6 @@ kustomize = "5.8"
 terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.9"
-herdr = "0.8"
 
 # dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
 [tasks."sandbox:completions"]
@@ -38,7 +37,6 @@ run = [
   'flux completion bash > "$COMPLETIONS_DIR/flux"',
   'task --completion bash > "$COMPLETIONS_DIR/task"',
   'yq shell-completion bash > "$COMPLETIONS_DIR/yq"',
-  'herdr completion bash > "$COMPLETIONS_DIR/herdr"',
   'echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"',
   'echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"',
 ]
