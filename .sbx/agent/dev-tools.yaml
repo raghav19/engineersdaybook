@@ -32,7 +32,7 @@ capabilities:
           - api.githubcopilot.com
           - kind.sigs.k8s.io
           - just.systems
-          - schemastore.io
+          - schemastore.org
           - fluxcd.io
         deny:
           - hosts: [api.github.com]
