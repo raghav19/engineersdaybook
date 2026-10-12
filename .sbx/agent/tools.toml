@@ -12,7 +12,6 @@ TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
 CHECKPOINT_DISABLE = "1"  # no Terraform version check to checkpoint-api.hashicorp.com
 
 [tools]
-task = "3.54"
 just = "1.58"
 yq = "4.54"
 jq = "1.8"
@@ -41,7 +40,7 @@ run = [
   'starship completions bash > "$COMPLETIONS_DIR/starship"',
   'fd --gen-completions bash > "$COMPLETIONS_DIR/fd"',
   'flux completion bash > "$COMPLETIONS_DIR/flux"',
-  'task --completion bash > "$COMPLETIONS_DIR/task"',
+  'just --completions bash > "$COMPLETIONS_DIR/just"',
   'yq shell-completion bash > "$COMPLETIONS_DIR/yq"',
   'echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"',
   'echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"',

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Demo of the sandbox, one section per Anthropic principle. Run it in one terminal window (see README.md).
-# It needs the sandbox running (`task sandbox:run` once beforehand). It prints variable names and status codes, never secret values.
+# It needs the sandbox running (`just sandbox run` once beforehand). It prints variable names and status codes, never secret values.
 # It makes no model call. Section 3 sends two dummy strings to third-party hosts and makes one temporary untracked file in the repo directory.
 set -u
 

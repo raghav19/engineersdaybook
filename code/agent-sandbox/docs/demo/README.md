@@ -8,7 +8,7 @@
 
 ## Before you run it
 
-- The sandbox is running: `sbx ls` shows `sandbox-dev` as `running` (`task sandbox:run`).
+- The sandbox is running: `sbx ls` shows `sandbox-dev` as `running` (`just sandbox run`).
 - Use one terminal window with a large font. The script prints variable names and status codes, never secret values.
 
 ## What it shows
