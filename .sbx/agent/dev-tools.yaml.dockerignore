@@ -1,3 +1,0 @@
-# The build context is the repo root. Keep only what the build in dev-tools.yaml copies.
-*
-!.sbx/agent/tools.toml
