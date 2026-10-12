@@ -2,7 +2,7 @@
 # folder name, and the folder name is also the OCIRepository / Kustomization name in clusters/<cluster>/sync/stack.yaml.
 #
 #   just build      kustomize build of this folder -> out/<name>/, one file per object. This is the artifact.
-#   just validate   build, then flux schema validate against the Kubernetes, Flux and ecosystem schemas
+#   just validate   build, then flux-schema validate against the Kubernetes, Flux and ecosystem schemas
 #   just push       validate, then push out/<name>/ to the URL its OCIRepository in stack.yaml pulls, tagged with the commit
 #   just pin        write the pushed tag and digest into stack.yaml (a developer or agent commits it in a PR)
 #
@@ -29,9 +29,9 @@ build:
     rm -rf {{ out }} && mkdir -p {{ out }}
     kustomize build . -o {{ out }}
 
-# build, the component's own `_checks`, then flux schema validate
+# build, the component's own `_checks`, then flux-schema validate
 validate: build _checks
-    flux schema validate {{ out }} --schema-location default --schema-location ecosystem --verbose
+    flux-schema validate {{ out }} --schema-location default --schema-location ecosystem --verbose
 
 # no checks by default; a component justfile redefines this one to add its own
 _checks:
