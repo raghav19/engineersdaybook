@@ -23,6 +23,8 @@ kustomize = "5.8"
 terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.9"
+kubeconform = "0.8"
+age = "1.2"
 
 # dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
 [tasks."sandbox:completions"]
