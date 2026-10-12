@@ -1,8 +1,10 @@
 # What the host needs. The sandbox image never reads this file (its tools are in .sbx/agent/tools.toml), so a tool both sides use is listed in both.
-# task runs the Taskfile, yq and jq are used by its tasks, sops decrypts .sbx/secrets.json (never loaded into the environment).
+# task runs the Taskfile of the root and .sbx, just runs the Part 3 justfiles (flux, kustomize, yq, jq, helm are used by its recipes),
+# flate renders the plan-style diff of Part 3, prek is for the secret-detection hook, sops decrypts .sbx/secrets.json (never loaded into the environment).
 # kind and cloud-provider-kind run the Part 3 cluster, sbx runs the sandboxes.
 [tools]
 task = "3.54"
+just = "1.58"
 yq = "4.54"
 jq = "1.8"
 sops = "3.13"
@@ -10,7 +12,9 @@ kind = "0.33.0"
 kubectl = "1.37"
 kustomize = "5.8.3"
 helm = "4.3.0"
-"aqua:kubernetes-sigs/cloud-provider-kind" = "0.12"
+flux2 = "2.9"
+"github:home-operations/flate" = "0.6"
+prek = "0.5"
 "github:docker/sbx-releases" = "v0.47"
 
 [env]
