@@ -37,6 +37,9 @@ capabilities:
       - cr.agentgateway.dev
       - fluxoperator.dev
       - schemas.fluxoperator.dev
+      - crl.microsoft.com
+      - www.githubstatus.com
+      - mise.jdx.dev
       deny:
       - hosts: [ api.github.com ]
         methods: [ DELETE ]
