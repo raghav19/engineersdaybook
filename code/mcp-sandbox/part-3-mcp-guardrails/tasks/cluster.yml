@@ -19,6 +19,8 @@ vars:
   # The chart version equals the Flux Operator release. Check it with `helm show chart <chart> --version <v>` when you change it.
   FLUX_OPERATOR_CHART: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
   FLUX_OPERATOR_VERSION: 0.61.0
+  # helm waits 5 minutes by default. The node pulls the operator image from ghcr.io on first start, which can take longer than that.
+  FLUX_OPERATOR_TIMEOUT: '{{.FLUX_OPERATOR_TIMEOUT | default "10m"}}'
   AGE_KEY_FILE: '{{.AGE_KEY_FILE | default (printf "%s/.config/sops/age/mcp-guardrails-%s.agekey" (env "HOME") .CLUSTER)}}'
 
 tasks:
@@ -30,10 +32,13 @@ tasks:
     cmds:
       - kind get clusters | grep -qx {{.KIND_CLUSTER}} || kind create cluster --config {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/kind-config.yaml
       - task: cluster:devices
+      # kind returns when the control plane is up. The operator needs Ready nodes and kube-proxy (ClusterIP of the API) on its node.
+      - kubectl --context {{.KUBE_CONTEXT}} wait --for=condition=Ready node --all --timeout=5m
+      - kubectl --context {{.KUBE_CONTEXT}} -n kube-system rollout status daemonset/kube-proxy --timeout=5m
       - kubectl --context {{.KUBE_CONTEXT}} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
       - >-
         helm upgrade --install flux-operator {{.FLUX_OPERATOR_CHART}} --version {{.FLUX_OPERATOR_VERSION}}
-        --kube-context {{.KUBE_CONTEXT}} --namespace flux-system --wait
+        --kube-context {{.KUBE_CONTEXT}} --namespace flux-system --wait --timeout {{.FLUX_OPERATOR_TIMEOUT}}
       - kubectl --context {{.KUBE_CONTEXT}} apply -f {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/sync/flux-instance.yaml
       - 'echo "Flux is installed. It waits for the credentials: task cluster:credentials. Watch it: kubectl --context {{.KUBE_CONTEXT}} -n flux-system get kustomizations"'
 
