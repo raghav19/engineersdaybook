@@ -1,0 +1,35 @@
+# The agentgateway controller chart, installed by Flux (helm-controller). The version is the tag below, here only.
+# It must equal the CRD chart in crds.yaml: `just validate` fails if they differ. Both are one artifact.
+# Chart values: put them under spec.values. `just diff` renders the chart and shows what a value changes in the objects it creates.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: agentgateway
+  namespace: agentgateway-system
+spec:
+  interval: 10m
+  url: oci://cr.agentgateway.dev/charts/agentgateway
+  ref:
+    tag: v1.6.0
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: agentgateway
+  namespace: agentgateway-system
+spec:
+  interval: 10m
+  releaseName: agentgateway
+  chartRef:
+    kind: OCIRepository
+    name: agentgateway
+  dependsOn:
+  - name: agentgateway-crds # the CRDs first, in the same artifact
+  driftDetection:
+    mode: enabled
+  values:
+    commonLabels:
+      team: platform

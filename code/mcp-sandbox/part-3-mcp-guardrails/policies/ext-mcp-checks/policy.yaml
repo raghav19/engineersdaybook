@@ -1,0 +1,25 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-extmcp
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - group: agentgateway.dev
+      kind: AgentgatewayBackend
+      name: mcp-federated
+  backend:
+    mcp:
+      guardrails:
+        processors:
+          - remote:
+              backendRef:
+                name: ext-mcp
+                namespace: mcp-guardrails
+                port: 4445
+              failureMode: FailClosed
+            methods:
+              tools/call: Full
+              tools/list: Response
+              resources/read: Response
+              prompts/get: Response

@@ -1,0 +1,8 @@
+# The namespace of ext-mcp and of its NetworkPolicy. It travels with this service.
+# Flux must never prune it: removing a namespace removes everything in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-guardrails
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

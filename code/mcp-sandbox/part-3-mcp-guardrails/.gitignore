@@ -1,0 +1,5 @@
+# `just <component>/build` writes the artifact of a component here, `just push` leaves the push result (out/<name>.json) next to it
+out/
+# Python bytecode from running rules.py and its tests
+__pycache__/
+*.pyc

@@ -1,0 +1,39 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: mcp-guardrails
+networking:
+  # rootless docker daemon
+  # ref: https://kind.sigs.k8s.io/docs/user/configuration/#api-server
+  apiServerPort: 6444
+# kube-proxy is privileged, and containerd hands a privileged container every device node of the node's /dev. A USB device that goes away
+# (a mouse replugged) leaves an entry runc cannot mount, and kube-proxy fails with "mount src=/dev/bus/usb/...: no such file or directory".
+# kube-proxy uses no device, so privileged containers get none. Applies at cluster creation: recreate the cluster to change it.
+# ref: containerd docs/cri/config.md, privileged_without_host_devices
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+      privileged_without_host_devices = true
+nodes:
+  - role: control-plane
+    # kind v0.33.0 default for Kubernetes 1.37.0.
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    extraPortMappings:
+      # The gateway: host 127.0.0.1:8080 -> NodePort 30080 (platform/routes/parameters.yaml). A fixed host port above 1024 and below 32768, because rootless
+      # Docker (pasta) drops ports in 32768-60999 and cannot bind below 1024. cloud-provider-kind is not used: its proxy container gets an ephemeral host
+      # port, and on this host sbx holds ports in that range too (127.0.0.1:32769), so its readiness check never reaches the proxy.
+      # ref: https://kind.sigs.k8s.io/docs/user/rootless/
+      - containerPort: 30080
+        hostPort: 8080
+        listenAddress: 127.0.0.1
+        protocol: TCP
+      # HTTPS: host 127.0.0.1:18443 -> NodePort 30443. Not 443, because rootless Docker cannot bind below 1024, and not 8443, which VS Code's port
+      # forwarding took on this host. Nothing answers behind 30443 until the Gateway has an HTTPS listener with a certificate and the gateway
+      # Service has a port with nodePort 30443.
+      - containerPort: 30443
+        hostPort: 18443
+        listenAddress: 127.0.0.1
+        protocol: TCP
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5

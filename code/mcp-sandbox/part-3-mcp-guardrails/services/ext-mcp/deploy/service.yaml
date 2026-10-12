@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ext-mcp
+  labels: {app.kubernetes.io/name: ext-mcp}
+spec:
+  selector: {app.kubernetes.io/name: ext-mcp}
+  ports:
+    - name: grpc
+      port: 4445
+      targetPort: 4445
+      appProtocol: kubernetes.io/h2c   # agentgateway talks gRPC to ExtMCP over h2c

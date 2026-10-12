@@ -1,0 +1,35 @@
+# The agentgateway CRD chart, installed by Flux (helm-controller). The version is the tag below, here only.
+# It must equal the controller chart in controller.yaml: `just validate` fails if they differ. Both are one artifact.
+# Helm never upgrades files in a chart's crds/ folder, so the CRD policy is CreateReplace. Helm never deletes them either.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: agentgateway-crds
+  namespace: agentgateway-system
+spec:
+  interval: 10m
+  url: oci://cr.agentgateway.dev/charts/agentgateway-crds
+  ref:
+    tag: v1.6.0
+  # A HelmRelease reads a chart from an OCIRepository when this layer selector names the chart layer.
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: agentgateway-crds
+  namespace: agentgateway-system
+spec:
+  interval: 10m
+  releaseName: agentgateway-crds
+  chartRef:
+    kind: OCIRepository
+    name: agentgateway-crds
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  driftDetection:
+    mode: enabled

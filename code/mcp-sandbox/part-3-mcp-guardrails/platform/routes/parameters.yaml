@@ -1,0 +1,15 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: agentgateway-proxy
+  namespace: agentgateway-system
+spec:
+  service:
+    spec:
+      # No load balancer provider on kind (cloud-provider-kind does not work on rootless Docker, see kind-config.yaml), so the gateway is a NodePort.
+      type: NodePort
+      ports:
+        # Strategic merge on `port`: the generated listener port gets a fixed nodePort. The port is the fleet value GATEWAY_PORT (values/wiring does not stamp it yet).
+        # kind-config.yaml maps host 127.0.0.1:8080 to this nodePort, so keep the two equal.
+        - port: 8080
+          nodePort: 30080

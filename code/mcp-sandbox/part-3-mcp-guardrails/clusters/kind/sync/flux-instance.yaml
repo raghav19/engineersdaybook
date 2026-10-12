@@ -1,0 +1,23 @@
+# Flux itself: the version and the sync of this folder from Git. `just cluster up` applies it once. After that Flux applies it too,
+# because the sync folder lists it. A Flux upgrade is an edit of distribution.version.
+# The Flux Operator reads this object and installs the controllers. The operator chart version is a variable in just/cluster.just.
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "2.9.6"
+    registry: ghcr.io/fluxcd
+  # source-controller reads Git and the artifacts, kustomize-controller applies the chains, helm-controller installs the two agentgateway charts.
+  # No image automation. Add notification-controller when you want alerts on a failed chain.
+  components:
+  - source-controller
+  - kustomize-controller
+  - helm-controller
+  sync:
+    kind: GitRepository
+    url: https://github.com/raghav19/engineersdaybook.git
+    ref: refs/heads/feat/mcp-guardrails-part-3
+    path: code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/sync

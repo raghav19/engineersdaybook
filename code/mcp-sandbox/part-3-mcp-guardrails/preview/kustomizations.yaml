@@ -1,0 +1,58 @@
+# What `just diff` (flate) reconciles: one Flux Kustomization per component, pointing at the folder in this repo. clusters/ is ignored
+# (.krmignore) because its Kustomizations read registry artifacts, not these folders. A new component needs one entry here and one in
+# clusters/<cluster>/sync/stack.yaml. The name is the folder name, the same as the justfile and the OCIRepository.
+# spec.path is relative to the root of the Git repository (as in Flux), so it carries this folder's place in the monorepo.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata: {name: flux-system, namespace: flux-system}
+spec: {interval: 10m, url: https://example.invalid/repo.git}   # flate resolves it to this working tree
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: gateway-api, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/platform/addons/gateway-api, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: agentgateway, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/platform/addons/agentgateway, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: mcp-servers, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/platform/mcp-servers, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: routes, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/platform/routes, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: ext-mcp, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/services/ext-mcp, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: ext-mcp-isolation, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/policies/ext-mcp-isolation, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: authn-jwt, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/policies/authn-jwt, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: rate-limit, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/policies/rate-limit, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: tool-rbac, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/policies/tool-rbac, sourceRef: {kind: GitRepository, name: flux-system}}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata: {name: ext-mcp-checks, namespace: flux-system}
+spec: {interval: 10m, prune: true, path: ./code/mcp-sandbox/part-3-mcp-guardrails/policies/ext-mcp-checks, sourceRef: {kind: GitRepository, name: flux-system}}
