@@ -1,0 +1,44 @@
+version: '3'
+
+# Render, review and push the artifacts of one cluster. One task set serves every artifact.
+# Included by ../Taskfile.yml with flatten; var CLUSTER comes from there.
+#   CLUSTER   the cluster folder under clusters/ (default kind). CLUSTER=all runs every cluster that has a sync/stack.yaml.
+#   CHAIN     one chain name from clusters/<cluster>/sync/stack.yaml (see `task chains`). Empty means every chain.
+# The logic is in render.sh and artifacts.sh, so it runs the same by hand.
+#
+#   task chains                       what exists, what each waits for, which digest runs
+#   task render CHAIN=rate-limit      build one artifact, check it, show the values
+#   task diff   CHAIN=rate-limit      the rendered diff against the pinned digest
+#   task push   CHAIN=rate-limit      push when changed, print the digest line for stack.yaml (host)
+#   task review CHAIN=rate-limit      pull the pinned artifact to review/<cluster>/<chain> (needs read access to the registry)
+
+tasks:
+  chains:
+    desc: List the artifacts of CLUSTER with their folders, what each waits for, and the pin
+    cmds:
+      - for c in {{.CLUSTERS}}; do echo "== cluster $c"; bash {{.ROOT_DIR}}/tasks/artifacts.sh list "$c"; done
+
+  render:
+    desc: Render CHAIN (or all) of CLUSTER to out/<cluster>/<chain>/, run the checks, show the values report
+    deps:
+      - task: tools:check
+        vars: {TOOLS: "kustomize helm yq jq kubeconform"}
+    cmds:
+      - for c in {{.CLUSTERS}}; do bash {{.ROOT_DIR}}/tasks/render.sh "$c" {{.CHAIN}}; done
+
+  diff:
+    desc: Show the rendered diff of CHAIN (or all) against the pinned artifact
+    cmds:
+      - task: render
+      - for c in {{.CLUSTERS}}; do bash {{.ROOT_DIR}}/tasks/artifacts.sh diff "$c" {{.CHAIN}}; done
+
+  push:
+    desc: Push CHAIN (or all) when its render differs from the pin, and print the digest lines (host; needs GHCR_USER and GHCR_PUSH_TOKEN)
+    cmds:
+      - task: render
+      - for c in {{.CLUSTERS}}; do bash {{.ROOT_DIR}}/tasks/artifacts.sh push "$c" {{.CHAIN}}; done
+
+  review:
+    desc: Pull the pinned artifact of CHAIN (or all) to review/<cluster>/<chain> so a reviewer can read it
+    cmds:
+      - for c in {{.CLUSTERS}}; do bash {{.ROOT_DIR}}/tasks/artifacts.sh pull "$c" {{.CHAIN}}; done

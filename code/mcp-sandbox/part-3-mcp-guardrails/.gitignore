@@ -1,3 +1,4 @@
-# kustomize --enable-helm pulls charts here at build time
-crds/agentgateway/charts/
-platform/base/controller/charts/
+# task render writes the rendered manifests here
+out/
+# task review pulls pinned artifacts here
+review/

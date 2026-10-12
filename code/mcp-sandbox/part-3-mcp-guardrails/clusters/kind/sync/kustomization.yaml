@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What Flux reads from Git for cluster `kind`: the stack (pins, chains, order, health), and Flux's own install.
+# kind-config.yaml (next folder up) is for `task cluster:up` only, so this file does not list it.
+# The secrets/ folder is read by the chain `secrets` with a decryption key, so this file does not list it either.
+resources:
+  - stack.yaml
+  - flux-instance.yaml

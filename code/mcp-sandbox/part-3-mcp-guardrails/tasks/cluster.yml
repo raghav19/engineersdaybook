@@ -1,17 +1,52 @@
 version: '3'
 
-# The kind cluster. Included by ../Taskfile.yml with flatten; var KIND_CLUSTER comes from there.
+# The kind cluster, and the one hand-over to Flux. Included by ../Taskfile.yml with flatten; vars CLUSTER, KIND_CLUSTER, KUBE_CONTEXT come from there.
+#
+# cluster:up is the only task that changes a cluster. It runs on the host and it is safe to run again. After it applies the FluxInstance,
+# Flux reads clusters/<CLUSTER>/sync from Git and the chain artifacts from the registry. Nothing else applies to the cluster.
+#
+# It reads two credentials from the environment, which you decrypt only for this process:
+#   sops exec-env .env.secrets.json 'task cluster:up'
+#   GHCR_USER, GHCR_PULL_TOKEN   a token with read:packages, for the private chain artifacts
+# and one file, the private age key of this cluster (created once, never in Git): AGE_KEY_FILE
+
+vars:
+  # The chart version equals the Flux Operator release. Check it with `helm show chart <chart> --version <v>` when you change it.
+  FLUX_OPERATOR_CHART: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
+  FLUX_OPERATOR_VERSION: 0.61.0
+  AGE_KEY_FILE: '{{.AGE_KEY_FILE | default (printf "%s/.config/sops/age/mcp-guardrails-%s.agekey" (env "HOME") .CLUSTER)}}'
 
 tasks:
   cluster:up:
-    desc: Create the kind cluster (Kubernetes 1.37, one control-plane and two workers) from kind-config.yaml
-    deps: [tools:check]
-    status:
-      - kind get clusters | grep -qx {{.KIND_CLUSTER}}
+    desc: Create the kind cluster, install the Flux Operator, create the two credentials, and apply the FluxInstance
+    deps:
+      - task: tools:check
+        vars: {TOOLS: "kind kubectl helm"}
+    preconditions:
+      - sh: '[ -f "{{.AGE_KEY_FILE}}" ]'
+        msg: "No age key at {{.AGE_KEY_FILE}}. Create one: age-keygen -o {{.AGE_KEY_FILE}} (see README, Secrets)"
+      - sh: '[ -n "${GHCR_USER:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]'
+        msg: "Set GHCR_USER and GHCR_PULL_TOKEN. Run: sops exec-env .env.secrets.json 'task cluster:up'"
     cmds:
-      - kind create cluster --config {{.ROOT_DIR}}/kind-config.yaml
+      - kind get clusters | grep -qx {{.KIND_CLUSTER}} || kind create cluster --config {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/kind-config.yaml
+      - kubectl --context {{.KUBE_CONTEXT}} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
+      - >-
+        helm upgrade --install flux-operator {{.FLUX_OPERATOR_CHART}} --version {{.FLUX_OPERATOR_VERSION}}
+        --kube-context {{.KUBE_CONTEXT}} --namespace flux-system --wait
+      - >-
+        kubectl --context {{.KUBE_CONTEXT}} -n flux-system create secret generic sops-age
+        --from-file=age.agekey={{.AGE_KEY_FILE}} --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
+      - >-
+        kubectl --context {{.KUBE_CONTEXT}} -n flux-system create secret docker-registry ghcr-pull
+        --docker-server=ghcr.io --docker-username="$GHCR_USER" --docker-password="$GHCR_PULL_TOKEN"
+        --dry-run=client -o yaml | kubectl --context {{.KUBE_CONTEXT}} apply -f -
+      - kubectl --context {{.KUBE_CONTEXT}} apply -f {{.ROOT_DIR}}/clusters/{{.CLUSTER}}/sync/flux-instance.yaml
+      - 'echo "Flux takes over. Watch it: kubectl --context {{.KUBE_CONTEXT}} -n flux-system get kustomizations"'
 
   cluster:down:
     desc: Delete the kind cluster
+    deps:
+      - task: tools:check
+        vars: {TOOLS: "kind"}
     cmds:
       - kind delete cluster --name {{.KIND_CLUSTER}}

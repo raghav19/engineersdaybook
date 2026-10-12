@@ -1,0 +1,57 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# Writes the values of the ConfigMap `mcp-values` (values/values.env, then the region and cluster layers) into the manifests.
+# This is the only place that knows which value lands in which field, and the list of valid keys: `task render` fails on a key that is not read here.
+# A target path that does not exist fails the build. A list element is selected by name, so the order of the MCP servers does not matter.
+replacements:
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GATEWAY_PORT}
+    targets:
+      - select: {kind: Gateway, name: agentgateway-proxy}
+        fieldPaths:
+          - spec.listeners.[name=http].port
+      - select: {kind: AgentgatewayParameters, name: agentgateway-proxy}
+        fieldPaths:
+          - spec.service.spec.ports.0.port
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GITHUB_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=github].static.host
+          - spec.mcp.targets.[name=github].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.GITHUB_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=github].static.path
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.DRAWIO_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=drawio].static.host
+          - spec.mcp.targets.[name=drawio].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.DRAWIO_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=drawio].static.path
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.FLUX_HOST}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=flux].static.host
+          - spec.mcp.targets.[name=flux].static.policies.tls.sni
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.FLUX_PATH}
+    targets:
+      - select: {kind: AgentgatewayBackend, name: mcp-federated}
+        fieldPaths:
+          - spec.mcp.targets.[name=flux].static.path
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.RATE_LIMIT_REQUESTS}
+    targets:
+      - select: {kind: AgentgatewayPolicy, name: mcp-rate-limit}
+        fieldPaths:
+          - spec.traffic.rateLimit.local.0.requests
+  - source: {kind: ConfigMap, name: mcp-values, fieldPath: data.JWT_JWKS}
+    targets:
+      - select: {kind: AgentgatewayPolicy, name: mcp-authn}
+        fieldPaths:
+          - spec.traffic.jwtAuthentication.providers.0.jwks.inline

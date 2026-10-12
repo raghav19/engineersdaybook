@@ -1,0 +1,352 @@
+# The stack of cluster `kind`: every artifact that runs here, in one place.
+# Per artifact, one pair:
+#   OCIRepository  the pin: which pushed artifact of this cluster runs. Rollout and rollback are an edit of ref.digest, in Git.
+#   Kustomization  the chain: how Flux applies that artifact (order, health) and which folders `task render` builds into it (the annotation).
+# `secrets` reads Git, not an artifact, so it has no pin and no folders.
+#
+# ref.tag `unpinned` means no artifact is pushed yet: the chain stays not Ready. `task push` prints the `digest:` line to put here.
+# A baseline run is this file without the ext-mcp-isolation and policy entries (authn-jwt, rate-limit, tool-rbac, ext-mcp-checks).
+# Flux never reverts a failed chain by itself: put the older digest back.
+#
+#   gateway-api ──► agentgateway ──┬──► secrets ──┐
+#                                  │              ▼
+#                                  └────────► mcp-servers ──┬──► routes ──┬──► authn-jwt
+#                                                           │             └──► rate-limit
+#                                                           ├──► tool-rbac
+#   ext-mcp ──┬───────────────────────────────────────────►└──► ext-mcp-checks
+#             └──► ext-mcp-isolation
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: gateway-api
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/gateway-api
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: platform/addons/gateway-api
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: false
+  wait: true                # CRDs report Established. A removed CRD must not delete every custom resource of its kind.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: gateway-api}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: agentgateway
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/agentgateway
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: agentgateway
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: platform/addons/agentgateway
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true                # both HelmReleases report Ready: helm-controller waits for the controller Deployment to roll out. Removing a HelmRelease uninstalls it and Helm leaves the chart's crds/ in place.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: agentgateway}
+  dependsOn:
+    - name: gateway-api
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true
+  # The upstream credential, from Git (age ciphertext). The folder has no manifest until you encrypt one: see secrets/README.md.
+  # Until then this chain stays not Ready, and mcp-servers waits.
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/sync/secrets
+  sourceRef: {kind: GitRepository, name: flux-system}
+  decryption:
+    provider: sops
+    secretRef: {name: sops-age}
+  dependsOn:
+    - name: agentgateway     # the namespace of the Secret
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: mcp-servers
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/mcp-servers
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mcp-servers
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: platform/mcp-servers
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true                # the Backend refers to the Secret github-upstream by name, so the secret first.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: mcp-servers}
+  dependsOn:
+    - name: agentgateway
+    - name: secrets
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: routes
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/routes
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: routes
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: platform/routes
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true                # the HTTPRoute refers to the Backend registered by mcp-servers.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: routes}
+  dependsOn:
+    - name: agentgateway
+    - name: mcp-servers
+  healthCheckExprs:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      current: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')
+      failed: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'False')
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ext-mcp
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ext-mcp
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: services/ext-mcp/deploy
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true                # the ext-mcp Deployment rolls out. Its namespace travels in this artifact, so it waits for nothing.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: ext-mcp}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ext-mcp-isolation
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp-isolation
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ext-mcp-isolation
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: policies/ext-mcp-isolation
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true                # MCP04, MCP09: only the gateway may call ext-mcp. The namespace comes from ext-mcp.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: ext-mcp-isolation}
+  dependsOn:
+    - name: ext-mcp
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: authn-jwt
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/authn-jwt
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: authn-jwt
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: policies/authn-jwt
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true                # MCP01, MCP07. Targets the HTTPRoute.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: authn-jwt}
+  dependsOn:
+    - name: routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: rate-limit
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/rate-limit
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: rate-limit
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: policies/rate-limit
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true                # MCP02, MCP10. Targets the HTTPRoute.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: rate-limit}
+  dependsOn:
+    - name: routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/tool-rbac
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: policies/tool-rbac
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true                # MCP02. Targets the Backend.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: tool-rbac}
+  dependsOn:
+    - name: mcp-servers
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: ext-mcp-checks
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/kind/ext-mcp-checks
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: ext-mcp-checks
+  namespace: flux-system
+  annotations:
+    render.engineersdaybook.dev/folders: policies/ext-mcp-checks
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true                # MCP03, 05, 06, 10. failureMode is FailClosed: without a running ext-mcp every tool call fails, so ext-mcp first.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: ext-mcp-checks}
+  dependsOn:
+    - name: mcp-servers
+    - name: ext-mcp

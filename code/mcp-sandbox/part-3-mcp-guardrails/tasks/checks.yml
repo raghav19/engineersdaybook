@@ -6,10 +6,11 @@ version: '3'
 tasks:
   tools:check:
     internal: true
+    desc: Stop with a message when a tool in TOOLS (space separated) is not installed
     cmds:
       - |
         missing=""
-        for t in kind kubectl kustomize helm sops; do command -v "$t" >/dev/null || missing="$missing $t"; done
+        for t in {{.TOOLS}}; do command -v "$t" >/dev/null || missing="$missing $t"; done
         if [ -n "$missing" ]; then echo "Missing tools:$missing. Run: mise install" >&2; exit 1; fi
 
   context:check:
@@ -17,4 +18,4 @@ tasks:
     desc: Refuse to touch any cluster but the one this folder names
     preconditions:
       - sh: '[ "$(kubectl config current-context)" = "{{.KUBE_CONTEXT}}" ]'
-        msg: "kubectl context is not {{.KUBE_CONTEXT}}; refusing to apply to the wrong cluster"
+        msg: "kubectl context is not {{.KUBE_CONTEXT}}; refusing to touch the wrong cluster"

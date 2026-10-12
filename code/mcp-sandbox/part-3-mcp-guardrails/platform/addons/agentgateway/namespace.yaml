@@ -1,0 +1,8 @@
+# The namespace of the agentgateway controller and of every object that targets it. It travels with this addon.
+# Flux must never prune it: removing a namespace removes everything in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentgateway-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
