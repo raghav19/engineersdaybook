@@ -4,7 +4,7 @@ Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox]
 
 > **Status (stage A, Flux hand-over written).** Manifests, the Flux stack and the cluster folder are written, and every component has a justfile (`just build`, `validate`,
 > `push`, `pin`), and the root justfile has `diff`. `just <component>/build` runs for all ten components with the real v1.6.0 charts, and `just diff` renders them. **Not yet run against a cluster**:
-> `just <component>/push`, `just cluster up` and Flux itself need the host. The rootless-Docker gateway reachability question below is the first thing to prove.
+> `just clusters/kind/up`, `credentials` and `down` refuse to run in the sandbox: they need the host (real ghcr.io token, your sops key). `just <component>/push` and Flux itself need the host too. The rootless-Docker gateway reachability question below is the first thing to prove.
 > **Per-cluster values are being redesigned**: `values/` and `clusters/<c>/values.env` are not applied by `just build` yet (see "How a value gets in").
 > Stage B (chaining the sbx gateway to this one, sandbox-driven tests, Keycloak) follows a spike.
 
@@ -15,7 +15,7 @@ Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox]
 - **Values as data**: one flat `values.env` per layer (fleet, cluster, and a region when one exists) with declarative wiring rules; not applied by `just build` yet (see "How a value gets in").
 - **One artifact per independently deployable unit**: each addon, route set, MCP server registration and policy is its own OCI artifact in a private registry; a cluster's `stack.yaml` pins which one it runs. What must change together travels inside one artifact. What must only be ready first is a `dependsOn`. Rollout and rollback of one unit is an edit of its `ref.digest` in the cluster's `stack.yaml`.
 - **Review before merge**: `just diff` is a plan-style diff of what Flux would apply (the objects of the artifact, and the objects each chart renders), locally and in CI. `just <component>/push` publishes an artifact, `just <component>/pin` writes its tag and digest into `stack.yaml`. Nothing applies it until a pin in `main` names it.
-- **One imperative step**: `just cluster up` creates the cluster and installs Flux; `just cluster credentials` adds the two Secrets Flux needs. Everything else is Git and the registry.
+- **One imperative step**: `just clusters/kind/up` creates the cluster and installs Flux; `just clusters/kind/credentials` adds the two Secrets Flux needs. Everything else is Git and the registry.
 
 ## Architecture
 
@@ -127,7 +127,7 @@ sequenceDiagram
 
     H->>H: age-keygen (key stays on the host)
     H->>G: sops --encrypt the Secret to clusters/kind/sync/secrets/ (token from .env.secrets.json)
-    H->>K: just cluster credentials creates Secret sops-age from the key file
+    H->>K: just clusters/kind/credentials creates Secret sops-age from the key file
     G-->>F: GitRepository sync
     F->>F: decrypt with sops-age (Kustomization `secrets`)
     F->>K: apply Secret github-upstream
@@ -142,8 +142,8 @@ in the tool lists; the hook configuration is not written yet). The sandbox VM ha
 ```text
 part-3-mcp-guardrails/
 ├── README.md
-├── justfile                     the entry point: `just diff`, `just cluster ...`, `just tests run`, `just <component>/<recipe>`
-├── just/                        lib.just (build, validate, push, pin: imported by every component), cluster.just, tests.just
+├── justfile                     the entry point: `just diff`, `just clusters/kind/<recipe>`, `just tests/run`, `just <component>/<recipe>`
+├── lib/                         lib.just (build, validate, push, pin: imported by every component)
 ├── preview/                     kustomizations.yaml: one Flux Kustomization per component, the input of `just diff` (flate)
 ├── .krmignore                   what flate skips (clusters/, out/, tests/)
 ├── platform/                    the gateway and what it needs
@@ -156,7 +156,7 @@ part-3-mcp-guardrails/
 ├── clusters/
 │   └── kind/                    one folder per cluster (the environment)
 │       ├── values.env           this cluster's overrides
-│       ├── kind-config.yaml     read by `just cluster up`
+│       ├── kind-config.yaml     read by `just clusters/kind/up`
 │       └── sync/                read by Flux from Git: stack.yaml (pins, Kustomizations, order, health), flux-instance.yaml, secrets/ (age ciphertext)
 ├── out/                         gitignored: what `just <component>/build` writes, one folder per artifact, and the push result `<component>.json`
 └── tests/
@@ -183,7 +183,7 @@ Latest stable at 2026-10-10, checked against the GitHub release APIs, for Kubern
 | kubectl / kustomize / helm | 1.37 / 5.8.3 / 4.3.0 | root `mise.toml` |
 | just / flate / prek | 1.58 / 0.6.5 / 0.5 | root `mise.toml`, `.sbx/agent/tools.toml` |
 | Flux (distribution, via the Flux Operator) | 2.9.6 | `clusters/kind/sync/flux-instance.yaml` |
-| Flux Operator chart | 0.61.0 (not checked against the registry) | `just/cluster.just` |
+| Flux Operator chart | 0.61.0 (not checked against the registry) | `clusters/kind/justfile` |
 | Which version a cluster runs | one tag (the commit) and one sha256 digest per artifact | `clusters/kind/sync/stack.yaml` (`ref.tag`, `ref.digest`) |
 
 agentgateway v1.6.0 lists Kubernetes 1.32 to 1.37 and Gateway API 1.4 to 1.6 as supported. Chart, CRD and image versions live in the component folders. The pin decides which pushed artifact a cluster runs.
@@ -203,13 +203,13 @@ Steps marked **host** run on your machine. The sandbox VM has no age key, no clu
 3. **Push the artifacts (host).** Commit the component, then `sops exec-env .env.secrets.json 'just platform/routes/push'`. It validates, then pushes `out/routes/` as
    `ghcr.io/raghav19/mcp-guardrails/routes:<commit>` and saves the result in `out/routes.json`. `just platform/routes/pin` writes that tag and digest into `ref` of the OCIRepository
    in `clusters/kind/sync/stack.yaml` (replacing `tag: unpinned`); commit it and open the pull request. (Make the registry packages private; the pull token is for them.)
-4. **Create the cluster (host).** `just cluster up` creates kind, installs the Flux Operator and applies the FluxInstance. It needs no credential. Then
-   `just cluster credentials` creates the two Secrets Flux waits for (`sops-age`, `ghcr-pull`); it decrypts the `ghcr.io` token of `.sbx/secrets.json` itself, so no env vars. Flux syncs `clusters/kind/sync` and applies the artifacts in order. Watch:
+4. **Create the cluster (host).** `just clusters/kind/up` creates kind, installs the Flux Operator and applies the FluxInstance. It needs no credential. Then
+   `just clusters/kind/credentials` creates the two Secrets Flux waits for (`sops-age`, `ghcr-pull`); it decrypts the `ghcr.io` token of `.sbx/secrets.json` itself, so no env vars. Flux syncs `clusters/kind/sync` and applies the artifacts in order. Watch:
    `kubectl -n flux-system get kustomizations`. Until the branch merges, set `spec.sync.ref` in `flux-instance.yaml` to your branch.
 5. **Check the gateway.** It answers on `http://127.0.0.1:8080/mcp` (host port 8080 -> NodePort 30080); `tools/list` with the MCP Inspector should show `github_*`, `drawio_*`, `flux_*`.
-6. **Run the attacks:** `just tests run`. The expected results follow the stack: with the policy entries (`authn-jwt` and the others) the run is the guarded one, without them it is
+6. **Run the attacks:** `just tests/run`. The expected results follow the stack: with the policy entries (`authn-jwt` and the others) the run is the guarded one, without them it is
    the baseline. To compare, remove those entries from `stack.yaml`, push, and let Flux apply.
-7. **Tear down.** `just cluster down`.
+7. **Tear down.** `just clusters/kind/down`.
 
 To change something:
 
@@ -224,7 +224,7 @@ just policies/rate-limit/pin         # write the tag and digest into stack.yaml;
 To roll one artifact back: `git revert` the commit that pinned it and merge. The other artifacts stay as they are.
 A change that needs two units moves both pins in one pull request. Flux applies them in `dependsOn` order.
 
-`just tests run` refuses to run unless `kubectl`'s current context is `kind-mcp-guardrails`.
+`just tests/run` refuses to run unless `kubectl`'s current context is `kind-mcp-guardrails`.
 
 ## Policies and what they map to
 
@@ -251,7 +251,7 @@ MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not so
 - **JWKS is a placeholder** (`JWT_JWKS` in `values/values.env`) until a key is minted; Keycloak replaces it in stage B.
 - **ext-mcp has rules but no server yet**: the gRPC contract is to be vendored at the pinned tag.
 - Argument-level CEL is unreliable in agentgateway ([#3092](https://github.com/agentgateway/agentgateway/issues/3092)), which is why argument checks live in ext-mcp.
-- **Not run on a cluster.** `just <component>/push` and `pin` against the registry, `just cluster up`, the Flux sync and the health gates need the host. `just` and `flux schema validate` have not been run against a real push yet.
+- **Not run on a cluster.** `just <component>/push` and `pin` against the registry, `just clusters/kind/up`, the Flux sync and the health gates need the host. `just` and `flux schema validate` have not been run against a real push yet.
 - **Unchecked names.** The status condition types of `AgentgatewayPolicy` and `AgentgatewayBackend` (the policy artifacts have no CEL health check until you read them on a live cluster), and the Flux Operator chart version `0.61.0`.
 - **The health gate for `Gateway` in `clusters/kind/sync/stack.yaml`** uses the `Programmed` condition (Gateway API v1.6.3 schema); it is not exercised yet.
 - **The gateway Service shape (NodePort 30080) still lives in base** (`platform/routes/parameters.yaml`). Move it out of the fleet files after the reachability spike; a cluster-only shape change has no mechanism yet.

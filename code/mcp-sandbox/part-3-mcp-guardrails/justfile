@@ -1,17 +1,14 @@
 # Part 3: agentgateway guardrails on kind, delivered by Flux. One artifact per component; every component folder has its own justfile
-# (just/lib.just) with build, validate, push and pin. From here, name the folder: `just platform/routes/build`.
+# (lib/lib.just) with build, validate, push and pin. From here, name the folder: `just platform/routes/build`.
 #
 #   just diff [base] [flags]                  plan-style diff of what Flux would apply against a git ref, changed components only
 #   just <component>/<recipe>                 build, validate, push, pin of one component
-#   just cluster up | credentials | down      the kind cluster and the hand-over to Flux (host)
-#   just tests run                            the attack cases against the gateway
+#   just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
+#   just tests/run                            the attack cases against the gateway
 #
-# From inside a component folder `just diff`, `just cluster up` and `just tests run` work too (the library sets `fallback`).
+# From inside a component folder `just diff` and `just tests/run` work too (the library sets `fallback`).
 
 set quiet
-
-mod cluster 'just/cluster.just'
-mod tests 'just/tests.just'
 
 # list the recipes, modules included (the default)
 [default]
