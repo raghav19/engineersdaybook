@@ -26,6 +26,7 @@ terraform = "1.16"
 flux2 = "2.9"
 age = "1.2"
 "github:home-operations/flate" = "0.6"
+"github:fluxcd/flux-schema" = "0.15"
 prek = "0.5"
 
 # dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
