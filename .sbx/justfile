@@ -1,0 +1,51 @@
+# Sandbox tooling, loaded by the root justfile as `mod sandbox`, so recipes are run as `just sandbox <recipe>` from the repo root, from any
+# subfolder and from this folder.
+#
+# This file orchestrates and holds what the parts share. The two policies live in their own folders, imported below (flat, so a recipe can depend on
+# another folder's recipe):
+#   agent/    agent.just: what runs inside the VM: the kit, its egress allow and deny lists, the tools, the skills
+#   daemon/   daemon.just, egress/egress.just: what the sbx daemon and its MCP gateway may reach: the MCP registrations, the daemon's systemd unit, and the
+#             squid allowlist and its container. Once per machine: install-egress, install-daemon. Then start-daemon / stop-daemon / restart-daemon
+#
+#   login     once per machine: log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json
+#   run       developer: sync the secrets, `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
+#
+# sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
+
+set quiet
+set lazy
+set allow-duplicate-recipes
+set shell := ['bash', '-euo', 'pipefail', '-c']
+
+import 'agent/agent.just'
+import 'daemon/daemon.just'
+import 'daemon/egress/egress.just'
+
+# VARIABLES
+sbx_dir := source_directory()
+repo := parent_directory(sbx_dir)
+secrets := sbx_dir / 'secrets.json'
+ghcr_user := env('GHCR_USER', 'raghav19')
+name := `yq .name sbxenv.yaml`
+
+# RECIPES
+
+# list the sandbox recipes
+[default]
+help:
+    just --list
+
+# Once per machine. Log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json (the kit is a private package)
+login:
+    token=$(sops -d --extract '["ghcr.io"]' "{{ secrets }}"); \
+    printf %s "$token" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin; \
+    printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{ ghcr_user }} --password-stdin
+
+# the sandbox's MCP calls go through the daemon, and the daemon's through the proxy; the secrets must be in sbx before the sandbox starts
+
+# Developer. Create or start the sandbox and open VS Code on it, then return (detached)
+run *args: _check-daemon _check-egress sync-secrets && install-mcp setup-vscode _open-vscode
+    sbx env run {{ sbx_dir }} --detached {{ args }}
+
+_open-vscode:
+    code --folder-uri "vscode-remote://ssh-remote+{{ name }}.sbx$(git rev-parse --show-toplevel)"
