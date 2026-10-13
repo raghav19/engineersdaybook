@@ -1,0 +1,3 @@
+# Which folders of config/ apply to this cluster: <cloud>[/<env>[/<region>]]. Every *.yaml of config/ and then of each folder on this
+# path is read, and the one further down wins. Later: aws/prod/us-east-1
+placement: kind
