@@ -40,6 +40,14 @@ capabilities:
       - crl.microsoft.com
       - www.githubstatus.com
       - mise.jdx.dev
+      - spiffe.github.com
+      - docs.ansible.com
+      - argo-cd.readthedocs.io
+      - pkl-lang.org
+      - kubernetes.io
+      - helm.sh
+      - kubectl.docs.kubernetes.io
+      - docs.aws.amazon.com
       deny:
       - hosts: [ api.github.com ]
         methods: [ DELETE ]

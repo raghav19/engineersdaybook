@@ -1,9 +1,5 @@
 {
-  "terminal.integrated.defaultProfile.linux": "bash",
-  "extensions.ignoreRecommendations": true,
-  "remote.downloadExtensionsLocally": true,
-  "workbench.settings.enableNaturalLanguageSearch": false,
-   "markdown.preview.fontFamily": "JetBrains Mono",
+   "markdown.preview.fontFamily": "CommitMono Nerd Font Mono",
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "files.watcherExclude": {
