@@ -3,8 +3,9 @@
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
 # also the OCIRepository / Kustomization name in clusters/<cluster>/sync/stack.yaml.
 #
-#   just build      the folder, rendered completely (charts included) -> out/<name>/manifests.yaml,
-#                   then checked against the Kubernetes, Flux and ecosystem schemas. This is the artifact.
+#   just build      the folder with the config values applied, rendered completely (charts included)
+#                   -> out/<name>/manifests.yaml, then checked against the Kubernetes, Flux and ecosystem schemas.
+#                   This is the artifact. The converged config it used is out/values.yaml.
 #   just diff       the change against the artifact `base` (origin/main) pins in stack.yaml,
 #                   that is what the cluster runs
 #   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit
@@ -14,6 +15,7 @@
 #
 #   manifests.yaml   the artifact
 #   build/ks.yaml    the Flux Kustomization flate reads to render this folder
+#   build/src/       a copy of the folder with the config values applied (only when it has a setters.yaml)
 #   diff/ks.yaml     the same, for baseline/
 #   baseline/        the artifact `base` pins, pulled by diff
 #   push.json        tag and digest of the last push, read by pin
@@ -29,7 +31,8 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 root := parent_directory(source_directory())
 name := file_name(justfile_directory())
 out := root / 'out' / name
-stack := 'clusters/kind/sync/stack.yaml'
+cluster := 'kind'
+stack := 'clusters/' + cluster + '/sync/stack.yaml'
 base := 'origin/main'
 
 # registry
@@ -44,10 +47,13 @@ ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 #   top           the root of the Git repository
 #   src           this component's folder: the stub of build renders it
 #                 ./code/mcp-sandbox/part-3-mcp-guardrails/platform/routes
+#   build_src     the copy of this folder with the config values applied: the stub of build renders it when there is a setters.yaml
+#                 ./code/mcp-sandbox/part-3-mcp-guardrails/out/routes/build/src
 #   baseline_src  the artifact pulled by diff for this component: the stub of diff renders it
 #                 ./code/mcp-sandbox/part-3-mcp-guardrails/out/routes/baseline
 top := `git rev-parse --show-toplevel`
 src := '.' + trim_start_match(justfile_directory(), top)
+build_src := '.' + trim_start_match(out, top) + '/build/src'
 baseline_src := '.' + trim_start_match(out, top) + '/baseline'
 
 # used by flate to determine which kinds are cluster-scoped 
@@ -125,16 +131,37 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
+# reads:  the *.yaml of config/, then of each level down to the placement of clusters/<cluster>/cluster.yaml (config/kind/,
+#         or config/aws/, config/aws/prod/, ...), each only where it exists
+# writes: out/values.yaml
+# output: the config files it merged
+# the converged config: one flat set for the whole cluster, the file lower in the hierarchy wins. Every build writes it, whether
+# the folder uses it or not
+_config:
+    {{ root }}/lib/converge_config.py {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
+
+# reads:  out/values.yaml, and setters.yaml of this folder
+# writes: out/<name>/build/src/ (a copy of this folder with the values set), only when the folder has a setters.yaml
+# the function: setters.yaml says which config value goes into which field, lib/apply_values.py sets it in the copy
+[script('bash')]
+_apply: _config
+    rm -rf {{ out }}/build/src
+    [ -f setters.yaml ] || exit 0
+    {{ root }}/lib/apply_values.py {{ root }}/out/values.yaml {{ justfile_directory() }} {{ out }}/build/src
+
 # reads:  nothing, it is generated from the folder name and path
 # writes: out/<name>/build/ks.yaml
 # output: the Flux Kustomization flate reads to render this folder, used by build and by the candidate side of diff
 # flate can only inflate Flux objects, not plain folders, and it needs these references to know what to render:
 # - a GitRepository: a stub, flate maps it to the working tree and fetches nothing
 # - a Kustomization named after this folder (as in stack.yaml) whose path is the folder to render
+# a folder with a setters.yaml is rendered from the copy with the values applied (build/src), the others from the folder itself
 # write the Kustomization that renders this folder
 [script('bash')]
-_stub_build:
+_stub_build: _apply
     mkdir -p {{ out }}/build
+    path='{{ src }}'
+    if [ -d {{ out }}/build/src ]; then path='{{ build_src }}'; fi
     cat > {{ out }}/build/ks.yaml <<EOF
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
@@ -144,7 +171,7 @@ _stub_build:
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata: {name: {{ name }}, namespace: flux-system}
-    spec: {interval: 10m, path: {{ src }}, sourceRef: {kind: GitRepository, name: flux-system}}
+    spec: {interval: 10m, path: $path, sourceRef: {kind: GitRepository, name: flux-system}}
     EOF
 
 # reads:  nothing, it is generated from the folder name and path

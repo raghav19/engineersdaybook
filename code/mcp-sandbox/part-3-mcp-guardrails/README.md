@@ -88,17 +88,18 @@ flowchart LR
 
 | Command | What it does |
 |---|---|
-| `just <c>/build` | flate renders the folder, charts included, checks it against the Kubernetes, Flux and ecosystem schemas, writes `out/<c>/manifests.yaml`: the artifact |
+| `just <c>/build` | applies the config values to a copy of the folder (when it has a `setters.yaml`), flate renders it, charts included, checks it against the Kubernetes, Flux and ecosystem schemas, writes `out/<c>/manifests.yaml`: the artifact |
 | `just <c>/diff` | prints the change against the artifact `origin/main` pins: the rendered objects, not the source files. `just --set base <rev> <c>/diff` for another revision. CRDs and Secrets are not shown (`FLATE_SKIP_CRDS=false` shows CRDs) |
 | `just <c>/push` | builds, then pushes the artifact as `ghcr.io/raghav19/mcp-guardrails/<c>:<commit>` (host) |
 | `just <c>/pin` | writes the pushed tag and digest into `stack.yaml`; commit it in a pull request |
 
-`out/<c>/` is gitignored. Only `manifests.yaml` is pushed:
+`out/<c>/` is gitignored, and so is `out/values.yaml` (the converged config of the cluster, written by every build). Only `manifests.yaml` is pushed:
 
 ```text
 out/routes/
 ├── manifests.yaml    the artifact
 ├── build/ks.yaml     the Flux Kustomization flate reads to render the folder (flate renders Flux objects, not folders)
+├── build/src/        the folder with the config values applied (only for a folder with a setters.yaml)
 ├── diff/ks.yaml      the same, for baseline/
 ├── baseline/         the artifact main pins, pulled by diff
 └── push.json         tag and digest of the last push, read by pin
@@ -113,8 +114,35 @@ Good to know:
 
 ### How a value gets in
 
-Not applied by the build yet. The component folders hold the fleet values. `values/` (with `values/wiring` and `clusters/<name>/values.env`) is not read by any recipe, and a per-cluster value or shape change has no mechanism yet (Flux `postBuild.substitute` or a per-cluster kustomize layer is the next design step).
-A chart value is an edit of `spec.values` in the HelmRelease; `just <c>/diff` shows what it changes in the objects the chart creates.
+A value is a plain `name: value`, kept in `config/`; a component says where the value goes; a function puts it there. No manifest holds a placeholder.
+
+```text
+config/*.yaml                         every cluster
+config/<cloud>/*.yaml                 e.g. config/kind/, config/aws/
+config/<cloud>/<env>/*.yaml           e.g. config/aws/prod/
+config/<cloud>/<env>/<region>/*.yaml  e.g. config/aws/prod/us-east-1/
+clusters/<name>/cluster.yaml          placement: kind        (later aws/prod/us-east-1)
+<component>/setters.yaml              which value goes into which field of this folder
+```
+
+- **Converge.** Every build reads every `*.yaml` of `config/` and then of each folder on the cluster's placement, and writes the flat result to `out/values.yaml` (each value with the file it came from). A file lower on the path wins and is printed; the same name in two files of one level, or a value that is a map or list, fails. The file names mean nothing: name them by component or app.
+- **Apply.** `<component>/setters.yaml` lists, per value name, the fields it goes into: `object: Kind/name` and a dotted `path`, where a number is a position in a list. A chart value is a field of its HelmRelease, so its path starts at `spec.values`; for `kustomization.yaml` the object is `Kustomization` with no name. The build copies the folder to `out/<c>/build/src/`, sets those fields from `out/values.yaml` and lets flate render the copy; the source is never edited. A folder without a `setters.yaml` is built as before.
+- **What fails.** A setter whose object is not in the folder, a position that does not exist, a name without a value, and two names writing one field.
+- **One name, many fields.** Several components can list the same name (the trust domain in spire and later istio), so the value cannot disagree.
+
+```yaml
+# config/spire.yaml                       # platform/addons/spire/setters.yaml
+trust_domain: mcp.local                   trust_domain:
+cluster_name: mcp-guardrails                - {object: HelmRelease/spire, path: spec.values.global.spire.trustDomain}
+                                          cluster_name:
+                                            - {object: HelmRelease/spire, path: spec.values.global.spire.clusterName}
+```
+
+The chart's own defaults stay in the chart. A value of `config/` overrides the literal in the manifest, which stays as a stand-in that keeps the file valid on its own. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
+
+Changing a shared value changes every artifact that sets it, so each is pushed and pinned again; `just <c>/diff` shows the effect per component. The functions are `lib/converge_config.py` and `lib/apply_values.py` (Python, PyYAML pinned in the script header, run with `uv`).
+
+Not covered yet: the fields of the plain manifests (the gateway port, the MCP backend hosts, the rate limit, the JWKS). `values/values.env`, `values/wiring` and `clusters/<name>/values.env` are the earlier design for them and are read by no recipe.
 
 ### How a secret gets in
 
@@ -140,15 +168,17 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 ```text
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
-├── lib/lib.just                 build, diff, push, pin: imported by every component justfile
+├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile), converge_config.py, apply_values.py
+├── config/                      the values: *.yaml per level (every cluster, <cloud>/, <env>/, <region>/), flat name: value
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
 │   └── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
 ├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation
 ├── services/ext-mcp/            rules.py (+ tests), Dockerfile, deploy/ (the artifact)
-├── values/                      fleet values.env + wiring (not applied yet)
+├── values/                      values.env + wiring: the earlier design for the plain-manifest fields, not applied
 ├── clusters/kind/               one folder per cluster
+│   ├── cluster.yaml             placement in config/ (kind)
 │   ├── justfile                 up, credentials, down, delete-crds (host only)
 │   ├── kind-config.yaml         read by `up`
 │   └── sync/                    read by Flux: stack.yaml (pins, order, health), flux-instance.yaml, secrets/ (age ciphertext)
