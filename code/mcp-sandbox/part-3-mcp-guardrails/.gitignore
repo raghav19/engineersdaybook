@@ -1,5 +1,4 @@
-# `just <component>/build` writes the artifact of a component here, `just push` leaves the push result (out/<name>.json) next to it
+# `just <component>/build` writes the artifact of a component to out/<component>/manifests.yaml, with its helper files and the push result (push.json) beside it
 out/
-# Python bytecode from running rules.py and its tests
 __pycache__/
 *.pyc

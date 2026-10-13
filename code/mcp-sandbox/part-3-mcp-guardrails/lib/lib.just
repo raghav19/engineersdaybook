@@ -1,12 +1,22 @@
-# Shared by every component justfile: `import '<../>lib/lib.just'`. The component is the folder the justfile sits in; its name is the
-# folder name, and the folder name is also the OCIRepository / Kustomization name in clusters/<cluster>/sync/stack.yaml.
+# Shared by every component justfile: `import '<../>lib/lib.just'`.
 #
-#   just build      the folder, rendered completely (charts included) -> out/<name>/manifests.yaml. This is the artifact.
-#   just diff       the change against the artifact <base> (default origin/main) pins in stack.yaml: what the cluster runs
-#   just validate   build, then flux-schema validate against the Kubernetes, Flux and ecosystem schemas
-#   just push       validate, then push out/<name>/ to the URL its OCIRepository in stack.yaml pulls, tagged with the commit
-#   just pin        write the pushed tag and digest into stack.yaml (a developer or agent commits it in a PR)
+# The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
+# also the OCIRepository / Kustomization name in clusters/<cluster>/sync/stack.yaml.
 #
+#   just build      the folder, rendered completely (charts included) -> out/<name>/manifests.yaml,
+#                   then checked against the Kubernetes, Flux and ecosystem schemas. This is the artifact.
+#   just diff       the change against the artifact `base` (origin/main) pins in stack.yaml,
+#                   that is what the cluster runs
+#   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit
+#   just pin        write the pushed tag and digest into stack.yaml (commit it in a PR)
+#
+# out/<name>/ holds everything of one component. Only manifests.yaml is pushed:
+#
+#   manifests.yaml   the artifact
+#   build/ks.yaml    the Flux Kustomization flate reads to render this folder
+#   diff/ks.yaml     the same, for baseline/
+#   baseline/        the artifact `base` pins, pulled by diff
+#   push.json        tag and digest of the last push, read by pin
 
 set quiet
 set lazy
@@ -15,57 +25,117 @@ set allow-duplicate-recipes
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # VARIABLES
+
 root := parent_directory(source_directory())
 name := file_name(justfile_directory())
 out := root / 'out' / name
-tag := `git log -1 --format=%h --abbrev=12 -- .`
+stack := 'clusters/kind/sync/stack.yaml'
+base := 'origin/main'
+
+# registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
+tag := `git log -1 --format=%h --abbrev=12 -- .`
 ghcr_user := env('GHCR_USER', 'raghav19')
-# note: placeholder-ghcr.io replaced by sbx proxy
+# placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
-# kinds flate (0.6.5) does not know are cluster-scoped: it puts a namespace on them. Found by rendering one of each; remove when flate fixes it.
-cluster_scoped := 'ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|MutatingAdmissionPolicy|RuntimeClass|CSIDriver'
-# a Kustomization path is relative to the root of the Git repository
+
+# The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
+# the absolute paths of this checkout into that form, for the stubs flate reads:
+#   top           the root of the Git repository
+#   src           this component's folder: the stub of build renders it
+#                 ./code/mcp-sandbox/part-3-mcp-guardrails/platform/routes
+#   baseline_src  the artifact pulled by diff for this component: the stub of diff renders it
+#                 ./code/mcp-sandbox/part-3-mcp-guardrails/out/routes/baseline
 top := `git rev-parse --show-toplevel`
 src := '.' + trim_start_match(justfile_directory(), top)
-baseline := '.' + trim_start_match(out, top) + '/baseline'
+baseline_src := '.' + trim_start_match(out, top) + '/baseline'
+
+# used by flate to determine which kinds are cluster-scoped 
+# and should have their namespace removed
+cluster_scoped := 'ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|MutatingAdmissionPolicy|RuntimeClass|CSIDriver'
+
+# yq filters
+
+# build: remove .metadata.namespace from the objects whose kind is in cluster_scoped (flate puts one there)
+drop_namespace := 'del(select(.kind | test("^(' + cluster_scoped + ')$")) | .metadata.namespace)'
+
+# _baseline: from stack.yaml, the digest of this component's OCIRepository ("" when it has none yet)
+pinned_digest := 'select(.spec.url == "' + registry + '/' + name + '") | .spec.ref.digest // ""'
+
+# pin: in stack.yaml, set spec.ref of the component's OCIRepository to the tag and digest of the last
+# push (out/<name>/push.json), keeping only those two fields
+pin_ref := '(select(.spec.url == "' + registry + '/' + name + '") | .spec.ref)' + \
+           ' = (load("' + out + '/push.json") | pick(["tag", "digest"]) | ... style="")'
 
 # RECIPES
+
+# reads:  nothing
+# writes: nothing
+# output: the list of recipes
+# list the recipes
 [default]
 help:
     just --list
 
-# the artifact: this folder rendered completely by flate, as Flux would apply it, nothing left to inflate in the cluster. The HelmRelease and its
-# chart OCIRepository are dropped, CRDs and Secrets stay in. A chart's CRDs are never pruned: that is a postRenderer on its HelmRelease
-# (see agentgateway/crds.yaml). Deleting them is an explicit step: `just clusters/kind/delete-crds`.
-# flate puts a namespace on the kinds in cluster_scoped; it is removed.
-build: (_stub out + '/build' src)
-    flate --no-progress build all --path {{ out }}/build --skip-crds=false --skip-secrets=false --skip-kinds HelmRelease,OCIRepository \
-      | yq 'del(select(.kind | test("^({{ cluster_scoped }})$")) | .metadata.namespace)' > {{ out }}/manifests.yaml
+# reads:  this folder, through out/<name>/build/ks.yaml
+# writes: out/<name>/manifests.yaml
+# output: the schema result and the inflated output manifest
+# - the namespace flate puts on the kinds in cluster_scoped is removed
+# - the component's own checks run first (_checks), the schema validation last: a build that does not
+build: _checks _stub_build
+    flate --no-progress build all \
+      --path {{ out }}/build \
+      --skip-kinds HelmRelease,OCIRepository \
+      --skip-crds=false \
+      --skip-secrets=false \
+      | yq '{{ drop_namespace }}' > {{ out }}/manifests.yaml
 
-# the change this makes to the cluster: this folder rendered now, against the artifact that <base>'s stack.yaml pins (what runs). flate renders
-# both sides the same way, so CRDs and Secrets are not shown (flags go to flate: --skip-crds=false). A component with no pin yet shows
-# entirely as added.
+    flux-schema validate {{ out }}/manifests.yaml \
+      --schema-location default \
+      --schema-location ecosystem
+
+# reads:  out/<name>/baseline/ (what `base` pins) through out/<name>/diff/ks.yaml
+#         this folder, through out/<name>/build/ks.yaml
+# writes: nothing
+# output: a unified diff of the rendered manifests, so you see the objects that 
+#         change in the cluster(charts inflated)
+diff: _stub_build _stub_diff _baseline
+    diff -u --label baseline --label {{ name }} \
+      <(flate --no-progress build all --path {{ out }}/diff --skip-kinds HelmRelease,OCIRepository) \
+      <(flate --no-progress build all --path {{ out }}/build --skip-kinds HelmRelease,OCIRepository) \
+      || [ $? -eq 1 ]
+
+# reads:  stack.yaml at `base` (the digest of the component), then the registry
+# writes: out/<name>/baseline/
+# output: the artifact `base` pins, which is what the cluster runs (left empty when there is no pin yet)
+# pull the artifact `base` pins for the component, by digest
 [script('bash')]
-diff base='origin/main' cluster='kind' *flags: (_stub out + '/build' src) (_stub out + '/diff' baseline)
+_baseline:
     set -euo pipefail
-    pin=$(git -C {{ root }} show {{ base }}:./clusters/{{ cluster }}/sync/stack.yaml \
-      | yq -N 'select(.kind == "OCIRepository" and .metadata.name == "{{ name }}") | .spec.url + ":" + .spec.ref.tag')
     rm -rf {{ out }}/baseline && mkdir -p {{ out }}/baseline
-    case "$pin" in
-      ""|*:unpinned) echo "baseline: none ({{ name }} has no pin in {{ base }})" ;;
-      *) echo "baseline: $pin"
-         flux pull artifact "$pin" -o {{ out }}/baseline --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
-           || { echo "cannot pull $pin" >&2; exit 1; } ;;
-    esac
-    render() { flate --no-progress build all --path "$1" --skip-kinds HelmRelease,OCIRepository {{ flags }}; }
-    diff -u --label baseline --label {{ name }} <(render {{ out }}/diff) <(render {{ out }}/build) || [ $? -eq 1 ]
+    digest=$(git -C {{ root }} show {{ base }}:./{{ stack }} | yq -N '{{ pinned_digest }}')
+    if [ -z "$digest" ]; then
+      echo "baseline: none ({{ name }} has no pin in {{ base }})"
+      exit 0
+    fi
+    echo "baseline: {{ registry }}/{{ name }}@$digest"
+    flux pull artifact {{ registry }}/{{ name }}@$digest \
+      -o {{ out }}/baseline \
+      --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" \
+      >/dev/null 2>&1 \
+      || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# the Flux Kustomization flate reads: named after this folder (as in stack.yaml), applying <path> of this repository
+# reads:  nothing, it is generated from the folder name and path
+# writes: out/<name>/build/ks.yaml
+# output: the Flux Kustomization flate reads to render this folder, used by build and by the candidate side of diff
+# flate can only inflate Flux objects, not plain folders, and it needs these references to know what to render:
+# - a GitRepository: a stub, flate maps it to the working tree and fetches nothing
+# - a Kustomization named after this folder (as in stack.yaml) whose path is the folder to render
+# write the Kustomization that renders this folder
 [script('bash')]
-_stub dir path:
-    mkdir -p {{ dir }}
-    cat > {{ dir }}/ks.yaml <<EOF
+_stub_build:
+    mkdir -p {{ out }}/build
+    cat > {{ out }}/build/ks.yaml <<EOF
     apiVersion: source.toolkit.fluxcd.io/v1
     kind: GitRepository
     metadata: {name: flux-system, namespace: flux-system}
@@ -74,26 +144,57 @@ _stub dir path:
     apiVersion: kustomize.toolkit.fluxcd.io/v1
     kind: Kustomization
     metadata: {name: {{ name }}, namespace: flux-system}
-    spec: {interval: 10m, path: {{ path }}, sourceRef: {kind: GitRepository, name: flux-system}}
+    spec: {interval: 10m, path: {{ src }}, sourceRef: {kind: GitRepository, name: flux-system}}
     EOF
 
-validate: build _checks
-    flux-schema validate {{ out }}/manifests.yaml --schema-location default --schema-location ecosystem --verbose
+# reads:  nothing, it is generated from the folder name and path
+# writes: out/<name>/diff/ks.yaml
+# output: the Flux Kustomization flate reads to render baseline/, used by the baseline side of diff
+# the same reason: flate only inflates Flux objects, so the pulled baseline/ needs its own Kustomization
+# it differs from build/ks.yaml only in its path, and sits in its own directory because flate renders
+# every Flux object it finds in the --path it is given
+# write the Kustomization that renders the pulled baseline
+[script('bash')]
+_stub_diff:
+    mkdir -p {{ out }}/diff
+    cat > {{ out }}/diff/ks.yaml <<EOF
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    metadata: {name: flux-system, namespace: flux-system}
+    spec: {interval: 10m, url: https://example.invalid/repo.git}
+    ---
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata: {name: {{ name }}, namespace: flux-system}
+    spec: {interval: 10m, path: {{ baseline_src }}, sourceRef: {kind: GitRepository, name: flux-system}}
+    EOF
 
-# validate, then push out/<name>/manifests.yaml as <registry>/<name>:<commit> (the rest of out/<name>/ is helper files and is not pushed);
-# the tag and digest land in out/<name>/push.json
-push: validate
-    flux push artifact {{ registry }}/{{ name }}:{{ tag }} --path {{ out }} --ignore-paths '/*,!/manifests.yaml' \
+# reads:  out/<name>/manifests.yaml, and only that: the rest of out/<name>/ is helper files
+# writes: the registry, and out/<name>/push.json (the tag and digest)
+# output: the artifact in the registry as <registry>/<name>:<commit>, with its tag and digest printed
+# build (which validates), then push the artifact
+push: build
+    flux push artifact {{ registry }}/{{ name }}:{{ tag }} \
+      --path {{ out }} \
+      --ignore-paths '/*,!/manifests.yaml' \
       --source "$(git remote get-url origin)" \
       --revision "$(git branch --show-current)@sha1:$(git rev-parse HEAD)" \
-      --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" --output json \
-      | jq --arg tag {{ tag }} '. + {tag: $tag}' | tee {{ out }}/push.json
+      --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" \
+      --output json \
+      | jq --arg tag {{ tag }} '. + {tag: $tag}' \
+      | tee {{ out }}/push.json
 
-# rollout: write the pushed tag and digest into this component's OCIRepository in stack.yaml 
+# reads:  out/<name>/push.json
+# writes: stack.yaml
+# output: stack.yaml with this component's OCIRepository pointing at the pushed tag and digest
 # rollback: git revert the commit
-pin cluster='kind':
-    yq -i '(select(.spec.url == "{{ registry }}/{{ name }}") | .spec.ref) = (load("{{ out }}/push.json") | pick(["tag", "digest"]) | ... style="")' \
-      {{ root }}/clusters/{{ cluster }}/sync/stack.yaml
+# rollout: record the pushed artifact in stack.yaml
+pin:
+    yq -i '{{ pin_ref }}' {{ root }}/{{ stack }}
 
+# reads:  nothing
+# writes: nothing
+# output: pass or fail
+# a component justfile redefines this to add its own checks; build runs it
 _checks:
     true

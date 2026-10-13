@@ -1,5 +1,5 @@
 # The agentgateway CRD chart, installed by Flux (helm-controller). The version is the tag below, here only.
-# It must equal the controller chart in controller.yaml: `just validate` fails if they differ. Both are one artifact.
+# It must equal the controller chart in controller.yaml: `just build` fails if they differ. Both are one artifact.
 # Helm never upgrades files in a chart's crds/ folder, so the CRD policy is CreateReplace. Helm never deletes them either.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
