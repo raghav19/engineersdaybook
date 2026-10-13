@@ -1,15 +1,23 @@
-# Part 3: agentgateway guardrails on kind, delivered by Flux. One artifact per component; every component folder has its own justfile
-# (lib/lib.just) with build, validate, push and pin. From here, name the folder: `just platform/routes/build`.
-#
-#   just <component>/<recipe>                 build, diff, validate, push, pin of one component
-#   just <component>/diff [base]              the change against the artifact <base> (default origin/main) pins: what the cluster runs
-#   just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
-#   just tests/run                            the attack cases against the gateway
-#
+# Part 3: agentgateway guardrails on kind, delivered by Flux. Run `just` to see the commands.
 
 set quiet
 
-# list the recipes, modules included (the default)
-[default]
+# the commands of this project
+[default, script('bash')]
 help:
-    just --list --list-submodules
+    cat <<'EOF'
+    One artifact per component. Every component folder has its own justfile (it imports lib/lib.just).
+    Name the folder to run a recipe: `just platform/routes/build`.
+
+      just <component>/build   render the folder (charts included), check it, write out/<component>/manifests.yaml
+      just <component>/diff    the change against the artifact origin/main pins, that is what the cluster runs
+                               (`just --set base <rev> <component>/diff` compares with another revision)
+      just <component>/push    build, then push the artifact to the registry (host)
+      just <component>/pin     write the pushed tag and digest into stack.yaml
+
+      just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
+      just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)
+      just tests/run                               the attack cases against the gateway
+
+    Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/lib.just.
+    EOF
