@@ -1,7 +1,7 @@
 # syntax=docker/sandbox-kit:3
 # dev-agent-sandbox tools: one mixin with everything this repo adds to the Docker Claude and shell kits.
 # The tools in .sbx/agent/tools.toml and their completions are baked in, so nothing is installed at boot.
-# Built with the repo root as build context, see the Taskfile.
+# Built with the repo root as build context, see agent.just.
 schemaVersion: "3"
 kind: mixin
 displayName: dev-tools

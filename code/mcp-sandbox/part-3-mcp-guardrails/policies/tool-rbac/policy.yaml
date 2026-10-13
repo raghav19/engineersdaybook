@@ -12,7 +12,7 @@ spec:
     mcp:
       authorization:
         # Require with a negated list, not Deny: the schema warns that a Deny expression that fails to
-        # evaluate fails to deny. Same tools the sbx gateway header excludes today (.sbx/daemon/Taskfile.yml).
+        # evaluate fails to deny. Same tools the sbx gateway header excludes today (.sbx/daemon/daemon.just).
         action: Require
         policy:
           matchExpressions:
