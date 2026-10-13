@@ -8,7 +8,7 @@ workspace:
 kits:
   - docker.io/docker/sbx-kit-shell:1.0.0
   - docker.io/docker/sbx-kit-claude-mixin:2.1.285
-  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:9a160fc2d61bd992158bb6bf7fcb7648f1f2e3c2ad985922df6e424b097b06c4
+  - ghcr.io/raghav19/dev-agent-sandbox/dev-tools@sha256:6262dff5c177256f4d692823f909c0c2751aa314ca1a1581c9129445af849538
 sandboxOptions:
-  cpus: 2
-  memory: 2g
+  cpus: 4
+  memory: 4g

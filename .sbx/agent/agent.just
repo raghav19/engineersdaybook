@@ -5,10 +5,15 @@
 #   update-skills   refresh the skills the store already has to upstream's latest
 #   sync-secrets    set the tokens in .sbx/secrets.json as sbx custom secrets, so the VM can use them without holding them (run does it first)
 #   build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
-#   setup-vscode    write the Remote-SSH and update settings into your host VS Code user settings (run does it first)
+#   setup-vscode    write the Remote-SSH and update settings, and the extensions of .vscode/extensions.json, into your host VS Code user settings (run does it first)
+#   kubeconfig      host only: write .sbx/kubeconfig, a read-only view of the kind cluster that the sandbox reads through the host repo mount
 
 kit_repo := 'ghcr.io/raghav19/dev-agent-sandbox/dev-tools'
 kit_version := '0.1.0'
+
+# The kind cluster the sandbox gets a kubeconfig for: the one that Part 3's kind-config.yaml names
+kind_config := repo / 'code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/kind-config.yaml'
+kind_cluster := shell('yq .name "$1"', kind_config)
 
 # sbx has no declarative skills list, so this list is it. --force replaces a skill without asking.
 
@@ -71,6 +76,10 @@ sync-secrets: _check-daemon
       echo "sbx secret placeholder-$host for $host"
     done
 
+# `recommendations` in .vscode/extensions.json only prompt. Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server,
+# so the recipe adds the recommendations to that list (it keeps the entries you already have there). A server that is already running installs nothing new:
+# it takes a new sandbox, or `code --install-extension <id>` in a terminal of the VM.
+
 # Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
 setup-vscode:
     #!/usr/bin/env bash
@@ -78,7 +87,8 @@ setup-vscode:
     f="$HOME/.config/Code/User/settings.json"
     mkdir -p "$(dirname "$f")"
     [ -f "$f" ] || echo '{}' > "$f"
-    merged=$(jq '. * {
+    merged=$(jq --argjson ext "$(jq -c .recommendations {{ repo }}/.vscode/extensions.json)" '. * {
+      "remote.SSH.defaultExtensions": (((.["remote.SSH.defaultExtensions"] // []) + $ext) | unique),
       "remote.SSH.useExecServer": false,
       "remote.SSH.enableDynamicForwarding": false,
       "remote.SSH.enableAgentForwarding": false,
@@ -90,3 +100,56 @@ setup-vscode:
       "extensions.autoCheckUpdates": false
     }' "$f")
     if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi
+
+# The sandbox reaches the kind API server (host 127.0.0.1) as host.docker.internal through the sbx proxy, which needs `sbx policy allow network localhost:<port>`
+# once. It holds a ServiceAccount token bound to the built-in `view` role (no Secrets, read-only), not the kind admin certificate. The file is in
+# .sbx/kubeconfig (gitignored): the host repo is mounted read-only in the VM, so it is /run/sandbox/source/.sbx/kubeconfig there, where KUBECONFIG
+# in tools.toml points. tls-server-name is a SAN every kind API server certificate has, so the cluster needs no change. Run it again after
+# `kind delete` + `kind create` (new CA) or when the token (30 days) expires.
+
+# Host only. Write .sbx/kubeconfig: a read-only (view) kubeconfig for the kind cluster, for the sandbox to read (run does it first, when the host has the cluster)
+kubeconfig cluster=kind_cluster:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): it needs the host's kind cluster." >&2; exit 1; }
+    ctx=kind-{{ cluster }}
+    sa=sandbox-viewer
+    kubectl --context "$ctx" -n default create serviceaccount "$sa" --dry-run=client -o yaml | kubectl --context "$ctx" apply -f - > /dev/null
+    kubectl --context "$ctx" create clusterrolebinding "$sa" --clusterrole=view --serviceaccount="default:$sa" --dry-run=client -o yaml \
+      | kubectl --context "$ctx" apply -f - > /dev/null
+    server=$(kubectl --context "$ctx" config view --minify -o jsonpath='{.clusters[0].cluster.server}' | sed 's#//127\.0\.0\.1:#//host.docker.internal:#')
+    ca=$(kubectl --context "$ctx" config view --minify --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
+    token=$(kubectl --context "$ctx" -n default create token "$sa" --duration=720h)
+    cat > {{ sbx_dir }}/kubeconfig <<EOF
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - name: $ctx
+      cluster:
+        server: $server
+        tls-server-name: localhost
+        certificate-authority-data: $ca
+    users:
+    - name: $sa
+      user:
+        token: $token
+    contexts:
+    - name: $ctx
+      context:
+        cluster: $ctx
+        user: $sa
+    current-context: $ctx
+    EOF
+    echo "wrote {{ sbx_dir }}/kubeconfig for $ctx ($server), read-only, token valid 30 days"
+
+# run calls this first. Best effort, so a missing or stopped cluster never keeps the sandbox from starting: no kind-config.yaml or no kubectl context for
+# its cluster on this host is skipped silently, an unreachable cluster with one line. A new token is written at every run, so the CA is always current.
+_kubeconfig-auto:
+    #!/usr/bin/env bash
+    set -u
+    [ -f "{{ kind_config }}" ] || exit 0
+    cluster=$(yq .name "{{ kind_config }}") || exit 0
+    contexts=$(kubectl config get-contexts -o name 2>/dev/null) || exit 0
+    grep -qx "kind-$cluster" <<< "$contexts" || exit 0
+    just --justfile "{{ sbx_dir }}/justfile" kubeconfig "$cluster" \
+      || echo "kubeconfig: kind-$cluster is not reachable, skipped (the sandbox keeps the .sbx/kubeconfig it has, if any)"

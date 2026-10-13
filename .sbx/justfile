@@ -8,7 +8,7 @@
 #             squid allowlist and its container. Once per machine: install-egress, install-daemon. Then start-daemon / stop-daemon / restart-daemon
 #
 #   login     once per machine: log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json
-#   run       developer: sync the secrets, `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
+#   run       developer: sync the secrets, write the kind kubeconfig (when the host has the cluster), `sbx env run . --detached`, register and attach the MCP servers, open VS Code on it
 #
 # sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
 
@@ -44,7 +44,7 @@ login:
 # the sandbox's MCP calls go through the daemon, and the daemon's through the proxy; the secrets must be in sbx before the sandbox starts
 
 # Developer. Create or start the sandbox and open VS Code on it, then return (detached)
-run *args: _check-daemon _check-egress sync-secrets && install-mcp setup-vscode _open-vscode
+run *args: _check-daemon _check-egress sync-secrets _kubeconfig-auto && install-mcp setup-vscode _open-vscode
     sbx env run {{ sbx_dir }} --detached {{ args }}
 
 _open-vscode:

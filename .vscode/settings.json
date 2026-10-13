@@ -2,6 +2,13 @@
   "markdown.preview.fontFamily": "CommitMono Nerd Font Mono",
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "icon": "terminal-bash"
+    }
+  },
   "files.watcherExclude": {
     "**/.git/**": true,
     "**/node_modules/**": true,
