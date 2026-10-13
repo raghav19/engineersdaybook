@@ -1,0 +1,55 @@
+# The SPIRE chart: server (the CA of trust domain mcp.local), node agents, CSI driver, spire-controller-manager. Installed by Flux (helm-controller).
+# The chart source is the HelmRepository in crds.yaml. Chart values: put them under spec.values; `just diff` shows what a value changes in the
+# objects the chart renders. The chart renders the server, the agents and the CSI driver into this release's namespace, spire-system.
+# Agents never sign: they attest to the server and hand out the SVIDs it issues. The agent that later runs in the microVM attests to this same
+# server with a join token (nodeAttestor.joinToken), so the server is the one CA of the stack.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: spire
+  namespace: spire-system
+spec:
+  interval: 10m
+  releaseName: spire
+  chart:
+    spec:
+      chart: spire
+      version: 0.30.3
+      sourceRef:
+        kind: HelmRepository
+        name: spiffe
+  dependsOn:
+    - name: spire-crds # the CRDs first, in the same artifact
+  driftDetection:
+    mode: enabled
+  values:
+    global:
+      spire:
+        # config/spire.yaml holds these two for the cluster and setters.yaml says where they go; what is written here is the stand-in.
+        trustDomain: mcp.local
+        clusterName: mcp-guardrails # name in clusters/kind/kind-config.yaml
+      # The hooks fix common problems of `helm install`. The artifact holds rendered objects, so a hook would become a plain Job.
+      installAndUpgradeHooks:
+        enabled: false
+      deleteHooks:
+        enabled: false
+    spire-server:
+      nodeAttestor:
+        # k8s_psat (the node agents) is on by default; join_token is for the agent of a microVM.
+        joinToken:
+          enabled: true
+      controllerManager:
+        identities:
+          clusterSPIFFEIDs:
+            # The default registers every pod of every namespace. Identities are opt-in: a later pull request adds a ClusterSPIFFEID per workload
+            # that needs one.
+            default:
+              enabled: false
+            # The two identities of the OIDC provider and its test pod: neither exists here.
+            oidc-discovery-provider:
+              enabled: false
+            test-keys:
+              enabled: false
+    # JWT-SVIDs and OIDC discovery are not used: no extra Deployment, no Ingress.
+    spiffe-oidc-discovery-provider:
+      enabled: false
