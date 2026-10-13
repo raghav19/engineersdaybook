@@ -1,5 +1,5 @@
 {
-   "markdown.preview.fontFamily": "CommitMono Nerd Font Mono",
+  "markdown.preview.fontFamily": "CommitMono Nerd Font Mono",
   "files.autoSave": "afterDelay",
   "files.autoSaveDelay": 1000,
   "files.watcherExclude": {
