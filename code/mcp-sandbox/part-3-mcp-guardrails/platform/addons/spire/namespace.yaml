@@ -1,0 +1,9 @@
+# The namespace of SPIRE: the server, the node agents and the CSI driver run here (the chart uses the release namespace unless
+# global.spire.recommendations is on). It travels with this addon.
+# Flux must never prune it: removing a namespace removes everything in it, and the server holds the CA in its volume.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spire-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

@@ -38,9 +38,9 @@ down: _host
 
 # delete the CRDs of the stack, and with them every custom resource of those kinds. Flux never prunes a CRD (the artifacts mark them), so this is
 # the explicit step. Run it after the stack is removed from Flux, otherwise the next reconcile applies them again. `down` needs none of this.
-[confirm('Delete the agentgateway and Gateway API CRDs and every custom resource of those kinds?')]
+[confirm('Delete the agentgateway, Gateway API and SPIRE CRDs and every custom resource of those kinds?')]
 delete-crds: _host
-    kubectl --context {{ ctx }} get crd -o name | grep -E '\.(agentgateway\.dev|gateway\.networking\.k8s\.io)$' | xargs -r kubectl --context {{ ctx }} delete --wait
+    kubectl --context {{ ctx }} get crd -o name | grep -E '\.(agentgateway\.dev|gateway\.networking\.k8s\.io|spiffe\.io)$' | xargs -r kubectl --context {{ ctx }} delete --wait
 
 _host:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): the ghcr.io token and the sops key are not usable here." >&2; exit 1; }

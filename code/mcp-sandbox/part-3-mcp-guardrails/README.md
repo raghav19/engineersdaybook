@@ -2,7 +2,7 @@
 
 Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox](../../agent-sandbox/README.md) put the agent in a microVM. This part puts a **policy point on the MCP path**: every call to a remote MCP server goes through [agentgateway](https://agentgateway.dev) in a local kind cluster, where tool, argument and response rules apply, mapped to the [OWASP MCP Top 10](https://owasp.org/www-project-mcp-top-10/).
 
-> **Status (stage A).** Manifests, Flux stack, cluster folder and justfiles are written. `just <component>/build` renders and validates all ten components with the real v1.6.0 charts.
+> **Status (stage A).** Manifests, Flux stack, cluster folder and justfiles are written. `just <component>/build` renders and validates all eleven components with the real charts.
 > **Not yet run on a cluster.** The `clusters/kind/*` recipes and `push` need the host (real ghcr.io token, your sops key) and refuse to run in the sandbox.
 > Stage B (chaining the sbx gateway to this one, Keycloak) follows a spike.
 
@@ -142,7 +142,7 @@ part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
 ├── lib/lib.just                 build, diff, push, pin: imported by every component justfile
 ├── platform/
-│   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart)
+│   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
 │   └── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
 ├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation
@@ -157,7 +157,8 @@ part-3-mcp-guardrails/
 ```
 
 An **artifact** is one deployable unit. Its folder, justfile, Kustomization in `stack.yaml` and pin have the same name (`services/ext-mcp` is `ext-mcp`).
-The ten artifacts: `gateway-api`, `agentgateway`, `mcp-servers`, `routes`, `ext-mcp`, `ext-mcp-isolation`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`. `secrets` is read from Git and is not an artifact.
+The eleven artifacts: `gateway-api`, `agentgateway`, `spire`, `mcp-servers`, `routes`, `ext-mcp`, `ext-mcp-isolation`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`. `secrets` is read from Git and is not an artifact.
+`spire` is the CA of trust domain `mcp.local`: the server in the cluster signs, the node agents attest to it (`k8s_psat`), and a join token (`join_token`) is enabled for the agent of a microVM later. Nothing uses it yet; the Istio addon takes its CA from it next. Identities are opt-in: the chart's `ClusterSPIFFEID`s are off, so a workload gets an SVID only when a `ClusterSPIFFEID` selects it.
 A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; one pushed artifact can be pinned by several clusters.
 
 ## Versions
@@ -167,6 +168,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 | Kubernetes (kind node image) | v1.37.0 (kind 0.33.0 default) | `clusters/kind/kind-config.yaml` |
 | Gateway API (standard channel) | v1.6.1 | `platform/addons/gateway-api/kustomization.yaml` |
 | agentgateway (CRDs and controller) | v1.6.0, `just build` fails if the two tags differ | `platform/addons/agentgateway/` |
+| SPIRE (CRD chart and spire chart) | spire-crds 0.6.1; spire 0.30.3 (SPIRE 1.15.3) | `platform/addons/spire/` |
 | Flux (via the Flux Operator) | 2.9.6; operator chart 0.61.0 | `clusters/kind/sync/flux-instance.yaml`, `clusters/kind/justfile` |
 | just / flate / kind / helm | 1.58 / 0.6.5 / 0.33.0 / 4.3.0 | root `mise.toml` |
 | What a cluster runs | one tag (the commit) and one digest per artifact | `clusters/kind/sync/stack.yaml` |

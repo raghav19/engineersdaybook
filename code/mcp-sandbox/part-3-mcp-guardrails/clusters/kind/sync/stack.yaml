@@ -16,6 +16,8 @@
 #                                                           ├──► tool-rbac
 #   ext-mcp ──┬───────────────────────────────────────────►└──► ext-mcp-checks
 #             └──► ext-mcp-isolation
+#
+#   spire                        (the CA of trust domain mcp.local; nothing depends on it yet)
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -333,3 +335,30 @@ spec:
   dependsOn:
     - name: mcp-servers
     - name: ext-mcp
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: spire
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/spire
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: spire
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m # the controller-manager webhook can reject a custom resource of the first apply: the retry settles it
+  timeout: 5m
+  prune: true
+  wait: true # the server StatefulSet and the agent and CSI DaemonSets roll out. The CRDs and namespaces travel in this artifact.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: spire}
