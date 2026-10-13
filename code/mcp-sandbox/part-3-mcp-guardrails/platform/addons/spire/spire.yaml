@@ -25,6 +25,7 @@ spec:
   values:
     global:
       spire:
+        # config/spire.yaml holds these two for the cluster and setters.yaml says where they go; what is written here is the stand-in.
         trustDomain: mcp.local
         clusterName: mcp-guardrails # name in clusters/kind/kind-config.yaml
       # The hooks fix common problems of `helm install`. The artifact holds rendered objects, so a hook would become a plain Job.
