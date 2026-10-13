@@ -48,6 +48,9 @@ capabilities:
       - helm.sh
       - kubectl.docs.kubernetes.io
       - docs.aws.amazon.com
+      - charts.dexidp.io
+      - embeddings.vscode-cdn.net
+      - localhost:6444
       deny:
       - hosts: [ api.github.com ]
         methods: [ DELETE ]
