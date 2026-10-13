@@ -3,7 +3,7 @@
 Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox](../../agent-sandbox/README.md) put the agent in a microVM. This part puts a **policy point on the MCP path**: every call to a remote MCP server goes through [agentgateway](https://agentgateway.dev) running in a local kind cluster, where tool, argument and response rules apply, mapped to the [OWASP MCP Top 10](https://owasp.org/www-project-mcp-top-10/).
 
 > **Status (stage A, Flux hand-over written).** Manifests, the Flux stack and the cluster folder are written, and every component has a justfile (`just build`, `validate`,
-> `push`, `pin`), and the root justfile has `diff`. `just <component>/build` runs for all ten components with the real v1.6.0 charts, and `just diff` renders them. **Not yet run against a cluster**:
+> `push`, `pin`), and `just <component>/diff` compares a build with the artifact `main` pins. `just <component>/build` runs for all ten components with the real v1.6.0 charts. **Not yet run against a cluster**:
 > `just clusters/kind/up`, `credentials` and `down` refuse to run in the sandbox: they need the host (real ghcr.io token, your sops key). `just <component>/push` and Flux itself need the host too. The rootless-Docker gateway reachability question below is the first thing to prove.
 > **Per-cluster values are being redesigned**: `values/` and `clusters/<c>/values.env` are not applied by `just build` yet (see "How a value gets in").
 > Stage B (chaining the sbx gateway to this one, sandbox-driven tests, Keycloak) follows a spike.
@@ -14,7 +14,7 @@ Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox]
 - **Two runs you can compare**: baseline (gateway in path, nothing enforced) and every policy on. A baseline cluster is a stack without the policy and `ext-mcp-isolation` entries. Same attacks, two results.
 - **Values as data**: one flat `values.env` per layer (fleet, cluster, and a region when one exists) with declarative wiring rules; not applied by `just build` yet (see "How a value gets in").
 - **One artifact per independently deployable unit**: each addon, route set, MCP server registration and policy is its own OCI artifact in a private registry; a cluster's `stack.yaml` pins which one it runs. What must change together travels inside one artifact. What must only be ready first is a `dependsOn`. Rollout and rollback of one unit is an edit of its `ref.digest` in the cluster's `stack.yaml`.
-- **Review before merge**: `just diff` is a plan-style diff of what Flux would apply (the objects of the artifact, and the objects each chart renders), locally and in CI. `just <component>/push` publishes an artifact, `just <component>/pin` writes its tag and digest into `stack.yaml`. Nothing applies it until a pin in `main` names it.
+- **Review before merge**: `just <component>/diff` is a diff of what Flux would apply (the rendered objects, charts included) against the artifact `origin/main` pins. flate renders both sides, so CRDs and Secrets are not shown (`just <c>/diff origin/main kind --skip-crds=false` shows CRDs). `just <component>/push` publishes an artifact, `just <component>/pin` writes its tag and digest into `stack.yaml`. Nothing applies it until a pin in `main` names it.
 - **One imperative step**: `just clusters/kind/up` creates the cluster and installs Flux; `just clusters/kind/credentials` adds the two Secrets Flux needs. Everything else is Git and the registry.
 
 ## Architecture
@@ -112,7 +112,7 @@ in `stack.yaml` applies one artifact (order, health). Two things carry the word 
 recipe. For the kind cluster, which has no overrides, the raw build of every component equals what that layer produced. How per-cluster values reach the manifests
 (Flux `postBuild.substitute`, or a per-cluster kustomize layer) is the next design step.
 
-A chart value is an edit of `spec.values` in the HelmRelease. `just diff` renders the chart and shows what the value changes in the objects the chart creates.
+A chart value is an edit of `spec.values` in the HelmRelease. `just build` renders the chart into `out/<c>/manifests.yaml`, and `just <c>/diff` shows what the value changes in the objects the chart creates.
 
 A change moves only the artifacts whose folder it touches.
 
@@ -142,10 +142,8 @@ in the tool lists; the hook configuration is not written yet). The sandbox VM ha
 ```text
 part-3-mcp-guardrails/
 ├── README.md
-├── justfile                     the entry point: `just diff`, `just clusters/kind/<recipe>`, `just tests/run`, `just <component>/<recipe>`
+├── justfile                     the entry point: `just clusters/kind/<recipe>`, `just tests/run`, `just <component>/<recipe>`
 ├── lib/                         lib.just (build, validate, push, pin: imported by every component)
-├── preview/                     kustomizations.yaml: one Flux Kustomization per component, the input of `just diff` (flate)
-├── .krmignore                   what flate skips (clusters/, out/, tests/)
 ├── platform/                    the gateway and what it needs
 │   ├── addons/                  one folder per Kubernetes addon: gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart, both HelmRelease)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
@@ -165,7 +163,7 @@ part-3-mcp-guardrails/
 ```
 
 An **artifact** is one independently deployable unit; the folder, the justfile, the Kustomization in `stack.yaml` and the pin have the same name (`services/ext-mcp` for `ext-mcp`).
-`preview/kustomizations.yaml` lists the same names with their folders for `just diff`. The artifacts: `gateway-api`, `agentgateway`, `mcp-servers`, `routes`, `ext-mcp`,
+The artifacts: `gateway-api`, `agentgateway`, `mcp-servers`, `routes`, `ext-mcp`,
 `ext-mcp-isolation`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`, and `secrets` (from Git, not an artifact).
 
 A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`. A region layer is not built yet. One pushed artifact can be pinned by several clusters.
@@ -194,14 +192,14 @@ Prerequisites: rootless Docker as in [`code/rootless-docker`](../../rootless-doc
 Steps marked **host** run on your machine. The sandbox VM has no age key, no cluster and no registry credential.
 
 1. **Look at what a cluster gets (anywhere).** From the folder of the component, or from here with the folder in the name: `just platform/routes/build` writes `out/routes/`
-   (one file per object), `just platform/routes/validate` also checks it with `flux schema validate` (the hosted schema catalog needs the network), and
-   `just diff` is the plan-style diff of the whole repo against `origin/main`, changed components only, with every chart rendered by flate (in the sandbox VM the chart registry needs a host approval first).
+   (`out/<c>/manifests.yaml`), `just platform/routes/validate` also checks it with `flux schema validate` (the hosted schema catalog needs the network), and
+   `just platform/routes/diff` shows the change against the artifact `origin/main` pins, CRDs and Secrets not shown (in the sandbox VM the chart registry needs a host approval first).
 2. **Secret and keys (host, once).** Follow [`clusters/kind/sync/secrets/README.md`](clusters/kind/sync/secrets/README.md): a cluster age key, a `.sops.yaml` rule, the encrypted
    `github-upstream` Secret. Add `GHCR_USER`, `GHCR_PULL_TOKEN` and `GHCR_PUSH_TOKEN` (classic PAT, `read:packages` / `write:packages`) to `.env.secrets.json`.
    Check on the host that the GitHub token can call the GitHub MCP server (`tools/list` returns the `github_*` tools). It was created for pulling the kit image;
    if it lacks the permissions you need, add a dedicated key.
 3. **Push the artifacts (host).** Commit the component, then `sops exec-env .env.secrets.json 'just platform/routes/push'`. It validates, then pushes `out/routes/` as
-   `ghcr.io/raghav19/mcp-guardrails/routes:<commit>` and saves the result in `out/routes.json`. `just platform/routes/pin` writes that tag and digest into `ref` of the OCIRepository
+   `ghcr.io/raghav19/mcp-guardrails/routes:<commit>` and saves the result in `out/routes/push.json`. `just platform/routes/pin` writes that tag and digest into `ref` of the OCIRepository
    in `clusters/kind/sync/stack.yaml` (replacing `tag: unpinned`); commit it and open the pull request. (Make the registry packages private; the pull token is for them.)
 4. **Create the cluster (host).** `just clusters/kind/up` creates kind, installs the Flux Operator and applies the FluxInstance. It needs no credential. Then
    `just clusters/kind/credentials` creates the two Secrets Flux waits for (`sops-age`, `ghcr-pull`); it decrypts the `ghcr.io` token of `.sbx/secrets.json` itself, so no env vars. Flux syncs `clusters/kind/sync` and applies the artifacts in order. Watch:
@@ -214,7 +212,7 @@ Steps marked **host** run on your machine. The sandbox VM has no age key, no clu
 To change something:
 
 ```sh
-just diff                           # plan-style diff against origin/main, changed components only: the objects Flux would apply, charts rendered (flags go to flate: -o github)
+just <component>/diff                # the build against the artifact origin/main pins (flux pull artifact + diff -ruN); no pin shows everything as added
 just policies/rate-limit/validate    # build out/rate-limit/ and check it against the schemas
 just policies/rate-limit/push        # host: push out/rate-limit/ as :<commit>, print the digest
 just policies/rate-limit/pin         # write the tag and digest into stack.yaml; commit it and open the pull request
@@ -245,7 +243,7 @@ MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not so
 ## Known gaps and open risks
 
 - **The gateway is reached through a NodePort, not a LoadBalancer, and that path is not yet verified end to end.** cloud-provider-kind does not work on rootless Docker with the pasta network: its proxy container gets an ephemeral host port, and pasta does not forward 32768-60999 (see `kind-config.yaml`). `kind-config.yaml` instead maps host `127.0.0.1:8080` to NodePort 30080, which `platform/gateway/parameters.yaml` pins. The manifests render and the mapping is created; a request through the gateway has not been made yet.
-- **The two agentgateway charts are installed by Flux (helm-controller), not rendered into the artifact.** The artifact `agentgateway` holds an `OCIRepository` and a `HelmRelease` per chart. `just diff` renders both charts with flate (helm built in; same version, same values) so a review sees what a chart or a value changes. That rendering is evidence, not the applied bytes: helm-controller renders and applies inside the cluster, and flate approximates it (Kubernetes 1.37.0 by default, no `lookup`). CRD changes are hidden by default (`--skip-crds=false` shows them). `driftDetection` is on.
+- **The artifact is the rendered component.** `just <c>/build` has flate render the folder (a Flux Kustomization generated from the folder name, every HelmRelease in it rendered, the HelmRelease and chart OCIRepository dropped), CRDs and Secrets included, so Flux applies exactly the files that were reviewed and no helm-controller render happens in the cluster. flate renders against Kubernetes 1.37.0 by default and has no `lookup`; pin `--kube-version` to the node's version when a chart reads capabilities. A HelmRelease hook becomes a plain object. `just diff` hides CRD changes by default (`--skip-crds=false` shows them). Every CRD in an artifact carries `kustomize.toolkit.fluxcd.io/prune: disabled` (the build adds it to chart CRDs, `gateway-api` patches its own), so Flux never prunes one (deleting a CRD deletes every custom resource of its kind). Remove them explicitly with `just clusters/kind/delete-crds`, after the stack is removed from Flux; `just clusters/kind/down` needs no such step.
 - **`GITHUB_TOKEN` as the MCP credential is untested**: it could not be decrypted where this was written, so its permissions against the GitHub MCP server are unknown.
 - **Not verified against a live controller**: the CRD field names are checked against the v1.6.0 schemas, but `Gateway` Programmed status, the secret key convention (`Authorization`, raw token) and how two `AgentgatewayPolicy` objects on one backend merge need a cluster.
 - **JWKS is a placeholder** (`JWT_JWKS` in `values/values.env`) until a key is minted; Keycloak replaces it in stage B.
@@ -257,9 +255,9 @@ MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not so
 - **The gateway Service shape (NodePort 30080) still lives in base** (`platform/routes/parameters.yaml`). Move it out of the fleet files after the reachability spike; a cluster-only shape change has no mechanism yet.
 - **`ref.digest` over `ref.tag` is assumed, not checked.** `just pin` writes both: the tag is the commit the artifact came from, the digest is what Flux should pull. An OCIRepository
   prefers the digest when both are set; check that on the first rollout. `flux diff artifact` prints only "differs" and an exit code, so it is not used for review.
-- **Helm hooks**: the v1.6.0 charts have none (checked by rendering). Helm runs hooks of a later version as hooks, so read `just diff` of a chart bump.
+- **Helm hooks**: the v1.6.0 charts have none (checked by rendering). A hook of a later version is rendered as a plain object and runs on every apply, so read `just <c>/diff` of a chart bump.
 - **Unplugging a USB device while the cluster runs could break new privileged pods.** A kind node keeps a snapshot of the host's `/dev`, and runc fails on the entry that is gone
   (`mount src=/dev/bus/usb/...: no such file or directory`; kube-proxy goes to `RunContainerError`). `kind-config.yaml` sets `privileged_without_host_devices = true` for containerd so
   privileged pods get no device nodes. The patch is valid TOML but its effect on a replugged device is not confirmed on a host. If it still happens, recreate the cluster.
-- **No CI and no signing yet.** `just <component>/push` is a host recipe; the registry is the trust root. CI (`just diff origin/main -o github` as a pull request comment), cosign and SBOM are the next step.
+- **No CI and no signing yet.** `just <component>/push` is a host recipe; the registry is the trust root. CI (`just <c>/diff` as a pull request comment), cosign and SBOM are the next step.
 - **Per-cluster values have no mechanism yet.** `values/` and `clusters/<name>/values.env` are not applied by `just build`; both charts use their defaults and the component folders hold the fleet values. A per-cluster chart value or shape change needs the redesign described under "How a value gets in".
