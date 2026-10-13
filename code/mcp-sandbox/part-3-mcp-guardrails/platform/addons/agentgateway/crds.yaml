@@ -33,3 +33,13 @@ spec:
     crds: CreateReplace
   driftDetection:
     mode: enabled
+  # The artifact holds the rendered CRDs. Flux must never prune one: deleting a CRD deletes every custom resource of its kind.
+  # Delete them explicitly: `just clusters/kind/delete-crds`.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target: {kind: CustomResourceDefinition}
+            patch: |
+              - op: add
+                path: /metadata/annotations/kustomize.toolkit.fluxcd.io~1prune
+                value: disabled

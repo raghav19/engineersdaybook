@@ -69,7 +69,7 @@ spec:
   retryInterval: 1m
   timeout: 5m
   prune: true
-  wait: true # both HelmReleases report Ready: helm-controller waits for the controller Deployment to roll out. Removing a HelmRelease uninstalls it and Helm leaves the chart's crds/ in place.
+  wait: true # the artifact holds the rendered chart: the controller Deployment must roll out and the CRDs report Established.
   path: ./
   sourceRef: {kind: OCIRepository, name: agentgateway}
   dependsOn:
