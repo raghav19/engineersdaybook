@@ -5,6 +5,8 @@
 #
 #   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
 #   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
+#   just _tools  pull every function at the digest config/tools/manifest.yaml pins -> out/.tools/<name>/<name>.
+#                lib/lib.just loads this file as the module `tools` and every component build runs `tools::_tools`.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
@@ -33,8 +35,14 @@ flags := '--onefile --clean --noconfirm --log-level WARN'
 # every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of lib/tools
 uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group build'
 
+# the root of part 3 (this file is lib/tools/tools.just) and where a build finds the pulled functions
+root := parent_directory(parent_directory(source_directory()))
+tools := root / 'out' / '.tools'
+tools_manifest := root / 'config' / 'tools' / 'manifest.yaml'
+
 # registry
-repo := 'oci://ghcr.io/raghav19/mcp-guardrails/tools/' + name
+registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
+repo := registry + '/tools/' + name
 source := 'https://github.com/raghav19/engineersdaybook'
 ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
@@ -80,3 +88,29 @@ push: build
     echo "{{ name }}:"
     echo "  digest: '$digest'"
     echo "  binary: 'sha256:$sha'"
+
+# reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
+# output: nothing; _config and _apply run the links
+# pull the build functions (lib/tools) at the digests the config pins
+[script('bash')]
+_tools:
+    set -euo pipefail
+    pull() {
+      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
+      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_manifest }})
+      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
+      dir={{ tools }}/$1/${digest#sha256:}
+      if [ ! -x "$dir/$1" ]; then
+        rm -rf "$dir" && mkdir -p "$dir"
+        flux pull artifact {{ registry }}/tools/$1@$digest -o "$dir" \
+          --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
+          || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$digest" >&2; exit 1; }
+      fi
+      # the pinned sha256 of the binary is checked on every run, not only after a pull
+      [ "sha256:$(sha256sum "$dir/$1" | cut -d' ' -f1)" = "$binary" ] \
+        || { echo "$1: the binary of $digest is not $binary" >&2; rm -rf "$dir"; exit 1; }
+      ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
+    }
+    pull config-builder
+    pull value-injector
