@@ -1,0 +1,49 @@
+# The Istio control plane (istiod), sidecar mode only: no ambient components (no istio-cni, no ztunnel). Installed by Flux (helm-controller).
+# The chart source is the HelmRepository in base.yaml. Chart values: put them under spec.values; `just diff` shows what a value changes in the
+# objects the chart renders.
+#
+# SPIRE is the CA of the mesh, as in Istio's SPIRE integration: a proxy reads its identity from the SPIFFE Workload API socket that the SPIFFE
+# CSI driver (installed by the spire addon) mounts into it, and never asks istiod for a certificate. Both sides must use the same trust domain:
+# `trust_domain` in config/ goes to meshConfig.trustDomain here and to the spire chart (setters.yaml), so the two cannot disagree.
+#
+# A workload takes part by two steps, both its own: the namespace carries `istio-injection: enabled`, and the pod selects the template below
+# with the annotation `inject.istio.io/templates: "sidecar,spire"`. SPIRE only issues an identity to a pod a ClusterSPIFFEID selects.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istiod
+  namespace: istio-system
+spec:
+  interval: 10m
+  releaseName: istiod
+  chart:
+    spec:
+      chart: istiod
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+  dependsOn:
+    - name: istio-base # the CRDs first, in the same artifact
+  driftDetection:
+    mode: enabled
+  values:
+    # meshConfig.trustDomain has no default here: config/ must set `trust_domain` and the build fails without.
+    sidecarInjectorWebhook:
+      templates:
+        # The "spire" template of Istio's SPIRE integration: the label that the ClusterSPIFFEID of a workload selects, and the CSI mount of the
+        # Workload API socket. Kubernetes 1.33+ injects istio-proxy as a native sidecar (an init container), so the mount patches initContainers.
+        spire: |
+          labels:
+            spiffe.io/spire-managed-identity: "true"
+          spec:
+            initContainers:
+              - name: istio-proxy
+                volumeMounts:
+                  - name: workload-socket
+                    mountPath: /run/secrets/workload-spiffe-uds
+                    readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: csi.spiffe.io
+                  readOnly: true

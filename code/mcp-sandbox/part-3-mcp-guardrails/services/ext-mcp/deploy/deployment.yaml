@@ -10,7 +10,12 @@ spec:
   template:
     metadata:
       labels: {app.kubernetes.io/name: ext-mcp}
+      annotations:
+        # The sidecar template plus the "spire" template of istiod (platform/addons/istio/istiod.yaml): the SVID of the proxy comes from SPIRE.
+        inject.istio.io/templates: sidecar,spire
     spec:
+      # Its own service account: the SPIFFE ID is spiffe://<trust domain>/ns/mcp-guardrails/sa/ext-mcp.
+      serviceAccountName: ext-mcp
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true

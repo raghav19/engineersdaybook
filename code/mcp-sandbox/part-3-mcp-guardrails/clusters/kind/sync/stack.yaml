@@ -6,7 +6,7 @@
 # not an artifact, so it has no pin and no folder.
 #
 # ref.tag `unpinned` means no artifact is pushed yet: its Kustomization stays not Ready. `just <folder>/pin` writes the tag (the commit) and the digest.
-# A baseline run is this file without the ext-mcp-isolation and policy entries (authn-jwt, rate-limit, tool-rbac, ext-mcp-checks).
+# A baseline run is this file without the ext-mcp-isolation and policy entries (authn-jwt, rate-limit, tool-rbac, ext-mcp-checks, mcp-mtls).
 # Flux never reverts a failed artifact by itself: put the older pin back (git revert).
 #
 #   gateway-api ──► agentgateway ──┬──► secrets ──┐
@@ -17,7 +17,10 @@
 #   ext-mcp ──┬───────────────────────────────────────────►└──► ext-mcp-checks
 #             └──► ext-mcp-isolation
 #
-#   spire                        (the CA of trust domain mcp.local; nothing depends on it yet)
+#   spire ──► istio ──┬──► ext-mcp       (ext-mcp also waits for spire: its sidecar and its SPIRE identity)
+#                     └──► mcp-mtls      (STRICT mTLS of namespace mcp-guardrails; also waits for ext-mcp)
+#
+#   spire is the CA of trust domain mcp.local; istio takes its CA from it (sidecar mode only, no ambient).
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -186,9 +189,12 @@ spec:
   retryInterval: 1m
   timeout: 5m
   prune: true
-  wait: true # the ext-mcp Deployment rolls out. Its namespace travels in this artifact, so it waits for nothing.
+  wait: true # the ext-mcp Deployment rolls out. Its namespace travels in this artifact.
   path: ./
   sourceRef: {kind: OCIRepository, name: ext-mcp}
+  dependsOn:
+    - name: istio # the injection webhook first, otherwise the pod starts without its istio-proxy
+    - name: spire # the ClusterSPIFFEID kind, and the identity the proxy asks for
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -363,3 +369,62 @@ spec:
   wait: true # the server StatefulSet and the agent and CSI DaemonSets roll out. The CRDs and namespaces travel in this artifact.
   path: ./
   sourceRef: {kind: OCIRepository, name: spire}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/istio
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m # the SPIFFE CSI driver of spire can be late: the gateway pod waits for it, the retry settles it
+  timeout: 5m
+  prune: true
+  wait: true # istiod and the gateway Deployment roll out. The CRDs and namespaces travel in this artifact.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: istio}
+  dependsOn:
+    - name: spire # the CA, the CSI driver and the ClusterSPIFFEID kind
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: mcp-mtls
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-mtls
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mcp-mtls
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true # the east-west rule of mcp-guardrails. Pin it only together with the client half in agentgateway: see peerauthentication.yaml.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: mcp-mtls}
+  dependsOn:
+    - name: istio # the PeerAuthentication kind
+    - name: ext-mcp # the namespace

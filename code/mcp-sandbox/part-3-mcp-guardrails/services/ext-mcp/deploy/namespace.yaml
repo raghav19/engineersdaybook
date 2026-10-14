@@ -1,8 +1,12 @@
 # The namespace of ext-mcp and of its NetworkPolicy. It travels with this service.
 # Flux must never prune it: removing a namespace removes everything in it.
+# The label makes the injection webhook of istiod add the istio-proxy sidecar to the pods of this namespace (the mesh is sidecar mode only).
+# A namespace takes part in the mesh by this label and by its own PeerAuthentication; the other namespaces of the cluster are untouched.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: mcp-guardrails
+  labels:
+    istio-injection: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled

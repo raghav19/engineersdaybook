@@ -64,7 +64,7 @@ baseline_src := '.' + trim_start_match(out, top) + '/baseline'
 
 # used by flate to determine which kinds are cluster-scoped 
 # and should have their namespace removed
-cluster_scoped := 'ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|MutatingAdmissionPolicy|RuntimeClass|CSIDriver'
+cluster_scoped := 'ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|MutatingAdmissionPolicy|RuntimeClass|CSIDriver|ClusterSPIFFEID'
 
 # yq filters
 

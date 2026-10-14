@@ -1,0 +1,4 @@
+# Addon versions: one flat name per version, the same on every cloud. setters.yaml of the addon folder says which fields a name goes to.
+# An upgrade is an edit of this file, then `just platform/addons/<addon>/diff`, build, push, pin.
+# Quote a version: an unquoted 0.30 is a number, not a string.
+istio_version: "1.31.1" # base, istiod and the gateway chart are one Istio release (Kubernetes 1.37 is supported from Istio 1.31)
