@@ -1,12 +1,12 @@
-# Shared by the justfile of every build function in lib/tools: `import '../tools.just'`.
+# Shared by the justfile of every build function in tools/: `import '../tools.just'`.
 #
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
-# <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: lib/tools/pyproject.toml, locked in uv.lock.
+# <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: tools/pyproject.toml, locked in uv.lock.
 #
 #   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
 #   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
 #   just _tools  pull every function at the digest config/tools/manifest.yaml pins -> out/.tools/<name>/<name>.
-#                lib/workflow.just loads this file as the module `tools` and every component build runs `tools::_tools`.
+#                lib/workflow/workflow.just loads this file as the module `tools` and every component build runs `tools::_tools`.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
@@ -20,7 +20,7 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 name := file_name(justfile_directory())
 script := replace(name, '-', '_') + '.py'
-out := parent_directory(parent_directory(source_directory())) / 'out' / 'tools'
+out := parent_directory(source_directory()) / 'out' / 'tools'
 binary := out / name / name
 
 # Everything that makes the binary the same bytes on every build, so that `push` prints the same digest for the same inputs.
@@ -32,11 +32,11 @@ binary := out / name / name
 export PYTHONHASHSEED := '1'
 python := '3.13.15'
 flags := '--onefile --clean --noconfirm --log-level WARN'
-# every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of lib/tools
+# every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of tools/
 uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group build'
 
-# the root of part 3 (this file is lib/tools/tools.just) and where a build finds the pulled functions
-root := parent_directory(parent_directory(source_directory()))
+# the root of part 3 (this file is tools/tools.just) and where a build finds the pulled functions
+root := parent_directory(source_directory())
 tools := root / 'out' / '.tools'
 tools_manifest := root / 'config' / 'tools' / 'manifest.yaml'
 
@@ -51,7 +51,7 @@ creds := ghcr_user + ':' + ghcr_push_token
 
 # RECIPES
 
-# reads:  the script of this folder, lib/tools/pyproject.toml and uv.lock
+# reads:  the script of this folder, tools/pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python
 # validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
@@ -92,14 +92,14 @@ push: build
 # reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
-# pull the build functions (lib/tools) at the digests the config pins
+# pull the build functions (tools/) at the digests the config pins
 [script('bash')]
 _tools:
     set -euo pipefail
     pull() {
       digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
       binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_manifest }})
-      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
+      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
       dir={{ tools }}/$1/${digest#sha256:}
       if [ ! -x "$dir/$1" ]; then
         rm -rf "$dir" && mkdir -p "$dir"

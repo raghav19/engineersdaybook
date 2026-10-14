@@ -75,7 +75,7 @@ sequenceDiagram
 
 ## How an artifact is made
 
-Every component folder has a justfile that imports [`lib/workflow.just`](lib/workflow.just) (the recipes are in `lib/package.just`, `lib/diff.just` and `lib/push.just`). Name the folder to run a recipe: `just platform/routes/build`. Run `just` for the list.
+Every component folder has a justfile that imports [`lib/workflow/workflow.just`](lib/workflow/workflow.just) (the recipes are in `lib/workflow/package.just`, `diff.just` and `push.just`). Name the folder to run a recipe: `just platform/routes/build`. Run `just` for the list.
 
 ```mermaid
 flowchart LR
@@ -109,7 +109,7 @@ Good to know:
 
 - A HelmRelease and its chart source are replaced by the objects the chart renders. A chart hook becomes a plain object; the v1.6.0 charts have none. flate renders for Kubernetes 1.37.0 and has no `lookup`.
 - CRDs and Secrets stay in the artifact. Every CRD carries `kustomize.toolkit.fluxcd.io/prune: disabled`, so Flux never deletes one (that would delete every custom resource of its kind). Remove them with `just clusters/kind/delete-crds`.
-- flate 0.6.5 does not know some kinds are cluster-scoped and puts a namespace on them. `cluster_scoped` in `lib/workflow.just` lists them and the build removes it.
+- flate 0.6.5 does not know some kinds are cluster-scoped and puts a namespace on them. `cluster_scoped` in `lib/workflow/workflow.just` lists them and the build removes it.
 - `kustomization.yaml` in a folder is only a build index. A Flux `Kustomization` in `stack.yaml` applies one artifact (order, health).
 
 ### How a value gets in
@@ -146,17 +146,17 @@ listeners:                                gateway_port:                         
 
 The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides that per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
 
-Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `config-builder` and `value-injector` in `lib/tools/`, each its own pinned artifact ([below](#how-the-functions-are-pinned)).
+Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `config-builder` and `value-injector` in `tools/`, each its own pinned artifact ([below](#how-the-functions-are-pinned)).
 
 Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 30080) and the default URL of `tests/justfile`. They are not components, so keep them equal to the gateway port by hand.
 
 ### How the functions are pinned
 
-`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` (in `lib/tools/tools.just`, next to their `build` and `push`; `lib/workflow.just` loads that file as the module `tools` and runs `tools::_tools`) pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
+`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/workflow/`, which every component imports); `_tools` (in `tools/tools.just`, next to their `build` and `push`; `lib/workflow/workflow.just` loads that file as the module `tools` and runs `tools::_tools`) pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
 
 ```text
-lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
-   │  just lib/tools/<name>/push      (host)  one push, prints:
+tools/{pyproject.toml, uv.lock}  +  tools/<name>/{<script>.py, justfile}
+   │  just tools/<name>/push      (host)  one push, prints:
    │                                    <name>:
    │                                      digest: 'sha256:<the artifact>'
    │                                      binary: 'sha256:<the executable inside it>'
@@ -165,9 +165,9 @@ ghcr.io/raghav19/mcp-guardrails/tools/<name>:sha256-<sha of the binary>      the
 ```
 
 - **Two recipes:** `build` first runs `ruff check` and `ruff format --check` on the script (ruff 0.17.0 from `uv.lock`, line length 140 in `pyproject.toml`), so a script that fails ruff is never built or pushed. It then runs `uv run --locked`, so exactly what `uv.lock` says (it fails when `pyproject.toml` and `uv.lock` disagree), and needs only `uv` and `objdump` (binutils) on the machine. `push` depends on `build`, pushes and prints the pin. The Python is uv's own 3.13.15 (`python-build-standalone`), so the binary needs glibc 2.14 or newer and runs on Debian 12.
-- **Versions are pinned in one file,** `lib/tools/pyproject.toml` (PyYAML, and PyInstaller in the `build` group). Change one, run `uv lock` in `lib/tools`, commit `uv.lock`.
+- **Versions are pinned in one file,** `tools/pyproject.toml` (PyYAML, and PyInstaller in the `build` group). Change one, run `uv lock` in `tools`, commit `uv.lock`.
 - **The identity of a function is the sha256 of its binary.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies), so the same inputs give the same binary on any checkout path. The binary's sha256 is known before the push, so it is the tag (`sha256-<hex>`, the form cosign uses for digest tags) and one push makes one tag. The push is reproducible too (`--reproducible`, and a `--revision` taken from the binary, not from `HEAD`), so the same binary gives the same artifact digest. `push` on an unchanged function prints the same line. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `config/tools/manifest.yaml` before pasting. `manifest.yaml` holds both the artifact `digest` and the `binary` sha256; `_tools` checks the binary against it on every build, so a pin that names the wrong contents stops the build.
-- **A script edit needs a push and a new block in `config/tools/manifest.yaml`**, even a comment-only edit (the line table is in the bundle, so the binary changes); until then builds keep running the pinned digest. To try an edit first, run `uv run --project lib/tools python lib/tools/<name>/<script>.py <args>`, or the binary of `just lib/tools/<name>/build` from `out/tools/<name>/`.
+- **A script edit needs a push and a new block in `config/tools/manifest.yaml`**, even a comment-only edit (the line table is in the bundle, so the binary changes); until then builds keep running the pinned digest. To try an edit first, run `uv run --project tools python tools/<name>/<script>.py <args>`, or the binary of `just tools/<name>/build` from `out/tools/<name>/`.
 - **Why `config/tools/` and not `config/*.yaml`:** `config-builder` converges `config/*.yaml`, so it cannot read its own pin from that output, and it rejects any name no `setters.yaml` lists. `config/tools/` is not on a placement path, so it is skipped, and the pins are global (the same on every cloud).
 - **Roll back** by `git revert` of the block in `config/tools/manifest.yaml`. The old digest is still in the registry.
 
@@ -195,10 +195,10 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 ```text
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
-├── lib/                         workflow.just (settings, variables, help: imported by every component justfile), package.just (build), diff.just (diff), push.just (push, pin)
-│   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push, pull)
+├── lib/workflow/                workflow.just (settings, variables, help: imported by every component justfile), package.just (build), diff.just (diff), push.just (push, pin)
+├── tools/                       pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push, pull)
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
-│   └── tools/manifest.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
+│   └── tools/manifest.yaml          the digests of the build functions (tools); outside the levels above, see "How the functions are pinned"
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart); istio (namespaces, base, istiod, ingress gateway, gateway identity)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
@@ -240,7 +240,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 
 Prerequisites: rootless Docker ([`code/rootless-docker`](../../rootless-docker)), `mise install` at the repo root, your age key for `sops`. Steps marked **host** run on your machine.
 
-0. **Pin the build functions (host; already done for the current scripts).** After an edit of a function, or of `lib/tools/pyproject.toml`, run `just lib/tools/config-builder/push` and `just lib/tools/value-injector/push`, and put the block each prints into `config/tools/manifest.yaml`. A function that is not pinned there stops every build with that command.
+0. **Pin the build functions (host; already done for the current scripts).** After an edit of a function, or of `tools/pyproject.toml`, run `just tools/config-builder/push` and `just tools/value-injector/push`, and put the block each prints into `config/tools/manifest.yaml`. A function that is not pinned there stops every build with that command.
 1. **Look at what a cluster gets (anywhere).** `just platform/routes/build`, then `just platform/routes/diff`. The schema catalog needs the network; in the sandbox VM the chart registry needs a host approval first.
 2. **Secret and keys (host, once).** Follow [`clusters/kind/sync/secrets/README.md`](clusters/kind/sync/secrets/README.md). Add `GHCR_USER`, `GHCR_PULL_TOKEN` and `GHCR_PUSH_TOKEN` (classic PAT, `read:packages` / `write:packages`) to `.env.secrets.json`.
 3. **Push the artifacts (host).** `sops exec-env .env.secrets.json 'just platform/routes/push'`, then `just platform/routes/pin`; commit `stack.yaml` and open the pull request. Make the registry packages private.
