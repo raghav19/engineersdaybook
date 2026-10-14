@@ -75,7 +75,7 @@ install-daemon:
 # The output is captured first: `| grep -q` under pipefail can fail the pipeline when grep exits before sbx has finished writing.
 _check-daemon:
     status=$(sbx daemon status 2>&1 || true); \
-    [[ $status == *'Status: running'* ]] || { echo "The sbx daemon is not running. Run: just sandbox start-daemon" >&2; exit 1; }
+    [[ $status =~ Status:[[:space:]]+[^[:alnum:]]*running ]] || { echo "The sbx daemon is not running. Run: just sandbox start-daemon" >&2; exit 1; }
 
 # Starts the proxy and then the daemon, which sends its own traffic through it. reset-failed clears the start limit that systemd sets after 5 quick
 # failures. A failure shows up a second or two after `start` returns, so check once more and print the journal if it is down.
