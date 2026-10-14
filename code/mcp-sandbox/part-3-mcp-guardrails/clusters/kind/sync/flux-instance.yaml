@@ -19,5 +19,5 @@ spec:
   sync:
     kind: GitRepository
     url: https://github.com/raghav19/engineersdaybook.git
-    ref: refs/heads/feat/mcp-guardrails-part-3
+    ref: refs/heads/main
     path: code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/sync
