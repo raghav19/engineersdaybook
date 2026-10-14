@@ -32,6 +32,7 @@ def keys_of(path):
 
 
 def set_path(doc, path, value):
+    """Write value at a dotted path of a document, creating the missing levels."""
     *parents, last = keys_of(path)
     for key in parents:
         doc = doc[key] if isinstance(key, int) else doc.setdefault(key, {})
@@ -39,6 +40,7 @@ def set_path(doc, path, value):
 
 
 def has_path(doc, path):
+    """True when the document already holds a value at the dotted path (that value is the default)."""
     for key in keys_of(path):
         try:
             doc = doc[key]
@@ -47,38 +49,72 @@ def has_path(doc, path):
     return True
 
 
-values_file, src, dst = sys.argv[1:]
-values = yaml.safe_load(Path(values_file).read_text()) or {}
-setters_file = Path(src) / "setters.yaml"
-setters = yaml.safe_load(setters_file.read_text()) if setters_file.exists() else {}
+def selects(doc, target):
+    """True when a setter target names this document: its kind, and its name unless the target gives none."""
+    kind, _, obj = target["object"].partition("/")
+    return doc.get("kind") == kind and (not obj or doc.get("metadata", {}).get("name") == obj)
 
-shutil.copytree(src, dst, dirs_exist_ok=True)  # everything below edits the copy
 
-applied = set()  # (value name, object) pairs found in a manifest; a setter left over is an error below
-written = {}  # (object, path) -> the value name that set it, to catch two names on one field
-for manifest in Path(dst).glob("*.yaml"):
+def pairs(setters):
+    """Every (value name, target field) of setters.yaml, in file order."""
+    for name, targets in setters.items():
+        for target in targets:
+            yield name, target
+
+
+def inject(doc, name, target, values, applied, written):
+    """Set one value into one field of one document, or keep the default the manifest holds there."""
+    field = (target["object"], target["path"])
+    applied.add((name, target["object"]))
+    if name not in values:  # no override: keep the default in the manifest, or fail when there is none
+        if not has_path(doc, target["path"]):
+            sys.exit(
+                f"setters.yaml: {name} has no value in the config (config/, placement of the cluster), "
+                f"and {field[0]} has no {field[1]} to default to"
+            )
+        return
+    if field in written:
+        sys.exit(f"setters.yaml: {field[0]} {field[1]} is set by both {written[field]} and {name}")
+    written[field] = name
+    set_path(doc, target["path"], values[name])
+
+
+def inject_doc(doc, setters, values, applied, written):
+    """Apply every setter whose target is this document."""
+    for name, target in pairs(setters):
+        if selects(doc, target):
+            inject(doc, name, target, values, applied, written)
+
+
+def inject_file(manifest, setters, values, applied, written):
+    """Rewrite one manifest file, with the values set in each of its documents."""
     docs = list(yaml.safe_load_all(manifest.read_text()))
     for doc in filter(None, docs):
-        for name, targets in setters.items():  # every value name
-            for target in targets:  # every field it goes to
-                kind, _, obj = target["object"].partition("/")
-                if doc.get("kind") == kind and (not obj or doc.get("metadata", {}).get("name") == obj):
-                    field = (target["object"], target["path"])
-                    applied.add((name, target["object"]))
-                    if name not in values:  # no override: keep the default in the manifest, or fail when there is none
-                        if not has_path(doc, target["path"]):
-                            sys.exit(
-                                f"setters.yaml: {name} has no value in the config (config/, placement of the cluster), "
-                                f"and {field[0]} has no {field[1]} to default to"
-                            )
-                        continue
-                    if field in written:
-                        sys.exit(f"setters.yaml: {field[0]} {field[1]} is set by both {written[field]} and {name}")
-                    written[field] = name
-                    set_path(doc, target["path"], values[name])
+        inject_doc(doc, setters, values, applied, written)
     manifest.write_text(yaml.safe_dump_all(docs, sort_keys=False))
 
-for name, targets in setters.items():  # every setter must have matched an object of the folder
-    for target in targets:
+
+def check_all_matched(setters, applied, src):
+    """Fail on a setter whose object is in no manifest of the folder (a misspelt Kind/name)."""
+    for name, target in pairs(setters):
         if (name, target["object"]) not in applied:
             sys.exit(f"setters.yaml: {target['object']} is not in {src}")
+
+
+def main():
+    values_file, src, dst = sys.argv[1:]
+    values = yaml.safe_load(Path(values_file).read_text()) or {}
+    setters_file = Path(src) / "setters.yaml"
+    setters = yaml.safe_load(setters_file.read_text()) if setters_file.exists() else {}
+
+    shutil.copytree(src, dst, dirs_exist_ok=True)  # everything below edits the copy
+
+    applied = set()  # (value name, object) pairs found in a manifest; a setter left over is an error
+    written = {}  # (object, path) -> the value name that set it, to catch two names on one field
+    for manifest in Path(dst).glob("*.yaml"):
+        inject_file(manifest, setters, values, applied, written)
+    check_all_matched(setters, applied, src)
+
+
+if __name__ == "__main__":
+    main()
