@@ -17,7 +17,6 @@
 #   manifests.yaml   the artifact
 #   build/ks.yaml    the Flux Kustomization flate reads to render this folder
 #   build/src/       a copy of the folder with the config values applied (only when it has a setters.yaml)
-#   diff/ks.yaml     the same, for baseline/
 #   baseline/        the artifact `base` pins, pulled by diff
 #   push.json        tag and digest of the last push, read by pin
 
@@ -56,12 +55,9 @@ tools := root / 'out' / '.tools'
 #                 ./code/mcp-sandbox/part-3-mcp-guardrails/platform/routes
 #   build_src     the copy of this folder with the config values applied: the stub of build renders it when there is a setters.yaml
 #                 ./code/mcp-sandbox/part-3-mcp-guardrails/out/routes/build/src
-#   baseline_src  the artifact pulled by diff for this component: the stub of diff renders it
-#                 ./code/mcp-sandbox/part-3-mcp-guardrails/out/routes/baseline
 top := `git rev-parse --show-toplevel`
 src := '.' + trim_start_match(justfile_directory(), top)
 build_src := '.' + trim_start_match(out, top) + '/build/src'
-baseline_src := '.' + trim_start_match(out, top) + '/baseline'
 
 # used by flate to determine which kinds are cluster-scoped 
 # and should have their namespace removed

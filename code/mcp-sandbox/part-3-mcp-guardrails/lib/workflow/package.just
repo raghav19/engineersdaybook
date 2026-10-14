@@ -2,10 +2,11 @@
 
 # reads:  this folder, through out/<name>/build/ks.yaml
 # writes: out/<name>/manifests.yaml
-# output: the schema result and the inflated output manifest
+# output: the inflated output manifest: the artifact, not yet validated
 # - the namespace flate puts on the kinds in cluster_scoped is removed
-# - the component's own checks run first (_checks), the schema validation last: a build that does not
-build: _checks _stub_build
+# - the component's own checks run first (_checks)
+# render the artifact; build validates it, diff compares it with the one `base` pins
+_manifest: _checks _stub_build
     flate --no-progress build all \
       --path {{ out }}/build \
       --skip-kinds HelmRelease,OCIRepository \
@@ -13,6 +14,11 @@ build: _checks _stub_build
       --skip-secrets=false \
       | yq '{{ drop_namespace }}' > {{ out }}/manifests.yaml
 
+# reads:  out/<name>/manifests.yaml, written by _manifest
+# writes: nothing
+# output: the schema result
+# the artifact, then its schema validation last: a build that does not validate does not push
+build: _manifest
     flux-schema validate {{ out }}/manifests.yaml \
       --schema-location default \
       --schema-location ecosystem
