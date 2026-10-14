@@ -1,4 +1,4 @@
-# Shared by every component justfile: `import '<../>lib/workflow.just'`. This file holds the settings, the variables and the
+# Shared by every component justfile: `import '<../>lib/workflow/workflow.just'`. This file holds the settings, the variables and the
 # help; the recipes are in package.just (build), diff.just (diff) and push.just (push, pin).
 #
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
@@ -27,12 +27,12 @@ set fallback
 set allow-duplicate-recipes
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-# the build functions (config-builder, value-injector): their build, push and pull are all in lib/tools/tools.just
-mod tools 'tools/tools.just'
+# the build functions (config-builder, value-injector): their build, push and pull are all in tools/tools.just
+mod tools '../../tools/tools.just'
 
 # VARIABLES
 
-root := parent_directory(source_directory())
+root := parent_directory(parent_directory(source_directory()))
 name := file_name(justfile_directory())
 out := root / 'out' / name
 cluster := 'kind'
@@ -46,7 +46,7 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
-# where the pulled build functions are linked, by the `_tools` recipe of lib/tools/tools.just (the same path is set there)
+# where the pulled build functions are linked, by the `_tools` recipe of tools/tools.just (the same path is set there)
 tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn

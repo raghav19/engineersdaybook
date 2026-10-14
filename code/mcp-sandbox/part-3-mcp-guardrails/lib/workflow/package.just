@@ -28,7 +28,7 @@ _config: tools::_tools
 
 # reads:  out/values.yaml, and setters.yaml of this folder
 # writes: out/<name>/build/src/ (a copy of this folder with the values set), only when the folder has a setters.yaml
-# the function: setters.yaml says which config value goes into which field, value-injector (lib/tools) sets it in the copy
+# the function: setters.yaml says which config value goes into which field, value-injector (tools/) sets it in the copy
 [script('bash')]
 _apply: _config
     rm -rf {{ out }}/build/src

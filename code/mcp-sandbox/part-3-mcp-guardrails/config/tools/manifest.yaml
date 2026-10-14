@@ -1,5 +1,5 @@
-# The build functions of lib/tools that every build runs, each its own artifact ghcr.io/raghav19/mcp-guardrails/tools/<name>.
-# `just lib/tools/<name>/push` prints the block to put here.
+# The build functions of tools/ that every build runs, each its own artifact ghcr.io/raghav19/mcp-guardrails/tools/<name>.
+# `just tools/<name>/push` prints the block to put here.
 #
 #   digest   the artifact in the registry. This is what is pulled, so it cannot change under the pin.
 #   binary   the sha256 of the executable inside it. The build checks it after every pull and refuses a mismatch.

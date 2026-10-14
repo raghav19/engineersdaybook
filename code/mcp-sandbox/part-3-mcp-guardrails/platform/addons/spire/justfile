@@ -1,1 +1,1 @@
-import '../../../lib/workflow.just'
+import '../../../lib/workflow/workflow.just'
