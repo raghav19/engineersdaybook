@@ -156,14 +156,15 @@ Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 
 
 ```text
 lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
-   │  just lib/tools/<name>/push      (host)  prints:  config_builder := 'sha256:…'
+   │  just lib/tools/<name>/push      (host)  one push, prints:
+   │                                    config_builder := 'sha256:<digest>'  # binary sha256:<sha of the binary>
    ▼
-ghcr.io/raghav19/mcp-guardrails/tools/<name>:<inputs hash, 12 chars>      the line goes into lib/lib.just
+ghcr.io/raghav19/mcp-guardrails/tools/<name>:sha256-<sha of the binary>      the line goes into lib/lib.just
 ```
 
 - **Two recipes:** `build` runs `uv run --locked`, so exactly what `uv.lock` says (it fails when `pyproject.toml` and `uv.lock` disagree), and needs only `uv` and `objdump` (binutils) on the machine. `push` depends on `build`, pushes and prints the pin. The Python is uv's own 3.13.15 (`python-build-standalone`), so the binary needs glibc 2.14 or newer and runs on Debian 12.
 - **Versions are pinned in one file,** `lib/tools/pyproject.toml` (PyYAML, and PyInstaller in the `build` group). Change one, run `uv lock` in `lib/tools`, commit `uv.lock`.
-- **The digest moves only when an input moves.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies) and so is the push (`--reproducible`, and a `--revision` taken from the inputs hash, not from `HEAD`). `push` on an unchanged function prints the same line, from any checkout path. The tag is the first 12 characters of the hash of script, `pyproject.toml`, `uv.lock`, Python and flags, like the tag of a component artifact. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `lib/lib.just` before pasting.
+- **The identity of a function is the sha256 of its binary.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies), so the same inputs give the same binary on any checkout path. The binary's sha256 is known before the push, so it is the tag (`sha256-<hex>`, the form cosign uses for digest tags) and one push makes one tag. The push is reproducible too (`--reproducible`, and a `--revision` taken from the binary, not from `HEAD`), so the same binary gives the same artifact digest. `push` on an unchanged function prints the same line. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `lib/lib.just` before pasting. After a pull, `sha256sum` of the binary equals the sha in the comment of the pin.
 - **A script edit needs a push and a new line in `lib/lib.just`**; until then builds keep running the pinned digest. To try an edit first, run `uv run --project lib/tools python lib/tools/<name>/<script>.py <args>`, or the binary of `just lib/tools/<name>/build` from `out/tools/<name>/`.
 - **Roll back** by `git revert` of the line in `lib/lib.just`. The old digest is still in the registry.
 

@@ -4,10 +4,11 @@
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: lib/tools/pyproject.toml, locked in uv.lock.
 #
 #   just build   the binary, built by uv from uv.lock -> out/tools/<name>/<name>
-#   just push    build, push, then print the line that pins it. Put that line in lib/lib.just.
+#   just push    build, push once, then print the line that pins it. Put that line in lib/lib.just.
 #
-# The digest does not move when nothing changed: the build is deterministic (fixed Python and hash seed, locked dependencies)
-# and so is the push (--reproducible), so the same inputs give the same bytes, on any checkout path.
+# The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
+# dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
+# The tag is that sha256, known before the push, so there is one push and one tag.
 
 set quiet
 set fallback
@@ -26,16 +27,10 @@ binary := out / name / name
 # PYTHONHASHSEED  Python gives strings a random hash on every start, which changes the order PyInstaller lists the modules
 #                 in the bundle, so two builds of one source differ. A fixed seed gives one order. The value itself does not matter.
 # python          the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary.
-# flags           PyInstaller flags; part of the hash below, so changing them is a new tag.
+# flags           PyInstaller flags; another set is another binary.
 export PYTHONHASHSEED := '1'
 python := '3.13.15'
 flags := '--onefile --clean --noconfirm --log-level WARN'
-
-# what the binary is built from, for the tag and the revision. Dependencies come from uv.lock, so they are in the hash through it
-inputs := sha256(sha256_file(script) + sha256_file('../pyproject.toml') + sha256_file('../uv.lock') + python + flags)
-tag := replace_regex(inputs, '^(.{12}).*', '$1')
-# flux requires a revision; taken from the inputs, not from HEAD, so the digest does not change with every commit
-revision := 'inputs@sha1:' + replace_regex(inputs, '^(.{40}).*', '$1')
 
 # registry
 repo := 'oci://ghcr.io/raghav19/mcp-guardrails/tools/' + name
@@ -67,19 +62,21 @@ build:
         {{ script }}
 
 # reads:  out/tools/<name>/<name>
-# writes: the registry, <repo>:<tag>
-# output: the line that pins the artifact, for lib/lib.just
+# writes: the registry, <repo>:sha256-<sha256 of the binary>
+# output: the line that pins the artifact, for lib/lib.just, with the sha256 of the binary
 # rollback: git revert the commit of that line
-# build, push the binary and print its pin
+# build, push the binary once and print its pin
 [script('bash')]
 push: build
     set -euo pipefail
-    digest=$(flux push artifact {{ repo }}:{{ tag }} \
+    sha=$(sha256sum {{ binary }} | cut -d' ' -f1)
+    # flux requires a revision; taken from the binary, not from HEAD, so the digest does not change with every commit
+    digest=$(flux push artifact {{ repo }}:sha256-$sha \
       --path {{ binary }} \
       --reproducible \
       --source {{ source }} \
-      --revision {{ revision }} \
+      --revision binary@sha1:${sha:0:40} \
       --creds {{ creds }} \
       --output json \
       | jq -r .digest)
-    echo "{{ pin }} := '$digest'"
+    echo "{{ pin }} := '$digest'  # binary sha256:$sha"
