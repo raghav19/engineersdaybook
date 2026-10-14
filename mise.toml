@@ -15,7 +15,6 @@ flux2 = "2.9"
 "github:home-operations/flate" = "0.6"
 prek = "0.5"
 "github:docker/sbx-releases" = "v0.48"
-ruff = "latest"
 
 [env]
 EDITOR="code --wait"
