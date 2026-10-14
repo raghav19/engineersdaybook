@@ -50,6 +50,11 @@ capabilities:
       - docs.aws.amazon.com
       - charts.dexidp.io
       - "**.vscode-cdn.net"
+      - "**.istio.io"
+      - agentgateway.dev
+      - istio.io
+      - "**.astral.sh"
+      - cuelang.org
       - localhost:6444
       deny:
       - hosts: [ api.github.com ]
