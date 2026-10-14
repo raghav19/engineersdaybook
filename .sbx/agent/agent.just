@@ -102,7 +102,11 @@ setup-vscode:
     if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi
 
 # The sandbox reaches the kind API server (host 127.0.0.1) as host.docker.internal through the sbx proxy, which needs `sbx policy allow network localhost:<port>`
-# once. It holds a ServiceAccount token bound to the built-in `view` role (no Secrets, read-only), not the kind admin certificate. The file is in
+# once. It holds a ServiceAccount token bound to the built-in `view` role and to `sandbox-viewer-extra` (no Secrets, read-only), not the kind admin
+# certificate. `view` has no cluster-scoped kinds and none of the stack's custom resources, so the extra role adds get/list/watch on nodes, volumes,
+# storage classes, CSI drivers, CRDs and webhook configurations, and on every resource of the agentgateway.dev, gateway.networking.k8s.io,
+# fluxcd.controlplane.io and spire.spiffe.io groups. Nothing can be written, and no Secret can be read: anything that would reach a credential
+# (the age key in `sops-age`, `ghcr-pull`, `github-upstream`) stays out. The file is in
 # .sbx/kubeconfig (gitignored): the host repo is mounted read-only in the VM, so it is /run/sandbox/source/.sbx/kubeconfig there, where KUBECONFIG
 # in tools.toml points. tls-server-name is a SAN every kind API server certificate has, so the cluster needs no change. Run it again after
 # `kind delete` + `kind create` (new CA) or when the token (30 days) expires.
@@ -117,6 +121,41 @@ kubeconfig cluster=kind_cluster:
     kubectl --context "$ctx" -n default create serviceaccount "$sa" --dry-run=client -o yaml | kubectl --context "$ctx" apply -f - > /dev/null
     kubectl --context "$ctx" create clusterrolebinding "$sa" --clusterrole=view --serviceaccount="default:$sa" --dry-run=client -o yaml \
       | kubectl --context "$ctx" apply -f - > /dev/null
+    kubectl --context "$ctx" apply -f - > /dev/null <<YAML
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: $sa-extra
+    rules:
+      - apiGroups: [""]
+        resources: [nodes, persistentvolumes]
+        verbs: [get, list, watch]
+      - apiGroups: [storage.k8s.io]
+        resources: [storageclasses, csidrivers]
+        verbs: [get, list, watch]
+      - apiGroups: [apiextensions.k8s.io]
+        resources: [customresourcedefinitions]
+        verbs: [get, list, watch]
+      - apiGroups: [admissionregistration.k8s.io]
+        resources: [validatingwebhookconfigurations, mutatingwebhookconfigurations]
+        verbs: [get, list, watch]
+      - apiGroups: [gateway.networking.k8s.io, agentgateway.dev, fluxcd.controlplane.io, spire.spiffe.io]
+        resources: ["*"]
+        verbs: [get, list, watch]
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: $sa-extra
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: $sa-extra
+    subjects:
+      - kind: ServiceAccount
+        name: $sa
+        namespace: default
+    YAML
     server=$(kubectl --context "$ctx" config view --minify -o jsonpath='{.clusters[0].cluster.server}' | sed 's#//127\.0\.0\.1:#//host.docker.internal:#')
     ca=$(kubectl --context "$ctx" config view --minify --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
     token=$(kubectl --context "$ctx" -n default create token "$sa" --duration=720h)
