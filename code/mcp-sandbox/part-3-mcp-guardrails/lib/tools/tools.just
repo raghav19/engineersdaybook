@@ -6,7 +6,7 @@
 #   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
 #   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
 #   just _tools  pull every function at the digest config/tools/manifest.yaml pins -> out/.tools/<name>/<name>.
-#                lib/lib.just loads this file as the module `tools` and every component build runs `tools::_tools`.
+#                lib/workflow.just loads this file as the module `tools` and every component build runs `tools::_tools`.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.

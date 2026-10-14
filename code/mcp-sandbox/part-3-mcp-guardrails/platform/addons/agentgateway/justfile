@@ -1,4 +1,4 @@
-import '../../../lib/lib.just'
+import '../../../lib/workflow.just'
 
 # the CRD chart and the controller chart are one release: the two OCIRepository tags must be equal
 _checks:
