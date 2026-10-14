@@ -40,7 +40,7 @@ capabilities:
       - crl.microsoft.com
       - www.githubstatus.com
       - mise.jdx.dev
-      - spiffe.github.com
+      - spiffe.github.io
       - docs.ansible.com
       - argo-cd.readthedocs.io
       - pkl-lang.org
