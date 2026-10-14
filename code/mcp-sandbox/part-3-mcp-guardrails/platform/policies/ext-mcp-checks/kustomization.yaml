@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# MCP03 / MCP05 / MCP06 / MCP10: argument checks, response redaction, tool pinning, in platform/ext-mcp.
+# The ext-mcp deployment itself is in platform/ext-mcp/deploy, its own artifact. This policy waits for it (flux: clusters/<name>/sync/stack.yaml).
+resources:
+  - policy.yaml

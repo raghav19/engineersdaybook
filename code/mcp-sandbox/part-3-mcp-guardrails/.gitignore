@@ -6,3 +6,6 @@ __pycache__/
 .venv/
 # the cache of `ruff check` / `ruff format` (tools/tools.just build), written next to the code it checked
 .ruff_cache/
+
+# a local-only runner of build and diff for the changed components (not part of the project)
+/local-preview.sh

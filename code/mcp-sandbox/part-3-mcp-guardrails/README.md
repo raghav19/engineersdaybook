@@ -201,9 +201,9 @@ part-3-mcp-guardrails/
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart); istio (namespaces, base, istiod, ingress gateway, gateway identity)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
-│   └── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
-├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
-├── services/ext-mcp/            rules.py (+ tests), Dockerfile, deploy/ (the artifact)
+│   ├── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
+│   ├── ext-mcp/                 rules.py (+ tests), Dockerfile, deploy/ (the artifact)
+│   └── policies/                one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── clusters/kind/               one folder per cluster
 │   ├── cluster.yaml             placement in config/ (cloud/local)
 │   ├── justfile                 up, credentials, down, delete-crds (host only)
@@ -213,7 +213,7 @@ part-3-mcp-guardrails/
 └── out/                         gitignored, see above
 ```
 
-An **artifact** is one deployable unit. Its folder, justfile, Kustomization in `stack.yaml` and pin have the same name (`services/ext-mcp` is `ext-mcp`).
+An **artifact** is one deployable unit. Its folder, justfile, Kustomization in `stack.yaml` and pin have the same name (`platform/ext-mcp` is `ext-mcp`).
 The thirteen artifacts: `gateway-api`, `agentgateway`, `spire`, `istio`, `mcp-servers`, `routes`, `ext-mcp`, `ext-mcp-isolation`, `mcp-mtls`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`. `secrets` is read from Git and is not an artifact.
 `spire` is the CA of trust domain `mcp.local`: the server in the cluster signs, the node agents attest to it (`k8s_psat`), and a join token (`join_token`) is enabled for the agent of a microVM later. Istio takes its CA from it (below). Identities are opt-in: the chart's `ClusterSPIFFEID`s are off, so a workload gets an SVID only when a `ClusterSPIFFEID` selects it.
 
@@ -257,12 +257,12 @@ Each policy is its own artifact, so one policy rolls out or back alone.
 
 | Control | Folder | OWASP MCP | Test |
 |---|---|---|---|
-| JWT, strict | `policies/authn-jwt` | MCP01, MCP07 | `MCP07-no-token` |
+| JWT, strict | `platform/policies/authn-jwt` | MCP01, MCP07 | `MCP07-no-token` |
 | Upstream credential held by the gateway | SOPS Secret in `clusters/<name>/sync/secrets` + `platform/mcp-servers` `auth.secretRef` | MCP01 | (inspect: nothing client-side) |
-| Tool deny list (CEL, target + name) | `policies/tool-rbac` | MCP02 | `MCP02-destructive-tool` |
-| Rate limit per `jwt.sub` | `policies/rate-limit` | MCP02, MCP10 | to write |
-| Argument and response checks, pinning | `policies/ext-mcp-checks` + `services/ext-mcp` | MCP03, 05, 06, 10 | `rules.py` unit tests; attack cases to write |
-| Only the gateway may call ext-mcp | `policies/ext-mcp-isolation` | MCP04, MCP09 | to write |
+| Tool deny list (CEL, target + name) | `platform/policies/tool-rbac` | MCP02 | `MCP02-destructive-tool` |
+| Rate limit per `jwt.sub` | `platform/policies/rate-limit` | MCP02, MCP10 | to write |
+| Argument and response checks, pinning | `platform/policies/ext-mcp-checks` + `platform/ext-mcp` | MCP03, 05, 06, 10 | `rules.py` unit tests; attack cases to write |
+| Only the gateway may call ext-mcp | `platform/policies/ext-mcp-isolation` | MCP04, MCP09 | to write |
 | Access logs and traces | not wired | MCP08 | to write |
 
 MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not solved.
@@ -273,7 +273,7 @@ MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not so
 - **Nothing has run on a cluster:** `push`, `pin`, `clusters/kind/*`, the Flux sync and the health gates need the host.
 - **The first push of `agentgateway` changes its format.** The current pin holds two HelmReleases; the new one holds the rendered objects with the same names. On a cluster that already runs the old pin, helm-controller uninstalling the release could remove objects Flux just applied, so check that cut-over. A fresh cluster is fine.
 - **Unchecked against a live controller:** the status conditions of `AgentgatewayPolicy` and `AgentgatewayBackend` (no CEL health check yet), the `Programmed` gate of `Gateway`, the secret key convention (`Authorization`, raw token), how two policies on one backend merge, and that an OCIRepository prefers `ref.digest` over `ref.tag` (`pin` writes both; `diff` pulls the digest).
-- **Credentials are untested:** `GITHUB_TOKEN` against the GitHub MCP server. **JWKS is a placeholder** (the default in `policies/authn-jwt/policy.yaml`, override `jwt_jwks`) until Keycloak in stage B.
+- **Credentials are untested:** `GITHUB_TOKEN` against the GitHub MCP server. **JWKS is a placeholder** (the default in `platform/policies/authn-jwt/policy.yaml`, override `jwt_jwks`) until Keycloak in stage B.
 - **ext-mcp has rules but no server yet.** Argument-level CEL is unreliable in agentgateway ([#3092](https://github.com/agentgateway/agentgateway/issues/3092)), which is why argument checks live in ext-mcp.
 - **Unplugging a USB device while the cluster runs could break new privileged pods** (runc fails on the vanished `/dev` entry). `kind-config.yaml` sets `privileged_without_host_devices = true`; its effect is not confirmed on a host. If it happens, recreate the cluster.
 - **No CI and no signing yet.** `push` is a host recipe and the registry is the trust root. CI (`just <c>/diff` as a pull request comment), cosign and SBOM are next.
