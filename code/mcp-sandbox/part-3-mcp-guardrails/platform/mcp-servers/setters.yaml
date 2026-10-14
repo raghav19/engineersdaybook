@@ -1,0 +1,27 @@
+# The fields of this folder a config value can override: name, then the object and the path it goes into. A number in a path is a position
+# in a list. Without a value in config/ the field keeps what the manifest holds.
+# The targets of backend.yaml are addressed by position: 0 github, 1 drawio, 2 flux. Reordering them there moves the values with it.
+mcp_github_host:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.0.static.host
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.0.static.policies.tls.sni
+mcp_github_path:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.0.static.path
+mcp_drawio_host:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.1.static.host
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.1.static.policies.tls.sni
+mcp_drawio_path:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.1.static.path
+mcp_flux_host:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.2.static.host
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.2.static.policies.tls.sni
+mcp_flux_path:
+  - object: AgentgatewayBackend/mcp-federated
+    path: spec.mcp.targets.2.static.path
