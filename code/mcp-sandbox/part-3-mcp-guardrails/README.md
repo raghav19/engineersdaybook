@@ -152,7 +152,7 @@ Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 
 
 ### How the functions are pinned
 
-`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
+`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` (in `lib/tools/tools.just`, next to their `build` and `push`; `lib/lib.just` loads that file as the module `tools` and runs `tools::_tools`) pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
 
 ```text
 lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
@@ -196,7 +196,7 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
 ├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile)
-│   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push)
+│   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push, pull)
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
 │   └── tools/manifest.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
 ├── platform/

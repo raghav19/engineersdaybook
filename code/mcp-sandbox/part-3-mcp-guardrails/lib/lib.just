@@ -26,6 +26,9 @@ set fallback
 set allow-duplicate-recipes
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
+# the build functions (config-builder, value-injector): their build, push and pull are all in lib/tools/tools.just
+mod tools 'tools/tools.just'
+
 # VARIABLES
 
 root := parent_directory(source_directory())
@@ -35,17 +38,15 @@ cluster := 'kind'
 stack := 'clusters/' + cluster + '/sync/stack.yaml'
 base := 'origin/main'
 
+# where the pulled build functions are linked, by the `_tools` recipe of lib/tools/tools.just (the same path is set there)
+tools := root / 'out' / '.tools'
+
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 tag := `git log -1 --format=%h --abbrev=12 -- .`
 ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
-
-# the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. Their digests are
-# config, not part of this library: config/tools/manifest.yaml, from the block `just lib/tools/<name>/push` prints
-tools_manifest := root / 'config' / 'tools' / 'manifest.yaml'
-tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
 # the absolute paths of this checkout into that form, for the stubs flate reads:
@@ -136,39 +137,13 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
-# writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
-# output: nothing; _config and _apply run the links
-# pull the build functions (lib/tools) at the digests the config pins
-[script('bash')]
-_tools:
-    set -euo pipefail
-    pull() {
-      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
-      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_manifest }})
-      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
-      dir={{ tools }}/$1/${digest#sha256:}
-      if [ ! -x "$dir/$1" ]; then
-        rm -rf "$dir" && mkdir -p "$dir"
-        flux pull artifact {{ registry }}/tools/$1@$digest -o "$dir" \
-          --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
-          || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$digest" >&2; exit 1; }
-      fi
-      # the pinned sha256 of the binary is checked on every run, not only after a pull
-      [ "sha256:$(sha256sum "$dir/$1" | cut -d' ' -f1)" = "$binary" ] \
-        || { echo "$1: the binary of $digest is not $binary" >&2; rm -rf "$dir"; exit 1; }
-      ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
-    }
-    pull config-builder
-    pull value-injector
-
 # reads:  the *.yaml of config/ and of each level down to the placement of clusters/<cluster>/cluster.yaml
 #         (config/cloud/local/, or config/cloud/aws/, config/cloud/aws/dev/, ...), each only where it exists
 # writes: out/values.yaml
 # output: the config files it merged
 # the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
 # the manifest, so a value that nothing overrides is not in it. Every build writes it, whether the folder uses it or not
-_config: _tools
+_config: tools::_tools
     {{ tools }}/config-builder/config-builder {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
 
 # reads:  out/values.yaml, and setters.yaml of this folder
