@@ -49,7 +49,7 @@ capabilities:
       - kubectl.docs.kubernetes.io
       - docs.aws.amazon.com
       - charts.dexidp.io
-      - embeddings.vscode-cdn.net
+      - "**.vscode-cdn.net"
       - localhost:6444
       deny:
       - hosts: [ api.github.com ]
@@ -73,6 +73,7 @@ capabilities:
       content: |
         [[ $- == *i* ]] || return
         eval "$(mise activate bash)"
+        [ -r /usr/share/bash-completion/bash_completion ] && . /usr/share/bash-completion/bash_completion
         for f in /opt/sandbox/completions/* ~/.local/share/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
         alias k=kubectl
         alias f=flux
@@ -120,7 +121,7 @@ build: |
       COMPLETIONS_DIR=/out/opt/sandbox/completions
 
   RUN apt-get update \
-   && apt-get install -y --no-install-recommends curl ca-certificates git xz-utils bzip2 \
+   && apt-get install -y --no-install-recommends curl ca-certificates git xz-utils bzip2 bash-completion \
    && rm -rf /var/lib/apt/lists/*
 
   # mise, then exactly the tools in .sbx/agent/tools.toml, which is copied in as it is: it is mise's system config.
@@ -130,6 +131,12 @@ build: |
 
   # The bash completions come from a task in .sbx/agent/tools.toml.
   RUN mise run sandbox:completions
+
+  # What those completions call: kubectl, helm and flux fail with "_get_comp_words_by_ref: command not found" without it. The
+  # compat file defines that name and _init_completion (bash-completion 2.12+ renamed them). The shell image has no bash-completion.
+  RUN mkdir -p /out/usr/share/bash-completion /out/etc/bash_completion.d \
+   && cp -a /usr/share/bash-completion/bash_completion /usr/share/bash-completion/helpers /out/usr/share/bash-completion/ \
+   && cp -a /etc/bash_completion.d/000_bash_completion_compat.bash /out/etc/bash_completion.d/
 
   # The file is also the VM's system config, so the shims resolve from any directory.
   COPY .sbx/agent/tools.toml /out/etc/mise/conf.d/sandbox.toml
