@@ -33,7 +33,7 @@ flags := '--onefile --clean --noconfirm --log-level WARN'
 
 # what the binary is built from, for the tag and the revision. Dependencies come from uv.lock, so they are in the hash through it
 inputs := sha256(sha256_file(script) + sha256_file('../pyproject.toml') + sha256_file('../uv.lock') + python + flags)
-tag := 'src-' + replace_regex(inputs, '^(.{12}).*', '$1')
+tag := replace_regex(inputs, '^(.{12}).*', '$1')
 # flux requires a revision; taken from the inputs, not from HEAD, so the digest does not change with every commit
 revision := 'inputs@sha1:' + replace_regex(inputs, '^(.{40}).*', '$1')
 

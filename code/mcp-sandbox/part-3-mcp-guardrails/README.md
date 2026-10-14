@@ -158,7 +158,7 @@ Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 
 lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
    │  just lib/tools/<name>/push      (host)  prints:  config_builder := 'sha256:…'
    ▼
-ghcr.io/raghav19/mcp-guardrails/tools/<name>:src-<inputs hash>      the line goes into lib/lib.just
+ghcr.io/raghav19/mcp-guardrails/tools/<name>:<inputs hash, 12 chars>      the line goes into lib/lib.just
 ```
 
 - **Two recipes:** `build` runs `uv run --locked`, so exactly what `uv.lock` says (it fails when `pyproject.toml` and `uv.lock` disagree), and needs only `uv` and `objdump` (binutils) on the machine. `push` depends on `build`, pushes and prints the pin. The Python is uv's own 3.13.15 (`python-build-standalone`), so the binary needs glibc 2.14 or newer and runs on Debian 12.
