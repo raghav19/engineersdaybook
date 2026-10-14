@@ -42,10 +42,9 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
-# the build functions of lib/tools, each its own artifact <registry>/tools/<name>, pinned by digest.
-# `just lib/tools/<name>/push` prints the line to put here; `unpinned` means it has not been pushed yet
-config_builder := 'sha256:c12eeb8c72ffafc142c9b54e2c83930feea17b011d58597ad3bb81f52b1bb79e'  # binary sha256:3315c7588b89b0c008c6a005f2624a750a844214404f026f395ea248fe93b6ee
-value_injector := 'sha256:40fcddaa465cd84974374890f07b443125fb00a66d7fbb4082841acb98036461'  # binary sha256:4d39bc7f061b3300552890cb24fd90633fbdd2fbef159977fe800c282b2d8bae
+# the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. The cluster
+# pins their digests, not this library: clusters/<cluster>/tools.yaml, written by hand from what `just lib/tools/<name>/push` prints
+tools_pin := root / 'clusters' / cluster / 'tools.yaml'
 tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
@@ -137,24 +136,27 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the registry, only for a digest that is not in out/.tools/ yet
-# writes: out/.tools/<name>/<digest>/<name>
-# output: nothing; _config and _apply run these binaries
-# pull the build functions (lib/tools) at the digests pinned above
+# reads:  the digests of clusters/<cluster>/tools.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
+# output: nothing; _config and _apply run the links
+# pull the build functions (lib/tools) at the digests the cluster pins
 [script('bash')]
 _tools:
     set -euo pipefail
     pull() {
-      [ "$2" != unpinned ] || { echo "$1 is unpinned: run 'just lib/tools/$1/push' (host) and put the line it prints in lib/lib.just" >&2; exit 1; }
-      dir={{ tools }}/$1/${2#sha256:}
-      [ -x "$dir/$1" ] && return
-      rm -rf "$dir" && mkdir -p "$dir"
-      flux pull artifact {{ registry }}/tools/$1@$2 -o "$dir" \
-        --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
-        || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$2" >&2; exit 1; }
+      digest=$(yq -r ".\"$1\" // \"\"" {{ tools_pin }})
+      [ -n "$digest" ] || { echo "$1 is not pinned in clusters/{{ cluster }}/tools.yaml: run 'just lib/tools/$1/push' (host) and put the line it prints there" >&2; exit 1; }
+      dir={{ tools }}/$1/${digest#sha256:}
+      if [ ! -x "$dir/$1" ]; then
+        rm -rf "$dir" && mkdir -p "$dir"
+        flux pull artifact {{ registry }}/tools/$1@$digest -o "$dir" \
+          --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
+          || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$digest" >&2; exit 1; }
+      fi
+      ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
     }
-    pull config-builder {{ config_builder }}
-    pull value-injector {{ value_injector }}
+    pull config-builder
+    pull value-injector
 
 # reads:  the *.yaml of config/ and of each level down to the placement of clusters/<cluster>/cluster.yaml
 #         (config/cloud/local/, or config/cloud/aws/, config/cloud/aws/dev/, ...), each only where it exists
@@ -163,7 +165,7 @@ _tools:
 # the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
 # the manifest, so a value that nothing overrides is not in it. Every build writes it, whether the folder uses it or not
 _config: _tools
-    {{ tools }}/config-builder/{{ trim_start_match(config_builder, 'sha256:') }}/config-builder {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
+    {{ tools }}/config-builder/config-builder {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
 
 # reads:  out/values.yaml, and setters.yaml of this folder
 # writes: out/<name>/build/src/ (a copy of this folder with the values set), only when the folder has a setters.yaml
@@ -172,7 +174,7 @@ _config: _tools
 _apply: _config
     rm -rf {{ out }}/build/src
     [ -f setters.yaml ] || exit 0
-    {{ tools }}/value-injector/{{ trim_start_match(value_injector, 'sha256:') }}/value-injector {{ root }}/out/values.yaml {{ justfile_directory() }} {{ out }}/build/src
+    {{ tools }}/value-injector/value-injector {{ root }}/out/values.yaml {{ justfile_directory() }} {{ out }}/build/src
 
 # reads:  nothing, it is generated from the folder name and path
 # writes: out/<name>/build/ks.yaml

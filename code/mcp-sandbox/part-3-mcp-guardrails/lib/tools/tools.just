@@ -4,7 +4,7 @@
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: lib/tools/pyproject.toml, locked in uv.lock.
 #
 #   just build   the binary, built by uv from uv.lock -> out/tools/<name>/<name>
-#   just push    build, push once, then print the line that pins it. Put that line in lib/lib.just.
+#   just push    build, push once, then print the line that pins it. Put that line in clusters/<cluster>/tools.yaml.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
@@ -18,7 +18,6 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 name := file_name(justfile_directory())
 script := replace(name, '-', '_') + '.py'
-pin := replace(name, '-', '_')
 out := parent_directory(parent_directory(source_directory())) / 'out' / 'tools'
 binary := out / name / name
 
@@ -63,7 +62,7 @@ build:
 
 # reads:  out/tools/<name>/<name>
 # writes: the registry, <repo>:sha256-<sha256 of the binary>
-# output: the line that pins the artifact, for lib/lib.just, with the sha256 of the binary
+# output: the line that pins the artifact, for clusters/<cluster>/tools.yaml, with the sha256 of the binary
 # rollback: git revert the commit of that line
 # build, push the binary once and print its pin
 [script('bash')]
@@ -79,4 +78,4 @@ push: build
       --creds {{ creds }} \
       --output json \
       | jq -r .digest)
-    echo "{{ pin }} := '$digest'  # binary sha256:$sha"
+    echo "{{ name }}: '$digest'  # binary sha256:$sha"
