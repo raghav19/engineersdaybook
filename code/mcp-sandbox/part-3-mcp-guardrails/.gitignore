@@ -2,3 +2,7 @@
 out/
 __pycache__/
 *.pyc
+# the venv `uv run --project lib/tools` creates for the build functions (lib/tools/tools.just)
+.venv/
+# the cache of `ruff check` / `ruff format` (lib/tools/tools.just build), written next to the code it checked
+.ruff_cache/
