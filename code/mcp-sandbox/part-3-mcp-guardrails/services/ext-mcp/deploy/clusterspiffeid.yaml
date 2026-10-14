@@ -1,0 +1,17 @@
+# The SPIRE identity of the istio-proxy of ext-mcp. The workload owns its identity (the spire addon registers none by default). SPIRE only grants
+# an identity to a registered workload: without it the sidecar never becomes Ready. The label is added to the pod by the "spire" template of
+# istiod, so any pod of this namespace that selects that template gets an identity, a later MCP workload too.
+# The ClusterSPIFFEID kind comes from the spire-crds chart: the stack entry of ext-mcp waits for spire. Cluster-scoped: no namespace here.
+# Istio requires the SPIFFE ID format spiffe://<trust domain>/ns/<namespace>/sa/<service account>.
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: mcp-guardrails-workloads
+spec:
+  spiffeIDTemplate: "spiffe://{{ .TrustDomain }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: mcp-guardrails
+  podSelector:
+    matchLabels:
+      spiffe.io/spire-managed-identity: "true"

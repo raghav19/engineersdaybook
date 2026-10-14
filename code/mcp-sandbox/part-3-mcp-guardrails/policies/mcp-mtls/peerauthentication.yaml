@@ -1,0 +1,15 @@
+# The east-west rule of the MCP workload namespace: every workload of mcp-guardrails accepts only mutual TLS. Istio enforces it in the
+# istio-proxy sidecar of the receiving pod, so it covers any later MCP workload that is injected in this namespace, and no other namespace
+# (Flux, SPIRE and Istio itself keep their own plain traffic).
+#
+# This is the server half. The client half is agentgateway: it must present its SPIRE identity (AgentgatewayParameters.spec.spiffe and a backend
+# TLS policy with certificateSource SPIFFE) when it calls ext-mcp. Until then STRICT rejects the plain call and the guardrail (failureMode
+# FailClosed) fails every tool call. So this artifact stays `unpinned` in stack.yaml until the routes change brings the client half.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: mcp-guardrails
+spec:
+  mtls:
+    mode: STRICT

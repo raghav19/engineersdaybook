@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: mcp-guardrails
 resources:
   - namespace.yaml
+  - serviceaccount.yaml
+  - clusterspiffeid.yaml
   - deployment.yaml
   - service.yaml
 images:

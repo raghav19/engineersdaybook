@@ -1,0 +1,17 @@
+# The SPIRE identity of the ingress gateway. SPIRE only grants an identity to a workload that is registered; the proxy of the gateway cannot
+# become Ready without one. The ClusterSPIFFEID kind comes from the spire-crds chart (the spire addon), so this addon waits for spire.
+#
+# Istio requires the SPIFFE ID format spiffe://<trust domain>/ns/<namespace>/sa/<service account>. The chart names the pod labels app and
+# istio from the gateway name (istio-ingressgateway).
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: istio-ingressgateway
+spec:
+  spiffeIDTemplate: "spiffe://{{ .TrustDomain }}/ns/{{ .PodMeta.Namespace }}/sa/{{ .PodSpec.ServiceAccountName }}"
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: istio-ingress
+  podSelector:
+    matchLabels:
+      istio: ingressgateway

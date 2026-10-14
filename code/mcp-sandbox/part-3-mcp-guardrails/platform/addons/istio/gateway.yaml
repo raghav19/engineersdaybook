@@ -1,0 +1,44 @@
+# The Istio ingress gateway (an Envoy Deployment in namespace istio-ingress). Installed by Flux (helm-controller).
+# The chart source is the HelmRepository in base.yaml, in namespace istio-system.
+#
+# It is the L4 front door of the stack: a later change (the routes) moves the host port 30080 from the agentgateway Service to this one,
+# and the gateway hands the connection to agentgateway as mTLS. Until then it receives no traffic: the Service is ClusterIP.
+#
+# Its identity comes from SPIRE, like every proxy of this mesh: the CSI driver mounts the Workload API socket into istio-proxy, and the
+# ClusterSPIFFEID in clusterspiffeid.yaml selects the pod. The gateway needs no `spire` template: the chart is the pod spec.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-ingressgateway
+  namespace: istio-ingress
+spec:
+  interval: 10m
+  releaseName: istio-ingressgateway
+  chart:
+    spec:
+      chart: gateway
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: istio-system
+  dependsOn:
+    - name: istiod
+      namespace: istio-system # the injection webhook first: the proxy of the gateway pod is injected
+  driftDetection:
+    mode: enabled
+  values:
+    service:
+      type: ClusterIP
+    # One replica, no HPA: kind has no metrics-server.
+    autoscaling:
+      enabled: false
+    replicaCount: 1
+    volumes:
+      - name: workload-socket
+        csi:
+          driver: csi.spiffe.io
+          readOnly: true
+    volumeMounts:
+      - name: workload-socket
+        mountPath: /run/secrets/workload-spiffe-uds
+        readOnly: true
