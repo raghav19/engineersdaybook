@@ -6,6 +6,8 @@
 #   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
 #   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
 #
+# The third leg, the pull of a pinned function into a component build, is pull.just (imported by lib/lib.just).
+#
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
 # The tag is that sha256, known before the push, so there is one push and one tag.
