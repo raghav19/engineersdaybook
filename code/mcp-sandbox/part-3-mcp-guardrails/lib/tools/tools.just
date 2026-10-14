@@ -75,7 +75,7 @@ push: build
       --path {{ binary }} \
       --reproducible \
       --source {{ source }} \
-      --revision binary@sha1:${sha:0:40} \
+      --revision binary@sha256:$sha \
       --creds {{ creds }} \
       --output json \
       | jq -r .digest)
