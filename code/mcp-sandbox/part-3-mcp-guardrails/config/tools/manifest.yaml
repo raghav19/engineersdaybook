@@ -8,8 +8,8 @@
 # cannot read its own pin from them, and it rejects names no setters.yaml lists. This folder is not on a placement path.
 # Roll one back with `git revert` of its block.
 config-builder:
-  digest: 'sha256:300b2160f338e10db7ca87dee7431fe4a294f095f22048c93782e1f6f8d7f746'
-  binary: 'sha256:2b86a15d130efb878306c56fa6dbdedaaf4a21e80b66cbd03bf6c46f9b18cd2d'
+  digest: 'sha256:38b45bcb2ad540c51ce057fb905e4d8a76731fd9a19f1addf7d7ba1ec2803b0b'
+  binary: 'sha256:eb4eef58900293f1dc3c41584709d44aeef51b7cd33c7b46a02bc1b25e17651e'
 value-injector:
-  digest: 'sha256:5a4d385c7aac591a611ad07586e3578bd1386301ea6f33c10972944b6c24cac9'
-  binary: 'sha256:63dc123585550fde0de912a3c800275b2ad17cb1b3222cd5a549f45139426f32'
+  digest: 'sha256:745e55f08646829de4e7b88d2512a294057e29777cce42d4eefdb969ec0bb8dd'
+  binary: 'sha256:02d7ee510ca0f026faaec685f400371459fba3534b5e2834531b962921364b39'

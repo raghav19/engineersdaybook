@@ -25,23 +25,23 @@ from pathlib import Path
 import yaml
 
 
-def keys_of(path):
+def parse_path(path):
     """spec.listeners.0.port -> ['spec', 'listeners', 0, 'port']   (a number is a list position, \\. is a dot inside a key)"""
     parts = [p.replace("\\.", ".") for p in re.split(r"(?<!\\)\.", path)]
     return [int(p) if p.isdigit() else p for p in parts]
 
 
-def set_path(doc, path, value):
+def set_at_path(doc, path, value):
     """Write value at a dotted path of a document, creating the missing levels."""
-    *parents, last = keys_of(path)
+    *parents, last = parse_path(path)
     for key in parents:
         doc = doc[key] if isinstance(key, int) else doc.setdefault(key, {})
     doc[last] = value
 
 
 def has_path(doc, path):
-    """True when the document already holds a value at the dotted path (that value is the default)."""
-    for key in keys_of(path):
+    """Return True when the document already holds a value at the dotted path (that value is the default)."""
+    for key in parse_path(path):
         try:
             doc = doc[key]
         except (KeyError, IndexError, TypeError):
@@ -49,20 +49,20 @@ def has_path(doc, path):
     return True
 
 
-def selects(doc, target):
-    """True when a setter target names this document: its kind, and its name unless the target gives none."""
+def matches_target(doc, target):
+    """Return True when a setter target names this document: its kind, and its name unless the target gives none."""
     kind, _, obj = target["object"].partition("/")
     return doc.get("kind") == kind and (not obj or doc.get("metadata", {}).get("name") == obj)
 
 
-def pairs(setters):
-    """Every (value name, target field) of setters.yaml, in file order."""
+def iter_setters(setters):
+    """Yield every (value name, target field) of setters.yaml, in file order."""
     for name, targets in setters.items():
         for target in targets:
             yield name, target
 
 
-def inject(doc, name, target, values, applied, written):
+def apply_setter(doc, name, target, values, applied, written):
     """Set one value into one field of one document, or keep the default the manifest holds there."""
     field = (target["object"], target["path"])
     applied.add((name, target["object"]))
@@ -76,27 +76,27 @@ def inject(doc, name, target, values, applied, written):
     if field in written:
         sys.exit(f"setters.yaml: {field[0]} {field[1]} is set by both {written[field]} and {name}")
     written[field] = name
-    set_path(doc, target["path"], values[name])
+    set_at_path(doc, target["path"], values[name])
 
 
-def inject_doc(doc, setters, values, applied, written):
+def apply_to_doc(doc, setters, values, applied, written):
     """Apply every setter whose target is this document."""
-    for name, target in pairs(setters):
-        if selects(doc, target):
-            inject(doc, name, target, values, applied, written)
+    for name, target in iter_setters(setters):
+        if matches_target(doc, target):
+            apply_setter(doc, name, target, values, applied, written)
 
 
-def inject_file(manifest, setters, values, applied, written):
+def apply_to_manifest(manifest, setters, values, applied, written):
     """Rewrite one manifest file, with the values set in each of its documents."""
     docs = list(yaml.safe_load_all(manifest.read_text()))
     for doc in filter(None, docs):
-        inject_doc(doc, setters, values, applied, written)
+        apply_to_doc(doc, setters, values, applied, written)
     manifest.write_text(yaml.safe_dump_all(docs, sort_keys=False))
 
 
-def check_all_matched(setters, applied, src):
-    """Fail on a setter whose object is in no manifest of the folder (a misspelt Kind/name)."""
-    for name, target in pairs(setters):
+def check_setters_matched(setters, applied, src):
+    """Exit on a setter whose object is in no manifest of the folder (a misspelt Kind/name)."""
+    for name, target in iter_setters(setters):
         if (name, target["object"]) not in applied:
             sys.exit(f"setters.yaml: {target['object']} is not in {src}")
 
@@ -112,8 +112,8 @@ def main():
     applied = set()  # (value name, object) pairs found in a manifest; a setter left over is an error
     written = {}  # (object, path) -> the value name that set it, to catch two names on one field
     for manifest in Path(dst).glob("*.yaml"):
-        inject_file(manifest, setters, values, applied, written)
-    check_all_matched(setters, applied, src)
+        apply_to_manifest(manifest, setters, values, applied, written)
+    check_setters_matched(setters, applied, src)
 
 
 if __name__ == "__main__":
