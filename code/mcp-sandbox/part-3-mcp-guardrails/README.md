@@ -100,7 +100,6 @@ out/routes/
 ├── manifests.yaml    the artifact
 ├── build/ks.yaml     the Flux Kustomization flate reads to render the folder (flate renders Flux objects, not folders)
 ├── build/src/        the folder with the config values applied (only for a folder with a setters.yaml)
-├── diff/ks.yaml      the same, for baseline/
 ├── baseline/         the artifact main pins, pulled by diff
 └── push.json         tag and digest of the last push, read by pin
 ```
