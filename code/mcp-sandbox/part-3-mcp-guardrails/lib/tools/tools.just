@@ -4,7 +4,7 @@
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: lib/tools/pyproject.toml, locked in uv.lock.
 #
 #   just build   the binary, built by uv from uv.lock -> out/tools/<name>/<name>
-#   just push    build, push once, then print the block that pins it. Put that block in config/tools/pins.yaml.
+#   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
@@ -62,7 +62,7 @@ build:
 
 # reads:  out/tools/<name>/<name>
 # writes: the registry, <repo>:sha256-<sha256 of the binary>
-# output: the block that pins the artifact, for config/tools/pins.yaml: its digest and the sha256 of the binary
+# output: the block that pins the artifact, for config/tools/manifest.yaml: its digest and the sha256 of the binary
 # rollback: git revert the commit of that line
 # build, push the binary once and print its pin
 [script('bash')]

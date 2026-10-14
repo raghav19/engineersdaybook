@@ -43,8 +43,8 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. Their digests are
-# config, not part of this library: config/tools/pins.yaml, from the block `just lib/tools/<name>/push` prints
-tools_pin := root / 'config' / 'tools' / 'pins.yaml'
+# config, not part of this library: config/tools/manifest.yaml, from the block `just lib/tools/<name>/push` prints
+tools_manifest := root / 'config' / 'tools' / 'manifest.yaml'
 tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
@@ -136,7 +136,7 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the digests and binary sha256 of config/tools/pins.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
 # pull the build functions (lib/tools) at the digests the config pins
@@ -144,9 +144,9 @@ _baseline:
 _tools:
     set -euo pipefail
     pull() {
-      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_pin }})
-      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_pin }})
-      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/pins.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
+      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
+      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_manifest }})
+      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
       dir={{ tools }}/$1/${digest#sha256:}
       if [ ! -x "$dir/$1" ]; then
         rm -rf "$dir" && mkdir -p "$dir"

@@ -152,7 +152,7 @@ Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 
 
 ### How the functions are pinned
 
-`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/pins.yaml` (not in `lib/`, which every component imports); `_tools` pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
+`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
 
 ```text
 lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
@@ -161,15 +161,15 @@ lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
    │                                      digest: 'sha256:<the artifact>'
    │                                      binary: 'sha256:<the executable inside it>'
    ▼
-ghcr.io/raghav19/mcp-guardrails/tools/<name>:sha256-<sha of the binary>      the block goes into config/tools/pins.yaml
+ghcr.io/raghav19/mcp-guardrails/tools/<name>:sha256-<sha of the binary>      the block goes into config/tools/manifest.yaml
 ```
 
 - **Two recipes:** `build` runs `uv run --locked`, so exactly what `uv.lock` says (it fails when `pyproject.toml` and `uv.lock` disagree), and needs only `uv` and `objdump` (binutils) on the machine. `push` depends on `build`, pushes and prints the pin. The Python is uv's own 3.13.15 (`python-build-standalone`), so the binary needs glibc 2.14 or newer and runs on Debian 12.
 - **Versions are pinned in one file,** `lib/tools/pyproject.toml` (PyYAML, and PyInstaller in the `build` group). Change one, run `uv lock` in `lib/tools`, commit `uv.lock`.
-- **The identity of a function is the sha256 of its binary.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies), so the same inputs give the same binary on any checkout path. The binary's sha256 is known before the push, so it is the tag (`sha256-<hex>`, the form cosign uses for digest tags) and one push makes one tag. The push is reproducible too (`--reproducible`, and a `--revision` taken from the binary, not from `HEAD`), so the same binary gives the same artifact digest. `push` on an unchanged function prints the same line. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `config/tools/pins.yaml` before pasting. `pins.yaml` holds both the artifact `digest` and the `binary` sha256; `_tools` checks the binary against it on every build, so a pin that names the wrong contents stops the build.
-- **A script edit needs a push and a new block in `config/tools/pins.yaml`**, even a comment-only edit (the line table is in the bundle, so the binary changes); until then builds keep running the pinned digest. To try an edit first, run `uv run --project lib/tools python lib/tools/<name>/<script>.py <args>`, or the binary of `just lib/tools/<name>/build` from `out/tools/<name>/`.
+- **The identity of a function is the sha256 of its binary.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies), so the same inputs give the same binary on any checkout path. The binary's sha256 is known before the push, so it is the tag (`sha256-<hex>`, the form cosign uses for digest tags) and one push makes one tag. The push is reproducible too (`--reproducible`, and a `--revision` taken from the binary, not from `HEAD`), so the same binary gives the same artifact digest. `push` on an unchanged function prints the same line. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `config/tools/manifest.yaml` before pasting. `manifest.yaml` holds both the artifact `digest` and the `binary` sha256; `_tools` checks the binary against it on every build, so a pin that names the wrong contents stops the build.
+- **A script edit needs a push and a new block in `config/tools/manifest.yaml`**, even a comment-only edit (the line table is in the bundle, so the binary changes); until then builds keep running the pinned digest. To try an edit first, run `uv run --project lib/tools python lib/tools/<name>/<script>.py <args>`, or the binary of `just lib/tools/<name>/build` from `out/tools/<name>/`.
 - **Why `config/tools/` and not `config/*.yaml`:** `config-builder` converges `config/*.yaml`, so it cannot read its own pin from that output, and it rejects any name no `setters.yaml` lists. `config/tools/` is not on a placement path, so it is skipped, and the pins are global (the same on every cloud).
-- **Roll back** by `git revert` of the block in `config/tools/pins.yaml`. The old digest is still in the registry.
+- **Roll back** by `git revert` of the block in `config/tools/manifest.yaml`. The old digest is still in the registry.
 
 ### How a secret gets in
 
@@ -198,7 +198,7 @@ part-3-mcp-guardrails/
 ├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile)
 │   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push)
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
-│   └── tools/pins.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
+│   └── tools/manifest.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
@@ -235,7 +235,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 
 Prerequisites: rootless Docker ([`code/rootless-docker`](../../rootless-docker)), `mise install` at the repo root, your age key for `sops`. Steps marked **host** run on your machine.
 
-0. **Pin the build functions (host; already done for the current scripts).** After an edit of a function, or of `lib/tools/pyproject.toml`, run `just lib/tools/config-builder/push` and `just lib/tools/value-injector/push`, and put the block each prints into `config/tools/pins.yaml`. A function that is not pinned there stops every build with that command.
+0. **Pin the build functions (host; already done for the current scripts).** After an edit of a function, or of `lib/tools/pyproject.toml`, run `just lib/tools/config-builder/push` and `just lib/tools/value-injector/push`, and put the block each prints into `config/tools/manifest.yaml`. A function that is not pinned there stops every build with that command.
 1. **Look at what a cluster gets (anywhere).** `just platform/routes/build`, then `just platform/routes/diff`. The schema catalog needs the network; in the sandbox VM the chart registry needs a host approval first.
 2. **Secret and keys (host, once).** Follow [`clusters/kind/sync/secrets/README.md`](clusters/kind/sync/secrets/README.md). Add `GHCR_USER`, `GHCR_PULL_TOKEN` and `GHCR_PUSH_TOKEN` (classic PAT, `read:packages` / `write:packages`) to `.env.secrets.json`.
 3. **Push the artifacts (host).** `sops exec-env .env.secrets.json 'just platform/routes/push'`, then `just platform/routes/pin`; commit `stack.yaml` and open the pull request. Make the registry packages private.
