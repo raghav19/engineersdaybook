@@ -3,7 +3,7 @@
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: lib/tools/pyproject.toml, locked in uv.lock.
 #
-#   just build   the binary, built by uv from uv.lock -> out/tools/<name>/<name>
+#   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
 #   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
@@ -30,6 +30,8 @@ binary := out / name / name
 export PYTHONHASHSEED := '1'
 python := '3.13.15'
 flags := '--onefile --clean --noconfirm --log-level WARN'
+# every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of lib/tools
+uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group build'
 
 # registry
 repo := 'oci://ghcr.io/raghav19/mcp-guardrails/tools/' + name
@@ -44,15 +46,12 @@ creds := ghcr_user + ':' + ghcr_push_token
 # reads:  the script of this folder, lib/tools/pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python
-# build the binary with uv, from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
+# validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
 [default]
 build:
-    uv run \
-      --quiet \
-      --locked \
-      --python {{ python }} \
-      --project .. \
-      --group build \
+    {{ uv }} ruff check --quiet {{ script }}
+    {{ uv }} ruff format --check --quiet {{ script }}
+    {{ uv }} \
       pyinstaller {{ flags }} \
         --name {{ name }} \
         --distpath {{ out }}/{{ name }} \

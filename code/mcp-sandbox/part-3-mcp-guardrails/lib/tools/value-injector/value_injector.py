@@ -16,6 +16,7 @@ Rules   - a value in the config overrides the field
         - no value and no such field in the manifest: the value is required, the build fails
         - two names writing one field, or a setter whose object is not in the folder, is an error
 """
+
 import re
 import shutil
 import sys
@@ -66,8 +67,10 @@ for manifest in Path(dst).glob("*.yaml"):
                     applied.add((name, target["object"]))
                     if name not in values:  # no override: keep the default in the manifest, or fail when there is none
                         if not has_path(doc, target["path"]):
-                            sys.exit(f"setters.yaml: {name} has no value in the config (config/, placement of the cluster), "
-                                     f"and {field[0]} has no {field[1]} to default to")
+                            sys.exit(
+                                f"setters.yaml: {name} has no value in the config (config/, placement of the cluster), "
+                                f"and {field[0]} has no {field[1]} to default to"
+                            )
                         continue
                     if field in written:
                         sys.exit(f"setters.yaml: {field[0]} {field[1]} is set by both {written[field]} and {name}")

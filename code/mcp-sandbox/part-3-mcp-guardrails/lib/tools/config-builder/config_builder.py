@@ -17,6 +17,7 @@ Rules   - a lower level wins over a level above it, and says so
         - a value is plain (`name: value`), never a map or a list
         - a name that no setters.yaml lists is an error: nothing would use it (a misspelt override)
 """
+
 import sys
 from pathlib import Path
 
