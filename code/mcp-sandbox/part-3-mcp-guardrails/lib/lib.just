@@ -44,8 +44,8 @@ ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # the build functions of lib/tools, each its own artifact <registry>/tools/<name>, pinned by digest.
 # `just lib/tools/<name>/push` prints the line to put here; `unpinned` means it has not been pushed yet
-config_builder := 'unpinned'
-value_injector := 'unpinned'
+config_builder := 'sha256:ecf763d4d59e8efe313b0d73ba02af1be0a43bdac91767aaa1a5e4c133fbf42b'
+value_injector := 'sha256:10bf0e554eff806c46a79b92856d2268c949996759bd092cd0d7aa9f279dbf02'
 tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn

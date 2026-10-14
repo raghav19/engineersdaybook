@@ -230,7 +230,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 
 Prerequisites: rootless Docker ([`code/rootless-docker`](../../rootless-docker)), `mise install` at the repo root, your age key for `sops`. Steps marked **host** run on your machine.
 
-0. **Pin the build functions (host, once, and after any edit of them).** `just lib/tools/config-builder/pin` and `just lib/tools/value-injector/pin`, paste the two lines they print into `lib/lib.just` and commit. Every build fails with "has no pin" until then.
+0. **Pin the build functions (host; already done for the current scripts).** After an edit of a function, or of `lib/tools/pyproject.toml`, run `just lib/tools/config-builder/push` and `just lib/tools/value-injector/push`, paste the line each prints into `lib/lib.just` and commit. A function left `unpinned` stops every build with that command.
 1. **Look at what a cluster gets (anywhere).** `just platform/routes/build`, then `just platform/routes/diff`. The schema catalog needs the network; in the sandbox VM the chart registry needs a host approval first.
 2. **Secret and keys (host, once).** Follow [`clusters/kind/sync/secrets/README.md`](clusters/kind/sync/secrets/README.md). Add `GHCR_USER`, `GHCR_PULL_TOKEN` and `GHCR_PUSH_TOKEN` (classic PAT, `read:packages` / `write:packages`) to `.env.secrets.json`.
 3. **Push the artifacts (host).** `sops exec-env .env.secrets.json 'just platform/routes/push'`, then `just platform/routes/pin`; commit `stack.yaml` and open the pull request. Make the registry packages private.
