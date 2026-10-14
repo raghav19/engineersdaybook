@@ -2,7 +2,7 @@
 
 Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox](../../agent-sandbox/README.md) put the agent in a microVM. This part puts a **policy point on the MCP path**: every call to a remote MCP server goes through [agentgateway](https://agentgateway.dev) in a local kind cluster, where tool, argument and response rules apply, mapped to the [OWASP MCP Top 10](https://owasp.org/www-project-mcp-top-10/).
 
-> **Status (stage A).** Manifests, Flux stack, cluster folder and justfiles are written. `just <component>/build` renders and validates all eleven components with the real charts.
+> **Status (stage A).** Manifests, Flux stack, cluster folder and justfiles are written. `just <component>/build` renders and validates the components with the real charts (`istio` and `mcp-mtls` are new: see the Istio paragraph below).
 > **Not yet run on a cluster.** The `clusters/kind/*` recipes and `push` need the host (real ghcr.io token, your sops key) and refuse to run in the sandbox.
 > Stage B (chaining the sbx gateway to this one, Keycloak) follows a spike.
 
@@ -133,7 +133,7 @@ A level that does not exist is skipped: kind has a cloud and nothing below it. P
 - **Apply.** `<component>/setters.yaml` lists, per name, the fields it overrides: `object: Kind/name` and a dotted `path`, where a number is a position in a list. A chart value is a field of its HelmRelease, so its path starts at `spec.values`; for `kustomization.yaml` the object is `Kustomization` with no name. The build copies the folder to `out/<c>/build/src/`, sets those fields from `out/values.yaml` and lets flate render the copy; the source is never edited. A folder without a `setters.yaml` is built as before.
 - **Default or required.** A name with a value overrides the field. A name without one leaves the field as the manifest has it: that is the default. If the manifest has no such field, the value is required and the build fails without it. `trust_domain` and `cluster_name` are required: they differ per cloud, and the chart's own default (`example.org`) would issue identities in the wrong domain.
 - **What fails.** A setter whose object is not in the folder, a position that does not exist, a required name without a value, two names writing one field, and a config name nothing lists.
-- **One name, many fields.** Several components can list the same name (the trust domain in spire and later istio), so the value cannot disagree.
+- **One name, many fields.** Several components can list the same name (the trust domain in spire and istio), so the value cannot disagree.
 
 ```yaml
 # platform/routes/gateway.yaml            # platform/routes/setters.yaml                 # config/cloud/aws/dev/us-east-1/gateway.yaml
@@ -144,7 +144,7 @@ listeners:                                gateway_port:                         
                                               path: spec.service.spec.ports.0.port
 ```
 
-The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides that per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
+The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides it per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
 
 Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `config-builder` and `value-injector` in `lib/tools/`, each its own pinned artifact ([below](#how-the-functions-are-pinned)).
 
@@ -200,10 +200,10 @@ part-3-mcp-guardrails/
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
 │   └── tools/manifest.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
 ├── platform/
-│   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
+│   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart); istio (namespaces, base, istiod, ingress gateway, gateway identity)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
 │   └── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
-├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation
+├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── services/ext-mcp/            rules.py (+ tests), Dockerfile, deploy/ (the artifact)
 ├── clusters/kind/               one folder per cluster
 │   ├── cluster.yaml             placement in config/ (cloud/local)
@@ -215,8 +215,12 @@ part-3-mcp-guardrails/
 ```
 
 An **artifact** is one deployable unit. Its folder, justfile, Kustomization in `stack.yaml` and pin have the same name (`services/ext-mcp` is `ext-mcp`).
-The eleven artifacts: `gateway-api`, `agentgateway`, `spire`, `mcp-servers`, `routes`, `ext-mcp`, `ext-mcp-isolation`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`. `secrets` is read from Git and is not an artifact.
-`spire` is the CA of trust domain `mcp.local`: the server in the cluster signs, the node agents attest to it (`k8s_psat`), and a join token (`join_token`) is enabled for the agent of a microVM later. Nothing uses it yet; the Istio addon takes its CA from it next. Identities are opt-in: the chart's `ClusterSPIFFEID`s are off, so a workload gets an SVID only when a `ClusterSPIFFEID` selects it.
+The thirteen artifacts: `gateway-api`, `agentgateway`, `spire`, `istio`, `mcp-servers`, `routes`, `ext-mcp`, `ext-mcp-isolation`, `mcp-mtls`, `authn-jwt`, `rate-limit`, `tool-rbac`, `ext-mcp-checks`. `secrets` is read from Git and is not an artifact.
+`spire` is the CA of trust domain `mcp.local`: the server in the cluster signs, the node agents attest to it (`k8s_psat`), and a join token (`join_token`) is enabled for the agent of a microVM later. Istio takes its CA from it (below). Identities are opt-in: the chart's `ClusterSPIFFEID`s are off, so a workload gets an SVID only when a `ClusterSPIFFEID` selects it.
+
+`istio` is the mesh, in **sidecar mode only** (no ambient, no `istio-cni`, no `ztunnel`): `base` (CRDs), `istiod` and an ingress gateway in namespace `istio-ingress`. The three charts are one release, so one name, `istio_version` in `config/versions.yaml`, sets the three versions; the chart versions have no default in the manifests. SPIRE is the CA: a proxy gets its SVID from the SPIFFE Workload API socket that the CSI driver of `spire` mounts (the `spire` injection template in `istiod.yaml`), and `trust_domain` goes to both `spire` and `meshConfig.trustDomain`.
+A namespace takes part by itself: the label `istio-injection: enabled`, the annotation `inject.istio.io/templates: sidecar,spire` on the pod, a `ClusterSPIFFEID` that selects it, and its own `PeerAuthentication`. Today only `mcp-guardrails` does (`ext-mcp`); `flux-system`, `spire-system` and the rest are untouched. There is no mesh-wide policy on purpose. A later MCP workload namespace repeats those steps.
+The intended flow is host -> Istio gateway (L4) -> mTLS -> agentgateway (no sidecar; TLS with its own SPIRE identity, L7 checks) -> workloads. This pull request does not move the traffic: the gateway Service is ClusterIP, the host port 30080 still reaches agentgateway, and the `mcp-mtls` artifact (STRICT for `mcp-guardrails`) is `unpinned` until the client half exists (`AgentgatewayParameters.spec.spiffe` and a backend TLS policy with `certificateSource: SPIFFE`), because STRICT would otherwise reject the plain guardrail call.
 A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; one pushed artifact can be pinned by several clusters.
 
 ## Versions
@@ -227,6 +231,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 | Gateway API (standard channel) | v1.6.1 | `platform/addons/gateway-api/kustomization.yaml` |
 | agentgateway (CRDs and controller) | v1.6.0, `just build` fails if the two tags differ | `platform/addons/agentgateway/` |
 | SPIRE (CRD chart and spire chart) | spire-crds 0.6.1; spire 0.30.3 (SPIRE 1.15.3) | `platform/addons/spire/` |
+| Istio (base, istiod, gateway: one release) | 1.31.1 (supports Kubernetes 1.32 to 1.37) | `config/versions.yaml` (`istio_version`), `platform/addons/istio/setters.yaml` |
 | Flux (via the Flux Operator) | 2.9.6; operator chart 0.61.0 | `clusters/kind/sync/flux-instance.yaml`, `clusters/kind/justfile` |
 | just / flate / kind / helm | 1.58 / 0.6.5 / 0.33.0 / 4.3.0 | root `mise.toml` |
 | What a cluster runs | one tag (the commit) and one digest per artifact | `clusters/kind/sync/stack.yaml` |
