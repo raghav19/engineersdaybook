@@ -1,11 +1,6 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["pyyaml==6.0.2"]
-# ///
 """Put the converged values into the manifests of one component folder.
 
-usage: apply_values.py <values.yaml> <component folder> <output folder>
+usage: value_injector.py <values.yaml> <component folder> <output folder>
 
 <component folder>/setters.yaml says which value goes to which field. One shape for every kind of object:
 

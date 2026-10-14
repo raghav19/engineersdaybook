@@ -146,9 +146,26 @@ listeners:                                gateway_port:                         
 
 The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides that per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
 
-Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `lib/converge_config.py` and `lib/apply_values.py` (Python, PyYAML pinned in the script header, run with `uv`).
+Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `config-builder` and `value-injector` in `lib/tools/`, each its own pinned artifact ([below](#how-the-functions-are-pinned)).
 
 Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 30080) and the default URL of `tests/justfile`. They are not components, so keep them equal to the gateway port by hand.
+
+### How the functions are pinned
+
+`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. `lib/lib.just` pins the two digests and `_tools` pulls each once into `out/.tools/<name>/<digest>/`. Nothing is installed and no network is used when a function runs.
+
+```text
+lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
+   │  just lib/tools/<name>/push      (host)  prints:  config_builder := 'sha256:…'
+   ▼
+ghcr.io/raghav19/mcp-guardrails/tools/<name>:src-<inputs hash>      the line goes into lib/lib.just
+```
+
+- **Two recipes:** `build` runs `uv run --locked`, so exactly what `uv.lock` says (it fails when `pyproject.toml` and `uv.lock` disagree), and needs only `uv` and `objdump` (binutils) on the machine. `push` depends on `build`, pushes and prints the pin. The Python is uv's own 3.13.15 (`python-build-standalone`), so the binary needs glibc 2.14 or newer and runs on Debian 12.
+- **Versions are pinned in one file,** `lib/tools/pyproject.toml` (PyYAML, and PyInstaller in the `build` group). Change one, run `uv lock` in `lib/tools`, commit `uv.lock`.
+- **The digest moves only when an input moves.** The build is deterministic (fixed Python 3.13.15, `PYTHONHASHSEED=1`, locked dependencies) and so is the push (`--reproducible`, and a `--revision` taken from the inputs hash, not from `HEAD`). `push` on an unchanged function prints the same line, from any checkout path. The tag is `src-<hash of script, pyproject.toml, uv.lock, Python, flags>`. If a machine ever builds different bytes (another uv bringing another build of Python 3.13.15), the printed line differs: compare it with the one in `lib/lib.just` before pasting.
+- **A script edit needs a push and a new line in `lib/lib.just`**; until then builds keep running the pinned digest. To try an edit first, run `uv run --project lib/tools python lib/tools/<name>/<script>.py <args>`, or the binary of `just lib/tools/<name>/build` from `out/tools/<name>/`.
+- **Roll back** by `git revert` of the line in `lib/lib.just`. The old digest is still in the registry.
 
 ### How a secret gets in
 
@@ -174,7 +191,8 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 ```text
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
-├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile), converge_config.py, apply_values.py
+├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile)
+│   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push)
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
@@ -212,6 +230,7 @@ A second cluster is a new `clusters/<name>/` folder with its own `stack.yaml`; o
 
 Prerequisites: rootless Docker ([`code/rootless-docker`](../../rootless-docker)), `mise install` at the repo root, your age key for `sops`. Steps marked **host** run on your machine.
 
+0. **Pin the build functions (host, once, and after any edit of them).** `just lib/tools/config-builder/pin` and `just lib/tools/value-injector/pin`, paste the two lines they print into `lib/lib.just` and commit. Every build fails with "has no pin" until then.
 1. **Look at what a cluster gets (anywhere).** `just platform/routes/build`, then `just platform/routes/diff`. The schema catalog needs the network; in the sandbox VM the chart registry needs a host approval first.
 2. **Secret and keys (host, once).** Follow [`clusters/kind/sync/secrets/README.md`](clusters/kind/sync/secrets/README.md). Add `GHCR_USER`, `GHCR_PULL_TOKEN` and `GHCR_PUSH_TOKEN` (classic PAT, `read:packages` / `write:packages`) to `.env.secrets.json`.
 3. **Push the artifacts (host).** `sops exec-env .env.secrets.json 'just platform/routes/push'`, then `just platform/routes/pin`; commit `stack.yaml` and open the pull request. Make the registry packages private.

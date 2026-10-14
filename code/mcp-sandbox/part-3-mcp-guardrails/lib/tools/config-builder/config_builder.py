@@ -1,11 +1,6 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["pyyaml==6.0.2"]
-# ///
 """Converge the config hierarchy of one cluster into one flat file.
 
-usage: converge_config.py <config dir> <cluster.yaml> <output file>
+usage: config_builder.py <config dir> <cluster.yaml> <output file>
 
 The config only overrides: the default of a value is the manifest of the component. The placement in cluster.yaml names the levels,
 from the top down. Every *.yaml of a level is config of that level:

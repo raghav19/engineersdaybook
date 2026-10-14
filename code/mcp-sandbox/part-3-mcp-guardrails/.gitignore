@@ -1,4 +1,4 @@
-# `just <component>/build` writes the artifact of a component to out/<component>/manifests.yaml, with its helper files and the push result (push.json) beside it
 out/
 __pycache__/
 *.pyc
+.venv/
