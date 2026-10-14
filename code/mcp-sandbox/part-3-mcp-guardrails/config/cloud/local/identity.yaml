@@ -1,0 +1,4 @@
+# The trust domain every identity of this cluster is issued in. More than one component uses it (spire now, istio later), and it differs per
+# cloud: mcp.local is only true for the local cluster. A manifest holds no default for it, so a cloud that does not set its own fails the
+# build instead of issuing identities in someone else's trust domain.
+trust_domain: mcp.local

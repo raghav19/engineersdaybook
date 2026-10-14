@@ -9,7 +9,7 @@ spec:
     # and CEL rules can match on a stable name.
     prefixMode: Always
     targets:
-      # host/path values are the fleet values of values/values.env (values/wiring does not stamp them yet).
+      # host and path are the defaults; `mcp_<server>_host` and `mcp_<server>_path` in config/ override them (setters.yaml, by position of the target).
       - name: github
         static:
           host: api.githubcopilot.com

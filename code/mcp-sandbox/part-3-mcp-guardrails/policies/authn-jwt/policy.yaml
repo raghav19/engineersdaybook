@@ -16,5 +16,6 @@ spec:
           audiences:
             - mcp-gateway
           jwks:
-            # Public JWKS only. The fleet value is JWT_JWKS in values/values.env (not stamped by values/wiring yet).
+            # Public JWKS only. An empty key set is a placeholder: nothing validates until Keycloak (stage B) or a minted key fills it.
+            # This is the default; `jwt_jwks` in config/ overrides it (setters.yaml).
             inline: '{"keys":[]}'

@@ -131,12 +131,12 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the *.yaml of config/, then of each level down to the placement of clusters/<cluster>/cluster.yaml (config/kind/,
-#         or config/aws/, config/aws/prod/, ...), each only where it exists
+# reads:  the *.yaml of config/ and of each level down to the placement of clusters/<cluster>/cluster.yaml
+#         (config/cloud/local/, or config/cloud/aws/, config/cloud/aws/dev/, ...), each only where it exists
 # writes: out/values.yaml
 # output: the config files it merged
-# the converged config: one flat set for the whole cluster, the file lower in the hierarchy wins. Every build writes it, whether
-# the folder uses it or not
+# the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
+# the manifest, so a value that nothing overrides is not in it. Every build writes it, whether the folder uses it or not
 _config:
     {{ root }}/lib/converge_config.py {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
 
