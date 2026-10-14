@@ -30,6 +30,7 @@ age = "1.2"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.15"
 prek = "0.5"
+ruff = "0.17"  # lints the Python build functions of part 3 (lib/tools); its uv.lock locks 0.17.0
 
 # dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR comes from [env]: the build sets it, and run by hand in the VM it
 # defaults to ~/.local/share/sandbox/completions, which the shell setup in dev-tools.yaml also sources (/opt/sandbox is root-owned there).
