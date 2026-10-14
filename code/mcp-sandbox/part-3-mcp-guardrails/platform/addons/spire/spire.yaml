@@ -24,10 +24,8 @@ spec:
     mode: enabled
   values:
     global:
-      spire:
-        # config/spire.yaml holds these two for the cluster and setters.yaml says where they go; what is written here is the stand-in.
-        trustDomain: mcp.local
-        clusterName: mcp-guardrails # name in clusters/kind/kind-config.yaml
+      # spire.trustDomain and spire.clusterName have no default here: they differ per cloud, so config/ must set `trust_domain` and
+      # `cluster_name` (setters.yaml says where they go) and the build fails without them. The chart's own default is example.org.
       # The hooks fix common problems of `helm install`. The artifact holds rendered objects, so a hook would become a plain Job.
       installAndUpgradeHooks:
         enabled: false
