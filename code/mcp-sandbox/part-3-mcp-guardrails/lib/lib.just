@@ -43,7 +43,7 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. Their digests are
-# config, not part of this library: config/tools/pins.yaml, from what `just lib/tools/<name>/push` prints
+# config, not part of this library: config/tools/pins.yaml, from the block `just lib/tools/<name>/push` prints
 tools_pin := root / 'config' / 'tools' / 'pins.yaml'
 tools := root / 'out' / '.tools'
 
@@ -136,7 +136,7 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the digests of config/tools/pins.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# reads:  the digests and binary sha256 of config/tools/pins.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
 # pull the build functions (lib/tools) at the digests the config pins
@@ -144,9 +144,9 @@ _baseline:
 _tools:
     set -euo pipefail
     pull() {
-      var=tool_${1//-/_}
-      digest=$(yq -r ".$var // \"\"" {{ tools_pin }})
-      [ -n "$digest" ] || { echo "$var is not in config/tools/pins.yaml: run 'just lib/tools/$1/push' (host) and put the line it prints there" >&2; exit 1; }
+      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_pin }})
+      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_pin }})
+      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/pins.yaml: run 'just lib/tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
       dir={{ tools }}/$1/${digest#sha256:}
       if [ ! -x "$dir/$1" ]; then
         rm -rf "$dir" && mkdir -p "$dir"
@@ -154,6 +154,9 @@ _tools:
           --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
           || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$digest" >&2; exit 1; }
       fi
+      # the pinned sha256 of the binary is checked on every run, not only after a pull
+      [ "sha256:$(sha256sum "$dir/$1" | cut -d' ' -f1)" = "$binary" ] \
+        || { echo "$1: the binary of $digest is not $binary" >&2; rm -rf "$dir"; exit 1; }
       ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
     }
     pull config-builder

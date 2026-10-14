@@ -1,7 +1,15 @@
-# The build functions of lib/tools (config-builder, value-injector) that every build runs, each its own artifact
-# ghcr.io/raghav19/mcp-guardrails/tools/<name>, pinned by digest. `just lib/tools/<name>/push` prints the line to put here.
-# The same on every cloud, so global config. It is not in config/*.yaml on purpose: config-builder converges those files,
-# so it cannot read its own pin from them, and it rejects names no setters.yaml lists. This folder is not on a placement path.
-# Roll one back with `git revert` of its line. The comment is the sha256 of the binary inside; `sha256sum` of the pulled file equals it.
-tool_config_builder: 'sha256:c12eeb8c72ffafc142c9b54e2c83930feea17b011d58597ad3bb81f52b1bb79e'  # binary sha256:3315c7588b89b0c008c6a005f2624a750a844214404f026f395ea248fe93b6ee
-tool_value_injector: 'sha256:40fcddaa465cd84974374890f07b443125fb00a66d7fbb4082841acb98036461'  # binary sha256:4d39bc7f061b3300552890cb24fd90633fbdd2fbef159977fe800c282b2d8bae
+# The build functions of lib/tools that every build runs, each its own artifact ghcr.io/raghav19/mcp-guardrails/tools/<name>.
+# `just lib/tools/<name>/push` prints the block to put here.
+#
+#   digest   the artifact in the registry. This is what is pulled, so it cannot change under the pin.
+#   binary   the sha256 of the executable inside it. The build checks it after every pull and refuses a mismatch.
+#
+# The same on every cloud, so global config. It is not in config/*.yaml on purpose: config-builder converges those files, so it
+# cannot read its own pin from them, and it rejects names no setters.yaml lists. This folder is not on a placement path.
+# Roll one back with `git revert` of its block.
+config-builder:
+  digest: 'sha256:0e4e33d53521b680baf7e0c1e5ea783a369a8a464bd248d7aee1de9e3ddfb487'
+  binary: 'sha256:d2ffa3f05a357e2102542a60d1565fccfa12bcecc98d149fb865beadc22a99cf'
+value-injector:
+  digest: 'sha256:40012fc9055b4f16af576cdc60b396d7872f5d785446ee23bf7613657e596ad4'
+  binary: 'sha256:4721a10eb8431e0bf586962ecb55ea5e9718f74099db451641fcd367b8b9438b'
