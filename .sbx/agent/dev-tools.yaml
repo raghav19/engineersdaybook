@@ -73,7 +73,11 @@ capabilities:
       content: |
         [[ $- == *i* ]] || return
         eval "$(mise activate bash)"
-        for f in /opt/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
+        for f in /opt/sandbox/completions/* ~/.local/share/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
+        alias k=kubectl
+        alias f=flux
+        complete -o default -F __start_kubectl k
+        complete -o default -F __start_flux f
         command -v fzf >/dev/null && eval "$(fzf --bash)"
         command -v starship >/dev/null && eval "$(starship init bash)"
     startup:

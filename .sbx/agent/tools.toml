@@ -30,19 +30,21 @@ age = "1.2"
 "github:fluxcd/flux-schema" = "0.15"
 prek = "0.5"
 
-# dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build.
+# dev-tools.yaml runs this with the tools in place. COMPLETIONS_DIR is set once, at the top of its build. Run by hand in the VM it is unset and
+# falls back to ~/.local/share/sandbox/completions, which the shell setup in dev-tools.yaml also sources (/opt/sandbox is root-owned there).
 [tasks."sandbox:completions"]
 description = "Write the bash completions that the shell setup in dev-tools.yaml sources into $COMPLETIONS_DIR"
-run = [
-  'mkdir -p "$COMPLETIONS_DIR"',
-  'kubectl completion bash > "$COMPLETIONS_DIR/kubectl"',
-  'helm completion bash > "$COMPLETIONS_DIR/helm"',
-  'kustomize completion bash > "$COMPLETIONS_DIR/kustomize"',
-  'starship completions bash > "$COMPLETIONS_DIR/starship"',
-  'fd --gen-completions bash > "$COMPLETIONS_DIR/fd"',
-  'flux completion bash > "$COMPLETIONS_DIR/flux"',
-  'just --completions bash > "$COMPLETIONS_DIR/just"',
-  'yq shell-completion bash > "$COMPLETIONS_DIR/yq"',
-  'echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"',
-  'echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"',
-]
+run = """
+: "${COMPLETIONS_DIR:=$HOME/.local/share/sandbox/completions}"
+mkdir -p "$COMPLETIONS_DIR"
+kubectl completion bash > "$COMPLETIONS_DIR/kubectl"
+helm completion bash > "$COMPLETIONS_DIR/helm"
+kustomize completion bash > "$COMPLETIONS_DIR/kustomize"
+starship completions bash > "$COMPLETIONS_DIR/starship"
+fd --gen-completions bash > "$COMPLETIONS_DIR/fd"
+flux completion bash > "$COMPLETIONS_DIR/flux"
+just --completions bash > "$COMPLETIONS_DIR/just"
+yq shell-completion bash > "$COMPLETIONS_DIR/yq"
+echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
+echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
+"""
