@@ -144,7 +144,7 @@ listeners:                                gateway_port:                         
                                               path: spec.service.spec.ports.0.port
 ```
 
-The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides it per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
+The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides that per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
 
 Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `config-builder` and `value-injector` in `lib/tools/`, each its own pinned artifact ([below](#how-the-functions-are-pinned)).
 
