@@ -12,6 +12,7 @@ spec:
     rateLimit:
       local:
         # One tool call is several HTTP requests (initialize, notifications, list, call); size accordingly.
+        # Requests per minute for one jwt.sub. This is the default; `rate_limit_requests` in config/ overrides it (setters.yaml).
         - requests: 60
           unit: Minutes
           burst: 10

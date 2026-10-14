@@ -1,0 +1,2 @@
+# What differs for the local kind cluster. The name SPIRE gives this cluster is the one in clusters/kind/kind-config.yaml.
+cluster_name: mcp-guardrails

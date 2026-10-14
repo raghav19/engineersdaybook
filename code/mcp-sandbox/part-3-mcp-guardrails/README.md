@@ -114,35 +114,41 @@ Good to know:
 
 ### How a value gets in
 
-A value is a plain `name: value`, kept in `config/`; a component says where the value goes; a function puts it there. No manifest holds a placeholder.
+The default of a value is the manifest of its component, so the manifest stays complete and readable. `config/` holds only what differs per cloud, env or region. A component's `setters.yaml` lists the fields `config/` may override, and a function puts the override there. No manifest holds a placeholder.
 
 ```text
-config/*.yaml                         every cluster
-config/<cloud>/*.yaml                 e.g. config/kind/, config/aws/
-config/<cloud>/<env>/*.yaml           e.g. config/aws/prod/
-config/<cloud>/<env>/<region>/*.yaml  e.g. config/aws/prod/us-east-1/
-clusters/<name>/cluster.yaml          placement: kind        (later aws/prod/us-east-1)
-<component>/setters.yaml              which value goes into which field of this folder
+<component>/*.yaml                           the manifest: holds the default of every value
+<component>/setters.yaml                     which config name overrides which field of this folder
+config/*.yaml                                global: the same on every cloud (none yet)
+config/cloud/*.yaml
+config/cloud/<cloud>/*.yaml                  e.g. config/cloud/local/ (kind: trust_domain, cluster_name), config/cloud/aws/
+config/cloud/<cloud>/<env>/*.yaml            e.g. config/cloud/aws/dev/
+config/cloud/<cloud>/<env>/<region>/*.yaml   e.g. config/cloud/aws/dev/us-east-1/
+clusters/<name>/cluster.yaml                 placement: cloud/local        (later cloud/aws/dev/us-east-1)
 ```
 
-- **Converge.** Every build reads every `*.yaml` of `config/` and then of each folder on the cluster's placement, and writes the flat result to `out/values.yaml` (each value with the file it came from). A file lower on the path wins and is printed; the same name in two files of one level, or a value that is a map or list, fails. The file names mean nothing: name them by component or app.
-- **Apply.** `<component>/setters.yaml` lists, per value name, the fields it goes into: `object: Kind/name` and a dotted `path`, where a number is a position in a list. A chart value is a field of its HelmRelease, so its path starts at `spec.values`; for `kustomization.yaml` the object is `Kustomization` with no name. The build copies the folder to `out/<c>/build/src/`, sets those fields from `out/values.yaml` and lets flate render the copy; the source is never edited. A folder without a `setters.yaml` is built as before.
-- **What fails.** A setter whose object is not in the folder, a position that does not exist, a name without a value, and two names writing one field.
+A level that does not exist is skipped: kind has a cloud and nothing below it. Put an override at the highest level where it is still true. A value that more than one component uses (the trust domain) is config, not the default of one component, and sits where it holds: `mcp.local` is true for the local cloud only, so it is under `config/cloud/local/`.
+
+- **Converge.** Every build reads every `*.yaml` of `config/` and of each folder on the cluster's placement, and writes the flat result to `out/values.yaml` (each override with the file it came from). It holds overrides only; the effective value is in `out/<c>/manifests.yaml` and shown by `just <c>/diff`. A file lower on the path wins and is printed. A value that is a map or list fails, so does the same name in two files of one level, and so does a name that no `setters.yaml` lists (a misspelt override). The file names in `config/` mean nothing: name them by component or app.
+- **Apply.** `<component>/setters.yaml` lists, per name, the fields it overrides: `object: Kind/name` and a dotted `path`, where a number is a position in a list. A chart value is a field of its HelmRelease, so its path starts at `spec.values`; for `kustomization.yaml` the object is `Kustomization` with no name. The build copies the folder to `out/<c>/build/src/`, sets those fields from `out/values.yaml` and lets flate render the copy; the source is never edited. A folder without a `setters.yaml` is built as before.
+- **Default or required.** A name with a value overrides the field. A name without one leaves the field as the manifest has it: that is the default. If the manifest has no such field, the value is required and the build fails without it. `trust_domain` and `cluster_name` are required: they differ per cloud, and the chart's own default (`example.org`) would issue identities in the wrong domain.
+- **What fails.** A setter whose object is not in the folder, a position that does not exist, a required name without a value, two names writing one field, and a config name nothing lists.
 - **One name, many fields.** Several components can list the same name (the trust domain in spire and later istio), so the value cannot disagree.
 
 ```yaml
-# config/spire.yaml                       # platform/addons/spire/setters.yaml
-trust_domain: mcp.local                   trust_domain:
-cluster_name: mcp-guardrails                - {object: HelmRelease/spire, path: spec.values.global.spire.trustDomain}
-                                          cluster_name:
-                                            - {object: HelmRelease/spire, path: spec.values.global.spire.clusterName}
+# platform/routes/gateway.yaml            # platform/routes/setters.yaml                 # config/cloud/aws/dev/us-east-1/gateway.yaml
+listeners:                                gateway_port:                                  gateway_port: 8443
+  - name: http                              - object: Gateway/agentgateway-proxy
+    port: 8080   # the default                path: spec.listeners.0.port
+                                            - object: AgentgatewayParameters/agentgateway-proxy
+                                              path: spec.service.spec.ports.0.port
 ```
 
-The chart's own defaults stay in the chart. A value of `config/` overrides the literal in the manifest, which stays as a stand-in that keeps the file valid on its own. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
+The chart's own defaults stay in the chart; the `values:` of a HelmRelease holds what this stack sets differently, and `config/` overrides that per cluster. A list element is addressed by position: the targets of `platform/mcp-servers` are `0` github, `1` drawio, `2` flux, so reordering them in `backend.yaml` moves the overrides with it. Config names are one flat namespace: prefix them (`gateway_port`, not `port`).
 
-Changing a shared value changes every artifact that sets it, so each is pushed and pinned again; `just <c>/diff` shows the effect per component. The functions are `lib/converge_config.py` and `lib/apply_values.py` (Python, PyYAML pinned in the script header, run with `uv`).
+Changing an override changes every artifact that sets it, so each is pushed and pinned again. Changing a default is an edit of the manifest and shows in `just <c>/diff`. The functions are `lib/converge_config.py` and `lib/apply_values.py` (Python, PyYAML pinned in the script header, run with `uv`).
 
-Not covered yet: the fields of the plain manifests (the gateway port, the MCP backend hosts, the rate limit, the JWKS). `values/values.env`, `values/wiring` and `clusters/<name>/values.env` are the earlier design for them and are read by no recipe.
+Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 30080) and the default URL of `tests/justfile`. They are not components, so keep them equal to the gateway port by hand.
 
 ### How a secret gets in
 
@@ -169,16 +175,15 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
 ├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile), converge_config.py, apply_values.py
-├── config/                      the values: *.yaml per level (every cluster, <cloud>/, <env>/, <region>/), flat name: value
+├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
 ├── platform/
 │   ├── addons/                  gateway-api (CRDs); agentgateway (namespace, CRD chart, controller chart); spire (namespace, CRD chart, spire chart)
 │   ├── mcp-servers/             the registered MCP servers behind /mcp (one AgentgatewayBackend)
 │   └── routes/                  Gateway, AgentgatewayParameters, HTTPRoute
 ├── policies/                    one folder per control: authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation
 ├── services/ext-mcp/            rules.py (+ tests), Dockerfile, deploy/ (the artifact)
-├── values/                      values.env + wiring: the earlier design for the plain-manifest fields, not applied
 ├── clusters/kind/               one folder per cluster
-│   ├── cluster.yaml             placement in config/ (kind)
+│   ├── cluster.yaml             placement in config/ (cloud/local)
 │   ├── justfile                 up, credentials, down, delete-crds (host only)
 │   ├── kind-config.yaml         read by `up`
 │   └── sync/                    read by Flux: stack.yaml (pins, order, health), flux-instance.yaml, secrets/ (age ciphertext)
@@ -240,7 +245,7 @@ MCP04 (supply chain) and MCP06 (intent flow subversion) are reduced here, not so
 - **Nothing has run on a cluster:** `push`, `pin`, `clusters/kind/*`, the Flux sync and the health gates need the host.
 - **The first push of `agentgateway` changes its format.** The current pin holds two HelmReleases; the new one holds the rendered objects with the same names. On a cluster that already runs the old pin, helm-controller uninstalling the release could remove objects Flux just applied, so check that cut-over. A fresh cluster is fine.
 - **Unchecked against a live controller:** the status conditions of `AgentgatewayPolicy` and `AgentgatewayBackend` (no CEL health check yet), the `Programmed` gate of `Gateway`, the secret key convention (`Authorization`, raw token), how two policies on one backend merge, and that an OCIRepository prefers `ref.digest` over `ref.tag` (`pin` writes both; `diff` pulls the digest).
-- **Credentials are untested:** `GITHUB_TOKEN` against the GitHub MCP server. **JWKS is a placeholder** (`JWT_JWKS` in `values/values.env`) until Keycloak in stage B.
+- **Credentials are untested:** `GITHUB_TOKEN` against the GitHub MCP server. **JWKS is a placeholder** (the default in `policies/authn-jwt/policy.yaml`, override `jwt_jwks`) until Keycloak in stage B.
 - **ext-mcp has rules but no server yet.** Argument-level CEL is unreliable in agentgateway ([#3092](https://github.com/agentgateway/agentgateway/issues/3092)), which is why argument checks live in ext-mcp.
 - **Unplugging a USB device while the cluster runs could break new privileged pods** (runc fails on the vanished `/dev` entry). `kind-config.yaml` sets `privileged_without_host_devices = true`; its effect is not confirmed on a host. If it happens, recreate the cluster.
 - **No CI and no signing yet.** `push` is a host recipe and the registry is the trust root. CI (`just <c>/diff` as a pull request comment), cosign and SBOM are next.

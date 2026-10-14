@@ -7,16 +7,19 @@
 
 usage: converge_config.py <config dir> <cluster.yaml> <output file>
 
-The placement in cluster.yaml names the levels, from the top down. Every *.yaml of a level is config of that level:
+The config only overrides: the default of a value is the manifest of the component. The placement in cluster.yaml names the levels,
+from the top down. Every *.yaml of a level is config of that level:
 
-    placement: aws/prod/us-east-1   ->   config/*.yaml
-                                         config/aws/*.yaml
-                                         config/aws/prod/*.yaml
-                                         config/aws/prod/us-east-1/*.yaml
+    placement: cloud/aws/dev/us-east-1   ->   config/*.yaml                         (global: the same on every cloud)
+                                              config/cloud/*.yaml
+                                              config/cloud/aws/*.yaml
+                                              config/cloud/aws/dev/*.yaml
+                                              config/cloud/aws/dev/us-east-1/*.yaml
 
 - a level further down wins over a level above it (and says so)
 - two files of the SAME level setting the same name is an error: there is no winner
 - every value is plain (name: value), not a map or a list
+- a name that no setters.yaml lists is an error: nothing would use it (a misspelt override)
 """
 import sys
 from pathlib import Path
@@ -26,7 +29,7 @@ import yaml
 config_dir, cluster_file, output_file = map(Path, sys.argv[1:])
 placement = yaml.safe_load(cluster_file.read_text())["placement"]
 
-levels = [config_dir]  # config/, then config/aws/, config/aws/prod/, ...
+levels = [config_dir]  # config/, then config/cloud/, config/cloud/aws/, ...
 for part in placement.split("/"):
     levels.append(levels[-1] / part)
 
@@ -50,6 +53,14 @@ for level in levels:
                 print(f"  {name}: {shown(source[name])} -> {shown(file)}")
             set_here[name] = source[name] = file
             config[name] = value
+
+known = set()  # every name some component can take
+for file in config_dir.parent.rglob("setters.yaml"):
+    if "out" not in shown(file).parts:
+        known |= set(yaml.safe_load(file.read_text()) or {})
+for name in config:
+    if name not in known:
+        sys.exit(f"{shown(source[name])}: {name} is not in any setters.yaml, so nothing would use it (misspelt?)")
 
 output_file.parent.mkdir(parents=True, exist_ok=True)
 with output_file.open("w") as out:

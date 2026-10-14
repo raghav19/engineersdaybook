@@ -1,3 +1,0 @@
-# The trust domain every identity of the stack is issued in (spire, later istio) and the name SPIRE gives this cluster.
-trust_domain: mcp.local
-cluster_name: mcp-guardrails # the cluster name in clusters/kind/kind-config.yaml

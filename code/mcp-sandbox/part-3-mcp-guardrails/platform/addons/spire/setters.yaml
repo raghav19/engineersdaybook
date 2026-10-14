@@ -1,6 +1,9 @@
-# Which config value (config/) goes into which field of this folder. Path: dotted, a number is a position in a list.
-# A chart value is a field of the HelmRelease, so its path starts at spec.values.
+# The fields of this folder a config value can override: name, then the object and the path it goes into. A number in a path is a position
+# in a list. A chart value is a field of the HelmRelease, so its path starts at spec.values. Both values here have no default in the
+# manifest: config/ must set them, and the build fails without.
 trust_domain:
-  - {object: HelmRelease/spire, path: spec.values.global.spire.trustDomain}
+  - object: HelmRelease/spire
+    path: spec.values.global.spire.trustDomain
 cluster_name:
-  - {object: HelmRelease/spire, path: spec.values.global.spire.clusterName}
+  - object: HelmRelease/spire
+    path: spec.values.global.spire.clusterName

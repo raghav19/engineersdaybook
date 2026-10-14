@@ -1,0 +1,5 @@
+# The fields of this folder a config value can override: name, then the object and the path it goes into. A number in a path is a position
+# in a list. Without a value in config/ the field keeps what the manifest holds.
+rate_limit_requests:
+  - object: AgentgatewayPolicy/mcp-rate-limit
+    path: spec.traffic.rateLimit.local.0.requests
