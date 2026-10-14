@@ -42,9 +42,9 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
-# the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. The cluster
-# pins their digests, not this library: clusters/<cluster>/tools.yaml, written by hand from what `just lib/tools/<name>/push` prints
-tools_pin := root / 'clusters' / cluster / 'tools.yaml'
+# the build functions of lib/tools (config-builder, value-injector): each its own artifact <registry>/tools/<name>. Their digests are
+# config, not part of this library: config/tools/pins.yaml, from what `just lib/tools/<name>/push` prints
+tools_pin := root / 'config' / 'tools' / 'pins.yaml'
 tools := root / 'out' / '.tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
@@ -136,16 +136,17 @@ _baseline:
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }
 
-# reads:  the digests of clusters/<cluster>/tools.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# reads:  the digests of config/tools/pins.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
-# pull the build functions (lib/tools) at the digests the cluster pins
+# pull the build functions (lib/tools) at the digests the config pins
 [script('bash')]
 _tools:
     set -euo pipefail
     pull() {
-      digest=$(yq -r ".\"$1\" // \"\"" {{ tools_pin }})
-      [ -n "$digest" ] || { echo "$1 is not pinned in clusters/{{ cluster }}/tools.yaml: run 'just lib/tools/$1/push' (host) and put the line it prints there" >&2; exit 1; }
+      var=tool_${1//-/_}
+      digest=$(yq -r ".$var // \"\"" {{ tools_pin }})
+      [ -n "$digest" ] || { echo "$var is not in config/tools/pins.yaml: run 'just lib/tools/$1/push' (host) and put the line it prints there" >&2; exit 1; }
       dir={{ tools }}/$1/${digest#sha256:}
       if [ ! -x "$dir/$1" ]; then
         rm -rf "$dir" && mkdir -p "$dir"
