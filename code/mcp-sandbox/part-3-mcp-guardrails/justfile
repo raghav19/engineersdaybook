@@ -6,7 +6,7 @@ set quiet
 [default, script('bash')]
 help:
     cat <<'EOF'
-    One artifact per component. Every component folder has its own justfile (it imports lib/lib.just).
+    One artifact per component. Every component folder has its own justfile (it imports lib/workflow.just).
     Name the folder to run a recipe: `just platform/routes/build`.
 
       just <component>/build   render the folder (charts included), check it, write out/<component>/manifests.yaml
@@ -19,5 +19,5 @@ help:
       just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)
       just tests/run                               the attack cases against the gateway
 
-    Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/lib.just.
+    Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/workflow.just.
     EOF

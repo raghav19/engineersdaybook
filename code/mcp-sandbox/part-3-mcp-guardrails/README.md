@@ -75,7 +75,7 @@ sequenceDiagram
 
 ## How an artifact is made
 
-Every component folder has a justfile that imports [`lib/lib.just`](lib/lib.just). Name the folder to run a recipe: `just platform/routes/build`. Run `just` for the list.
+Every component folder has a justfile that imports [`lib/workflow.just`](lib/workflow.just) (the recipes are in `lib/package.just`, `lib/diff.just` and `lib/push.just`). Name the folder to run a recipe: `just platform/routes/build`. Run `just` for the list.
 
 ```mermaid
 flowchart LR
@@ -109,7 +109,7 @@ Good to know:
 
 - A HelmRelease and its chart source are replaced by the objects the chart renders. A chart hook becomes a plain object; the v1.6.0 charts have none. flate renders for Kubernetes 1.37.0 and has no `lookup`.
 - CRDs and Secrets stay in the artifact. Every CRD carries `kustomize.toolkit.fluxcd.io/prune: disabled`, so Flux never deletes one (that would delete every custom resource of its kind). Remove them with `just clusters/kind/delete-crds`.
-- flate 0.6.5 does not know some kinds are cluster-scoped and puts a namespace on them. `cluster_scoped` in `lib/lib.just` lists them and the build removes it.
+- flate 0.6.5 does not know some kinds are cluster-scoped and puts a namespace on them. `cluster_scoped` in `lib/workflow.just` lists them and the build removes it.
 - `kustomization.yaml` in a folder is only a build index. A Flux `Kustomization` in `stack.yaml` applies one artifact (order, health).
 
 ### How a value gets in
@@ -152,7 +152,7 @@ Not covered by it: `clusters/kind/kind-config.yaml` (host port 8080 to NodePort 
 
 ### How the functions are pinned
 
-`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` (in `lib/tools/tools.just`, next to their `build` and `push`; `lib/lib.just` loads that file as the module `tools` and runs `tools::_tools`) pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
+`config-builder` and `value-injector` are Python scripts, but a build never runs them from the working tree and never calls `uv`. Each is built by uv into one binary (PyInstaller, carrying the interpreter and PyYAML) and pushed as its own OCI artifact: one file in the registry, not a container image. Their digests are config, in `config/tools/manifest.yaml` (not in `lib/`, which every component imports); `_tools` (in `lib/tools/tools.just`, next to their `build` and `push`; `lib/workflow.just` loads that file as the module `tools` and runs `tools::_tools`) pulls each once into `out/.tools/<name>/<digest>/` and links `out/.tools/<name>/<name>` to it. Nothing is installed and no network is used when a function runs.
 
 ```text
 lib/tools/{pyproject.toml, uv.lock}  +  lib/tools/<name>/{<script>.py, justfile}
@@ -195,7 +195,7 @@ The agent never holds this value: the gateway reads the Secret and sets the upst
 ```text
 part-3-mcp-guardrails/
 ├── justfile                     `just` prints the commands
-├── lib/                         lib.just (build, diff, push, pin: imported by every component justfile)
+├── lib/                         workflow.just (settings, variables, help: imported by every component justfile), package.just (build), diff.just (diff), push.just (push, pin)
 │   └── tools/                   pyproject.toml, uv.lock, config-builder/, value-injector/ (script, justfile), tools.just (build, push, pull)
 ├── config/                      overrides only: *.yaml global, then cloud/<cloud>/<env>/<region>/, flat name: value
 │   └── tools/manifest.yaml          the digests of the build functions (lib/tools); outside the levels above, see "How the functions are pinned"
