@@ -1,4 +1,4 @@
-# Part 3: MCP guardrails with agentgateway on kind
+# Part 3: MCP guardrails
 
 ## What we are building
 
