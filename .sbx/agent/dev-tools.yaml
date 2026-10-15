@@ -25,21 +25,25 @@ capabilities:
   config:
     runtime:
       allow:
-      - marketplace.visualstudio.com
-      - "**.vsassets.io"
-      - registry.terraform.io
+      # Tool downloads
       - releases.hashicorp.com
-      - api.githubcopilot.com
+      - registry.terraform.io
+      - mise.jdx.dev
+      - "**.astral.sh"
+      # Chart and OCI registries the cluster pulls from. blob.istio.io redirects to istio-release.r2.istio.io,
+      # which "**.istio.io" does not match, so both are needed.
+      - "**.istio.io"
+      - istio-release.r2.istio.io
+      - cr.agentgateway.dev
+      - charts.dexidp.io
+      # Schemas
+      - www.schemastore.org
+      - schemas.fluxoperator.dev
+      # Docs and project sites, for research
       - kind.sigs.k8s.io
       - just.systems
-      - www.schemastore.org
       - fluxcd.io
-      - cr.agentgateway.dev
       - fluxoperator.dev
-      - schemas.fluxoperator.dev
-      - crl.microsoft.com
-      - www.githubstatus.com
-      - mise.jdx.dev
       - spiffe.github.io
       - docs.ansible.com
       - argo-cd.readthedocs.io
@@ -48,13 +52,17 @@ capabilities:
       - helm.sh
       - kubectl.docs.kubernetes.io
       - docs.aws.amazon.com
-      - charts.dexidp.io
-      - "**.vscode-cdn.net"
-      - "**.istio.io"
       - agentgateway.dev
       - istio.io
-      - "**.astral.sh"
       - cuelang.org
+      # VS Code and Copilot
+      - marketplace.visualstudio.com
+      - "**.vsassets.io"
+      - "**.vscode-cdn.net"
+      - api.githubcopilot.com
+      # Other
+      - crl.microsoft.com
+      - www.githubstatus.com
       - localhost:6444
       deny:
       - hosts: [ api.github.com ]
