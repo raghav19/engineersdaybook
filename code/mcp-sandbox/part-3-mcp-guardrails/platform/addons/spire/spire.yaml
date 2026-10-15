@@ -37,6 +37,10 @@ spec:
         joinToken:
           enabled: true
       controllerManager:
+        # The chart only reconciles a ClusterSPIFFEID whose spec.className is its own class (spire-system-spire). The ClusterSPIFFEIDs of the
+        # components set none, so without this they are ignored: no registration entry, no status, and the proxy of the pod is refused an
+        # identity ("workload is not authorized for the requested identities").
+        watchClassless: true
         identities:
           clusterSPIFFEIDs:
             # The default registers every pod of every namespace. Identities are opt-in: a later pull request adds a ClusterSPIFFEID per workload
