@@ -34,6 +34,7 @@ capabilities:
       # which "**.istio.io" does not match, so both are needed.
       - "**.istio.io"
       - istio-release.r2.istio.io
+      - istio-release.storage.googleapis.com
       - cr.agentgateway.dev
       - charts.dexidp.io
       # Schemas
