@@ -7,6 +7,8 @@
 #
 # ref.tag `unpinned` means no artifact is pushed yet: its Kustomization stays not Ready. `just <folder>/pin` writes the tag (the commit) and the digest.
 # A baseline run is this file without the ext-mcp-isolation and policy entries (authn-jwt, rate-limit, tool-rbac, ext-mcp-checks, mcp-mtls).
+# ext-mcp, ext-mcp-isolation, ext-mcp-checks and mcp-mtls are removed from this stack until the ext-mcp image is built and pushed.
+# Their entries are in the Git history before the commit that removed them.
 # Flux never reverts a failed artifact by itself: put the older pin back (git revert).
 #
 #   gateway-api ──► agentgateway ──┬──► secrets ──┐
@@ -172,67 +174,6 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: ext-mcp
-  namespace: flux-system
-spec:
-  interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp
-  secretRef:
-    name: ghcr-pull
-  ref:
-    tag: 8034f68cb62a
-    digest: sha256:a86ea59fbf6e02cbfba1f8e5534f61b983aab056d5f9db879755d68f0c513c4f
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: ext-mcp
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 5m
-  prune: true
-  wait: true # the ext-mcp Deployment rolls out. Its namespace travels in this artifact.
-  path: ./
-  sourceRef: {kind: OCIRepository, name: ext-mcp}
-  dependsOn:
-    - name: istio # the injection webhook first, otherwise the pod starts without its istio-proxy
-    - name: spire # the ClusterSPIFFEID kind, and the identity the proxy asks for
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: ext-mcp-isolation
-  namespace: flux-system
-spec:
-  interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp-isolation
-  secretRef:
-    name: ghcr-pull
-  ref:
-    tag: 8034f68cb62a
-    digest: sha256:02f4b06e00aa80c19a17386380d3aeee85138c90b87a02ece7bc602845d6b8e0
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: ext-mcp-isolation
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 2m
-  prune: true
-  wait: true # MCP04, MCP09: only the gateway may call ext-mcp. The namespace comes from ext-mcp.
-  path: ./
-  sourceRef: {kind: OCIRepository, name: ext-mcp-isolation}
-  dependsOn:
-    - name: ext-mcp
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
   name: authn-jwt
   namespace: flux-system
 spec:
@@ -323,37 +264,6 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: ext-mcp-checks
-  namespace: flux-system
-spec:
-  interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/ext-mcp-checks
-  secretRef:
-    name: ghcr-pull
-  ref:
-    tag: 8034f68cb62a
-    digest: sha256:70ee8fd5d93e3c99b6929ad9be756e8cf4f262e903c215339c22710f45f7bd9b
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: ext-mcp-checks
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 3m
-  prune: true
-  wait: true # MCP03, 05, 06, 10. failureMode is FailClosed: without a running ext-mcp every tool call fails, so ext-mcp first.
-  path: ./
-  sourceRef: {kind: OCIRepository, name: ext-mcp-checks}
-  dependsOn:
-    - name: mcp-servers
-    - name: ext-mcp
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
   name: spire
   namespace: flux-system
 spec:
@@ -439,34 +349,3 @@ spec:
   dependsOn:
     - name: istio # istiod and its injection webhook
     - name: spire # the ClusterSPIFFEID kind and the CSI driver
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: mcp-mtls
-  namespace: flux-system
-spec:
-  interval: 5m
-  url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-mtls
-  secretRef:
-    name: ghcr-pull
-  ref:
-    tag: 8034f68cb62a
-    digest: sha256:fd16d83a22db2377100b0ef37a5631ee93d4ec29c3d1505b57ed86887a22ee23
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: mcp-mtls
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 3m
-  prune: true
-  wait: true # the east-west rule of mcp-guardrails. Pin it only together with the client half in agentgateway: see peerauthentication.yaml.
-  path: ./
-  sourceRef: {kind: OCIRepository, name: mcp-mtls}
-  dependsOn:
-    - name: istio # the PeerAuthentication kind
-    - name: ext-mcp # the namespace
