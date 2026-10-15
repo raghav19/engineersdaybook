@@ -79,6 +79,7 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 ![High-level architecture](docs/diagrams/architecture.drawio.svg)
 
 The flows are in [docs/arch.md](docs/arch.md): login, workload identity, mTLS and the guardrails.
+The L7 policy chain of the gateway is in [docs/arch.md](docs/arch.md#l7-policy-chain).
 
 ## Repo structure
 
@@ -118,24 +119,77 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 
 ### Apply order
 
-Units in one step apply in parallel. A step starts when every unit it waits for is Ready (`wait: true`).
+Flux applies the units as an ordered set. Units in one step apply in parallel. A step starts when every unit it waits for is Ready.
 
-| Step | Unit | Waits for | Why |
-|---|---|---|---|
-| 0 | `gateway-api` | nothing | It installs the Gateway API CRDs. |
-| 0 | `spire` | nothing | It installs the CA, the CSI driver and the `ClusterSPIFFEID` kind. |
-| 1 | `agentgateway` | `gateway-api` | The controller needs the Gateway API CRDs. |
-| 1 | `istio` | `spire` | istiod takes its CA and the CSI driver from SPIRE. |
-| 2 | `secrets` | `agentgateway` | The Secret goes into the `agentgateway-system` namespace. |
-| 2 | `istio-ingress` | `istio`, `spire` | The gateway pod needs the injection webhook of istiod and an identity. |
-| 2 | `ext-mcp` | `istio`, `spire` | The pod needs the injection webhook for its sidecar and an identity. |
-| 3 | `mcp-servers` | `agentgateway`, `secrets` | The backend refers to the Secret `github-upstream` by name. |
-| 3 | `ext-mcp-isolation` | `ext-mcp` | The `NetworkPolicy` lives in the namespace that `ext-mcp` creates. |
-| 3 | `mcp-mtls` | `istio`, `ext-mcp` | The `PeerAuthentication` needs the Istio CRDs and the namespace. |
-| 4 | `routes` | `agentgateway`, `mcp-servers` | The `HTTPRoute` refers to the backend that `mcp-servers` registers. |
-| 4 | `tool-rbac` | `mcp-servers` | The policy attaches to the backend. |
-| 4 | `ext-mcp-checks` | `mcp-servers`, `ext-mcp` | Failure mode is `FailClosed`. Without ext-mcp every tool call fails. |
-| 5 | `authn-jwt` | `routes` | The policy attaches to the `HTTPRoute`. |
-| 5 | `rate-limit` | `routes` | The policy attaches to the `HTTPRoute`. |
+```text
+step 0   { gateway-api, spire }
+step 1   { agentgateway, istio }
+step 2   { secrets, istio-ingress, ext-mcp }
+step 3   { mcp-servers, ext-mcp-isolation, mcp-mtls }
+step 4   { routes, tool-rbac, ext-mcp-checks }
+step 5   { authn-jwt, rate-limit }
+```
 
-The `ext-mcp`, `ext-mcp-isolation`, `ext-mcp-checks` and `mcp-mtls` units are out of the kind stack for now. They return in the order above.
+An arrow means "must be Ready before". Dashed units are the ext-mcp group.
+
+```mermaid
+flowchart LR
+  subgraph s0["step 0"]
+    gwapi[gateway-api]
+    spire[spire]
+  end
+  subgraph s1["step 1"]
+    agw[agentgateway]
+    istio[istio]
+  end
+  subgraph s2["step 2"]
+    secrets[secrets]
+    ingress[istio-ingress]
+    ext[ext-mcp]
+  end
+  subgraph s3["step 3"]
+    servers[mcp-servers]
+    iso[ext-mcp-isolation]
+    mtls[mcp-mtls]
+  end
+  subgraph s4["step 4"]
+    routes[routes]
+    rbac[tool-rbac]
+    checks[ext-mcp-checks]
+  end
+  subgraph s5["step 5"]
+    authn[authn-jwt]
+    rate[rate-limit]
+  end
+
+  gwapi --> agw
+  spire --> istio
+  spire --> ingress
+  spire --> ext
+  agw --> secrets
+  agw --> servers
+  agw --> routes
+  istio --> ingress
+  istio --> ext
+  istio --> mtls
+  secrets --> servers
+  ext --> iso
+  ext --> mtls
+  ext --> checks
+  servers --> routes
+  servers --> rbac
+  servers --> checks
+  routes --> authn
+  routes --> rate
+
+  classDef out stroke-dasharray: 5 5,fill:#f5f5f5,stroke:#999,color:#555
+  class ext,iso,mtls,checks out
+```
+
+Each arrow has a reason in `clusters/kind/sync/stack.yaml`. Examples:
+
+- `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
+- `mcp-servers` refers to the Secret `github-upstream` by name, so `secrets` comes first.
+- `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
+
+The dashed units are out of the kind stack for now. They return in the order above.

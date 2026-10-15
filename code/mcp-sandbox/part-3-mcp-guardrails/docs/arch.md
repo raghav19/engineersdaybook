@@ -285,3 +285,21 @@ sequenceDiagram
 | Credential | held by the gateway, set on the upstream call | `mcp-servers`, Secret | MCP01 |
 
 If ext-mcp is not available, the call fails (`failureMode: FailClosed`).
+
+### L7 policy chain
+
+agentgateway applies its rules in two layers. The HTTP route holds the first two. The MCP backend holds the next two. Egress settings sit on each target.
+
+| Layer | Object, attached to | Field | Setting | MCP methods |
+|---|---|---|---|---|
+| HTTP route | `AgentgatewayPolicy mcp-authn` on `HTTPRoute/mcp` | `traffic.jwtAuthentication` | `mode: Strict`, issuer, audience `mcp-gateway`, JWKS | all |
+| HTTP route | `AgentgatewayPolicy mcp-rate-limit` on `HTTPRoute/mcp` | `traffic.rateLimit.local` | 60 requests per minute, burst 10, key `jwt.sub` | all |
+| MCP backend | `AgentgatewayPolicy mcp-tool-rbac` on `AgentgatewayBackend/mcp-federated` | `backend.mcp.authorization` | `action: Require`, CEL on `mcp.tool.target` and `mcp.tool.name` | tool calls |
+| MCP backend | `AgentgatewayPolicy mcp-extmcp` on `AgentgatewayBackend/mcp-federated` | `backend.mcp.guardrails.processors` | ext-mcp on port 4445, `failureMode: FailClosed` | `tools/call` request and response, others response only |
+| Egress | `AgentgatewayBackend mcp-federated`, each target | `static.policies` | `tls.sni`, `auth.secretRef` (GitHub only) | per target |
+
+- **Methods for ext-mcp.** `tools/call` is `Full`: ext-mcp sees the request and the response. `tools/list`, `resources/read` and `prompts/get` are `Response`.
+- **JWT handling.** By default the gateway deletes the JWT after it checks the token. The upstream server does not receive it (`preserveToken` is off).
+- **Rate limit unit.** The limit counts HTTP requests. One tool call is several requests: initialize, a notification, a list and the call.
+- **Why `Require`.** A `Deny` rule that fails to evaluate fails to deny. A `Require` rule that fails to evaluate fails closed, so the policy uses `Require`.
+- **Order between layers.** The route policies run before the MCP policies in the sequence above. Nobody checked this order on a live controller yet.
