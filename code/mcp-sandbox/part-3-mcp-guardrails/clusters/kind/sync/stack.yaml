@@ -33,8 +33,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: 67c4ebcbc8bd
-    digest: sha256:438f60918d2093eaa3cccde8645fa9f1d7ef369c97e5b08dd1ec323c1b70b0e4
+    tag: 5f7e9eee881c
+    digest: sha256:b636a179d1c066cb058cfb4085b0678d1003a8d5c91474cfbde75005c0e3e97a
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -61,8 +61,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: 8dd5c4fc3199
-    digest: sha256:eb64285f68ab23e36bef13b5e3bdae73d0b4fd96d2ae1a07f76878fb82298c28
+    tag: 5f7e9eee881c
+    digest: sha256:68bd9b083a9f8dbdf75948ba9ca3fab1ce5cd89b47ff70678cf61720779250e6
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -112,7 +112,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 5f7e9eee881c
+    digest: sha256:0545a5b5c01185f5d117e8b6a8a547303ba738ad58e155aab72be8a75a31c52b
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -142,7 +143,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 5f7e9eee881c
+    digest: sha256:dfa3aa90205c6c8eea82d83329bacf4acdde005bfffeac5ae9fd4db43495239e
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -177,7 +179,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:eb5f05c48a83b724baa19979eec4974da1e45c5e52c550bf98c516ed0c2dd500
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -207,7 +210,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:42573d2af444c8f414b3e78c2e6e1568cd80e720308f4ff26002be910f844402
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -236,7 +240,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:1ca3da6286b43e7c81b0a8bfecdb529fa90d3cb0157958ba0a98b64fba4ac0d3
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -265,7 +270,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:d18c6c59ce62c78051b768bce6b54092f43ddbc677b5a7aaf2f7c4ced42c92ac
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -294,7 +300,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:6353665fbac9c2e5fa34415099799dd9f54215463eba7b7867a9302a5c7ddb8f
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -323,7 +330,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:430a041a89e9c5a8b34a86e39850263b6393f81aa4179f788c7a6f6a48a52f51
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -353,8 +361,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: 6eccb3a8c5da
-    digest: sha256:26c72cd6e515f09c639597d524b6ef4e04b1991f9602275e9265b253cb5fae1a
+    tag: 5f7e9eee881c
+    digest: sha256:e61a4c43d0c1d4d06eb48ff4d02adc57d08d98e462d45af3426d595f056987c6
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -381,7 +389,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 5f7e9eee881c
+    digest: sha256:6ae2c8fd2183e6879ccae1094c0ce49e1a610a64b31a0504dc58da94195b9a86
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -410,7 +419,8 @@ spec:
   secretRef:
     name: ghcr-pull
   ref:
-    tag: unpinned
+    tag: 8034f68cb62a
+    digest: sha256:8dcea7bcba8fec33841895a2b28a4f4051acae44ff5493c3f2ca03a7b6b42d24
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
