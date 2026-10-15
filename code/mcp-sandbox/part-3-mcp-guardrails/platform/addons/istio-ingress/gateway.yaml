@@ -1,5 +1,6 @@
 # The Istio ingress gateway (an Envoy Deployment in namespace istio-ingress). Installed by Flux (helm-controller).
-# The chart source is the HelmRepository in base.yaml, in namespace istio-system.
+# The chart source is the HelmRepository in repository.yaml, in this namespace. This component waits for `istio` in stack.yaml: the
+# injection webhook of istiod must be serving when the gateway pod is created, or the pod keeps the placeholder image `auto`.
 #
 # It is the L4 front door of the stack: a later change (the routes) moves the host port 30080 from the agentgateway Service to this one,
 # and the gateway hands the connection to agentgateway as mTLS. Until then it receives no traffic: the Service is ClusterIP.
@@ -20,10 +21,6 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: istio
-        namespace: istio-system
-  dependsOn:
-    - name: istiod
-      namespace: istio-system # the injection webhook first: the proxy of the gateway pod is injected
   driftDetection:
     mode: enabled
   values:

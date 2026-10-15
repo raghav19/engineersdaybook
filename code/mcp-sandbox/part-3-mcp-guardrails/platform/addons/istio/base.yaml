@@ -1,6 +1,7 @@
 # The Istio base chart: the CRDs and the cluster roles of the control plane. Installed by Flux (helm-controller).
-# The chart source below is shared with istiod.yaml and gateway.yaml. All three charts are one Istio release: `istio_version` in config/
-# sets the three versions (setters.yaml). The version has no default here, so the build fails without it.
+# The chart source below is shared with istiod.yaml; the gateway chart (istio-ingress component) has its own copy. All three charts are one
+# Istio release: `istio_version` in config/ sets the three versions (setters.yaml of both folders). The version has no default here, so the
+# build fails without it.
 # The CRD policy is CreateReplace: Helm never upgrades files in a chart's crds/ folder. Helm never deletes them either.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository

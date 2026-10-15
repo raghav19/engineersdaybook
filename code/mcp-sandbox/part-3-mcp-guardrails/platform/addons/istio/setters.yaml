@@ -1,13 +1,11 @@
 # The fields of this folder a config value can override: name, then the object and the path it goes into. A number in a path is a position
 # in a list. A chart value is a field of the HelmRelease, so its path starts at spec.values. Both names have no default in the manifest:
 # config/ must set them, and the build fails without.
-# The three charts are one Istio release, so one name sets the three chart versions.
+# The three charts are one Istio release, so one name sets the three chart versions (the gateway chart is in istio-ingress/setters.yaml).
 istio_version:
   - object: HelmRelease/istio-base
     path: spec.chart.spec.version
   - object: HelmRelease/istiod
-    path: spec.chart.spec.version
-  - object: HelmRelease/istio-ingressgateway
     path: spec.chart.spec.version
 # The trust domain is shared with the spire addon (its setters.yaml lists the same name): the two cannot disagree.
 trust_domain:

@@ -1,0 +1,10 @@
+# The chart source of the gateway chart, the same repository as the one in the istio addon (base.yaml). It is a second object, in this
+# component's namespace: two artifacts must not own one object.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: istio
+  namespace: istio-ingress
+spec:
+  interval: 10m
+  url: https://blob.istio.io/istio-release/charts
