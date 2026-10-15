@@ -16,6 +16,9 @@ kit_version := '0.1.0'
 kind_config := repo / 'code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/kind-config.yaml'
 kind_cluster := shell('yq .name "$1"', kind_config)
 
+# The hosts of the egress allow list in dev-tools.yaml, on one line (allow-egress)
+egress_hosts := shell('yq -r "$1" "$2"', '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow | join(" ")', sbx_dir / 'agent/dev-tools.yaml')
+
 # sbx has no declarative skills list, so this list is it. --force replaces a skill without asking.
 
 # Once per machine. Install the agent skills into the sbx store, which every sandbox links in read-only at its start
@@ -60,8 +63,7 @@ build:
 allow-egress:
     #!/usr/bin/env bash
     set -f -euo pipefail
-    hosts=$(yq -r '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow[]' {{ sbx_dir }}/agent/dev-tools.yaml)
-    for host in $hosts; do
+    for host in {{ egress_hosts }}; do
       sbx policy allow network "$host"
     done
 
