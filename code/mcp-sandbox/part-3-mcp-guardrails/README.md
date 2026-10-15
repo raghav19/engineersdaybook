@@ -3,13 +3,44 @@
 Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox](../../agent-sandbox/README.md) put the agent in a microVM.
 This part puts a policy point on the MCP path. Every call to a remote MCP server goes through [agentgateway](https://agentgateway.dev) in a local kind cluster.
 
-## What we build
+## What we are building
 
 ### Problem
 
-- An AI agent calls tools on remote MCP servers.
-- A tool call can destroy data. A tool result can hold secrets or injected text.
-- Nothing checks the path between the agent and the server.
+An agent that calls MCP tools holds real authority. Parts 1 and 2 of this series showed two ways that authority goes wrong. Each fix left a gap.
+
+**Part 1: the model was the only control.** [Part 1](../part-1-lethal-trifecta/README.md) built the "lethal trifecta" on purpose: private data, untrusted content and a way to publish.
+It gave a coding agent one fine-grained GitHub token. The token covered a public repo and a private repo.
+A planted issue told the agent to copy a private file into a public pull request. The model refused twice.
+Nothing else would have stopped the copy. The token scope allowed the read. The injected text entered the agent's context and tried to redirect its plan.
+A model's judgment changes with the model and with the wording. You cannot enforce it or audit it.
+
+**Part 2: a sandbox does not govern the calls.** [Part 2](../part-2-sandboxing-local-mcp/README.md) sealed one local MCP server in rootless Docker.
+The container has a read-only filesystem, no capabilities and a sealed network. Its only route out is an egress proxy that logs every outbound attempt.
+That limits what the server process can reach. It does not limit what the agent asks the server to do. It does not inspect what a result carries back.
+The server runs every call it receives.
+
+**The MCP path itself stays open.** Remote servers run outside any sandbox that we own. Four questions on that path have no owner today:
+
+1. Who is calling, and may that user use this server and this tool?
+2. What do the arguments of the call contain?
+3. What does the result carry back into the agent's context?
+4. Which workload is on the other end of each hop, and is there a record of the call?
+
+The [OWASP MCP Top 10](https://owasp.org/www-project-mcp-top-10/) names the risks. Parts 1 and 2 touched some of them. This part maps all ten.
+
+| ID | Risk | What goes wrong on this path |
+|---|---|---|
+| MCP01 | Token Mismanagement and Secret Exposure | The agent holds a long-lived token, or a secret appears in a call or a result. |
+| MCP02 | Privilege Escalation via Scope Creep | One credential reaches more than the task needs, and every call gets the same rights. |
+| MCP03 | Tool Poisoning | A server changes a tool description after the user approved it. |
+| MCP04 | Software Supply Chain Attacks | An MCP server that you did not write or review runs behind the call. |
+| MCP05 | Command Injection and Execution | Arguments carry path traversal, a sensitive file name or a credential. |
+| MCP06 | Intent Flow Subversion | Content in a result redirects the plan of the agent. |
+| MCP07 | Insufficient Authentication and Authorization | A call arrives with no identity, or with an identity that nobody checks. |
+| MCP08 | Lack of Audit and Telemetry | Nobody can tell which user called which tool. |
+| MCP09 | Shadow MCP Servers | An agent reaches a server that nobody registered or reviewed. |
+| MCP10 | Context Injection and Over-Sharing | Injected text or a secret moves between the server and the model. |
 
 ### Solution
 
@@ -19,7 +50,7 @@ This part puts a policy point on the MCP path. Every call to a remote MCP server
 - Each workload has a SPIFFE identity. Traffic in the cluster uses mTLS.
 - The gateway holds the upstream credential. The agent never sees it.
 
-The rules map to the [OWASP MCP Top 10](https://owasp.org/www-project-mcp-top-10/).
+The [policies table](#policies-and-what-they-map-to) lists the control for each risk.
 
 ![High-level architecture](docs/diagrams/architecture.drawio.svg)
 
