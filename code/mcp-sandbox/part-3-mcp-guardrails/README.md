@@ -84,7 +84,7 @@ The flows are in [docs/arch.md](docs/arch.md): login, workload identity, mTLS an
 
 ```text
 part-3-mcp-guardrails/
-├── docs/                 arch.md and diagrams/ (the draw.io diagram)
+├── docs/                 arch.md and diagrams/ (the draw.io source and its SVG)
 ├── lib/workflow/         shared just recipes: build, diff, push, pin
 ├── tools/                config-builder and value-injector
 ├── config/               overrides only, by cloud, env and region

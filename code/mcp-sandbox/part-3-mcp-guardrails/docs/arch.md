@@ -21,7 +21,7 @@ The problem and the solution are in the [README](../README.md#what-we-build).
 
 ![High-level architecture: GitHub and Dex, MCP client, istio-ingress, agentgateway, ext-mcp, upstream MCP servers, SPIRE and Flux](diagrams/architecture.drawio.svg)
 
-Open `diagrams/architecture.drawio.svg` in draw.io to edit it.
+The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md) to open it in draw.io.
 
 | Component | Job | Namespace |
 |---|---|---|
