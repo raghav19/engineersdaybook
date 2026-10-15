@@ -56,19 +56,13 @@ build:
     grep -q "$digest" {{ sbx_dir }}/sbxenv.yaml
     echo "pinned dev-tools $digest"
 
-# dev-tools.yaml is the record of the egress allow list: the kit applies it when a sandbox starts from a rebuilt, re-pinned kit. This puts the same
-# hosts into the local sbx policy now, for every sandbox on the host, so a new host works without the rebuild. set -f: a pattern like **.istio.io
-# must not be expanded by the shell.
-
-# Host only. Allow every host of the allow list in dev-tools.yaml in the local sbx policy, one `sbx policy allow network` each
+# Host only. Allow the hosts of the allow list in dev-tools.yaml in the local sbx policy now, without the kit rebuild (set -f: no glob expansion of **.istio.io)
 allow-egress:
     #!/usr/bin/env bash
     set -f -euo pipefail
-    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): sbx policy is the host's." >&2; exit 1; }
-    yq -r '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow[]' {{ sbx_dir }}/agent/dev-tools.yaml |
-    while read -r host; do
-      sbx policy allow network "$host" > /dev/null
-      echo "allowed $host"
+    hosts=$(yq -r '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow[]' {{ sbx_dir }}/agent/dev-tools.yaml)
+    for host in $hosts; do
+      sbx policy allow network "$host"
     done
 
 # .sbx/secrets.json is for the sandbox and nothing else: every entry is injected, including the two the host recipes read (login reads ghcr.io, install-mcp reads api.githubcopilot.com).
