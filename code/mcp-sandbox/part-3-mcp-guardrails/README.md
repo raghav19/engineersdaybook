@@ -1,9 +1,6 @@
 # Part 3: MCP guardrails with agentgateway on kind
 
-Part 1 showed the attack. Part 2 contained one local MCP server. [agent-sandbox](../../agent-sandbox/README.md) put the agent in a microVM.
-This part puts a policy point on the MCP path. Every call to a remote MCP server goes through [agentgateway](https://agentgateway.dev) in a local kind cluster.
-
-## What we build
+## What we are building
 
 ### Problem
 

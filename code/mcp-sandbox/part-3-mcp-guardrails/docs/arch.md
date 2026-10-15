@@ -2,7 +2,7 @@
 
 ## 1. Terms
 
-The problem and the solution are in the [README](../README.md#what-we-build).
+The problem and the solution are in the [README](../README.md#what-we-are-building).
 
 | Term | Meaning |
 |---|---|
