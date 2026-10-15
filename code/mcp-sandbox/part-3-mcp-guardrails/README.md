@@ -109,9 +109,33 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 
 - **One artifact per unit.** Each addon, route set, MCP server registration and policy is its own OCI artifact. The artifact is the rendered manifest. Charts render at build time.
 - **A pin selects what runs.** `clusters/kind/sync/stack.yaml` pins one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin.
-- **Flux applies the pins.** Each `Kustomization` in `stack.yaml` applies one artifact in `dependsOn` order.
+- **Flux applies the pins in order.** Each `Kustomization` in `stack.yaml` applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
 - **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
 - **Build functions.** `config-builder` and `value-injector` are binaries that the repo pins by digest. `config/tools/manifest.yaml` holds the digest and sha256 of each one, and the build checks the sha256.
 - **Secrets.** The upstream credential is a SOPS-encrypted Secret in `clusters/<name>/sync/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
 - **Baseline run.** A baseline is `stack.yaml` without the policy entries. Compare it with a run that has every policy.
+
+### Apply order
+
+Units in one step apply in parallel. A step starts when every unit it waits for is Ready (`wait: true`).
+
+| Step | Unit | Waits for | Why |
+|---|---|---|---|
+| 0 | `gateway-api` | nothing | It installs the Gateway API CRDs. |
+| 0 | `spire` | nothing | It installs the CA, the CSI driver and the `ClusterSPIFFEID` kind. |
+| 1 | `agentgateway` | `gateway-api` | The controller needs the Gateway API CRDs. |
+| 1 | `istio` | `spire` | istiod takes its CA and the CSI driver from SPIRE. |
+| 2 | `secrets` | `agentgateway` | The Secret goes into the `agentgateway-system` namespace. |
+| 2 | `istio-ingress` | `istio`, `spire` | The gateway pod needs the injection webhook of istiod and an identity. |
+| 2 | `ext-mcp` | `istio`, `spire` | The pod needs the injection webhook for its sidecar and an identity. |
+| 3 | `mcp-servers` | `agentgateway`, `secrets` | The backend refers to the Secret `github-upstream` by name. |
+| 3 | `ext-mcp-isolation` | `ext-mcp` | The `NetworkPolicy` lives in the namespace that `ext-mcp` creates. |
+| 3 | `mcp-mtls` | `istio`, `ext-mcp` | The `PeerAuthentication` needs the Istio CRDs and the namespace. |
+| 4 | `routes` | `agentgateway`, `mcp-servers` | The `HTTPRoute` refers to the backend that `mcp-servers` registers. |
+| 4 | `tool-rbac` | `mcp-servers` | The policy attaches to the backend. |
+| 4 | `ext-mcp-checks` | `mcp-servers`, `ext-mcp` | Failure mode is `FailClosed`. Without ext-mcp every tool call fails. |
+| 5 | `authn-jwt` | `routes` | The policy attaches to the `HTTPRoute`. |
+| 5 | `rate-limit` | `routes` | The policy attaches to the `HTTPRoute`. |
+
+The `ext-mcp`, `ext-mcp-isolation`, `ext-mcp-checks` and `mcp-mtls` units are out of the kind stack for now. They return in the order above.
