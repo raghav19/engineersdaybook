@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The Istio ingress gateway: its namespace, the chart (installed by Flux as a HelmRelease) and its SPIRE identity. Its own artifact, so that
+# Flux applies it after `istio` is Ready: the injection webhook of istiod must be serving when the gateway pod is created, or the pod is
+# admitted without its proxy (image: auto) and never recovers.
+resources:
+  - namespace.yaml
+  - repository.yaml
+  - gateway.yaml
+  - clusterspiffeid.yaml

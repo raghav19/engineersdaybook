@@ -1,0 +1,6 @@
+# The fields of this folder a config value can override: name, then the object and the path it goes into. A chart value is a field of the
+# HelmRelease, so its path starts at spec.values. The name has no default in the manifest: config/ must set it, and the build fails without.
+# The gateway chart is one Istio release with base and istiod (the istio addon), so the name is the same one.
+istio_version:
+  - object: HelmRelease/istio-ingressgateway
+    path: spec.chart.spec.version

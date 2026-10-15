@@ -1,0 +1,13 @@
+# The namespace of the Istio ingress gateway. It travels with this component.
+# Flux must never prune it: removing a namespace removes everything in it.
+#
+# istio-ingress the ingress gateway. Gateways run in their own namespace, apart from the control plane. The label makes the injection
+#               webhook of istiod fill in the proxy of the gateway pods.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-ingress
+  labels:
+    istio-injection: enabled
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

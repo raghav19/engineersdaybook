@@ -1,21 +1,10 @@
-# The two namespaces of the Istio addon. They travel with this addon.
-# Flux must never prune one: removing a namespace removes everything in it.
+# The namespace of the Istio addon. It travels with this addon.
+# Flux must never prune it: removing a namespace removes everything in it.
 #
 # istio-system  istiod and the base chart objects.
-# istio-ingress the ingress gateway. Gateways run in their own namespace, apart from the control plane. The label makes the injection
-#               webhook of istiod fill in the proxy of the gateway pods.
 apiVersion: v1
 kind: Namespace
 metadata:
   name: istio-system
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: istio-ingress
-  labels:
-    istio-injection: enabled
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
