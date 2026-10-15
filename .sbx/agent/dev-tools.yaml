@@ -56,6 +56,7 @@ capabilities:
       - agentgateway.dev
       - istio.io
       - cuelang.org
+      - spiffe.io
       # VS Code and Copilot
       - marketplace.visualstudio.com
       - "**.vsassets.io"
