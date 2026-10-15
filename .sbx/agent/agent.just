@@ -5,6 +5,7 @@
 #   update-skills   refresh the skills the store already has to upstream's latest
 #   sync-secrets    set the tokens in .sbx/secrets.json as sbx custom secrets, so the VM can use them without holding them (run does it first)
 #   build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
+#   allow-egress    host only: allow the hosts of the dev-tools.yaml allow list in the local sbx policy now, without the kit rebuild
 #   setup-vscode    write the Remote-SSH and update settings, and the extensions of .vscode/extensions.json, into your host VS Code user settings (run does it first)
 #   kubeconfig      host only: write .sbx/kubeconfig, a read-only view of the kind cluster that the sandbox reads through the host repo mount
 
@@ -54,6 +55,21 @@ build:
     yq -i '(.kits[] | select(contains("dev-tools"))) = "{{ kit_repo }}@" + strenv(digest)' {{ sbx_dir }}/sbxenv.yaml
     grep -q "$digest" {{ sbx_dir }}/sbxenv.yaml
     echo "pinned dev-tools $digest"
+
+# dev-tools.yaml is the record of the egress allow list: the kit applies it when a sandbox starts from a rebuilt, re-pinned kit. This puts the same
+# hosts into the local sbx policy now, for every sandbox on the host, so a new host works without the rebuild. set -f: a pattern like **.istio.io
+# must not be expanded by the shell.
+
+# Host only. Allow every host of the allow list in dev-tools.yaml in the local sbx policy, one `sbx policy allow network` each
+allow-egress:
+    #!/usr/bin/env bash
+    set -f -euo pipefail
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): sbx policy is the host's." >&2; exit 1; }
+    yq -r '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow[]' {{ sbx_dir }}/agent/dev-tools.yaml |
+    while read -r host; do
+      sbx policy allow network "$host" > /dev/null
+      echo "allowed $host"
+    done
 
 # .sbx/secrets.json is for the sandbox and nothing else: every entry is injected, including the two the host recipes read (login reads ghcr.io, install-mcp reads api.githubcopilot.com).
 # One entry per host, the host as the key and the token as the value (edit with `sops .sbx/secrets.json`):
