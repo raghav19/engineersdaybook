@@ -119,77 +119,21 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 
 ### Apply order
 
-Flux applies the units as an ordered set. Units in one step apply in parallel. A step starts when every unit it waits for is Ready.
-
-```text
-step 0   { gateway-api, spire }
-step 1   { agentgateway, istio }
-step 2   { secrets, istio-ingress, ext-mcp }
-step 3   { mcp-servers, ext-mcp-isolation, mcp-mtls }
-step 4   { routes, tool-rbac, ext-mcp-checks }
-step 5   { authn-jwt, rate-limit }
-```
-
-An arrow means "must be Ready before". Dashed units are the ext-mcp group.
+Flux applies the units in six steps. Units in one step apply in parallel. A step starts when every unit it waits for is Ready.
 
 ```mermaid
 flowchart LR
-  subgraph s0["step 0"]
-    gwapi[gateway-api]
-    spire[spire]
-  end
-  subgraph s1["step 1"]
-    agw[agentgateway]
-    istio[istio]
-  end
-  subgraph s2["step 2"]
-    secrets[secrets]
-    ingress[istio-ingress]
-    ext[ext-mcp]
-  end
-  subgraph s3["step 3"]
-    servers[mcp-servers]
-    iso[ext-mcp-isolation]
-    mtls[mcp-mtls]
-  end
-  subgraph s4["step 4"]
-    routes[routes]
-    rbac[tool-rbac]
-    checks[ext-mcp-checks]
-  end
-  subgraph s5["step 5"]
-    authn[authn-jwt]
-    rate[rate-limit]
-  end
-
-  gwapi --> agw
-  spire --> istio
-  spire --> ingress
-  spire --> ext
-  agw --> secrets
-  agw --> servers
-  agw --> routes
-  istio --> ingress
-  istio --> ext
-  istio --> mtls
-  secrets --> servers
-  ext --> iso
-  ext --> mtls
-  ext --> checks
-  servers --> routes
-  servers --> rbac
-  servers --> checks
-  routes --> authn
-  routes --> rate
-
-  classDef out stroke-dasharray: 5 5,fill:#f5f5f5,stroke:#999,color:#555
-  class ext,iso,mtls,checks out
+  s0["<b>Step 0</b><br/>gateway-api<br/>spire"] --> s1["<b>Step 1</b><br/>agentgateway<br/>istio"]
+  s1 --> s2["<b>Step 2</b><br/>secrets<br/>istio-ingress<br/>ext-mcp *"]
+  s2 --> s3["<b>Step 3</b><br/>mcp-servers<br/>ext-mcp-isolation *<br/>mcp-mtls *"]
+  s3 --> s4["<b>Step 4</b><br/>routes<br/>tool-rbac<br/>ext-mcp-checks *"]
+  s4 --> s5["<b>Step 5</b><br/>authn-jwt<br/>rate-limit"]
 ```
 
-Each arrow has a reason in `clusters/kind/sync/stack.yaml`. Examples:
+A unit waits only for units in earlier steps. `clusters/kind/sync/stack.yaml` holds the exact `dependsOn` of each unit. Examples:
 
 - `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
 - `mcp-servers` refers to the Secret `github-upstream` by name, so `secrets` comes first.
 - `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
 
-The dashed units are out of the kind stack for now. They return in the order above.
+A `*` marks the ext-mcp group. These units are out of the kind stack for now. They return in the order above.
