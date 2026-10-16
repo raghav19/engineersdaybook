@@ -8,10 +8,10 @@
           <mxGeometry x="20" y="65" width="170" height="64" as="geometry"/>
         </mxCell>
         <mxCell id="reg" value="&lt;b&gt;ghcr.io&lt;/b&gt;&lt;br&gt;10 OCI artifacts" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="20" y="330" width="170" height="64" as="geometry"/>
+          <mxGeometry x="20" y="290" width="170" height="64" as="geometry"/>
         </mxCell>
         <mxCell id="kind" value="kind cluster" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="260" y="20" width="820" height="520" as="geometry"/>
+          <mxGeometry x="260" y="20" width="920" height="440" as="geometry"/>
         </mxCell>
         <mxCell id="fks" value="&lt;b&gt;Kustomization&lt;/b&gt;&lt;br&gt;flux-system" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="280" y="65" width="230" height="64" as="geometry"/>
@@ -19,62 +19,56 @@
         <mxCell id="flux" value="&lt;b&gt;FluxInstance&lt;/b&gt;&lt;br&gt;flux" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="600" y="65" width="230" height="64" as="geometry"/>
         </mxCell>
-        <mxCell id="units" value="infra-stack.yaml: 10 units" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="280" y="160" width="780" height="360" as="geometry"/>
+        <mxCell id="units" value="infra-stack.yaml: 10 units, applied in this order" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="280" y="160" width="880" height="262" as="geometry"/>
         </mxCell>
-        <mxCell id="u-agentgateway" value="&lt;b&gt;agentgateway&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="455" y="235" width="130" height="48" as="geometry"/>
+        <mxCell id="step0" value="Step 0" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="300" y="200" width="130" height="170" as="geometry"/>
         </mxCell>
-        <mxCell id="u-authn-jwt" value="&lt;b&gt;authn-jwt&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="905" y="235" width="130" height="48" as="geometry"/>
+        <mxCell id="step1" value="Step 1" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="480" y="200" width="130" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="step2" value="Step 2" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="660" y="200" width="130" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="step3" value="Step 3" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="840" y="200" width="130" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="step4" value="Step 4" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="200" width="130" height="170" as="geometry"/>
         </mxCell>
         <mxCell id="u-gateway-api" value="&lt;b&gt;gateway-api&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="305" y="235" width="130" height="48" as="geometry"/>
-        </mxCell>
-        <mxCell id="u-istio" value="&lt;b&gt;istio&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="455" y="405" width="130" height="48" as="geometry"/>
-        </mxCell>
-        <mxCell id="u-istio-ingress" value="&lt;b&gt;istio-ingress&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="605" y="405" width="130" height="48" as="geometry"/>
-        </mxCell>
-        <mxCell id="u-mcp-servers" value="&lt;b&gt;mcp-servers&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="605" y="235" width="130" height="48" as="geometry"/>
-        </mxCell>
-        <mxCell id="u-rate-limit" value="&lt;b&gt;rate-limit&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="905" y="320" width="130" height="48" as="geometry"/>
-        </mxCell>
-        <mxCell id="u-routes" value="&lt;b&gt;routes&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="755" y="235" width="130" height="48" as="geometry"/>
+          <mxGeometry x="310.0" y="236" width="110" height="44" as="geometry"/>
         </mxCell>
         <mxCell id="u-spire" value="&lt;b&gt;spire&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="305" y="405" width="130" height="48" as="geometry"/>
+          <mxGeometry x="310.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="u-tool-rbac" value="&lt;b&gt;tool-rbac&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="755" y="320" width="130" height="48" as="geometry"/>
+        <mxCell id="u-agentgateway" value="&lt;b&gt;agentgateway&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="490.0" y="236" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="h0" value="&lt;b&gt;Step 0&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="305" y="196" width="130" height="22" as="geometry"/>
+        <mxCell id="u-istio" value="&lt;b&gt;istio&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="490.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="h1" value="&lt;b&gt;Step 1&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="455" y="196" width="130" height="22" as="geometry"/>
+        <mxCell id="u-istio-ingress" value="&lt;b&gt;istio-ingress&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="670.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="h2" value="&lt;b&gt;Step 2&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="605" y="196" width="130" height="22" as="geometry"/>
+        <mxCell id="u-mcp-servers" value="&lt;b&gt;mcp-servers&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="670.0" y="236" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="h3" value="&lt;b&gt;Step 3&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="755" y="196" width="130" height="22" as="geometry"/>
+        <mxCell id="u-routes" value="&lt;b&gt;routes&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="850.0" y="236" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="h4" value="&lt;b&gt;Step 4&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry x="905" y="196" width="130" height="22" as="geometry"/>
+        <mxCell id="u-tool-rbac" value="&lt;b&gt;tool-rbac&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="850.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="lg0" value="&lt;b&gt;addons&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="610" y="478" width="90" height="26" as="geometry"/>
+        <mxCell id="u-authn-jwt" value="&lt;b&gt;authn-jwt&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1030.0" y="236" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="lg1" value="&lt;b&gt;MCP servers, routes&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="715" y="478" width="150" height="26" as="geometry"/>
+        <mxCell id="u-rate-limit" value="&lt;b&gt;rate-limit&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1030.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="lg2" value="&lt;b&gt;policies&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="880" y="478" width="90" height="26" as="geometry"/>
+        <mxCell id="rule" value="Units in one step apply in parallel. A unit starts when every unit it waits for is Ready." style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="280" y="386" width="880" height="30" as="geometry"/>
         </mxCell>
         <mxCell id="e-agentgateway-mcp-servers" value="" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.5;edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=20;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="u-agentgateway" target="u-mcp-servers">
           <mxGeometry relative="1" as="geometry"/>

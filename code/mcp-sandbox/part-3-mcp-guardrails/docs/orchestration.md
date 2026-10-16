@@ -142,15 +142,9 @@ flowchart LR
   mcp --> rbac
   routes --> jwt
   routes --> rate
-  classDef addon fill:#dae8fc,stroke:#6c8ebf,color:#000
-  classDef traffic fill:#fff2cc,stroke:#d6b656,color:#000
-  classDef policy fill:#e1d5e7,stroke:#9673a6,color:#000
-  class gwapi,spire,agw,istio,ingress addon
-  class mcp,routes traffic
-  class rbac,jwt,rate policy
 ```
 
-An arrow means "the target waits for the source". The pictures show the direct waits that the chain does not already give. `routes` also lists `agentgateway`, and `istio-ingress` also lists `spire`. `mcp-servers` and `istio` already wait for those, so the order is the same, and the pictures leave the two arrows out. The table lists every `dependsOn`. The same graph is in the diagram of section 2, with the colors of the [architecture](arch.md) diagram.
+An arrow means "the target waits for the source". The pictures show the direct waits that the chain does not already give. `routes` also lists `agentgateway`, and `istio-ingress` also lists `spire`. `mcp-servers` and `istio` already wait for those, so the order is the same, and the pictures leave the two arrows out. The table lists every `dependsOn`. The same graph is in the diagram of section 2.
 
 | Unit | Waits for | Why |
 |---|---|---|
