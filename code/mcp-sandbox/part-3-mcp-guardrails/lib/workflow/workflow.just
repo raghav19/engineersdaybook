@@ -2,15 +2,16 @@
 # help; the recipes are in package.just (build), diff.just (diff) and push.just (push, pin).
 #
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
-# also the OCIRepository / Kustomization name in clusters/<cluster>/sync/stack.yaml.
+# also the OCIRepository / Kustomization name in sync/<full name>/infra-stack.yaml or app-stack.yaml.
 #
 #   just build      the folder with the config values applied, rendered completely (charts included)
 #                   -> out/<name>/manifests.yaml, then checked against the Kubernetes, Flux and ecosystem schemas.
 #                   This is the artifact. The converged config it used is out/values.yaml.
-#   just diff       the change against the artifact `base` (origin/main) pins in stack.yaml,
+#   just diff       the change against the artifact `base` (origin/main) pins in its stack,
 #                   that is what the cluster runs
 #   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit
-#   just pin        write the pushed tag and digest into stack.yaml (commit it in a PR)
+#   just pin        write the pushed tag and digest into its stack (commit it in a PR). The stacks are sync/<full name>/infra-stack.yaml
+#                   (the components of platform/addons) and app-stack.yaml (the rest)
 #
 # out/<name>/ holds everything of one component. Only manifests.yaml is pushed:
 #
@@ -34,8 +35,13 @@ mod tools '../../tools/tools.just'
 root := parent_directory(parent_directory(source_directory()))
 name := file_name(justfile_directory())
 out := root / 'out' / name
-cluster := 'kind'
-stack := 'clusters/' + cluster + '/sync/stack.yaml'
+# the cluster that a run targets: CLUSTER=<name> just <component>/pin. Its folder is clusters/<cluster>/ (bring-up, cluster.yaml)
+cluster := env('CLUSTER', 'kind')
+# the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
+sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
+# the tier of the component decides its stack: the folders of platform/addons are the infrastructure, everything else is the app side
+tier := if justfile_directory() =~ '/platform/addons/' { 'infra' } else { 'app' }
+stack := sync + '/' + tier + '-stack.yaml'
 base := 'origin/main'
 
 # registry
@@ -68,10 +74,10 @@ cluster_scoped := 'ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|Mu
 # build: remove .metadata.namespace from the objects whose kind is in cluster_scoped (flate puts one there)
 drop_namespace := 'del(select(.kind | test("^(' + cluster_scoped + ')$")) | .metadata.namespace)'
 
-# _baseline: from stack.yaml, the digest of this component's OCIRepository ("" when it has none yet)
+# _baseline: from its stack, the digest of this component's OCIRepository ("" when it has none yet)
 pinned_digest := 'select(.spec.url == "' + registry + '/' + name + '") | .spec.ref.digest // ""'
 
-# pin: in stack.yaml, set spec.ref of the component's OCIRepository to the tag and digest of the last
+# pin: in its stack, set spec.ref of the component's OCIRepository to the tag and digest of the last
 # push (out/<name>/push.json), keeping only those two fields
 pin_ref := '(select(.spec.url == "' + registry + '/' + name + '") | .spec.ref)' + \
            ' = (load("' + out + '/push.json") | pick(["tag", "digest"]) | ... style="")'

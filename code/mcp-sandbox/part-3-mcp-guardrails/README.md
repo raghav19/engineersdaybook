@@ -92,7 +92,8 @@ part-3-mcp-guardrails/
 │   ├── routes/           Gateway, AgentgatewayParameters, HTTPRoute
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
-├── clusters/kind/        cluster.yaml, kind-config.yaml, justfile, sync/ (stack.yaml, secrets/)
+├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux)
+├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml, app-stack.yaml, secrets/
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```
@@ -102,17 +103,17 @@ part-3-mcp-guardrails/
 A short note. The orchestration moves to its own doc later.
 
 ```text
-component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► stack.yaml ──► Flux applies
+component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► infra-stack.yaml / app-stack.yaml ──► Flux applies
 ```
 
 - **One artifact per unit.** Each addon, route set, MCP server registration and policy is its own OCI artifact. The artifact is the rendered manifest. Charts render at build time.
-- **A pin selects what runs.** `clusters/kind/sync/stack.yaml` pins one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin.
-- **Flux applies the pins in order.** Each `Kustomization` in `stack.yaml` applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
+- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` and `app-stack.yaml` pin one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin.
+- **Flux applies the pins in order.** Each `Kustomization` in a stack applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
 - **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
 - **Build functions.** `config-builder` and `value-injector` are binaries that the repo pins by digest. `config/tools/manifest.yaml` holds the digest and sha256 of each one, and the build checks the sha256.
-- **Secrets.** The upstream credential is a SOPS-encrypted Secret in `clusters/<name>/sync/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
-- **Baseline run.** A baseline is `stack.yaml` without the policy entries. Compare it with a run that has every policy.
+- **Secrets.** The upstream credential is a SOPS-encrypted Secret in `sync/<name>/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
+- **Baseline run.** A baseline is the app stack without the policy entries. Compare it with a run that has every policy.
 
 ### Apply order
 
@@ -127,10 +128,38 @@ flowchart LR
   s4 --> s5["<b>Step 5</b><br/>authn-jwt<br/>rate-limit"]
 ```
 
-A unit waits only for units in earlier steps. `clusters/kind/sync/stack.yaml` holds the exact `dependsOn` of each unit. Examples:
+A unit waits only for units in earlier steps. The stacks in `sync/local-kind/` hold the exact `dependsOn` of each unit. Examples:
 
 - `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
 - `mcp-servers` refers to the Secret `github-upstream` by name, so `secrets` comes first.
 - `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
 
 A `*` marks the ext-mcp group. These units are out of the kind stack for now. They return in the order above.
+
+### The sync folder of a cluster
+
+Flux reconciles one folder for each cluster: `sync/<full name>/`. The full name is the placement and the cluster, and `sync:` in `clusters/<cluster>/cluster.yaml` holds it. It is `local-kind` now. A later region is for example `aws-dev-us-east-1`.
+
+```text
+sync/local-kind/                what Flux reconciles
+├── kustomization.yaml          lists the two stacks
+├── infra-stack.yaml            the infrastructure: CRDs, controllers, gateways
+├── app-stack.yaml              what runs on it: the MCP servers, the routes, the policies
+└── secrets/                    read by the Kustomization `secrets`, not listed above
+clusters/kind/
+└── flux-instance.yaml          Flux itself: the version, and the path of this sync. Not in the folder above.
+```
+
+- **Flux itself is apart from what it reconciles.** `clusters/<cluster>/flux-instance.yaml` is applied only by `just clusters/kind/up` (host). A merge cannot remove it, and deleting the object would uninstall Flux. A Flux upgrade is an edit of `distribution.version`, then `just clusters/kind/up`. The object has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`, so a sync that once held it never prunes it. The reasons and the sources are in [docs/flux-sync-layout.md](docs/flux-sync-layout.md).
+- **The tier of a component** is its folder: a component in `platform/addons/` is infrastructure and goes to `infra-stack.yaml`. Every other component goes to `app-stack.yaml`. `just <c>/pin` picks the stack by that rule.
+- The `Kustomization` of an app waits (`dependsOn`) for the ones of the infrastructure, so the order is the same as with one file.
+- **Another cluster:** add `clusters/<name>/cluster.yaml` with its `placement` and its `sync:` name, and its own `flux-instance.yaml` with its own sync path. Run the recipes with `CLUSTER=<name>`. It gets its own pins and its own flags (`config/`), so its own stacks.
+
+**Move the sync folder of a running cluster (once, from `clusters/kind/sync` to `sync/local-kind`).** The `flux-system` sync of the cluster has the old path, and it holds the `FluxInstance` in its inventory. The new folder does not list the `FluxInstance`, so protect it first, and change the path with the new file:
+
+1. On the host, before the merge: `kubectl annotate fluxinstance flux -n flux-system kustomize.toolkit.fluxcd.io/prune=disabled`. Without it, the next prune removes the `FluxInstance` and uninstalls Flux.
+2. Merge the change. Until step 3, the sync reports that the old path is missing. That is an error, and it removes nothing.
+3. On the host, at once: `just clusters/kind/up`. It applies `clusters/kind/flux-instance.yaml`, and the operator changes the path of the sync.
+4. Check that `kubectl get kustomization flux-system -n flux-system` shows the new path, Ready. The objects are the same in both folders, so nothing is removed. The Kustomization `secrets` now reads `sync/local-kind/secrets`.
+
+I did not test steps 1 to 4 on a cluster. They follow the Flux documentation: an object with that annotation is skipped by garbage collection.

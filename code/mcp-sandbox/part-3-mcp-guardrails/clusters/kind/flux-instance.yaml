@@ -1,11 +1,15 @@
-# Flux itself: the version and the sync of this folder from Git. `just clusters/kind/up` applies it once. After that Flux applies it too,
-# because the sync folder lists it. A Flux upgrade is an edit of distribution.version.
+# Flux itself: the version, and the sync of the folder sync/local-kind from Git. This file is NOT in the folder that Flux syncs: Git cannot
+# remove it, and deleting this object uninstalls Flux (the workloads stay). Only `just clusters/kind/up` applies it (host), once and after each change.
+# A Flux upgrade is an edit of distribution.version, then `just clusters/kind/up`.
+# The prune annotation keeps a sync that once held this object from removing it. Flux never prunes an object that has it.
 # The Flux Operator reads this object and installs the controllers. The operator chart version is a variable in clusters/kind/justfile.
 apiVersion: fluxcd.controlplane.io/v1
 kind: FluxInstance
 metadata:
   name: flux
   namespace: flux-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   distribution:
     version: "2.9.6"
@@ -20,4 +24,4 @@ spec:
     kind: GitRepository
     url: https://github.com/raghav19/engineersdaybook.git
     ref: refs/heads/main
-    path: code/mcp-sandbox/part-3-mcp-guardrails/clusters/kind/sync
+    path: code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind

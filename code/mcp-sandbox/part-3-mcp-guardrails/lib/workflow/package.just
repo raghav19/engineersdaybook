@@ -46,7 +46,7 @@ _apply: _config
 # output: the Flux Kustomization flate reads to render this folder, used by build and by the candidate side of diff
 # flate can only inflate Flux objects, not plain folders, and it needs these references to know what to render:
 # - a GitRepository: a stub, flate maps it to the working tree and fetches nothing
-# - a Kustomization named after this folder (as in stack.yaml) whose path is the folder to render
+# - a Kustomization named after this folder (as in its stack) whose path is the folder to render
 # a folder with a setters.yaml is rendered from the copy with the values applied (build/src), the others from the folder itself
 # write the Kustomization that renders this folder
 [script('bash')]

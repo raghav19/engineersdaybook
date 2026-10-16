@@ -13,7 +13,7 @@ help:
       just <component>/diff    the change against the artifact origin/main pins, that is what the cluster runs
                                (`just --set base <rev> <component>/diff` compares with another revision)
       just <component>/push    build, then push the artifact to the registry (host)
-      just <component>/pin     write the pushed tag and digest into stack.yaml
+      just <component>/pin     write the pushed tag and digest into its stack (sync/<cluster>/infra-stack.yaml or app-stack.yaml)
 
       just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
       just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)

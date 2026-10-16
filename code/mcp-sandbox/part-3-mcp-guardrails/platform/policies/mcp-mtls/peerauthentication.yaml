@@ -4,7 +4,7 @@
 #
 # This is the server half. The client half is agentgateway: it must present its SPIRE identity (AgentgatewayParameters.spec.spiffe and a backend
 # TLS policy with certificateSource SPIFFE) when it calls ext-mcp. Until then STRICT rejects the plain call and the guardrail (failureMode
-# FailClosed) fails every tool call. So this artifact stays `unpinned` in stack.yaml until the routes change brings the client half.
+# FailClosed) fails every tool call. So this artifact stays `unpinned` in app-stack.yaml until the routes change brings the client half.
 apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
