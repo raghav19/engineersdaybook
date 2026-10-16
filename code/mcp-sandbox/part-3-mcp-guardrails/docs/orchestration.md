@@ -136,10 +136,8 @@ flowchart LR
   end
   gwapi --> agw
   spire --> istio
-  spire --> ingress
   istio --> ingress
   agw --> mcp
-  agw --> routes
   mcp --> routes
   mcp --> rbac
   routes --> jwt
@@ -152,7 +150,7 @@ flowchart LR
   class rbac,jwt,rate policy
 ```
 
-An arrow means "the target waits for the source". The same graph is in the diagram of section 2, with the colors of the [architecture](arch.md) diagram.
+An arrow means "the target waits for the source". The pictures show the direct waits that the chain does not already give. `routes` also lists `agentgateway`, and `istio-ingress` also lists `spire`. `mcp-servers` and `istio` already wait for those, so the order is the same, and the pictures leave the two arrows out. The table lists every `dependsOn`. The same graph is in the diagram of section 2, with the colors of the [architecture](arch.md) diagram.
 
 | Unit | Waits for | Why |
 |---|---|---|
