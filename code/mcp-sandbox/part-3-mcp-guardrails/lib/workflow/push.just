@@ -1,11 +1,11 @@
-# push, pin: publish the built artifact and record it in the stack of the component. Imported by workflow.just; uses build of package.just.
+# push, compose-stack: publish the packaged artifact and record it in the stack of the component. Imported by workflow.just; uses package-artifact of package.just.
 
 # reads:  out/<name>/manifests.yaml, and only that: the rest of out/<name>/ is helper files
 # writes: the registry, and out/manifest.yaml: the tag and digest of this component, under `components:` and the name of the cluster
 # output: the artifact in the registry as <registry>/<name>:<commit>, with its tag and digest printed. Nothing for a disabled component
-# build (which validates), then push the artifact
+# package-artifact (which validates), then push the artifact
 [script('bash')]
-push: build
+push: package-artifact
     set -euo pipefail
     [ -s {{ out }}/manifests.yaml ] || { echo "disabled: nothing to push"; exit 0; }
     result=$(flux push artifact {{ registry }}/{{ name }}:{{ tag }} \
@@ -30,7 +30,7 @@ push: build
 # rollback: git revert the commit
 # rollout: record the pushed artifact in the stack
 [script('bash')]
-pin: _config (tools::_tools 'stack-composer')
+compose-stack: _config (tools::_tools 'stack-composer')
     set -euo pipefail
     args=()
     args+=(--manifest {{ manifest }} --cluster {{ cluster_name }})

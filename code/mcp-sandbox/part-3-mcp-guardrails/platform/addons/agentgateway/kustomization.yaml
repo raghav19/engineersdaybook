@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # The agentgateway addon: its namespace, the CRD chart (crds.yaml) and the controller chart (controller.yaml), both installed by Flux as a HelmRelease.
-# One folder, one artifact. The two chart tags must be equal: `just build` fails if they differ.
+# One folder, one artifact. The two chart tags must be equal: `just package-artifact` fails if they differ.
 resources:
   - namespace.yaml
   - crds.yaml

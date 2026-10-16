@@ -1,4 +1,4 @@
-# build: the folder with the config values applied, rendered and checked -> out/<name>/manifests.yaml. Imported by workflow.just.
+# package-artifact: the folder with the config values applied, rendered and checked -> out/<name>/manifests.yaml. Imported by workflow.just.
 
 # reads:  this folder, through out/<name>/build/ks.yaml
 # writes: out/<name>/manifests.yaml
@@ -6,7 +6,7 @@
 # - the namespace flate puts on the kinds in cluster_scoped is removed
 # - the component's own checks run first (_checks)
 # - when the flag of the component is false (out/values.yaml), nothing is rendered and manifests.yaml is empty. An empty file means disabled
-# render the artifact; build validates it, diff compares it with the one `base` pins
+# render the artifact; package-artifact validates it, diff compares it with the one `base` pins
 [script('bash')]
 _manifest: _checks _stub_build
     set -euo pipefail
@@ -25,9 +25,9 @@ _manifest: _checks _stub_build
 # reads:  out/<name>/manifests.yaml, written by _manifest
 # writes: nothing
 # output: the schema result; nothing for a disabled component (its manifests.yaml is empty)
-# the artifact, then its schema validation last: a build that does not validate does not push
+# the artifact, then its schema validation last: a package-artifact run that does not validate does not push
 [script('bash')]
-build: _manifest
+package-artifact: _manifest
     set -euo pipefail
     [ -s {{ out }}/manifests.yaml ] || exit 0
     flux-schema validate {{ out }}/manifests.yaml \
@@ -39,7 +39,7 @@ build: _manifest
 # writes: out/values.yaml
 # output: the config files it merged
 # the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
-# the manifest, so a value that nothing overrides is not in it. Every build writes it, whether the folder uses it or not
+# the manifest, so a value that nothing overrides is not in it. Every package-artifact run writes it, whether the folder uses it or not
 _config: tools::_tools
     {{ tools }}/config-builder/config-builder {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
 
@@ -54,7 +54,7 @@ _apply: _config
 
 # reads:  nothing, it is generated from the folder name and path
 # writes: out/<name>/build/ks.yaml
-# output: the Flux Kustomization flate reads to render this folder, used by build and by the candidate side of diff
+# output: the Flux Kustomization flate reads to render this folder, used by package-artifact and by the candidate side of diff
 # flate can only inflate Flux objects, not plain folders, and it needs these references to know what to render:
 # - a GitRepository: a stub, flate maps it to the working tree and fetches nothing
 # - a Kustomization named after this folder (as in its stack) whose path is the folder to render
@@ -80,6 +80,6 @@ _stub_build: _apply
 # reads:  nothing
 # writes: nothing
 # output: pass or fail
-# a component justfile redefines this to add its own checks; build runs it
+# a component justfile redefines this to add its own checks; package-artifact runs it
 _checks:
     true

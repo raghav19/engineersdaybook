@@ -1,6 +1,4 @@
-# Part 3: Flux orchestration
-
-How Flux applies Part 3 to a cluster. The components and the traffic flows are in the [architecture](arch.md). The commands are in the [README](../README.md).
+# Orchestration
 
 ## 1. Terms
 
@@ -75,9 +73,9 @@ sequenceDiagram
     participant C as kustomize-controller
     participant K as cluster
 
-    D->>D: build the component (render it, check the schemas)
+    D->>D: package-artifact (render the component, check the schemas)
     D->>R: push the artifact (tag and digest)
-    D->>D: pin (compose the stack from the entry file and the pin)
+    D->>D: compose-stack (patch the stack with the new pin)
     D->>G: open a pull request with the new pin
     Note over D,G: the diff shows the objects that change
     G->>G: review and merge
@@ -91,6 +89,8 @@ sequenceDiagram
 
 ## 5. Flow C: enable or disable a component
 
+### Disable
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -99,20 +99,33 @@ sequenceDiagram
     participant C as kustomize-controller
     participant K as cluster
 
-    alt disable
-        D->>D: set istio_ingress_enabled: false in config/
-        D->>D: diff (lists every object that goes)
-        D->>D: pin (stack-composer removes the unit from the stack)
-    else enable
-        D->>D: remove the flag from config/
-        D->>D: build, push, pin (stack-composer adds the unit with the new pin)
-    end
+    D->>D: set istio_ingress_enabled: false in config/
+    D->>D: diff (optional: lists every object that goes)
+    D->>D: compose-stack (remove the unit from the stack)
     D->>G: open a pull request with the flag and the stack
     G->>G: review and merge
     C->>K: flux-system reads the stack
-    alt disable
-        C->>K: prune the unit and its objects
-    else enable
-        C->>K: apply the unit
-    end
+    C->>K: prune the unit and its objects
+```
+
+### Enable
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as developer
+    participant R as ghcr.io
+    participant G as GitHub (main)
+    participant C as kustomize-controller
+    participant K as cluster
+
+    D->>D: remove the flag from config/
+    D->>D: package-artifact (render the component)
+    D->>R: push the artifact (tag and digest)
+    Note over D,R: skip these two when the code did not change: compose-stack uses the last push
+    D->>D: compose-stack (add the unit with the pin)
+    D->>G: open a pull request with the stack
+    G->>G: review and merge
+    C->>K: flux-system reads the stack
+    C->>K: create the unit and apply its artifact
 ```
