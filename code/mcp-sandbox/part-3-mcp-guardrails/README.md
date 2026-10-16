@@ -140,7 +140,7 @@ A `*` marks the ext-mcp group. These units are out of the kind stack for now. Th
 
 ### The sync folder of a cluster
 
-Flux reconciles one folder for each cluster: `sync/<full name>/`. The full name is the placement and the cluster, and `sync:` in `clusters/<cluster>/cluster.yaml` holds it. It is `local-kind` now. A later region is for example `aws-dev-us-east-1`.
+Flux reconciles one folder for each cluster: `sync/<full name>/`. Its name is the `sync:` value in `clusters/<cluster>/cluster.yaml`. It is `local-kind` now. A later region is for example `aws-dev-us-east-1`, for the placement `cloud/aws/dev/us-east-1`.
 
 ```text
 sync/local-kind/                what Flux reconciles
@@ -171,7 +171,7 @@ A flag in `config/` disables one component. Flux then removes its objects. The f
 A name that no config sets means enabled. A lower level overrides a higher level.
 
 ```yaml
-# config/cloud/local/kind.yaml
+# config/cloud/kind/kind.yaml
 istio_ingress_enabled: false
 ```
 
