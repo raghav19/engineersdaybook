@@ -43,7 +43,7 @@ uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group buil
 # the root of part 3 (this file is tools/tools.just) and where a build finds the pulled functions
 root := parent_directory(source_directory())
 tools := root / 'out' / '.tools'
-# what `push` recorded, for the tools and for the components (lib/workflow/push.just). Local, next to out/values.yaml
+# what `push` (tools) and `publish-artifact` (components, lib/workflow/publish.just) recorded. Local, next to out/values.yaml
 manifest := root / 'out' / 'manifest.yaml'
 
 # registry

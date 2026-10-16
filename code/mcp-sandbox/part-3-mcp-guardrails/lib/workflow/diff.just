@@ -3,7 +3,7 @@
 # reads:  out/<name>/baseline/manifests.yaml (what `base` pins), and out/<name>/manifests.yaml (this folder, built)
 # writes: nothing
 # output: a unified diff of the two artifacts, so you see the objects that change in the cluster (charts inflated).
-#         Both sides are the manifests.yaml that push sends and Flux applies: an unchanged component gives an empty diff.
+#         Both sides are the manifests.yaml that publish-artifact sends and Flux applies: an unchanged component gives an empty diff.
 #         A disabled component has an empty manifests.yaml, so the diff lists every object of the pinned artifact: what Flux will remove.
 #         CRDs and Secrets are left out of both sides; FLATE_SKIP_CRDS=false shows them. No pin yet: everything is new.
 [script('bash')]

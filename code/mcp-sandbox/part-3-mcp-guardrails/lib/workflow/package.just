@@ -25,7 +25,7 @@ _manifest: _checks _stub_build
 # reads:  out/<name>/manifests.yaml, written by _manifest
 # writes: nothing
 # output: the schema result; nothing for a disabled component (its manifests.yaml is empty)
-# the artifact, then its schema validation last: a package-artifact run that does not validate does not push
+# the artifact, then its schema validation last: a package-artifact run that does not validate does not publish
 [script('bash')]
 package-artifact: _manifest
     set -euo pipefail

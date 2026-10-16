@@ -5,7 +5,7 @@ usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] <values.y
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
         <stack.yaml>   the stack of the cluster (sync/<name>/infra-stack.yaml) that Flux reads: it holds the pins
-        --manifest     out/manifest.yaml: what `push` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
+        --manifest     out/manifest.yaml: what `publish-artifact` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
                        component: no new pin. Ignored when the flag is false.
         --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
 
@@ -97,7 +97,7 @@ def main():
     parser.add_argument("component")
     parser.add_argument("entry", help="the entry file of the component")
     parser.add_argument("stack", help="the stack of the component, which is rewritten")
-    parser.add_argument("--manifest", help="out/manifest.yaml: the tag and digest of the last push of each component")
+    parser.add_argument("--manifest", help="out/manifest.yaml: the tag and digest of the last publish of each component")
     parser.add_argument("--cluster", help="the name of the cluster in manifest.yaml")
     args = parser.parse_args()
     values_file, component, entry_file, stack_file = args.values, args.component, args.entry, args.stack
@@ -115,14 +115,14 @@ def main():
     if {("OCIRepository", component), ("Kustomization", component)} - {ident(d) for d in entry}:
         sys.exit(f"{entry_file}: it needs the OCIRepository and the Kustomization of {component}")
 
-    # The pin: the tag and the digest that the last push of this component wrote into the manifest. It is optional.
+    # The pin: the tag and the digest that the last publish of this component wrote into the manifest. It is optional.
     pin = None
     if args.manifest:
         if not args.cluster:
             sys.exit("--manifest needs --cluster")
         try:
             manifest = yaml.safe_load(Path(args.manifest).read_text()) or {}
-        except FileNotFoundError:  # no push on this machine yet
+        except FileNotFoundError:  # no publish on this machine yet
             manifest = {}
         except (OSError, yaml.YAMLError) as e:
             sys.exit(f"{args.manifest}: {e}")
