@@ -11,8 +11,7 @@ Input   <values.yaml>  the converged config (config-builder): the flag <componen
         --also         another stack of the same cluster. Optional, and it can repeat. It is only read, to check dependsOn: a Kustomization of
                        one stack can wait for a Kustomization of the other (the apps wait for the infrastructure).
 
-Model   The kustomize files are in model/ (next to this script, or inside the binary). This code only moves files and fills placeholders:
-        pin           entry + pin patch                  -> the pinned entry
+Model   The kustomize files are in model/ (next to this script, or inside the binary). This code only moves files:
         delete-patch  entry                              -> a delete patch
         stack         stack + add + patch + delete       -> the new stack
         Flag false:   delete the documents of the entry that are in the stack.
@@ -29,7 +28,6 @@ Words   document   one object of a YAML file (the parts of a file that `---` sep
 import argparse
 import re
 import shutil
-import string
 import subprocess
 import sys
 import tempfile
@@ -47,12 +45,7 @@ HEADER = """\
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
-class Template(string.Template):
-    # A placeholder in a model file is @{name}. The usual `$` does not work: the delete patches contain `$patch`.
-    delimiter = "@"
-
-
-def step(name, files, values=None):
+def step(name, files):
     """Run one kustomize folder of the model on some input files, and return what `kustomize build` prints."""
     with tempfile.TemporaryDirectory() as tmp:
         # 1. Copy the kustomize folder (model/<name>/) into a temporary folder.
@@ -60,10 +53,7 @@ def step(name, files, values=None):
         # 2. Put the input files next to its kustomization.yaml. The model files name them (entry.yaml, stack.yaml, ...).
         for file, text in files.items():
             (Path(tmp) / file).write_text(text)
-        # 3. Fill the placeholders: pin.yaml.tmpl becomes pin.yaml.
-        for tmpl in Path(tmp).glob("*.tmpl"):
-            tmpl.with_suffix("").write_text(Template(tmpl.read_text()).substitute(values or {}))
-        # 4. Let kustomize apply the patches and print the result.
+        # 3. Let kustomize apply the patches and print the result.
         try:
             done = subprocess.run(["kustomize", "build", tmp], check=False, capture_output=True, text=True)
         except FileNotFoundError:
@@ -165,9 +155,9 @@ def main():
     else:
         # Enabled. With a new pin, first put the pin into the entry (in memory only: the entry file is never written).
         if pin:
-            ns = next(d["metadata"].get("namespace", "default") for d in entry if d["kind"] == "OCIRepository")
-            # The "pin" step: the entry plus a patch (made from pin.yaml.tmpl) that sets spec.ref to the tag and the digest.
-            entry = load(step("pin", {"entry.yaml": entry_text}, {"component": component, "namespace": ns, **pin}))
+            for d in entry:
+                if ident(d) == ("OCIRepository", component):
+                    d["spec"].setdefault("ref", {}).update(pin)  # the tag and the digest of the pin
 
         # A patch can only change a document that exists. So split the entry: what the stack has gets patched, the rest gets added.
         present = [d for d in entry if ident(d) in in_stack]
