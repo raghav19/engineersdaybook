@@ -16,7 +16,7 @@ Rules   - a lower level wins over a level above it, and says so
         - the same name twice in ONE level is an error: there is no winner
         - a value is plain (`name: value`), never a map or a list
         - a name that no setters.yaml lists is an error: nothing would use it (a misspelt override)
-        - the flag of a component (<folder>_enabled, for each folder with flux/stack-entry.yaml) is a known name, and a boolean
+        - the flag of a component (<folder>_enabled, for each folder with flux/stack.yaml) is a known name, and a boolean
 """
 
 import sys
@@ -69,10 +69,10 @@ def collect_setter_names(root):
 
 
 def collect_flag_names(root):
-    """Return the flag of every switchable component: <folder>_enabled for each folder that has flux/stack-entry.yaml."""
+    """Return the flag of every switchable component: <folder>_enabled for each folder that has flux/stack.yaml."""
     return {
         entry.parent.parent.name.replace("-", "_") + "_enabled"
-        for entry in root.rglob("flux/stack-entry.yaml")
+        for entry in root.rglob("flux/stack.yaml")
         if "out" not in display_path(entry, root).parts
     }
 
