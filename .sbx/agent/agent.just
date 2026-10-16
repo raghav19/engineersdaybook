@@ -91,6 +91,8 @@ sync-secrets: _check-daemon
 # `recommendations` in .vscode/extensions.json only prompt. Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server,
 # so the recipe adds the recommendations to that list (it keeps the entries you already have there). A server that is already running installs nothing new:
 # it takes a new sandbox, or `code --install-extension <id>` in a terminal of the VM.
+# Python gets ty (types) and Ruff (lint, format) only: the recipe also removes every `ms-python.` extension (Python, Pylance, debugpy, ...) from that list.
+# It does not uninstall one that a VM already has: run `code --uninstall-extension <id>` in the VM for that.
 
 # Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
 setup-vscode:
@@ -100,7 +102,7 @@ setup-vscode:
     mkdir -p "$(dirname "$f")"
     [ -f "$f" ] || echo '{}' > "$f"
     merged=$(jq --argjson ext "$(jq -c .recommendations {{ repo }}/.vscode/extensions.json)" '. * {
-      "remote.SSH.defaultExtensions": (((.["remote.SSH.defaultExtensions"] // []) + $ext) | unique),
+      "remote.SSH.defaultExtensions": ((((.["remote.SSH.defaultExtensions"] // []) | map(select(startswith("ms-python.") | not))) + $ext) | unique),
       "remote.SSH.useExecServer": false,
       "remote.SSH.enableDynamicForwarding": false,
       "remote.SSH.enableAgentForwarding": false,
