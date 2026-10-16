@@ -9,6 +9,14 @@
       "icon": "terminal-bash"
     }
   },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
   "files.watcherExclude": {
     "**/.git/**": true,
     "**/node_modules/**": true,
