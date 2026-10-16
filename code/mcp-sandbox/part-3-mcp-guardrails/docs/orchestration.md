@@ -74,7 +74,7 @@ sequenceDiagram
     participant K as cluster
 
     D->>D: package-artifact (render the component, check the schemas)
-    D->>R: push the artifact (tag and digest)
+    D->>R: publish-artifact (push to the registry, tag and digest)
     D->>D: compose-stack (patch the stack with the new pin)
     D->>G: open a pull request with the new pin
     Note over D,G: the diff shows the objects that change
@@ -121,8 +121,8 @@ sequenceDiagram
 
     D->>D: remove the flag from config/
     D->>D: package-artifact (render the component)
-    D->>R: push the artifact (tag and digest)
-    Note over D,R: skip these two when the code did not change: compose-stack uses the last push
+    D->>R: publish-artifact (push to the registry, tag and digest)
+    Note over D,R: skip these two when the code did not change: compose-stack uses the last publish
     D->>D: compose-stack (add the unit with the pin)
     D->>G: open a pull request with the stack
     G->>G: review and merge

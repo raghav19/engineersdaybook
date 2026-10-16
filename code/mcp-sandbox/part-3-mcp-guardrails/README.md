@@ -84,7 +84,7 @@ How Flux applies the units (the sync model, the apply order, a change, enable or
 ```text
 part-3-mcp-guardrails/
 ├── docs/                 arch.md, orchestration.md and diagrams/ (the draw.io sources and their SVGs)
-├── lib/workflow/         shared just recipes: package-artifact, diff, push, compose-stack
+├── lib/workflow/         shared just recipes: package-artifact, diff, publish-artifact, compose-stack
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
 ├── platform/
@@ -101,16 +101,16 @@ part-3-mcp-guardrails/
 
 ## The manifest
 
-`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `push` writes it, and `compose-stack` and `package-artifact` read it. One file holds both kinds of pin:
+`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `publish-artifact` writes it, and `compose-stack` and `package-artifact` read it. One file holds both kinds of pin:
 
 ```yaml
 tools:                        # just tools/<name>/push
   stack-composer: { digest: 'sha256:51d0…', binary: 'sha256:3c91…' }
-components:                   # just <component>/push
+components:                   # just <component>/publish-artifact
   local-kind:                 # sync: of clusters/<cluster>/cluster.yaml
     istio: { tag: 60b6d97d2498, digest: 'sha256:9f68…' }
 ```
 
-- The write is one assignment of one key. It adds the entry or replaces the one of the last push.
-- The durable pin of an artifact is the stack in Git. The manifest is what this machine pushed last.
+- The write is one assignment of one key. It adds the entry or replaces the one of the last publish.
+- The durable pin of an artifact is the stack in Git. The manifest is what this machine published last.
 - The pin of a tool is only here. A fresh clone has none: run `just tools/<name>/push` once for each tool.

@@ -80,7 +80,7 @@ sequenceDiagram
     R->>CI: run checks
     CI->>CI: GitHub id exists, servers are allowed
     V->>R: review and merge
-    CI->>CI: package-artifact, push and compose-stack for tool-rbac
+    CI->>CI: package-artifact, publish-artifact and compose-stack for tool-rbac
     F->>G: apply the new tool-rbac rule
     Note over G: the grant is active
 ```
