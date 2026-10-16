@@ -35,7 +35,7 @@ build: _manifest
       --schema-location ecosystem
 
 # reads:  the *.yaml of config/ and of each level down to the placement of clusters/<cluster>/cluster.yaml
-#         (config/cloud/local/, or config/cloud/aws/, config/cloud/aws/dev/, ...), each only where it exists
+#         (config/cloud/kind/, or config/cloud/aws/, config/cloud/aws/dev/, ...), each only where it exists
 # writes: out/values.yaml
 # output: the config files it merged
 # the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
