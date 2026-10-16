@@ -10,8 +10,8 @@
 #                   A component whose flag <name>_enabled is false gets an empty manifests.yaml: nothing is rendered, checked or pushed.
 #   just diff       the change against the artifact `base` (origin/main) pins in its stack,
 #                   that is what the cluster runs. For a disabled component: every object that Flux will remove
-#   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit
-#   just pin        stack-composer (tools/) composes the stack of this component: the pushed tag and digest (out/<name>/push.json) patch its
+#   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit. The tag and digest go into out/manifest.yaml
+#   just pin        stack-composer (tools/) composes the stack of this component: the pushed tag and digest (out/manifest.yaml) patch its
 #                   flux/stack-entry.yaml, which patches the stack of its tier, or removes the pair when the flag is false. The stacks are
 #                   sync/<full name>/infra-stack.yaml (platform/addons) and app-stack.yaml (the rest). Never edit them by hand.
 #
@@ -21,7 +21,6 @@
 #   build/ks.yaml    the Flux Kustomization flate reads to render this folder
 #   build/src/       a copy of the folder with the config values applied (only when it has a setters.yaml)
 #   baseline/        the artifact `base` pins, pulled by diff
-#   push.json        tag and digest of the last push, read by pin
 
 set quiet
 set lazy
@@ -43,12 +42,15 @@ flag := replace(name, '-', '_') + '_enabled'
 cluster := env('CLUSTER', 'kind')
 # the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
 sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
+cluster_name := file_name(sync)
 # the tier of the component decides its stack: the folders of platform/addons are the infrastructure, everything else is the app side
 tier := if justfile_directory() =~ '/platform/addons/' { 'infra' } else { 'app' }
 other_tier := if tier == 'infra' { 'app' } else { 'infra' }
 stack := sync + '/' + tier + '-stack.yaml'
 other_stack := sync + '/' + other_tier + '-stack.yaml'
 base := 'origin/main'
+# what `push` recorded: the pins of the tools (`tools:`) and of the components of each cluster (`components:`). Local, next to out/values.yaml. `pin` reads it
+manifest := root / 'out' / 'manifest.yaml'
 
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
