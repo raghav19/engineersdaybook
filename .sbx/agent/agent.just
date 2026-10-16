@@ -88,11 +88,9 @@ sync-secrets: _check-daemon
       echo "sbx secret placeholder-$host for $host"
     done
 
-# Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server, so the recipe adds its list of extensions (in the recipe
-# below) to that list (it keeps the entries you already have there). A server that is already running installs nothing new:
-# it takes a new sandbox, or `code --install-extension <id>` in a terminal of the VM.
-# Python gets ty (types) and Ruff (lint, format) only: the recipe also removes every `ms-python.` extension (Python, Pylance, debugpy, ...) from that list.
-# It does not uninstall one that a VM already has: run `code --uninstall-extension <id>` in the VM for that.
+# Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server. The recipe sets that list to the static one below, so the
+# list on the host is exactly this one (Python gets ty and Ruff only). A server that is already running installs nothing new: it takes a new sandbox, or
+# `code --install-extension <id>` in a terminal of the VM. An extension that a VM already has stays until `code --uninstall-extension <id>`.
 
 # Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
 setup-vscode:
@@ -101,19 +99,17 @@ setup-vscode:
     f="$HOME/.config/Code/User/settings.json"
     mkdir -p "$(dirname "$f")"
     [ -f "$f" ] || echo '{}' > "$f"
-    # the extensions of the VM: one line for each, with its job
-    extensions=(
-      anthropic.claude-code            # Claude Code
-      astral-sh.ty                     # Python: types and language features
-      charliermarsh.ruff               # Python: lint and format
-      tamasfe.even-better-toml         # TOML
-      kennylong.kubernetes-yaml-formatter  # Kubernetes YAML
-      yzhang.markdown-all-in-one       # Markdown
-      skellock.just                    # Just files
-      isontheline.vscode-sysmon        # CPU and memory of the VM
-    )
-    merged=$(jq --argjson ext "$(printf '%s\n' "${extensions[@]}" | jq -R . | jq -sc .)" '. * {
-      "remote.SSH.defaultExtensions": ((((.["remote.SSH.defaultExtensions"] // []) | map(select(startswith("ms-python.") | not))) + $ext) | unique),
+    merged=$(jq '. * {
+      "remote.SSH.defaultExtensions": [
+        "anthropic.claude-code",
+        "astral-sh.ty",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "kennylong.kubernetes-yaml-formatter",
+        "yzhang.markdown-all-in-one",
+        "skellock.just",
+        "isontheline.vscode-sysmon"
+      ],
       "remote.SSH.useExecServer": false,
       "remote.SSH.enableDynamicForwarding": false,
       "remote.SSH.enableAgentForwarding": false,
