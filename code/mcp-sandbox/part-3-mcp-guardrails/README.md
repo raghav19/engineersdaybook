@@ -60,7 +60,7 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 
 | ID | Control | Where |
 |---|---|---|
-| MCP01 | The gateway holds the upstream credential. ext-mcp redacts secrets. | `platform/mcp-servers`, SOPS Secret, `platform/ext-mcp` |
+| MCP01 | The gateway holds the upstream credential. ext-mcp redacts secrets. | `platform/mcp-servers`, host-created Secret, `platform/ext-mcp` |
 | MCP02 | A grant per user for each server and tool. A rate limit per user. | `platform/policies/tool-rbac`, `platform/policies/rate-limit` |
 | MCP03 | Tool names carry the target name. ext-mcp pins tool descriptions. | `platform/mcp-servers`, `platform/ext-mcp` |
 | MCP04 | One list of registered targets. This reduces the risk. It does not solve it. | `platform/mcp-servers` |
@@ -93,7 +93,7 @@ part-3-mcp-guardrails/
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux)
-├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml, app-stack.yaml, secrets/
+├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml, app-stack.yaml
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```
@@ -113,7 +113,7 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
 - **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that `just tools/<name>/push` pushes by digest. It records the digest and the sha256 of each one in `out/manifest.yaml` (see "The manifest"), and the build checks the sha256. `out/` is local: on a fresh clone, run `push` of each tool once (the build is deterministic, so the digest is the same).
 - **Disable.** A config flag `<component>_enabled: false` disables a component. See "Disable a component" below.
-- **Secrets.** The upstream credential is a SOPS-encrypted Secret in `sync/<name>/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
+- **Secrets.** No secret is in Git, in an artifact or in the registry. `just clusters/kind/credentials` (host) creates them in the cluster from `.sbx/secrets.json`, with your age key: `ghcr-pull` and `sops-age` in `flux-system`, and `github-upstream` (the upstream GitHub credential) in `agentgateway-system`. The gateway sets `github-upstream` on the outbound call. After `kind delete`, run the recipe again.
 - **Baseline run.** A baseline is the app stack without the policy entries. Compare it with a run that has every policy.
 
 ### Apply order
@@ -123,7 +123,7 @@ Flux applies the units in six steps. Units in one step apply in parallel. A step
 ```mermaid
 flowchart LR
   s0["<b>Step 0</b><br/>gateway-api<br/>spire"] --> s1["<b>Step 1</b><br/>agentgateway<br/>istio"]
-  s1 --> s2["<b>Step 2</b><br/>secrets<br/>istio-ingress<br/>ext-mcp *"]
+  s1 --> s2["<b>Step 2</b><br/>istio-ingress<br/>ext-mcp *"]
   s2 --> s3["<b>Step 3</b><br/>mcp-servers<br/>ext-mcp-isolation *<br/>mcp-mtls *"]
   s3 --> s4["<b>Step 4</b><br/>routes<br/>tool-rbac<br/>ext-mcp-checks *"]
   s4 --> s5["<b>Step 5</b><br/>authn-jwt<br/>rate-limit"]
@@ -132,7 +132,7 @@ flowchart LR
 A unit waits only for units in earlier steps. The stacks in `sync/local-kind/` hold the exact `dependsOn` of each unit. Examples:
 
 - `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
-- `mcp-servers` refers to the Secret `github-upstream` by name, so `secrets` comes first.
+- `mcp-servers` refers to the Secret `github-upstream` by name. `just clusters/kind/credentials` creates it. Flux does not wait for it.
 - `istio` takes its CA from `spire` (trust domain `mcp.local`, sidecar mode only, no ambient).
 - `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
 
@@ -146,8 +146,7 @@ Flux reconciles one folder for each cluster: `sync/<full name>/`. The full name 
 sync/local-kind/                what Flux reconciles
 ├── kustomization.yaml          lists the two stacks
 ├── infra-stack.yaml            the infrastructure: CRDs, controllers, gateways
-├── app-stack.yaml              what runs on it: the MCP servers, the routes, the policies
-└── secrets/                    read by the Kustomization `secrets`, not listed above
+└── app-stack.yaml              what runs on it: the MCP servers, the routes, the policies
 clusters/kind/
 └── flux-instance.yaml          Flux itself: the version, and the path of this sync. Not in the folder above.
 ```
@@ -162,7 +161,7 @@ clusters/kind/
 1. On the host, before the merge: `kubectl annotate fluxinstance flux -n flux-system kustomize.toolkit.fluxcd.io/prune=disabled`. Without it, the next prune removes the `FluxInstance` and uninstalls Flux.
 2. Merge the change. Until step 3, the sync reports that the old path is missing. That is an error, and it removes nothing.
 3. On the host, at once: `just clusters/kind/up`. It applies `clusters/kind/flux-instance.yaml`, and the operator changes the path of the sync.
-4. Check that `kubectl get kustomization flux-system -n flux-system` shows the new path, Ready. The objects are the same in both folders, so nothing is removed. The Kustomization `secrets` now reads `sync/local-kind/secrets`.
+4. Check that `kubectl get kustomization flux-system -n flux-system` shows the new path, Ready. The objects are the same in both folders, so nothing is removed.
 
 I did not test steps 1 to 4 on a cluster. They follow the Flux documentation: an object with that annotation is skipped by garbage collection.
 
@@ -196,7 +195,7 @@ To enable the component again, remove the flag. Run `build`, `push` and `pin`. T
 
 `pin` changes only the pair of its own component, and the pins live only in the stacks of `sync/<full name>/`, so they belong to the cluster.
 To disable a chain, pin the dependents first (`istio-ingress`, then `istio`, then `spire`). The error message names the components that still wait.
-`kustomize` sorts the documents and the keys, and it drops the comments, so the stacks have none. The comments are in the entry files. The `secrets` Kustomization has none left either: see `sync/local-kind/secrets/README.md`.
+`kustomize` sorts the documents and the keys, and it drops the comments, so the stacks have none. The comments are in the entry files.
 
 Limits:
 
@@ -206,7 +205,6 @@ Limits:
 - A patch overrides fields and never removes one. A field that you remove from an entry stays in the stack, and so does a field that someone adds there by hand. To reset a pair, disable the component, pin, then enable it and push and pin again.
 - Do not edit a stack by hand. Roll back with `git revert`.
 - Disabling a component removes its pin from the stack. `out/manifest.yaml` is local: it keeps the last push, and a fresh clone has none. Enabling again returns the pin of that push, so run `push` first when the code changed.
-- `secrets` has no folder and no entry file, so you cannot switch it. It waits for `agentgateway`. To disable `agentgateway`, remove the `secrets` entry from `app-stack.yaml` by hand first.
 
 ### The manifest
 
