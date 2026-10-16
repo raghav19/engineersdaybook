@@ -1,0 +1,28 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/istio
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true # istiod rolls out. The CRDs and the namespace travel in this artifact.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: istio}
+  dependsOn:
+    - name: spire # the CA and the CSI driver

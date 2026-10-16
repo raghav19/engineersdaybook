@@ -1,0 +1,5 @@
+# step "pin": the entry plus the pin patch is the pinned entry. Inputs: entry.yaml. pin.yaml is made from pin.yaml.tmpl.
+resources:
+  - entry.yaml
+patches:
+  - path: pin.yaml

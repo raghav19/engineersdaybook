@@ -4,12 +4,13 @@
 # writes: nothing
 # output: a unified diff of the two artifacts, so you see the objects that change in the cluster (charts inflated).
 #         Both sides are the manifests.yaml that push sends and Flux applies: an unchanged component gives an empty diff.
+#         A disabled component has an empty manifests.yaml, so the diff lists every object of the pinned artifact: what Flux will remove.
 #         CRDs and Secrets are left out of both sides; FLATE_SKIP_CRDS=false shows them. No pin yet: everything is new.
 [script('bash')]
 diff: _manifest _baseline
     set -euo pipefail
     filter() {
-      [ "$1" = /dev/null ] && return 0
+      [ -s "$1" ] || return 0
       if [ "${FLATE_SKIP_CRDS:-true}" = false ]; then cat "$1"
       else yq 'select(.kind != "CustomResourceDefinition" and .kind != "Secret")' "$1"; fi
     }

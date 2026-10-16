@@ -1,0 +1,10 @@
+# step "delete-patch": the entry becomes a delete patch: every document gets `$patch: delete`. Inputs: entry.yaml.
+resources:
+  - entry.yaml
+patches:
+  - target:
+      kind: ".*"
+    patch: |-
+      - op: add
+        path: /$patch
+        value: delete

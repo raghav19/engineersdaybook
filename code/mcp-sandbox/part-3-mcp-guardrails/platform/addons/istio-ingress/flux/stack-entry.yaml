@@ -1,0 +1,29 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: istio-ingress
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: istio-ingress
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m # the SPIFFE CSI driver of spire can be late: the gateway pod waits for it, the retry settles it
+  timeout: 5m
+  prune: true
+  wait: true # the gateway Deployment rolls out. Its pod is created only once the injection webhook of istiod serves: that is why this is not in `istio`.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: istio-ingress}
+  dependsOn:
+    - name: istio # istiod and its injection webhook
+    - name: spire # the ClusterSPIFFEID kind and the CSI driver

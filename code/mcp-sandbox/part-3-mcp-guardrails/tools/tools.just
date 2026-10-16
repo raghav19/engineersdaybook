@@ -29,9 +29,13 @@ binary := out / name / name
 #                 in the bundle, so two builds of one source differ. A fixed seed gives one order. The value itself does not matter.
 # python          the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary.
 # flags           PyInstaller flags; another set is another binary.
+# data            the folder model/ of a function, when it has one, goes into the binary (PyInstaller reads a relative path from the spec folder,
+#                 so the path is absolute). The function and its model are one pinned unit. The binary stays reproducible: the contents of
+#                 the files decide, not their dates and not the folder of the checkout.
 export PYTHONHASHSEED := '1'
 python := '3.13.15'
 flags := '--onefile --clean --noconfirm --log-level WARN'
+data := if path_exists(justfile_directory() / 'model') == 'true' { '--add-data ' + (justfile_directory() / 'model') + ':model' } else { '' }
 # every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of tools/
 uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group build'
 
@@ -51,7 +55,7 @@ creds := ghcr_user + ':' + ghcr_push_token
 
 # RECIPES
 
-# reads:  the script of this folder, tools/pyproject.toml and uv.lock
+# reads:  the script of this folder (and its model/ folder, if it has one), tools/pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python
 # validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
@@ -60,7 +64,7 @@ build:
     {{ uv }} ruff check --quiet {{ script }}
     {{ uv }} ruff format --check --quiet {{ script }}
     {{ uv }} \
-      pyinstaller {{ flags }} \
+      pyinstaller {{ flags }} {{ data }} \
         --name {{ name }} \
         --distpath {{ out }}/{{ name }} \
         --workpath {{ out }}/{{ name }}/work \
@@ -92,9 +96,10 @@ push: build
 # reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
-# pull the build functions (tools/) at the digests the config pins
+# pull the build functions (tools/) at the digests the config pins: config-builder and value-injector, or the names given
+# (`pin` asks for stack-composer, which only it uses)
 [script('bash')]
-_tools:
+_tools *names='config-builder value-injector':
     set -euo pipefail
     pull() {
       digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
@@ -112,5 +117,4 @@ _tools:
         || { echo "$1: the binary of $digest is not $binary" >&2; rm -rf "$dir"; exit 1; }
       ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
     }
-    pull config-builder
-    pull value-injector
+    for function in {{ names }}; do pull "$function"; done

@@ -5,8 +5,16 @@
 # output: the inflated output manifest: the artifact, not yet validated
 # - the namespace flate puts on the kinds in cluster_scoped is removed
 # - the component's own checks run first (_checks)
+# - when the flag of the component is false (out/values.yaml), nothing is rendered and manifests.yaml is empty. An empty file means disabled
 # render the artifact; build validates it, diff compares it with the one `base` pins
+[script('bash')]
 _manifest: _checks _stub_build
+    set -euo pipefail
+    if [ "$(yq '.{{ flag }}' {{ root }}/out/values.yaml)" = false ]; then
+      echo "disabled: {{ flag }} is false, nothing built"
+      : > {{ out }}/manifests.yaml
+      exit 0
+    fi
     flate --no-progress build all \
       --path {{ out }}/build \
       --skip-kinds HelmRelease,OCIRepository \
@@ -16,9 +24,12 @@ _manifest: _checks _stub_build
 
 # reads:  out/<name>/manifests.yaml, written by _manifest
 # writes: nothing
-# output: the schema result
+# output: the schema result; nothing for a disabled component (its manifests.yaml is empty)
 # the artifact, then its schema validation last: a build that does not validate does not push
+[script('bash')]
 build: _manifest
+    set -euo pipefail
+    [ -s {{ out }}/manifests.yaml ] || exit 0
     flux-schema validate {{ out }}/manifests.yaml \
       --schema-location default \
       --schema-location ecosystem
