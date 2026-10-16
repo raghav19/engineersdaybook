@@ -111,7 +111,7 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 - **Flux applies the pins in order.** Each `Kustomization` in a stack applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
 - **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
-- **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that the repo pins by digest. `config/tools/manifest.yaml` holds the digest and sha256 of each one, and the build checks the sha256.
+- **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that `just tools/<name>/push` pushes by digest. It records the digest and the sha256 of each one in `out/manifest.yaml` (see "The manifest"), and the build checks the sha256. `out/` is local: on a fresh clone, run `push` of each tool once (the build is deterministic, so the digest is the same).
 - **Disable.** A config flag `<component>_enabled: false` disables a component. See "Disable a component" below.
 - **Secrets.** The upstream credential is a SOPS-encrypted Secret in `sync/<name>/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
 - **Baseline run.** A baseline is the app stack without the policy entries. Compare it with a run that has every policy.
@@ -183,16 +183,16 @@ istio_ingress_enabled: false
 
 For a disabled component, `build` renders nothing (`out/<c>/manifests.yaml` is empty) and `push` pushes nothing.
 
-To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component is gone, so the pair returns with the new pin.
+To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component left the stack, so the pair returns with the pin of the last `push` (`out/manifest.yaml`). Run `push` first when the code changed.
 
 **How `pin` changes the stack.** `stack-composer` (`tools/stack-composer`) does it with `kustomize`. The kustomize files are in its `model/` folder, and the binary carries them.
 
 - Each component has an entry file, `<component>/flux/stack-entry.yaml`: its `OCIRepository` and `Kustomization`, with `tag: unpinned`. It is the contract. Nothing writes it.
-- The pin (`out/<c>/push.json`) becomes a patch of the entry: only `spec.ref` of the `OCIRepository`. Entry plus patch is the pinned entry, in memory.
+- The pin (`out/manifest.yaml`, written by `push`: `components: <cluster>: <component>: {tag, digest}`) becomes a patch of the entry: only `spec.ref` of the `OCIRepository`. Entry plus patch is the pinned entry, in memory.
 - The pinned entry then patches the stack of its tier (`infra-stack.yaml` or `app-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
 - With the flag `false`, a delete patch (`$patch: delete`, made from the entry) removes the documents from the stack.
-- Without a `push.json`, the pin in the stack stays. A pair that is new in the stack is added unpinned.
-- It checks that every `dependsOn` names a `Kustomization` of the result or of the other stack, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `push.json` and invalid YAML.
+- Without an entry in `out/manifest.yaml` (a fresh clone, or no `push` yet), the pin in the stack stays. A pair that is new in the stack is added unpinned.
+- It checks that every `dependsOn` names a `Kustomization` of the result or of the other stack, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `out/manifest.yaml` and invalid YAML.
 
 `pin` changes only the pair of its own component, and the pins live only in the stacks of `sync/<full name>/`, so they belong to the cluster.
 To disable a chain, pin the dependents first (`istio-ingress`, then `istio`, then `spire`). The error message names the components that still wait.
@@ -205,5 +205,21 @@ Limits:
 - A flag change alone does not change a stack. Run `pin`.
 - A patch overrides fields and never removes one. A field that you remove from an entry stays in the stack, and so does a field that someone adds there by hand. To reset a pair, disable the component, pin, then enable it and push and pin again.
 - Do not edit a stack by hand. Roll back with `git revert`.
-- Disabling a component removes its pin. Enabling it again needs a new `push` and `pin`.
+- Disabling a component removes its pin from the stack. `out/manifest.yaml` is local: it keeps the last push, and a fresh clone has none. Enabling again returns the pin of that push, so run `push` first when the code changed.
 - `secrets` has no folder and no entry file, so you cannot switch it. It waits for `agentgateway`. To disable `agentgateway`, remove the `secrets` entry from `app-stack.yaml` by hand first.
+
+### The manifest
+
+`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `push` writes it, and `pin` and the build read it. One file holds both kinds of pin:
+
+```yaml
+tools:                        # just tools/<name>/push
+  stack-composer: { digest: 'sha256:51d0…', binary: 'sha256:3c91…' }
+components:                   # just <component>/push
+  local-kind:                 # sync: of clusters/<cluster>/cluster.yaml
+    istio: { tag: 60b6d97d2498, digest: 'sha256:9f68…' }
+```
+
+- The write is one assignment of one key. It adds the entry or replaces the one of the last push.
+- The durable pin of an artifact is the stack in Git. The manifest is what this machine pushed last.
+- The pin of a tool is only here. A fresh clone has none: run `just tools/<name>/push` once for each tool.

@@ -1,11 +1,13 @@
 """stack-composer: compose stack.yaml for one component: its entry file is the contract, the pin is an input, kustomize does the patching.
 
-usage: stack_composer.py [--push <push.json>] [--also <other stack>]... <values.yaml> <component> <entry file> <stack.yaml>
+usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] [--also <other stack>]... <values.yaml> <component> <entry file> <stack.yaml>
 
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
         <stack.yaml>   the stack of the component (infra-stack.yaml or app-stack.yaml) that Flux reads: it holds the pins
-        --push         the new pin (tag and digest of the last push). Optional. Ignored when the flag is false.
+        --manifest     out/manifest.yaml: what `push` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
+                       component: no new pin. Ignored when the flag is false.
+        --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
         --also         another stack of the same cluster. Optional, and it can repeat. It is only read, to check dependsOn: a Kustomization of
                        one stack can wait for a Kustomization of the other (the apps wait for the infrastructure).
 
@@ -25,7 +27,6 @@ Words   document   one object of a YAML file (the parts of a file that `---` sep
 """
 
 import argparse
-import json
 import re
 import shutil
 import string
@@ -108,10 +109,11 @@ def main():
     parser.add_argument("component")
     parser.add_argument("entry", help="the entry file of the component")
     parser.add_argument("stack", help="the stack of the component, which is rewritten")
-    parser.add_argument("--push", help="push.json with the new pin")
+    parser.add_argument("--manifest", help="out/manifest.yaml: the tag and digest of the last push of each component")
+    parser.add_argument("--cluster", help="the name of the cluster in manifest.yaml")
     parser.add_argument("--also", action="append", default=[], help="another stack of the cluster, read to check dependsOn")
     args = parser.parse_args()
-    values_file, component, entry_file, stack_file, push = args.values, args.component, args.entry, args.stack, args.push
+    values_file, component, entry_file, stack_file = args.values, args.component, args.entry, args.stack
 
     # --- 1. Read and check the inputs. Nothing is written yet. ---
 
@@ -126,13 +128,23 @@ def main():
     if {("OCIRepository", component), ("Kustomization", component)} - {ident(d) for d in entry}:
         sys.exit(f"{entry_file}: it needs the OCIRepository and the Kustomization of {component}")
 
-    # The pin: the tag and the digest of the last push. It is optional.
-    try:
-        pin = json.loads(Path(push).read_text()) if push else None
-    except (OSError, ValueError) as e:  # the file is missing, or it is not JSON
-        sys.exit(f"{push}: {e}")
-    if pin and not (isinstance(pin.get("tag"), str) and pin["tag"] and DIGEST.match(str(pin.get("digest")))):
-        sys.exit(f"{push}: it needs a tag and a digest (sha256:<64 hex digits>)")
+    # The pin: the tag and the digest that the last push of this component wrote into the manifest. It is optional.
+    pin = None
+    if args.manifest:
+        if not args.cluster:
+            sys.exit("--manifest needs --cluster")
+        try:
+            manifest = yaml.safe_load(Path(args.manifest).read_text()) or {}
+        except FileNotFoundError:  # no push on this machine yet
+            manifest = {}
+        except (OSError, yaml.YAMLError) as e:
+            sys.exit(f"{args.manifest}: {e}")
+        components = (manifest.get("components") or {}) if isinstance(manifest, dict) else {}
+        pin = ((components.get(args.cluster) or {}) if isinstance(components, dict) else {}).get(component)
+    if pin and not (isinstance(pin, dict) and isinstance(pin.get("tag"), str) and pin["tag"] and DIGEST.match(str(pin.get("digest")))):
+        sys.exit(f"{args.manifest}: {args.cluster}/{component} needs a tag and a digest (sha256:<64 hex digits>), found {pin}")
+    if pin:
+        pin = {"tag": pin["tag"], "digest": pin["digest"]}
 
     # --- 2. Decide what kustomize must do, and give it the input files. ---
 

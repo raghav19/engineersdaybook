@@ -4,8 +4,9 @@
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: tools/pyproject.toml, locked in uv.lock.
 #
 #   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
-#   just push    build, push once, then print the block that pins it. Put that block in config/tools/manifest.yaml.
-#   just _tools  pull every function at the digest config/tools/manifest.yaml pins -> out/.tools/<name>/<name>.
+#   just push    build, push once, then record its digest and binary sha256 in out/manifest.yaml (under `tools:`).
+#   just _tools  pull every function at the digest that out/manifest.yaml records -> out/.tools/<name>/<name>.
+#                out/ is local: a fresh clone has no record yet, so run `just tools/<name>/push` once (the build is deterministic: same digest).
 #                lib/workflow/workflow.just loads this file as the module `tools` and every component build runs `tools::_tools`.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
@@ -42,7 +43,8 @@ uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group buil
 # the root of part 3 (this file is tools/tools.just) and where a build finds the pulled functions
 root := parent_directory(source_directory())
 tools := root / 'out' / '.tools'
-tools_manifest := root / 'config' / 'tools' / 'manifest.yaml'
+# what `push` recorded, for the tools and for the components (lib/workflow/push.just). Local, next to out/values.yaml
+manifest := root / 'out' / 'manifest.yaml'
 
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
@@ -73,9 +75,8 @@ build:
 
 # reads:  out/tools/<name>/<name>
 # writes: the registry, <repo>:sha256-<sha256 of the binary>
-# output: the block that pins the artifact, for config/tools/manifest.yaml: its digest and the sha256 of the binary
-# rollback: git revert the commit of that line
-# build, push the binary once and print its pin
+# writes: out/manifest.yaml: `tools: <name>: {digest, binary}`, the digest of the artifact and the sha256 of the binary. The file is created when it is not there
+# build, push the binary once and record its pin
 [script('bash')]
 push: build
     set -euo pipefail
@@ -89,11 +90,12 @@ push: build
       --creds {{ creds }} \
       --output json \
       | jq -r .digest)
-    echo "{{ name }}:"
-    echo "  digest: '$digest'"
-    echo "  binary: 'sha256:$sha'"
+    touch {{ manifest }}
+    N={{ name }} DIGEST=$digest BINARY=sha256:$sha \
+      yq -i '.tools[strenv(N)] = {"digest": strenv(DIGEST), "binary": strenv(BINARY)}' {{ manifest }}
+    echo "{{ name }}: $digest"
 
-# reads:  the digests and binary sha256 of config/tools/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
+# reads:  the digests and binary sha256 under `tools:` in out/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
 # pull the build functions (tools/) at the digests the config pins: config-builder and value-injector, or the names given
@@ -102,9 +104,12 @@ push: build
 _tools *names='config-builder value-injector':
     set -euo pipefail
     pull() {
-      digest=$(yq -r ".\"$1\".digest // \"\"" {{ tools_manifest }})
-      binary=$(yq -r ".\"$1\".binary // \"\"" {{ tools_manifest }})
-      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 is not pinned in config/tools/manifest.yaml: run 'just tools/$1/push' (host) and put the block it prints there" >&2; exit 1; }
+      digest=""; binary=""
+      if [ -f {{ manifest }} ]; then
+        digest=$(N=$1 yq '.tools[strenv(N)].digest // ""' {{ manifest }})
+        binary=$(N=$1 yq '.tools[strenv(N)].binary // ""' {{ manifest }})
+      fi
+      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 has no pin in out/manifest.yaml: run 'just tools/$1/push' (host), it records the pin" >&2; exit 1; }
       dir={{ tools }}/$1/${digest#sha256:}
       if [ ! -x "$dir/$1" ]; then
         rm -rf "$dir" && mkdir -p "$dir"
