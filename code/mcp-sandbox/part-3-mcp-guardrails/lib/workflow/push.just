@@ -22,9 +22,8 @@ push: build
       yq -i '.components[strenv(C)][strenv(N)] = {"tag": strenv(TAG), "digest": strenv(DIGEST)}' {{ manifest }}
     echo "{{ name }}: {{ tag }} $digest"
 
-# reads:  out/values.yaml, flux/stack-entry.yaml of this folder (the contract: never written), the stack of its tier, the other stack (to check
-#         dependsOn), and out/manifest.yaml when it exists (the pin that the last push of this component recorded)
-# writes: the stack of its tier: sync/<full name>/infra-stack.yaml for platform/addons, app-stack.yaml for the rest
+# reads:  out/values.yaml, flux/stack-entry.yaml of this folder (the contract: never written), the stack of the cluster (to check dependsOn), and out/manifest.yaml when it exists (the pin that the last push of this component recorded)
+# writes: the stack of the cluster: sync/<full name>/infra-stack.yaml
 # output: stack-composer (tools/) patches the pair of this component in its stack: the pin of manifest.yaml goes into the entry, the entry overrides the
 #         fields of the pair (a pair that is not there is added, unpinned when manifest.yaml has no entry for it). When the flag is false the pair is removed,
 #         so Flux removes its objects, and its pin leaves the stack. It writes only when every check passes: see tools/stack-composer/stack_composer.py
@@ -35,6 +34,4 @@ pin: _config (tools::_tools 'stack-composer')
     set -euo pipefail
     args=()
     args+=(--manifest {{ manifest }} --cluster {{ cluster_name }})
-    # the other stack of the cluster is only read: a Kustomization here can wait for one there (the apps wait for the infrastructure)
-    [ ! -f {{ root }}/{{ other_stack }} ] || args+=(--also {{ root }}/{{ other_stack }})
     {{ tools }}/stack-composer/stack-composer ${args[@]+"${args[@]}"} {{ root }}/out/values.yaml {{ name }} {{ justfile_directory() }}/flux/stack-entry.yaml {{ root }}/{{ stack }}

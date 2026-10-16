@@ -1,5 +1,5 @@
 # The attack cases of tests/attacks, run against the gateway. One line per OWASP id; the expected results are those of the profile of the
-# cluster stack: phase-1 when app-stack.yaml has the authn-jwt artifact, baseline when it has none. Run from here or as `just tests/run`.
+# cluster stack: phase-1 when infra-stack.yaml has the authn-jwt artifact, baseline when it has none. Run from here or as `just tests/run`.
 set quiet
 
 cluster := '../clusters/kind'
@@ -13,5 +13,5 @@ run:
     [ "$(kubectl config current-context)" = {{ context }} ] || { echo "kubectl context is not {{ context }}; refusing to touch the wrong cluster" >&2; exit 1; }
     [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' {{ gateway_url }})" != 000 ] \
       || { echo "Nothing answers on {{ gateway_url }}. Run: just clusters/kind/up, and wait for Flux to apply the artifacts" >&2; exit 1; }
-    profile=baseline; yq -N '.metadata.name' {{ sync }}/app-stack.yaml | grep -qx authn-jwt && profile=phase-1; \
+    profile=baseline; yq -N '.metadata.name' {{ sync }}/infra-stack.yaml | grep -qx authn-jwt && profile=phase-1; \
     for t in attacks/MCP*/; do bash "$t/run.sh" {{ gateway_url }} "$profile"; done

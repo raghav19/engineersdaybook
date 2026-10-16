@@ -93,7 +93,7 @@ part-3-mcp-guardrails/
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux)
-├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml, app-stack.yaml
+├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```
@@ -103,11 +103,11 @@ part-3-mcp-guardrails/
 A short note. The orchestration moves to its own doc later.
 
 ```text
-component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► infra-stack.yaml / app-stack.yaml ──► Flux applies
+component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► infra-stack.yaml ──► Flux applies
 ```
 
 - **One artifact per unit.** Each addon, route set, MCP server registration and policy is its own OCI artifact. The artifact is the rendered manifest. Charts render at build time.
-- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` and `app-stack.yaml` pin one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin. `just <c>/pin` writes the stacks (see "Disable a component"): do not edit them by hand.
+- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` pins one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin. `just <c>/pin` writes the stack (see "Disable a component"): do not edit them by hand.
 - **Flux applies the pins in order.** Each `Kustomization` in a stack applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
 - **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
@@ -129,7 +129,7 @@ flowchart LR
   s4 --> s5["<b>Step 5</b><br/>authn-jwt<br/>rate-limit"]
 ```
 
-A unit waits only for units in earlier steps. The stacks in `sync/local-kind/` hold the exact `dependsOn` of each unit. Examples:
+A unit waits only for units in earlier steps. The stack in `sync/local-kind/` hold the exact `dependsOn` of each unit. Examples:
 
 - `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
 - `mcp-servers` refers to the Secret `github-upstream` by name. `just clusters/kind/credentials` creates it. Flux does not wait for it.
@@ -144,16 +144,14 @@ Flux reconciles one folder for each cluster: `sync/<full name>/`. Its name is th
 
 ```text
 sync/local-kind/                what Flux reconciles
-├── kustomization.yaml          lists the two stacks
-├── infra-stack.yaml            the infrastructure: CRDs, controllers, gateways
-└── app-stack.yaml              what runs on it: the MCP servers, the routes, the policies
+├── kustomization.yaml          lists the stack
+└── infra-stack.yaml            every component: CRDs, controllers, gateways, the MCP servers, the routes, the policies
 clusters/kind/
 └── flux-instance.yaml          Flux itself: the version, and the path of this sync. Not in the folder above.
 ```
 
 - **Flux itself is apart from what it reconciles.** `clusters/<cluster>/flux-instance.yaml` is applied only by `just clusters/kind/up` (host). A merge cannot remove it, and deleting the object would uninstall Flux. A Flux upgrade is an edit of `distribution.version`, then `just clusters/kind/up`. The object has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`, so a sync that once held it never prunes it. The reasons and the sources are in [docs/flux-sync-layout.md](docs/flux-sync-layout.md).
-- **The tier of a component** is its folder: a component in `platform/addons/` is infrastructure and goes to `infra-stack.yaml`. Every other component goes to `app-stack.yaml`. `just <c>/pin` picks the stack by that rule.
-- The `Kustomization` of an app waits (`dependsOn`) for the ones of the infrastructure, so the order is the same as with one file.
+- **One stack.** Every component is in `infra-stack.yaml`, and each `Kustomization` waits (`dependsOn`) for the ones it needs. A second stack comes back when a second owner needs one.
 - **Another cluster:** add `clusters/<name>/cluster.yaml` with its `placement` and its `sync:` name, and its own `flux-instance.yaml` with its own sync path. Run the recipes with `CLUSTER=<name>`. It gets its own pins and its own flags (`config/`), so its own stacks.
 
 **Move the sync folder of a running cluster (once, from `clusters/kind/sync` to `sync/local-kind`).** The `flux-system` sync of the cluster has the old path, and it holds the `FluxInstance` in its inventory. The new folder does not list the `FluxInstance`, so protect it first, and change the path with the new file:
@@ -188,14 +186,14 @@ To enable the component again, remove the flag. Run `build`, `push` and `pin`. T
 
 - Each component has an entry file, `<component>/flux/stack-entry.yaml`: its `OCIRepository` and `Kustomization`, with `tag: unpinned`. It is the contract. Nothing writes it.
 - The pin (`out/manifest.yaml`, written by `push`: `components: <cluster>: <component>: {tag, digest}`) is put into `spec.ref` of the `OCIRepository` of the entry, in memory. That is the pinned entry.
-- The pinned entry then patches the stack of its tier (`infra-stack.yaml` or `app-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
+- The pinned entry then patches the stack (`infra-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
 - With the flag `false`, a delete patch (`$patch: delete`, made from the entry) removes the documents from the stack.
 - Without an entry in `out/manifest.yaml` (a fresh clone, or no `push` yet), the pin in the stack stays. A pair that is new in the stack is added unpinned.
-- It checks that every `dependsOn` names a `Kustomization` of the result or of the other stack, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `out/manifest.yaml` and invalid YAML.
+- It checks that every `dependsOn` names a `Kustomization` of the result, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `out/manifest.yaml` and invalid YAML.
 
-`pin` changes only the pair of its own component, and the pins live only in the stacks of `sync/<full name>/`, so they belong to the cluster.
+`pin` changes only the pair of its own component, and the pins live only in the stack of `sync/<full name>/`, so they belong to the cluster.
 To disable a chain, pin the dependents first (`istio-ingress`, then `istio`, then `spire`). The error message names the components that still wait.
-`kustomize` sorts the documents and the keys, and it drops the comments, so the stacks have none. The comments are in the entry files.
+`kustomize` sorts the documents and the keys, and it drops the comments, so the stack has none. The comments are in the entry files.
 
 Limits:
 
