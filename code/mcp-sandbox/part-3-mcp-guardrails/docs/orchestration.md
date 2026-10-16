@@ -15,7 +15,7 @@ The components and the traffic flows are in the [architecture](arch.md). The com
 | Sync folder | `sync/<name>/`. The one folder in Git that Flux reconciles for a cluster. `<name>` is `sync:` in `clusters/<cluster>/cluster.yaml`. |
 | Stack | `infra-stack.yaml` in the sync folder. It holds every unit of the cluster. |
 | Unit | One component as Flux sees it: an `OCIRepository` and a `Kustomization`. |
-| Entry file | `<component>/flux/stack-entry.yaml`. The unit of a component, with `tag: unpinned`. |
+| Entry file | `<component>/flux/stack.yaml`. The unit of a component, with `tag: unpinned`. |
 | Pin | The tag and the digest in the `OCIRepository` of a unit. They select the artifact that runs. |
 | `dependsOn` | A rule of a `Kustomization`: it starts only when the named ones are Ready. |
 | Step | The depth of a unit in the `dependsOn` graph. Units in one step apply in parallel. |

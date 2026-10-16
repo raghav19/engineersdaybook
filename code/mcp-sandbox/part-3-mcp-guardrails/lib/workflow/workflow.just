@@ -12,7 +12,7 @@
 #                   that is what the cluster runs. For a disabled component: every object that Flux will remove
 #   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit. The tag and digest go into out/manifest.yaml
 #   just pin        stack-composer (tools/) composes the stack of this component: the pushed tag and digest (out/manifest.yaml) patch its
-#                   flux/stack-entry.yaml, which patches the stack, or removes the pair when the flag is false. The stack is
+#                   flux/stack.yaml, which patches the stack, or removes the pair when the flag is false. The stack is
 #                   sync/<full name>/infra-stack.yaml. Never edit it by hand.
 #
 # out/<name>/ holds everything of one component. Only manifests.yaml is pushed:
