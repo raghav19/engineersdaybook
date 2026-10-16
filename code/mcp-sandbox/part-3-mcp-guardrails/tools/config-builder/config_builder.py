@@ -16,6 +16,7 @@ Rules   - a lower level wins over a level above it, and says so
         - the same name twice in ONE level is an error: there is no winner
         - a value is plain (`name: value`), never a map or a list
         - a name that no setters.yaml lists is an error: nothing would use it (a misspelt override)
+        - the flag of a component (<folder>_enabled, for each folder with flux/stack-entry.yaml) is a known name, and a boolean
 """
 
 import sys
@@ -67,6 +68,22 @@ def collect_setter_names(root):
     return known
 
 
+def collect_flag_names(root):
+    """Return the flag of every switchable component: <folder>_enabled for each folder that has flux/stack-entry.yaml."""
+    return {
+        entry.parent.parent.name.replace("-", "_") + "_enabled"
+        for entry in root.rglob("flux/stack-entry.yaml")
+        if "out" not in display_path(entry, root).parts
+    }
+
+
+def reject_non_boolean_flags(config, source, flags, root):
+    """Exit on a component flag that is not true or false: the string "false" is not a boolean."""
+    for name in flags & config.keys():
+        if not isinstance(config[name], bool):
+            sys.exit(f"{display_path(source[name], root)}: {name} is {config[name]!r}, it must be true or false (a YAML boolean)")
+
+
 def reject_unknown_names(config, source, known, root):
     """Exit on a name that no setters.yaml lists: nothing would use it (a misspelt override)."""
     for name in config:
@@ -92,7 +109,9 @@ def main():
     for folder in placement_folders(config_dir, placement):
         merge_level(folder, config, source, root)
 
-    reject_unknown_names(config, source, collect_setter_names(root), root)
+    flags = collect_flag_names(root)
+    reject_unknown_names(config, source, collect_setter_names(root) | flags, root)
+    reject_non_boolean_flags(config, source, flags, root)
     write_values_file(config, source, output_file, root)
 
 

@@ -84,10 +84,10 @@ The L7 policy chain of the gateway is in [docs/arch.md](docs/arch.md#l7-policy-c
 part-3-mcp-guardrails/
 ├── docs/                 arch.md and diagrams/ (the draw.io source and its SVG)
 ├── lib/workflow/         shared just recipes: build, diff, push, pin
-├── tools/                config-builder and value-injector
+├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
 ├── platform/
-│   ├── addons/           gateway-api, agentgateway, spire, istio, istio-ingress
+│   ├── addons/           gateway-api, agentgateway, spire, istio, istio-ingress (each component has flux/stack-entry.yaml)
 │   ├── mcp-servers/      the three servers behind /mcp (one AgentgatewayBackend)
 │   ├── routes/           Gateway, AgentgatewayParameters, HTTPRoute
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
@@ -107,11 +107,12 @@ component folder ──build──► out/<c>/manifests.yaml ──push──►
 ```
 
 - **One artifact per unit.** Each addon, route set, MCP server registration and policy is its own OCI artifact. The artifact is the rendered manifest. Charts render at build time.
-- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` and `app-stack.yaml` pin one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin.
+- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` and `app-stack.yaml` pin one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin. `just <c>/pin` writes the stacks (see "Disable a component"): do not edit them by hand.
 - **Flux applies the pins in order.** Each `Kustomization` in a stack applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
 - **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
-- **Build functions.** `config-builder` and `value-injector` are binaries that the repo pins by digest. `config/tools/manifest.yaml` holds the digest and sha256 of each one, and the build checks the sha256.
+- **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that the repo pins by digest. `config/tools/manifest.yaml` holds the digest and sha256 of each one, and the build checks the sha256.
+- **Disable.** A config flag `<component>_enabled: false` disables a component. See "Disable a component" below.
 - **Secrets.** The upstream credential is a SOPS-encrypted Secret in `sync/<name>/secrets`. Flux decrypts it, and the gateway sets it on the outbound call.
 - **Baseline run.** A baseline is the app stack without the policy entries. Compare it with a run that has every policy.
 
@@ -132,6 +133,7 @@ A unit waits only for units in earlier steps. The stacks in `sync/local-kind/` h
 
 - `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
 - `mcp-servers` refers to the Secret `github-upstream` by name, so `secrets` comes first.
+- `istio` takes its CA from `spire` (trust domain `mcp.local`, sidecar mode only, no ambient).
 - `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
 
 A `*` marks the ext-mcp group. These units are out of the kind stack for now. They return in the order above.
@@ -163,3 +165,45 @@ clusters/kind/
 4. Check that `kubectl get kustomization flux-system -n flux-system` shows the new path, Ready. The objects are the same in both folders, so nothing is removed. The Kustomization `secrets` now reads `sync/local-kind/secrets`.
 
 I did not test steps 1 to 4 on a cluster. They follow the Flux documentation: an object with that annotation is skipped by garbage collection.
+
+### Disable a component
+
+A flag in `config/` disables one component. Flux then removes its objects. The flag is `<component>_enabled`, with `-` written as `_`.
+A name that no config sets means enabled. A lower level overrides a higher level.
+
+```yaml
+# config/cloud/local/kind.yaml
+istio_ingress_enabled: false
+```
+
+1. Set the flag. The value must be `true` or `false`, not a string.
+2. Run `just platform/addons/istio-ingress/diff`. It lists every object that Flux will remove.
+3. Run `just platform/addons/istio-ingress/pin`. It removes the pair of `istio-ingress` from `infra-stack.yaml`.
+4. Commit the flag and the stack. After the merge, Flux removes the objects.
+
+For a disabled component, `build` renders nothing (`out/<c>/manifests.yaml` is empty) and `push` pushes nothing.
+
+To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component is gone, so the pair returns with the new pin.
+
+**How `pin` changes the stack.** `stack-composer` (`tools/stack-composer`) does it with `kustomize`. The kustomize files are in its `model/` folder, and the binary carries them.
+
+- Each component has an entry file, `<component>/flux/stack-entry.yaml`: its `OCIRepository` and `Kustomization`, with `tag: unpinned`. It is the contract. Nothing writes it.
+- The pin (`out/<c>/push.json`) becomes a patch of the entry: only `spec.ref` of the `OCIRepository`. Entry plus patch is the pinned entry, in memory.
+- The pinned entry then patches the stack of its tier (`infra-stack.yaml` or `app-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
+- With the flag `false`, a delete patch (`$patch: delete`, made from the entry) removes the documents from the stack.
+- Without a `push.json`, the pin in the stack stays. A pair that is new in the stack is added unpinned.
+- It checks that every `dependsOn` names a `Kustomization` of the result or of the other stack, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `push.json` and invalid YAML.
+
+`pin` changes only the pair of its own component, and the pins live only in the stacks of `sync/<full name>/`, so they belong to the cluster.
+To disable a chain, pin the dependents first (`istio-ingress`, then `istio`, then `spire`). The error message names the components that still wait.
+`kustomize` sorts the documents and the keys, and it drops the comments, so the stacks have none. The comments are in the entry files. The `secrets` Kustomization has none left either: see `sync/local-kind/secrets/README.md`.
+
+Limits:
+
+- CRDs stay. Flux does not prune them, and Helm does not delete them. Run `just clusters/kind/delete-crds` afterward.
+- Removing a namespace removes its volumes. Mark an object that must stay with `kustomize.toolkit.fluxcd.io/prune: disabled` first.
+- A flag change alone does not change a stack. Run `pin`.
+- A patch overrides fields and never removes one. A field that you remove from an entry stays in the stack, and so does a field that someone adds there by hand. To reset a pair, disable the component, pin, then enable it and push and pin again.
+- Do not edit a stack by hand. Roll back with `git revert`.
+- Disabling a component removes its pin. Enabling it again needs a new `push` and `pin`.
+- `secrets` has no folder and no entry file, so you cannot switch it. It waits for `agentgateway`. To disable `agentgateway`, remove the `secrets` entry from `app-stack.yaml` by hand first.

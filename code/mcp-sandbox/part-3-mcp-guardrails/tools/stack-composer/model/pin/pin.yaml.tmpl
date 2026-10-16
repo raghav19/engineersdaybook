@@ -1,0 +1,10 @@
+# The pin patch: only spec.ref of the OCIRepository of the component. stack-composer fills the placeholders.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: @{component}
+  namespace: @{namespace}
+spec:
+  ref:
+    tag: "@{tag}"
+    digest: @{digest}
