@@ -77,12 +77,13 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 
 The flows are in [docs/arch.md](docs/arch.md): login, workload identity, mTLS and the guardrails.
 The L7 policy chain of the gateway is in [docs/arch.md](docs/arch.md#l7-policy-chain).
+How Flux applies the units (the sync model, the `dependsOn` graph, a change, a disable) is in [docs/orchestration.md](docs/orchestration.md).
 
 ## Repo structure
 
 ```text
 part-3-mcp-guardrails/
-├── docs/                 arch.md and diagrams/ (the draw.io source and its SVG)
+├── docs/                 arch.md, orchestration.md and diagrams/ (the draw.io sources and their SVGs)
 ├── lib/workflow/         shared just recipes: build, diff, push, pin
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
@@ -150,7 +151,7 @@ clusters/kind/
 └── flux-instance.yaml          Flux itself: the version, and the path of this sync. Not in the folder above.
 ```
 
-- **Flux itself is apart from what it reconciles.** `clusters/<cluster>/flux-instance.yaml` is applied only by `just clusters/kind/up` (host). A merge cannot remove it, and deleting the object would uninstall Flux. A Flux upgrade is an edit of `distribution.version`, then `just clusters/kind/up`. The object has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`, so a sync that once held it never prunes it. The reasons and the sources are in [docs/flux-sync-layout.md](docs/flux-sync-layout.md).
+- **Flux itself is apart from what it reconciles.** `clusters/<cluster>/flux-instance.yaml` is applied only by `just clusters/kind/up` (host). A merge cannot remove it, and deleting the object would uninstall Flux. A Flux upgrade is an edit of `distribution.version`, then `just clusters/kind/up`. The object has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`, so a sync that once held it never prunes it. The reasons and the sources are in [docs/orchestration.md](docs/orchestration.md#7-why-this-layout).
 - **One stack.** Every component is in `infra-stack.yaml`, and each `Kustomization` waits (`dependsOn`) for the ones it needs. A second stack comes back when a second owner needs one.
 - **Another cluster:** add `clusters/<name>/cluster.yaml` with its `placement` and its `sync:` name, and its own `flux-instance.yaml` with its own sync path. Run the recipes with `CLUSTER=<name>`. It gets its own pins and its own flags (`config/`), so its own stacks.
 

@@ -35,7 +35,7 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 | `flux` | Applies each component from its OCI artifact. | `flux-system` |
 | Secret `github-upstream` | Holds the GitHub credential. `just clusters/kind/credentials` creates it on the host. | `agentgateway-system` |
 
-The pins of the OCI artifacts are in `sync/local-kind/infra-stack.yaml`.
+The pins of the OCI artifacts are in `sync/local-kind/infra-stack.yaml`. How Flux syncs them, and in which order, is in [orchestration](orchestration.md).
 
 The four flows follow this diagram from left to right.
 A is the login (GitHub, Dex). B is the identity (SPIRE). C is the connection (ingress, gateway, ext-mcp). D is the call (policies, egress, upstream).

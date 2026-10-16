@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 640" width="1220" height="640" font-family="Helvetica, Arial, sans-serif" content="&lt;mxfile host=&quot;app.diagrams.net&quot;&gt;
+  &lt;diagram id=&quot;orchestration&quot; name=&quot;orchestration&quot;&gt;
+    &lt;mxGraphModel adaptiveColors=&quot;auto&quot;&gt;
+      &lt;root&gt;
+        &lt;mxCell id=&quot;0&quot;/&gt;
+        &lt;mxCell id=&quot;1&quot; parent=&quot;0&quot;/&gt;
+        &lt;mxCell id=&quot;repo&quot; value=&quot;&amp;lt;b&amp;gt;Git repo (main)&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;sync/local-kind/&amp;lt;br&amp;gt;infra-stack.yaml&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+          &lt;mxGeometry x=&quot;20&quot; y=&quot;60&quot; width=&quot;210&quot; height=&quot;80&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;reg&quot; value=&quot;&amp;lt;b&amp;gt;ghcr.io&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;one OCI artifact&amp;lt;br&amp;gt;for each component&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+          &lt;mxGeometry x=&quot;20&quot; y=&quot;380&quot; width=&quot;210&quot; height=&quot;80&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;kind&quot; value=&quot;kind cluster&quot; style=&quot;swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+          &lt;mxGeometry x=&quot;270&quot; y=&quot;20&quot; width=&quot;930&quot; height=&quot;600&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;fks&quot; value=&quot;&amp;lt;b&amp;gt;Kustomization flux-system&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;path: sync/local-kind&amp;lt;br&amp;gt;prune: true&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;kind&quot;&gt;
+          &lt;mxGeometry x=&quot;20&quot; y=&quot;45&quot; width=&quot;250&quot; height=&quot;70&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;flux&quot; value=&quot;&amp;lt;b&amp;gt;FluxInstance flux&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;applied by the host:&amp;lt;br&amp;gt;just clusters/kind/up&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;kind&quot;&gt;
+          &lt;mxGeometry x=&quot;400&quot; y=&quot;45&quot; width=&quot;230&quot; height=&quot;70&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;units&quot; value=&quot;infra-stack.yaml: 10 units. Each unit is an OCIRepository and a Kustomization.&quot; style=&quot;swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;&quot; vertex=&quot;1&quot; parent=&quot;kind&quot;&gt;
+          &lt;mxGeometry x=&quot;20&quot; y=&quot;160&quot; width=&quot;890&quot; height=&quot;420&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-agentgateway&quot; value=&quot;&amp;lt;b&amp;gt;agentgateway&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;200&quot; y=&quot;112&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-authn-jwt&quot; value=&quot;&amp;lt;b&amp;gt;authn-jwt&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;725&quot; y=&quot;112&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-gateway-api&quot; value=&quot;&amp;lt;b&amp;gt;gateway-api&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;25&quot; y=&quot;112&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-istio&quot; value=&quot;&amp;lt;b&amp;gt;istio&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;200&quot; y=&quot;312&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-istio-ingress&quot; value=&quot;&amp;lt;b&amp;gt;istio-ingress&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;375&quot; y=&quot;312&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-mcp-servers&quot; value=&quot;&amp;lt;b&amp;gt;mcp-servers&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;375&quot; y=&quot;112&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-rate-limit&quot; value=&quot;&amp;lt;b&amp;gt;rate-limit&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;725&quot; y=&quot;212&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-routes&quot; value=&quot;&amp;lt;b&amp;gt;routes&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;550&quot; y=&quot;112&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-spire&quot; value=&quot;&amp;lt;b&amp;gt;spire&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;25&quot; y=&quot;312&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;u-tool-rbac&quot; value=&quot;&amp;lt;b&amp;gt;tool-rbac&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;550&quot; y=&quot;212&quot; width=&quot;145&quot; height=&quot;56&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;h0&quot; value=&quot;&amp;lt;b&amp;gt;Step 0&amp;lt;/b&amp;gt;&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;25&quot; y=&quot;32&quot; width=&quot;145&quot; height=&quot;24&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;h1&quot; value=&quot;&amp;lt;b&amp;gt;Step 1&amp;lt;/b&amp;gt;&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;200&quot; y=&quot;32&quot; width=&quot;145&quot; height=&quot;24&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;h2&quot; value=&quot;&amp;lt;b&amp;gt;Step 2&amp;lt;/b&amp;gt;&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;375&quot; y=&quot;32&quot; width=&quot;145&quot; height=&quot;24&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;h3&quot; value=&quot;&amp;lt;b&amp;gt;Step 3&amp;lt;/b&amp;gt;&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;550&quot; y=&quot;32&quot; width=&quot;145&quot; height=&quot;24&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;h4&quot; value=&quot;&amp;lt;b&amp;gt;Step 4&amp;lt;/b&amp;gt;&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;725&quot; y=&quot;32&quot; width=&quot;145&quot; height=&quot;24&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;lg0&quot; value=&quot;addons&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;540&quot; y=&quot;370&quot; width=&quot;105&quot; height=&quot;28&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;lg1&quot; value=&quot;MCP servers, routes&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;665&quot; y=&quot;370&quot; width=&quot;115&quot; height=&quot;28&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;lg2&quot; value=&quot;policies&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;units&quot;&gt;
+          &lt;mxGeometry x=&quot;790&quot; y=&quot;370&quot; width=&quot;105&quot; height=&quot;28&quot; as=&quot;geometry&quot;/&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-gateway-api-agentgateway&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-gateway-api&quot; target=&quot;u-agentgateway&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-routes-authn-jwt&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-routes&quot; target=&quot;u-authn-jwt&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-spire-istio&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-spire&quot; target=&quot;u-istio&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-istio-istio-ingress&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-istio&quot; target=&quot;u-istio-ingress&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-spire-istio-ingress&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=0.5;exitY=1;entryX=0.5;entryY=1;curved=1;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-spire&quot; target=&quot;u-istio-ingress&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+            &lt;Array as=&quot;points&quot;&gt;&lt;mxPoint x=&quot;387.5&quot; y=&quot;596&quot;/&gt;&lt;mxPoint x=&quot;737.5&quot; y=&quot;596&quot;/&gt;&lt;/Array&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-agentgateway-mcp-servers&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-agentgateway&quot; target=&quot;u-mcp-servers&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-routes-rate-limit&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-routes&quot; target=&quot;u-rate-limit&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-agentgateway-routes&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=0.5;exitY=0;entryX=0.5;entryY=0;curved=1;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-agentgateway&quot; target=&quot;u-routes&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+            &lt;Array as=&quot;points&quot;&gt;&lt;mxPoint x=&quot;562.5&quot; y=&quot;244&quot;/&gt;&lt;mxPoint x=&quot;912.5&quot; y=&quot;244&quot;/&gt;&lt;/Array&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-mcp-servers-routes&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-mcp-servers&quot; target=&quot;u-routes&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;e-mcp-servers-tool-rbac&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-mcp-servers&quot; target=&quot;u-tool-rbac&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;f-repo&quot; value=&quot;reads&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;repo&quot; target=&quot;fks&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;f-units&quot; value=&quot;creates the units&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=0.5;exitY=1;entryX=0.5;entryY=0;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;fks&quot; target=&quot;units&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;f-flux&quot; value=&quot;installs the sync&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=0;exitY=0.5;entryX=1;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;flux&quot; target=&quot;fks&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+        &lt;mxCell id=&quot;f-reg&quot; value=&quot;pull by digest&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;reg&quot; target=&quot;units&quot;&gt;
+          &lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;
+          &lt;/mxGeometry&gt;
+        &lt;/mxCell&gt;
+      &lt;/root&gt;
+    &lt;/mxGraphModel&gt;
+  &lt;/diagram&gt;
+&lt;/mxfile&gt;
+">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+<rect width="1220" height="640" fill="#ffffff"/>
+<rect x="270" y="20" width="930" height="600" fill="none" stroke="#666666" stroke-dasharray="6 4"/>
+<text x="278" y="37" font-size="13" font-weight="bold" fill="#000000">kind cluster</text>
+<rect x="290" y="180" width="890" height="420" fill="none" stroke="#666666" stroke-dasharray="6 4"/>
+<text x="298" y="197" font-size="13" font-weight="bold" fill="#000000">infra-stack.yaml: 10 units. Each unit is an OCIRepository and a Kustomization.</text>
+<path d="M460,320.0 L490,320.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M985,320.0 L1015,320.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M460,520.0 L490,520.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M635,520.0 L665,520.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M387.5,548 C387.5,596 737.5,596 737.5,548" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M635,320.0 L665,320.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M985,320.0 L1015,420.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M562.5,292 C562.5,244 912.5,244 912.5,292" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M810,320.0 L840,320.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M810,320.0 L840,420.0" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M230,100 L290,100" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="260.0" y="91.0" font-size="11" text-anchor="middle" fill="#333333">reads</text>
+<path d="M415,135 L415,180" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="415.0" y="148.5" font-size="11" text-anchor="middle" fill="#333333">creates the units</text>
+<path d="M670,100 L540,100" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="605.0" y="91.0" font-size="11" text-anchor="middle" fill="#333333">installs the sync</text>
+<path d="M230,420 L290,420" fill="none" stroke="#333333" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="260.0" y="411.0" font-size="11" text-anchor="middle" fill="#333333">pull by digest</text>
+<rect x="20" y="60" width="210" height="80" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<text x="125.0" y="89.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Git repo (main)</text>
+<text x="125.0" y="104.0" font-size="12" text-anchor="middle" fill="#000000">sync/local-kind/</text>
+<text x="125.0" y="119.0" font-size="12" text-anchor="middle" fill="#000000">infra-stack.yaml</text>
+<rect x="20" y="380" width="210" height="80" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<text x="125.0" y="409.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">ghcr.io</text>
+<text x="125.0" y="424.0" font-size="12" text-anchor="middle" fill="#000000">one OCI artifact</text>
+<text x="125.0" y="439.0" font-size="12" text-anchor="middle" fill="#000000">for each component</text>
+<rect x="290" y="65" width="250" height="70" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+<text x="415.0" y="89.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Kustomization flux-system</text>
+<text x="415.0" y="104.0" font-size="12" text-anchor="middle" fill="#000000">path: sync/local-kind</text>
+<text x="415.0" y="119.0" font-size="12" text-anchor="middle" fill="#000000">prune: true</text>
+<rect x="670" y="65" width="230" height="70" rx="8" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="785.0" y="89.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">FluxInstance flux</text>
+<text x="785.0" y="104.0" font-size="12" text-anchor="middle" fill="#000000">applied by the host:</text>
+<text x="785.0" y="119.0" font-size="12" text-anchor="middle" fill="#000000">just clusters/kind/up</text>
+<rect x="490" y="292" width="145" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="562.5" y="324.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">agentgateway</text>
+<rect x="1015" y="292" width="145" height="56" rx="8" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1087.5" y="324.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">authn-jwt</text>
+<rect x="315" y="292" width="145" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="387.5" y="324.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">gateway-api</text>
+<rect x="490" y="492" width="145" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="562.5" y="524.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">istio</text>
+<rect x="665" y="492" width="145" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="737.5" y="524.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">istio-ingress</text>
+<rect x="665" y="292" width="145" height="56" rx="8" fill="#fff2cc" stroke="#d6b656"/>
+<text x="737.5" y="324.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">mcp-servers</text>
+<rect x="1015" y="392" width="145" height="56" rx="8" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1087.5" y="424.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">rate-limit</text>
+<rect x="840" y="292" width="145" height="56" rx="8" fill="#fff2cc" stroke="#d6b656"/>
+<text x="912.5" y="324.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">routes</text>
+<rect x="315" y="492" width="145" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="387.5" y="524.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">spire</text>
+<rect x="840" y="392" width="145" height="56" rx="8" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="912.5" y="424.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">tool-rbac</text>
+<text x="387.5" y="228.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Step 0</text>
+<text x="562.5" y="228.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Step 1</text>
+<text x="737.5" y="228.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Step 2</text>
+<text x="912.5" y="228.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Step 3</text>
+<text x="1087.5" y="228.0" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold">Step 4</text>
+<rect x="830" y="550" width="105" height="28" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="882.5" y="568.0" font-size="12" text-anchor="middle" fill="#000000">addons</text>
+<rect x="955" y="550" width="115" height="28" rx="8" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1012.5" y="568.0" font-size="12" text-anchor="middle" fill="#000000">MCP servers, routes</text>
+<rect x="1080" y="550" width="105" height="28" rx="8" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1132.5" y="568.0" font-size="12" text-anchor="middle" fill="#000000">policies</text>
+</svg>
