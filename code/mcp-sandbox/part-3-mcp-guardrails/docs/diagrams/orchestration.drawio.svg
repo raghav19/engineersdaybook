@@ -7,19 +7,19 @@
         &lt;mxCell id=&quot;repo&quot; value=&quot;&amp;lt;b&amp;gt;Git repo (main)&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;infra-stack.yaml&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
           &lt;mxGeometry x=&quot;20&quot; y=&quot;65&quot; width=&quot;170&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
-        &lt;mxCell id=&quot;reg&quot; value=&quot;&amp;lt;b&amp;gt;ghcr.io&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;10 OCI artifacts&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
-          &lt;mxGeometry x=&quot;20&quot; y=&quot;290&quot; width=&quot;170&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
+        &lt;mxCell id=&quot;reg&quot; value=&quot;&amp;lt;b&amp;gt;ghcr.io&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+          &lt;mxGeometry x=&quot;20&quot; y=&quot;300&quot; width=&quot;170&quot; height=&quot;44&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
         &lt;mxCell id=&quot;kind&quot; value=&quot;kind cluster&quot; style=&quot;swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
           &lt;mxGeometry x=&quot;260&quot; y=&quot;20&quot; width=&quot;920&quot; height=&quot;440&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
         &lt;mxCell id=&quot;fks&quot; value=&quot;&amp;lt;b&amp;gt;Kustomization&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;flux-system&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
-          &lt;mxGeometry x=&quot;280&quot; y=&quot;65&quot; width=&quot;230&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
+          &lt;mxGeometry x=&quot;435&quot; y=&quot;65&quot; width=&quot;230&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
         &lt;mxCell id=&quot;flux&quot; value=&quot;&amp;lt;b&amp;gt;FluxInstance&amp;lt;/b&amp;gt;&amp;lt;br&amp;gt;flux&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
-          &lt;mxGeometry x=&quot;600&quot; y=&quot;65&quot; width=&quot;230&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
+          &lt;mxGeometry x=&quot;775&quot; y=&quot;65&quot; width=&quot;230&quot; height=&quot;64&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
-        &lt;mxCell id=&quot;units&quot; value=&quot;infra-stack.yaml: 10 units, applied in this order&quot; style=&quot;swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+        &lt;mxCell id=&quot;units&quot; value=&quot;infra-stack.yaml&quot; style=&quot;swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
           &lt;mxGeometry x=&quot;280&quot; y=&quot;160&quot; width=&quot;880&quot; height=&quot;262&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
         &lt;mxCell id=&quot;step0&quot; value=&quot;Step 0&quot; style=&quot;rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
@@ -67,7 +67,7 @@
         &lt;mxCell id=&quot;u-rate-limit&quot; value=&quot;&amp;lt;b&amp;gt;rate-limit&amp;lt;/b&amp;gt;&quot; style=&quot;rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
           &lt;mxGeometry x=&quot;1030.0&quot; y=&quot;298&quot; width=&quot;110&quot; height=&quot;44&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
-        &lt;mxCell id=&quot;rule&quot; value=&quot;Units in one step apply in parallel. A unit starts when every unit it waits for is Ready.&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
+        &lt;mxCell id=&quot;rule&quot; value=&quot;A unit starts as soon as the units it waits for are Ready.&quot; style=&quot;text;html=1;align=center;verticalAlign=middle;fontColor=#333333;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;
           &lt;mxGeometry x=&quot;280&quot; y=&quot;386&quot; width=&quot;880&quot; height=&quot;30&quot; as=&quot;geometry&quot;/&gt;
         &lt;/mxCell&gt;
         &lt;mxCell id=&quot;e-agentgateway-mcp-servers&quot; value=&quot;&quot; style=&quot;endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.5;edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=20;exitX=1;exitY=0.5;entryX=0;entryY=0.5;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;u-agentgateway&quot; target=&quot;u-mcp-servers&quot;&gt;
@@ -116,7 +116,7 @@
 <rect x="260" y="20" width="920" height="440" fill="none" stroke="#666666" stroke-dasharray="6 4"/>
 <text x="270" y="33" dominant-baseline="central" font-size="13" font-weight="bold" fill="#000000">kind cluster</text>
 <rect x="280" y="160" width="880" height="262" fill="none" stroke="#666666" stroke-dasharray="6 4"/>
-<text x="290" y="173" dominant-baseline="central" font-size="13" font-weight="bold" fill="#000000">infra-stack.yaml: 10 units, applied in this order</text>
+<text x="290" y="173" dominant-baseline="central" font-size="13" font-weight="bold" fill="#000000">infra-stack.yaml</text>
 <rect x="300" y="200" width="130" height="170" rx="8" fill="#fafafa" stroke="#999999"/>
 <text x="365.0" y="216" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">Step 0</text>
 <rect x="480" y="200" width="130" height="170" rx="8" fill="#fafafa" stroke="#999999"/>
@@ -135,26 +135,25 @@
 <path d="M960.0,258.0 L1030.0,258.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
 <path d="M960.0,258.0 H983.0 Q995.0,258.0 995.0,270.0 V308.0 Q995.0,320.0 1007.0,320.0 H1030.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
 <path d="M420.0,320.0 L490.0,320.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
-<path d="M190,97.0 L280,97.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
-<text x="235.0" y="87.0" dominant-baseline="central" font-size="11" text-anchor="middle" fill="#333333">reads</text>
-<path d="M600,97.0 L510,97.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
-<text x="555.0" y="87.0" dominant-baseline="central" font-size="11" text-anchor="middle" fill="#333333">installs</text>
-<path d="M395.0,129 L395.0,160" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
-<text x="403.0" y="144.5" dominant-baseline="central" font-size="11" text-anchor="start" fill="#333333">creates the units</text>
+<path d="M190,97.0 L435,97.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
+<text x="312.5" y="87.0" dominant-baseline="central" font-size="11" text-anchor="middle" fill="#333333">reads</text>
+<path d="M775,97.0 L665,97.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
+<text x="720.0" y="87.0" dominant-baseline="central" font-size="11" text-anchor="middle" fill="#333333">installs</text>
+<path d="M550.0,129 L550.0,160" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
+<text x="558.0" y="144.5" dominant-baseline="central" font-size="11" text-anchor="start" fill="#333333">creates the units</text>
 <path d="M190,322.0 L280,322.0" fill="none" stroke="#333333" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#a)"/>
 <text x="235.0" y="312.0" dominant-baseline="central" font-size="11" text-anchor="middle" fill="#333333">pull by digest</text>
 <rect x="20" y="65" width="170" height="64" rx="8" fill="#f5f5f5" stroke="#666666"/>
 <text x="105.0" y="88.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">Git repo (main)</text>
 <text x="105.0" y="105.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">infra-stack.yaml</text>
-<rect x="20" y="290" width="170" height="64" rx="8" fill="#f5f5f5" stroke="#666666"/>
-<text x="105.0" y="313.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">ghcr.io</text>
-<text x="105.0" y="330.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">10 OCI artifacts</text>
-<rect x="280" y="65" width="230" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
-<text x="395.0" y="88.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">Kustomization</text>
-<text x="395.0" y="105.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">flux-system</text>
-<rect x="600" y="65" width="230" height="64" rx="8" fill="#ffe6cc" stroke="#d79b00"/>
-<text x="715.0" y="88.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">FluxInstance</text>
-<text x="715.0" y="105.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">flux</text>
+<rect x="20" y="300" width="170" height="44" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<text x="105.0" y="322.0" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">ghcr.io</text>
+<rect x="435" y="65" width="230" height="64" rx="8" fill="#d5e8d4" stroke="#82b366"/>
+<text x="550.0" y="88.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">Kustomization</text>
+<text x="550.0" y="105.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">flux-system</text>
+<rect x="775" y="65" width="230" height="64" rx="8" fill="#ffe6cc" stroke="#d79b00"/>
+<text x="890.0" y="88.5" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">FluxInstance</text>
+<text x="890.0" y="105.5" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">flux</text>
 <rect x="310.0" y="236" width="110" height="44" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
 <text x="365.0" y="258.0" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">gateway-api</text>
 <rect x="310.0" y="298" width="110" height="44" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
@@ -175,5 +174,5 @@
 <text x="1085.0" y="258.0" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">authn-jwt</text>
 <rect x="1030.0" y="298" width="110" height="44" rx="8" fill="#dae8fc" stroke="#6c8ebf"/>
 <text x="1085.0" y="320.0" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="bold" fill="#000000">rate-limit</text>
-<text x="720.0" y="401.0" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">Units in one step apply in parallel. A unit starts when every unit it waits for is Ready.</text>
+<text x="720.0" y="401.0" text-anchor="middle" dominant-baseline="central" font-size="12" fill="#000000">A unit starts as soon as the units it waits for are Ready.</text>
 </svg>

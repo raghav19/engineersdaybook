@@ -7,19 +7,19 @@
         <mxCell id="repo" value="&lt;b&gt;Git repo (main)&lt;/b&gt;&lt;br&gt;infra-stack.yaml" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="20" y="65" width="170" height="64" as="geometry"/>
         </mxCell>
-        <mxCell id="reg" value="&lt;b&gt;ghcr.io&lt;/b&gt;&lt;br&gt;10 OCI artifacts" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="20" y="290" width="170" height="64" as="geometry"/>
+        <mxCell id="reg" value="&lt;b&gt;ghcr.io&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="300" width="170" height="44" as="geometry"/>
         </mxCell>
         <mxCell id="kind" value="kind cluster" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
           <mxGeometry x="260" y="20" width="920" height="440" as="geometry"/>
         </mxCell>
         <mxCell id="fks" value="&lt;b&gt;Kustomization&lt;/b&gt;&lt;br&gt;flux-system" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="280" y="65" width="230" height="64" as="geometry"/>
+          <mxGeometry x="435" y="65" width="230" height="64" as="geometry"/>
         </mxCell>
         <mxCell id="flux" value="&lt;b&gt;FluxInstance&lt;/b&gt;&lt;br&gt;flux" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="600" y="65" width="230" height="64" as="geometry"/>
+          <mxGeometry x="775" y="65" width="230" height="64" as="geometry"/>
         </mxCell>
-        <mxCell id="units" value="infra-stack.yaml: 10 units, applied in this order" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+        <mxCell id="units" value="infra-stack.yaml" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
           <mxGeometry x="280" y="160" width="880" height="262" as="geometry"/>
         </mxCell>
         <mxCell id="step0" value="Step 0" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;align=center;verticalAlign=top;fontStyle=1;fillColor=#fafafa;strokeColor=#999999;fontColor=#000000;" vertex="1" parent="1">
@@ -67,7 +67,7 @@
         <mxCell id="u-rate-limit" value="&lt;b&gt;rate-limit&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="1030.0" y="298" width="110" height="44" as="geometry"/>
         </mxCell>
-        <mxCell id="rule" value="Units in one step apply in parallel. A unit starts when every unit it waits for is Ready." style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
+        <mxCell id="rule" value="A unit starts as soon as the units it waits for are Ready." style="text;html=1;align=center;verticalAlign=middle;fontColor=#333333;" vertex="1" parent="1">
           <mxGeometry x="280" y="386" width="880" height="30" as="geometry"/>
         </mxCell>
         <mxCell id="e-agentgateway-mcp-servers" value="" style="endArrow=classic;html=1;strokeColor=#333333;strokeWidth=1.5;edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=20;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="u-agentgateway" target="u-mcp-servers">

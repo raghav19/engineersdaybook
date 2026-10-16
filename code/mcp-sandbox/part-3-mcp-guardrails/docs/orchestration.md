@@ -18,7 +18,7 @@ The components and the traffic flows are in the [architecture](arch.md). The com
 | Entry file | `<component>/flux/stack.yaml`. The unit of a component, with `tag: unpinned`. |
 | Pin | The tag and the digest in the `OCIRepository` of a unit. They select the artifact that runs. |
 | `dependsOn` | A rule of a `Kustomization`: it starts only when the named ones are Ready. |
-| Step | The depth of a unit in the `dependsOn` graph. Units in one step apply in parallel. |
+| Step | The depth of a unit in the `dependsOn` graph. It is a way to read the picture, not a stage: a unit starts as soon as the units it waits for are Ready. |
 | Prune | Flux removes an object that is no longer in its source. |
 
 ## 2. High-level orchestration
@@ -110,7 +110,7 @@ sequenceDiagram
 
 ## 5. Flow C: dependencies and apply order
 
-Each unit has `dependsOn`. A unit starts only when every unit it names is Ready. Units in one step apply in parallel.
+Each unit has `dependsOn`. A unit starts as soon as every unit it names is Ready. It does not wait for the rest of the previous step: `istio` needs only `spire`, so it can start before `gateway-api` is Ready.
 
 ```mermaid
 flowchart LR
