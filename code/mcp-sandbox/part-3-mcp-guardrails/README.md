@@ -77,7 +77,7 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 
 The flows are in [docs/arch.md](docs/arch.md): login, workload identity, mTLS and the guardrails.
 The L7 policy chain of the gateway is in [docs/arch.md](docs/arch.md#l7-policy-chain).
-How Flux applies the units (the sync model, the `dependsOn` graph, a change, a disable) is in [docs/orchestration.md](docs/orchestration.md).
+How Flux applies the units (the sync model, the apply order, a change, enable or disable) is in [docs/orchestration.md](docs/orchestration.md).
 
 ## Repo structure
 
@@ -101,68 +101,19 @@ part-3-mcp-guardrails/
 
 ## How provisioning works
 
-A short note. The orchestration moves to its own doc later.
+The flows, the sync model and the apply order are in [docs/orchestration.md](docs/orchestration.md).
 
 ```text
 component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► infra-stack.yaml ──► Flux applies
 ```
 
-- **One artifact per unit.** Each addon, route set, MCP server registration and policy is its own OCI artifact. The artifact is the rendered manifest. Charts render at build time.
-- **A pin selects what runs.** `sync/local-kind/infra-stack.yaml` pins one tag and one digest per artifact. A rollout or a rollback is a Git edit of the pin. `just <c>/pin` writes the stack (see "Disable a component"): do not edit them by hand.
-- **Flux applies the pins in order.** Each `Kustomization` in a stack applies one artifact. It starts when every unit in its `dependsOn` is Ready. See the apply order below.
-- **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins.
+- **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins. `just <c>/pin` writes the stack: do not edit it by hand.
 - **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
 - **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that `just tools/<name>/push` pushes by digest. It records the digest and the sha256 of each one in `out/manifest.yaml` (see "The manifest"), and the build checks the sha256. `out/` is local: on a fresh clone, run `push` of each tool once (the build is deterministic, so the digest is the same).
 - **Disable.** A config flag `<component>_enabled: false` disables a component. See "Disable a component" below.
 - **Secrets.** No secret is in Git, in an artifact or in the registry. `just clusters/kind/credentials` (host) creates them in the cluster from `.sbx/secrets.json`, with your age key: `ghcr-pull` and `sops-age` in `flux-system`, and `github-upstream` (the upstream GitHub credential) in `agentgateway-system`. The gateway sets `github-upstream` on the outbound call. After `kind delete`, run the recipe again.
-- **Baseline run.** A baseline is the app stack without the policy entries. Compare it with a run that has every policy.
-
-### Apply order
-
-Flux applies the units in six steps. Units in one step apply in parallel. A step starts when every unit it waits for is Ready.
-
-```mermaid
-flowchart LR
-  s0["<b>Step 0</b><br/>gateway-api<br/>spire"] --> s1["<b>Step 1</b><br/>agentgateway<br/>istio"]
-  s1 --> s2["<b>Step 2</b><br/>istio-ingress<br/>ext-mcp *"]
-  s2 --> s3["<b>Step 3</b><br/>mcp-servers<br/>ext-mcp-isolation *<br/>mcp-mtls *"]
-  s3 --> s4["<b>Step 4</b><br/>routes<br/>tool-rbac<br/>ext-mcp-checks *"]
-  s4 --> s5["<b>Step 5</b><br/>authn-jwt<br/>rate-limit"]
-```
-
-A unit waits only for units in earlier steps. The stack in `sync/local-kind/` hold the exact `dependsOn` of each unit. Examples:
-
-- `istio-ingress` and `ext-mcp` need the injection webhook of istiod and an identity from `spire`.
-- `mcp-servers` refers to the Secret `github-upstream` by name. `just clusters/kind/credentials` creates it. Flux does not wait for it.
-- `istio` takes its CA from `spire` (trust domain `mcp.local`, sidecar mode only, no ambient).
-- `ext-mcp-checks` uses `FailClosed`. Without a running ext-mcp every tool call fails.
-
-A `*` marks the ext-mcp group. These units are out of the kind stack for now. They return in the order above.
-
-### The sync folder of a cluster
-
-Flux reconciles one folder for each cluster: `sync/<full name>/`. Its name is the `sync:` value in `clusters/<cluster>/cluster.yaml`. It is `local-kind` now. A later region is for example `aws-dev-us-east-1`, for the placement `cloud/aws/dev/us-east-1`.
-
-```text
-sync/local-kind/                what Flux reconciles
-├── kustomization.yaml          lists the stack
-└── infra-stack.yaml            every component: CRDs, controllers, gateways, the MCP servers, the routes, the policies
-clusters/kind/
-└── flux-instance.yaml          Flux itself: the version, and the path of this sync. Not in the folder above.
-```
-
-- **Flux itself is apart from what it reconciles.** `clusters/<cluster>/flux-instance.yaml` is applied only by `just clusters/kind/up` (host). A merge cannot remove it, and deleting the object would uninstall Flux. A Flux upgrade is an edit of `distribution.version`, then `just clusters/kind/up`. The object has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`, so a sync that once held it never prunes it. The reasons and the sources are in [docs/orchestration.md](docs/orchestration.md#7-why-this-layout).
-- **One stack.** Every component is in `infra-stack.yaml`, and each `Kustomization` waits (`dependsOn`) for the ones it needs. A second stack comes back when a second owner needs one.
-- **Another cluster:** add `clusters/<name>/cluster.yaml` with its `placement` and its `sync:` name, and its own `flux-instance.yaml` with its own sync path. Run the recipes with `CLUSTER=<name>`. It gets its own pins and its own flags (`config/`), so its own stacks.
-
-**Move the sync folder of a running cluster (once, from `clusters/kind/sync` to `sync/local-kind`).** The `flux-system` sync of the cluster has the old path, and it holds the `FluxInstance` in its inventory. The new folder does not list the `FluxInstance`, so protect it first, and change the path with the new file:
-
-1. On the host, before the merge: `kubectl annotate fluxinstance flux -n flux-system kustomize.toolkit.fluxcd.io/prune=disabled`. Without it, the next prune removes the `FluxInstance` and uninstalls Flux.
-2. Merge the change. Until step 3, the sync reports that the old path is missing. That is an error, and it removes nothing.
-3. On the host, at once: `just clusters/kind/up`. It applies `clusters/kind/flux-instance.yaml`, and the operator changes the path of the sync.
-4. Check that `kubectl get kustomization flux-system -n flux-system` shows the new path, Ready. The objects are the same in both folders, so nothing is removed.
-
-I did not test steps 1 to 4 on a cluster. They follow the Flux documentation: an object with that annotation is skipped by garbage collection.
+- **ext-mcp group.** `ext-mcp`, `ext-mcp-isolation`, `mcp-mtls` and `ext-mcp-checks` are out of the kind stack for now. When they return, `ext-mcp` waits for `istio` and `spire`, and `ext-mcp-checks` waits for `ext-mcp`: it uses `FailClosed`, so without a running ext-mcp every tool call fails.
+- **Baseline run.** A baseline is the stack without the policy entries. Compare it with a run that has every policy.
 
 ### Disable a component
 
@@ -181,7 +132,7 @@ istio_ingress_enabled: false
 
 For a disabled component, `build` renders nothing (`out/<c>/manifests.yaml` is empty) and `push` pushes nothing.
 
-To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component left the stack, so the pair returns with the pin of the last `push` (`out/manifest.yaml`). Run `push` first when the code changed.
+The flow is in [docs/orchestration.md](docs/orchestration.md#5-flow-c-enable-or-disable-a-component). To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component left the stack, so the pair returns with the pin of the last `push` (`out/manifest.yaml`). Run `push` first when the code changed.
 
 **How `pin` changes the stack.** `stack-composer` (`tools/stack-composer`) does it with `kustomize`. The kustomize files are in its `model/` folder, and the binary carries them.
 
