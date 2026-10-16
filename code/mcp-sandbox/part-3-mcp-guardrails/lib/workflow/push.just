@@ -1,4 +1,4 @@
-# push, pin: publish the built artifact and record it in stack.yaml. Imported by workflow.just; uses build of package.just.
+# push, pin: publish the built artifact and record it in the stack of the component. Imported by workflow.just; uses build of package.just.
 
 # reads:  out/<name>/manifests.yaml, and only that: the rest of out/<name>/ is helper files
 # writes: the registry, and out/<name>/push.json (the tag and digest)
@@ -16,9 +16,9 @@ push: build
       | tee {{ out }}/push.json
 
 # reads:  out/<name>/push.json
-# writes: stack.yaml
-# output: stack.yaml with this component's OCIRepository pointing at the pushed tag and digest
+# writes: the stack of its tier: sync/<full name>/infra-stack.yaml for platform/addons, app-stack.yaml for the rest
+# output: that stack with this component's OCIRepository pointing at the pushed tag and digest
 # rollback: git revert the commit
-# rollout: record the pushed artifact in stack.yaml
+# rollout: record the pushed artifact in the stack
 pin:
     yq -i '{{ pin_ref }}' {{ root }}/{{ stack }}

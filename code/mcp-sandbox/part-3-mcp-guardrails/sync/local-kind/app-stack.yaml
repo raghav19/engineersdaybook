@@ -1,0 +1,195 @@
+# What runs on the infrastructure of cluster `local-kind`: the MCP servers, the routes and the policies (every component outside platform/addons).
+# Per artifact, one pair:
+#   OCIRepository  the pin: which pushed artifact of this cluster runs. Rollout and rollback are an edit of ref, in Git.
+#   Kustomization  how Flux applies that artifact (order, health).
+# Both are named after the component folder; `just <folder>/push` pushes it and `just <folder>/pin` writes the pin.
+#
+# ref.tag `unpinned` means no artifact is pushed yet: its Kustomization stays not Ready. `just <folder>/pin` writes the tag (the commit) and the digest.
+# Flux never reverts a failed artifact by itself: put the older pin back (git revert).
+#
+# `secrets` is the one Kustomization that is not a pair: it reads Git (sync/local-kind/secrets), not an artifact, so it has no pin and no folder.
+# A Kustomization here waits (dependsOn) for ones of infra-stack.yaml, so the order is the same as with one file.
+#
+#   agentgateway (infra-stack.yaml) ──┬──► secrets ──┐
+#                                     │              ▼
+#                                     └────────► mcp-servers ──┬──► routes ──┬──► authn-jwt
+#                                                              │             └──► rate-limit
+#                                                              └──► tool-rbac
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true
+  # The upstream credential, from Git (age ciphertext). The folder has no manifest until you encrypt one: see secrets/README.md.
+  # Until then this Kustomization stays not Ready, and mcp-servers waits.
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/secrets
+  sourceRef: {kind: GitRepository, name: flux-system}
+  decryption:
+    provider: sops
+    secretRef: {name: sops-age}
+  dependsOn:
+    - name: agentgateway # the namespace of the Secret
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: mcp-servers
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-servers
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: 5f7e9eee881c
+    digest: sha256:4bea923fe4daa63421bc699a7dee8f5b71b4de4992fb91ba94f6bd5fc97d091b
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mcp-servers
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true # the Backend refers to the Secret github-upstream by name, so the secret first.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: mcp-servers}
+  dependsOn:
+    - name: agentgateway
+    - name: secrets
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: routes
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/routes
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: 5f7e9eee881c
+    digest: sha256:4c5465a706faaa0e4d79004373a6b60f1c1a4db2b686c1552e70d1e4b5097028
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: routes
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true # the HTTPRoute refers to the Backend registered by mcp-servers.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: routes}
+  dependsOn:
+    - name: agentgateway
+    - name: mcp-servers
+  healthCheckExprs:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      current: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')
+      failed: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'False')
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: authn-jwt
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/authn-jwt
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: 8034f68cb62a
+    digest: sha256:5340220fe1061b294700fa49079650f1169e173fbc5e89379fef19306be27282
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: authn-jwt
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true # MCP01, MCP07. Targets the HTTPRoute.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: authn-jwt}
+  dependsOn:
+    - name: routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: rate-limit
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/rate-limit
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: 8034f68cb62a
+    digest: sha256:a1af46e03d885e4e8002f2b15466f8b89a3af743218e79e0d7e3646615ebaf19
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: rate-limit
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true # MCP02, MCP10. Targets the HTTPRoute.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: rate-limit}
+  dependsOn:
+    - name: routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/tool-rbac
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: 8034f68cb62a
+    digest: sha256:81cc8b58a3718334401922c062b53629cb95449c04185bbd657b887e7e2eca3c
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 3m
+  prune: true
+  wait: true # MCP02. Targets the Backend.
+  path: ./
+  sourceRef: {kind: OCIRepository, name: tool-rbac}
+  dependsOn:
+    - name: mcp-servers

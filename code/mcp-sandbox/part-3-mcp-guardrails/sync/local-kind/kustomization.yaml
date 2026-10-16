@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# What Flux reads from Git for the cluster `local-kind` (sync/<full name>/, named in clusters/kind/cluster.yaml). Two parts, apart from each other:
+#   infra-stack.yaml  the infrastructure: CRDs, controllers and gateways (platform/addons)
+#   app-stack.yaml    what runs on it: the MCP servers, the routes and the policies (all the rest)
+# A Kustomization of app-stack.yaml waits (dependsOn) for the ones of infra-stack.yaml, so the order is the same as if they were one file.
+# Flux itself (the FluxInstance, clusters/kind/flux-instance.yaml) is not here on purpose: this folder cannot remove it.
+# The secrets/ folder is read by the Kustomization `secrets` with a decryption key, so this file does not list it either.
+resources:
+  - infra-stack.yaml
+  - app-stack.yaml

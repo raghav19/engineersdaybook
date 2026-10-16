@@ -23,7 +23,7 @@ up: _host
     kubectl --context {{ ctx }} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
     helm upgrade --install flux-operator {{ flux_operator_chart }} --version {{ flux_operator_version }} \
       --kube-context {{ ctx }} --namespace flux-system --wait --timeout {{ flux_operator_timeout }}
-    kubectl --context {{ ctx }} apply -f sync/flux-instance.yaml
+    kubectl --context {{ ctx }} apply -f flux-instance.yaml
     echo "Flux waits for the credentials: just credentials"
 
 credentials: _host

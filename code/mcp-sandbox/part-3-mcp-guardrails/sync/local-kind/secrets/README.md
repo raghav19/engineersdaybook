@@ -8,7 +8,7 @@ no rendered manifest holds a secret: the Backend refers to the Secret `github-up
 The token is in `.env.secrets.json`. The sandbox VM never has it, and neither does the age key.
 
 1. Create the key for this cluster, outside Git: `age-keygen -o ~/.config/sops/age/mcp-guardrails-kind.agekey`
-2. Add a rule for `clusters/*/sync/secrets/*.sops.yaml` to the repo `.sops.yaml`, above any rule that matches the same path. Use the public
+2. Add a rule for `sync/*/secrets/*.sops.yaml` to the repo `.sops.yaml`, above any rule that matches the same path. Use the public
    key (`age1...`) that `age-keygen` printed, and `encrypted_regex: ^(data|stringData)$`.
 3. Build the Secret and encrypt it, without writing the plaintext to disk. Example (adjust the key name to your file):
 
@@ -16,9 +16,9 @@ The token is in `.env.secrets.json`. The sandbox VM never has it, and neither do
    sops exec-env .env.secrets.json \
      'kubectl create secret generic github-upstream --namespace agentgateway-system \
         --from-literal=Authorization="$GITHUB_TOKEN" --dry-run=client -o yaml' \
-   | sops --encrypt --filename-override clusters/kind/sync/secrets/github-upstream.sops.yaml \
+   | sops --encrypt --filename-override sync/local-kind/secrets/github-upstream.sops.yaml \
        --input-type yaml --output-type yaml /dev/stdin \
-   > clusters/kind/sync/secrets/github-upstream.sops.yaml
+   > sync/local-kind/secrets/github-upstream.sops.yaml
    ```
 4. Add `kustomization.yaml` in this folder that lists `github-upstream.sops.yaml`, and commit both.
 
