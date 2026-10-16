@@ -187,7 +187,7 @@ To enable the component again, remove the flag. Run `build`, `push` and `pin`. T
 **How `pin` changes the stack.** `stack-composer` (`tools/stack-composer`) does it with `kustomize`. The kustomize files are in its `model/` folder, and the binary carries them.
 
 - Each component has an entry file, `<component>/flux/stack-entry.yaml`: its `OCIRepository` and `Kustomization`, with `tag: unpinned`. It is the contract. Nothing writes it.
-- The pin (`out/manifest.yaml`, written by `push`: `components: <cluster>: <component>: {tag, digest}`) becomes a patch of the entry: only `spec.ref` of the `OCIRepository`. Entry plus patch is the pinned entry, in memory.
+- The pin (`out/manifest.yaml`, written by `push`: `components: <cluster>: <component>: {tag, digest}`) is put into `spec.ref` of the `OCIRepository` of the entry, in memory. That is the pinned entry.
 - The pinned entry then patches the stack of its tier (`infra-stack.yaml` or `app-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
 - With the flag `false`, a delete patch (`$patch: delete`, made from the entry) removes the documents from the stack.
 - Without an entry in `out/manifest.yaml` (a fresh clone, or no `push` yet), the pin in the stack stays. A pair that is new in the stack is added unpinned.
