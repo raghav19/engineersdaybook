@@ -6,7 +6,7 @@
 #   sync-secrets    set the tokens in .sbx/secrets.json as sbx custom secrets, so the VM can use them without holding them (run does it first)
 #   build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
 #   allow-egress    host only: allow the hosts of the dev-tools.yaml allow list in the local sbx policy now, without the kit rebuild
-#   setup-vscode    write the Remote-SSH and update settings, and the extensions of .vscode/extensions.json, into your host VS Code user settings (run does it first)
+#   setup-vscode    write the Remote-SSH and update settings, and the extensions of the recipe, into your host VS Code user settings (run does it first)
 #   kubeconfig      host only: write .sbx/kubeconfig, a read-only view of the kind cluster that the sandbox reads through the host repo mount
 
 kit_repo := 'ghcr.io/raghav19/dev-agent-sandbox/dev-tools'
@@ -88,8 +88,8 @@ sync-secrets: _check-daemon
       echo "sbx secret placeholder-$host for $host"
     done
 
-# `recommendations` in .vscode/extensions.json only prompt. Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server,
-# so the recipe adds the recommendations to that list (it keeps the entries you already have there). A server that is already running installs nothing new:
+# Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server, so the recipe adds its list of extensions (in the recipe
+# below) to that list (it keeps the entries you already have there). A server that is already running installs nothing new:
 # it takes a new sandbox, or `code --install-extension <id>` in a terminal of the VM.
 # Python gets ty (types) and Ruff (lint, format) only: the recipe also removes every `ms-python.` extension (Python, Pylance, debugpy, ...) from that list.
 # It does not uninstall one that a VM already has: run `code --uninstall-extension <id>` in the VM for that.
@@ -101,7 +101,18 @@ setup-vscode:
     f="$HOME/.config/Code/User/settings.json"
     mkdir -p "$(dirname "$f")"
     [ -f "$f" ] || echo '{}' > "$f"
-    merged=$(jq --argjson ext "$(jq -c .recommendations {{ repo }}/.vscode/extensions.json)" '. * {
+    # the extensions of the VM: one line for each, with its job
+    extensions=(
+      anthropic.claude-code            # Claude Code
+      astral-sh.ty                     # Python: types and language features
+      charliermarsh.ruff               # Python: lint and format
+      tamasfe.even-better-toml         # TOML
+      kennylong.kubernetes-yaml-formatter  # Kubernetes YAML
+      yzhang.markdown-all-in-one       # Markdown
+      skellock.just                    # Just files
+      isontheline.vscode-sysmon        # CPU and memory of the VM
+    )
+    merged=$(jq --argjson ext "$(printf '%s\n' "${extensions[@]}" | jq -R . | jq -sc .)" '. * {
       "remote.SSH.defaultExtensions": ((((.["remote.SSH.defaultExtensions"] // []) | map(select(startswith("ms-python.") | not))) + $ext) | unique),
       "remote.SSH.useExecServer": false,
       "remote.SSH.enableDynamicForwarding": false,
