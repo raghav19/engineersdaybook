@@ -33,7 +33,7 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 | `spire` | Attests workloads. Issues SVIDs. | `spire-system` |
 | `istio` | Runs the sidecars. Enforces mTLS with the SVID from SPIRE. | `istio-system` |
 | `flux` | Applies each component from its OCI artifact. | `flux-system` |
-| Secret `github-upstream` | Holds the GitHub credential. Flux decrypts it from SOPS. | `agentgateway-system` |
+| Secret `github-upstream` | Holds the GitHub credential. `just clusters/kind/credentials` creates it on the host. | `agentgateway-system` |
 
 The pins of the OCI artifacts are in `sync/local-kind/infra-stack.yaml` and `sync/local-kind/app-stack.yaml`.
 
