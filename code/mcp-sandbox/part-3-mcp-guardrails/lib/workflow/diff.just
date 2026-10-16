@@ -18,7 +18,7 @@ diff: _manifest _baseline
     [ -f "$left" ] || left=/dev/null
     diff -u --label baseline --label {{ name }} <(filter "$left") <(filter {{ out }}/manifests.yaml) || [ $? -eq 1 ]
 
-# reads:  the stack of the component (infra-stack.yaml or app-stack.yaml) at `base` (the digest of the component), then the registry
+# reads:  the stack of the cluster (infra-stack.yaml) at `base` (the digest of the component), then the registry
 # writes: out/<name>/baseline/
 # output: the artifact `base` pins, which is what the cluster runs (left empty when there is no pin yet)
 # pull the artifact `base` pins for the component, by digest

@@ -2,7 +2,7 @@
 # help; the recipes are in package.just (build), diff.just (diff) and push.just (push, pin).
 #
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
-# also the OCIRepository / Kustomization name in sync/<full name>/infra-stack.yaml or app-stack.yaml.
+# also the OCIRepository / Kustomization name in sync/<full name>/infra-stack.yaml.
 #
 #   just build      the folder with the config values applied, rendered completely (charts included)
 #                   -> out/<name>/manifests.yaml, then checked against the Kubernetes, Flux and ecosystem schemas.
@@ -12,8 +12,8 @@
 #                   that is what the cluster runs. For a disabled component: every object that Flux will remove
 #   just push       build (which validates), then push out/<name>/manifests.yaml, tagged with the commit. The tag and digest go into out/manifest.yaml
 #   just pin        stack-composer (tools/) composes the stack of this component: the pushed tag and digest (out/manifest.yaml) patch its
-#                   flux/stack-entry.yaml, which patches the stack of its tier, or removes the pair when the flag is false. The stacks are
-#                   sync/<full name>/infra-stack.yaml (platform/addons) and app-stack.yaml (the rest). Never edit them by hand.
+#                   flux/stack-entry.yaml, which patches the stack, or removes the pair when the flag is false. The stack is
+#                   sync/<full name>/infra-stack.yaml. Never edit it by hand.
 #
 # out/<name>/ holds everything of one component. Only manifests.yaml is pushed:
 #
@@ -43,11 +43,8 @@ cluster := env('CLUSTER', 'kind')
 # the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
 sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
 cluster_name := file_name(sync)
-# the tier of the component decides its stack: the folders of platform/addons are the infrastructure, everything else is the app side
-tier := if justfile_directory() =~ '/platform/addons/' { 'infra' } else { 'app' }
-other_tier := if tier == 'infra' { 'app' } else { 'infra' }
-stack := sync + '/' + tier + '-stack.yaml'
-other_stack := sync + '/' + other_tier + '-stack.yaml'
+# every component is in the one stack of the cluster
+stack := sync + '/infra-stack.yaml'
 base := 'origin/main'
 # what `push` recorded: the pins of the tools (`tools:`) and of the components of each cluster (`components:`). Local, next to out/values.yaml. `pin` reads it
 manifest := root / 'out' / 'manifest.yaml'

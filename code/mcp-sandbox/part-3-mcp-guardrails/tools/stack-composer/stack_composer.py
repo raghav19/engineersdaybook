@@ -1,15 +1,13 @@
 """stack-composer: compose stack.yaml for one component: its entry file is the contract, the pin is an input, kustomize does the patching.
 
-usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] [--also <other stack>]... <values.yaml> <component> <entry file> <stack.yaml>
+usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] <values.yaml> <component> <entry file> <stack.yaml>
 
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
-        <stack.yaml>   the stack of the component (infra-stack.yaml or app-stack.yaml) that Flux reads: it holds the pins
+        <stack.yaml>   the stack of the cluster (sync/<name>/infra-stack.yaml) that Flux reads: it holds the pins
         --manifest     out/manifest.yaml: what `push` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
                        component: no new pin. Ignored when the flag is false.
         --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
-        --also         another stack of the same cluster. Optional, and it can repeat. It is only read, to check dependsOn: a Kustomization of
-                       one stack can wait for a Kustomization of the other (the apps wait for the infrastructure).
 
 Model   The kustomize files are in model/ (next to this script, or inside the binary). This code only moves files:
         delete-patch  entry                              -> a delete patch
@@ -17,7 +15,7 @@ Model   The kustomize files are in model/ (next to this script, or inside the bi
         Flag false:   delete the documents of the entry that are in the stack.
         Otherwise:    the documents that are in the stack patch it (fields are overridden, none is removed). The others are added.
 
-Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack or of --also.
+Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack.
         kustomize sorts the documents and the keys and drops the comments: the comments are in the entry files.
 
 Words   document   one object of a YAML file (the parts of a file that `---` separates). The entry file has two: the pair.
@@ -74,10 +72,10 @@ def ident(doc):
 
 
 def dependency_errors(docs):
-    """Return a message for each Kustomization that waits for a Kustomization that is not in the stacks.
+    """Return a message for each Kustomization that waits for a Kustomization that is not in the stack.
 
     A Kustomization with `dependsOn: [{name: spire}]` never starts when spire is not there. So this stops a disable that would break it.
-    docs are the documents of the new stack and of the other stacks (--also).
+    docs are the documents of the new stack.
     """
     # The names of all the Kustomizations of the stacks.
     present = {d["metadata"]["name"] for d in docs if d["kind"] == "Kustomization"}
@@ -87,7 +85,7 @@ def dependency_errors(docs):
     ]
     # The pairs where B is not in the stack.
     return [
-        f"{name} waits for {dep.get('name')}, which is not in the stacks: remove or pin it first"
+        f"{name} waits for {dep.get('name')}, which is not in the stack: remove or pin it first"
         for name, dep in waits
         if dep.get("name") not in present
     ]
@@ -101,7 +99,6 @@ def main():
     parser.add_argument("stack", help="the stack of the component, which is rewritten")
     parser.add_argument("--manifest", help="out/manifest.yaml: the tag and digest of the last push of each component")
     parser.add_argument("--cluster", help="the name of the cluster in manifest.yaml")
-    parser.add_argument("--also", action="append", default=[], help="another stack of the cluster, read to check dependsOn")
     args = parser.parse_args()
     values_file, component, entry_file, stack_file = args.values, args.component, args.entry, args.stack
 
@@ -173,9 +170,8 @@ def main():
     # --- 3. Let kustomize build the new stack: stack.yaml + add.yaml, with patch.yaml and delete.yaml applied. ---
     new_text = step("stack", files)
 
-    # --- 4. Check the new stack (and the others: they can wait for it). Write it only if the check passes, so a refused run leaves stack.yaml as it was. ---
-    others = [d for other in args.also for d in load(Path(other).read_text())]  # the other stacks of the cluster: read only
-    problems = dependency_errors(load(new_text) + others)
+    # --- 4. Check the new stack. Write it only if the check passes, so a refused run leaves stack.yaml as it was. ---
+    problems = dependency_errors(load(new_text))
     if problems:
         sys.exit("\n".join(problems))
     # The header goes first, then `---` (the start of the first document).

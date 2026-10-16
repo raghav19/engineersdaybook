@@ -22,6 +22,24 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: authn-jwt
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: routes
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: authn-jwt
+  timeout: 3m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: gateway-api
   namespace: flux-system
 spec:
@@ -75,6 +93,66 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: mcp-servers
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: agentgateway
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: mcp-servers
+  timeout: 2m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: rate-limit
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: routes
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: rate-limit
+  timeout: 3m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: routes
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: agentgateway
+  - name: mcp-servers
+  healthCheckExprs:
+  - apiVersion: gateway.networking.k8s.io/v1
+    current: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')
+    failed: status.conditions.exists(c, c.type == 'Programmed' && c.status == 'False')
+    kind: Gateway
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: routes
+  timeout: 5m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: spire
   namespace: flux-system
 spec:
@@ -86,6 +164,24 @@ spec:
     kind: OCIRepository
     name: spire
   timeout: 5m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: mcp-servers
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: tool-rbac
+  timeout: 3m
   wait: true
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -101,6 +197,20 @@ spec:
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/agentgateway
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: authn-jwt
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:5340220fe1061b294700fa49079650f1169e173fbc5e89379fef19306be27282
+    tag: 8034f68cb62a
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/authn-jwt
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -147,6 +257,48 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
+  name: mcp-servers
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:4bea923fe4daa63421bc699a7dee8f5b71b4de4992fb91ba94f6bd5fc97d091b
+    tag: 5f7e9eee881c
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-servers
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: rate-limit
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:a1af46e03d885e4e8002f2b15466f8b89a3af743218e79e0d7e3646615ebaf19
+    tag: 8034f68cb62a
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/rate-limit
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: routes
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:4c5465a706faaa0e4d79004373a6b60f1c1a4db2b686c1552e70d1e4b5097028
+    tag: 5f7e9eee881c
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
   name: spire
   namespace: flux-system
 spec:
@@ -157,3 +309,17 @@ spec:
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/spire
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: tool-rbac
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:81cc8b58a3718334401922c062b53629cb95449c04185bbd657b887e7e2eca3c
+    tag: 8034f68cb62a
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/tool-rbac
