@@ -99,7 +99,7 @@ push: build
 # writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
 # output: nothing; _config and _apply run the links
 # pull the build functions (tools/) at the digests the config pins: config-builder and value-injector, or the names given
-# (`pin` asks for stack-composer, which only it uses)
+# (`compose-stack` asks for stack-composer, which only it uses)
 [script('bash')]
 _tools *names='config-builder value-injector':
     set -euo pipefail

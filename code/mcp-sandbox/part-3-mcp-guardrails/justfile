@@ -7,13 +7,13 @@ set quiet
 help:
     cat <<'EOF'
     One artifact per component. Every component folder has its own justfile (it imports lib/workflow/workflow.just).
-    Name the folder to run a recipe: `just platform/routes/build`.
+    Name the folder to run a recipe: `just platform/routes/package-artifact`.
 
-      just <component>/build   render the folder (charts included), check it, write out/<component>/manifests.yaml
-      just <component>/diff    the change against the artifact origin/main pins, that is what the cluster runs
-                               (`just --set base <rev> <component>/diff` compares with another revision)
-      just <component>/push    build, then push the artifact to the registry (host)
-      just <component>/pin     compose the stack (sync/<cluster>/infra-stack.yaml): the pushed tag and digest
+      just <component>/package-artifact    render the folder (charts included), check it, write out/<component>/manifests.yaml
+      just <component>/diff                the change against the artifact origin/main pins, that is what the cluster runs
+                                           (`just --set base <rev> <component>/diff` compares with another revision)
+      just <component>/push                package-artifact, then push the artifact to the registry (host)
+      just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the pushed tag and digest
 
       just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
       just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)

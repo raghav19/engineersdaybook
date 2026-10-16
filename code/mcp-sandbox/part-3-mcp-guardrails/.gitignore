@@ -1,4 +1,4 @@
-# `just <component>/build` writes the artifact of a component to out/<component>/manifests.yaml, with its helper files beside it
+# `just <component>/package-artifact` writes the artifact of a component to out/<component>/manifests.yaml, with its helper files beside it
 out/
 __pycache__/
 *.pyc

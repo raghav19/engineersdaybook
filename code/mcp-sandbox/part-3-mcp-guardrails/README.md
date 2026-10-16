@@ -84,7 +84,7 @@ How Flux applies the units (the sync model, the apply order, a change, enable or
 ```text
 part-3-mcp-guardrails/
 ├── docs/                 arch.md, orchestration.md and diagrams/ (the draw.io sources and their SVGs)
-├── lib/workflow/         shared just recipes: build, diff, push, pin
+├── lib/workflow/         shared just recipes: package-artifact, diff, push, compose-stack
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
 ├── platform/
@@ -99,66 +99,9 @@ part-3-mcp-guardrails/
 └── out/                  build output, gitignored
 ```
 
-## How provisioning works
+## The manifest
 
-The flows, the sync model and the apply order are in [docs/orchestration.md](docs/orchestration.md).
-
-```text
-component folder ──build──► out/<c>/manifests.yaml ──push──► ghcr.io ──pin──► infra-stack.yaml ──► Flux applies
-```
-
-- **Commands.** Run `just <c>/build`, `diff`, `push` and `pin`. `diff` prints the change against the artifact that `origin/main` pins. `just <c>/pin` writes the stack: do not edit it by hand.
-- **Values.** The default of a value is in the manifest. `config/` holds only the overrides that differ per cloud, env or region. Each `setters.yaml` names the fields that an override may set.
-- **Build functions.** `config-builder`, `value-injector` and `stack-composer` are binaries that `just tools/<name>/push` pushes by digest. It records the digest and the sha256 of each one in `out/manifest.yaml` (see "The manifest"), and the build checks the sha256. `out/` is local: on a fresh clone, run `push` of each tool once (the build is deterministic, so the digest is the same).
-- **Disable.** A config flag `<component>_enabled: false` disables a component. See "Disable a component" below.
-- **Secrets.** No secret is in Git, in an artifact or in the registry. `just clusters/kind/credentials` (host) creates them in the cluster from `.sbx/secrets.json`, with your age key: `ghcr-pull` and `sops-age` in `flux-system`, and `github-upstream` (the upstream GitHub credential) in `agentgateway-system`. The gateway sets `github-upstream` on the outbound call. After `kind delete`, run the recipe again.
-- **ext-mcp group.** `ext-mcp`, `ext-mcp-isolation`, `mcp-mtls` and `ext-mcp-checks` are out of the kind stack for now. When they return, `ext-mcp` waits for `istio` and `spire`, and `ext-mcp-checks` waits for `ext-mcp`: it uses `FailClosed`, so without a running ext-mcp every tool call fails.
-- **Baseline run.** A baseline is the stack without the policy entries. Compare it with a run that has every policy.
-
-### Disable a component
-
-A flag in `config/` disables one component. Flux then removes its objects. The flag is `<component>_enabled`, with `-` written as `_`.
-A name that no config sets means enabled. A lower level overrides a higher level.
-
-```yaml
-# config/cloud/kind/kind.yaml
-istio_ingress_enabled: false
-```
-
-1. Set the flag. The value must be `true` or `false`, not a string.
-2. Run `just platform/addons/istio-ingress/diff`. It lists every object that Flux will remove.
-3. Run `just platform/addons/istio-ingress/pin`. It removes the pair of `istio-ingress` from `infra-stack.yaml`.
-4. Commit the flag and the stack. After the merge, Flux removes the objects.
-
-For a disabled component, `build` renders nothing (`out/<c>/manifests.yaml` is empty) and `push` pushes nothing.
-
-The flow is in [docs/orchestration.md](docs/orchestration.md#5-flow-c-enable-or-disable-a-component). To enable the component again, remove the flag. Run `build`, `push` and `pin`. The pin of a disabled component left the stack, so the pair returns with the pin of the last `push` (`out/manifest.yaml`). Run `push` first when the code changed.
-
-**How `pin` changes the stack.** `stack-composer` (`tools/stack-composer`) does it with `kustomize`. The kustomize files are in its `model/` folder, and the binary carries them.
-
-- Each component has an entry file, `<component>/flux/stack.yaml`: its `OCIRepository` and `Kustomization`, with `tag: unpinned`. It is the contract. Nothing writes it.
-- The pin (`out/manifest.yaml`, written by `push`: `components: <cluster>: <component>: {tag, digest}`) is put into `spec.ref` of the `OCIRepository` of the entry, in memory. That is the pinned entry.
-- The pinned entry then patches the stack (`infra-stack.yaml`): each document overrides the fields of the document of the same kind, name and namespace. A document that is not in the stack is added.
-- With the flag `false`, a delete patch (`$patch: delete`, made from the entry) removes the documents from the stack.
-- Without an entry in `out/manifest.yaml` (a fresh clone, or no `push` yet), the pin in the stack stays. A pair that is new in the stack is added unpinned.
-- It checks that every `dependsOn` names a `Kustomization` of the result, and it writes the stack only if the checks pass. It refuses a bad flag, an entry without the pair, a bad `out/manifest.yaml` and invalid YAML.
-
-`pin` changes only the pair of its own component, and the pins live only in the stack of `sync/<full name>/`, so they belong to the cluster.
-To disable a chain, pin the dependents first (`istio-ingress`, then `istio`, then `spire`). The error message names the components that still wait.
-`kustomize` sorts the documents and the keys, and it drops the comments, so the stack has none. The comments are in the entry files.
-
-Limits:
-
-- CRDs stay. Flux does not prune them, and Helm does not delete them. Run `just clusters/kind/delete-crds` afterward.
-- Removing a namespace removes its volumes. Mark an object that must stay with `kustomize.toolkit.fluxcd.io/prune: disabled` first.
-- A flag change alone does not change a stack. Run `pin`.
-- A patch overrides fields and never removes one. A field that you remove from an entry stays in the stack, and so does a field that someone adds there by hand. To reset a pair, disable the component, pin, then enable it and push and pin again.
-- Do not edit a stack by hand. Roll back with `git revert`.
-- Disabling a component removes its pin from the stack. `out/manifest.yaml` is local: it keeps the last push, and a fresh clone has none. Enabling again returns the pin of that push, so run `push` first when the code changed.
-
-### The manifest
-
-`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `push` writes it, and `pin` and the build read it. One file holds both kinds of pin:
+`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `push` writes it, and `compose-stack` and `package-artifact` read it. One file holds both kinds of pin:
 
 ```yaml
 tools:                        # just tools/<name>/push
