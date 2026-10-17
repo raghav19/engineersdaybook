@@ -40,14 +40,14 @@ package-artifact: _manifest
 # output: the config files it merged
 # the converged config: the overrides of the cluster as one flat set, the file lower in the hierarchy wins. The default of a value is
 # the manifest, so a value that nothing overrides is not in it. Every package-artifact run writes it, whether the folder uses it or not
-_config: tools::_tools
+_config: (push 'config-builder')
     {{ tools }}/config-builder/config-builder {{ root }}/config {{ root }}/clusters/{{ cluster }}/cluster.yaml {{ root }}/out/values.yaml
 
 # reads:  out/values.yaml, and setters.yaml of this folder
 # writes: out/<name>/build/src/ (a copy of this folder with the values set), only when the folder has a setters.yaml
 # the function: setters.yaml says which config value goes into which field, value-injector (tools/) sets it in the copy
 [script('bash')]
-_apply: _config
+_apply: _config (push 'value-injector')
     rm -rf {{ out }}/build/src
     [ -f setters.yaml ] || exit 0
     {{ tools }}/value-injector/value-injector {{ root }}/out/values.yaml {{ justfile_directory() }} {{ out }}/build/src

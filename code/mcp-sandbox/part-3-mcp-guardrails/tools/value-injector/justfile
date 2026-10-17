@@ -1,1 +1,5 @@
 import '../tools.just'
+
+# just tools/value-injector/ builds the function
+[default]
+default: build

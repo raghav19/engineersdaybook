@@ -22,19 +22,14 @@
 #   build/src/       a copy of the folder with the config values applied (only when it has a setters.yaml)
 #   baseline/        the artifact `base` pins, pulled by diff
 
-set quiet
 set lazy
-set fallback
 set allow-duplicate-recipes
-set shell := ['bash', '-euo', 'pipefail', '-c']
 
-# the build functions (config-builder, value-injector): their build, push and pull are all in tools/tools.just
-mod tools '../../tools/tools.just'
+# the settings and the variables that this file and tools/tools.just share: root, name, manifest, tools, registry, ghcr_user, ghcr_push_token
+import 'common.just'
 
 # VARIABLES
 
-root := parent_directory(parent_directory(source_directory()))
-name := file_name(justfile_directory())
 out := root / 'out' / name
 # the config value that switches this component: istio-ingress -> istio_ingress_enabled (no value means enabled)
 flag := replace(name, '-', '_') + '_enabled'
@@ -46,18 +41,9 @@ cluster_name := file_name(sync)
 # every component is in the one stack of the cluster
 stack := sync + '/infra-stack.yaml'
 base := 'origin/main'
-# what `publish-artifact` recorded: the pins of the tools (`tools:`) and of the components of each cluster (`components:`). Local, next to out/values.yaml. `compose-stack` reads it
-manifest := root / 'out' / 'manifest.yaml'
 
-# registry
-registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
+# the tag of the artifact of this component: the commit that last changed its folder
 tag := `git log -1 --format=%h --abbrev=12 -- .`
-ghcr_user := env('GHCR_USER', 'raghav19')
-# placeholder-ghcr.io is replaced by the sbx proxy
-ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
-
-# where the build functions are: tools/tools.just builds them there
-tools := root / 'out' / 'tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
 # the absolute paths of this checkout into that form, for the stubs flate reads:
@@ -96,3 +82,5 @@ help:
 import 'package.just'
 import 'diff.just'
 import 'publish.just'
+# build and push a build function (config-builder, value-injector, stack-composer): the recipes depend on it, see package.just and publish.just
+import '../../tools/tools.just'

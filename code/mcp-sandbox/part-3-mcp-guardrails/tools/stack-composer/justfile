@@ -1,1 +1,5 @@
 import '../tools.just'
+
+# just tools/stack-composer/ builds the function
+[default]
+default: build
