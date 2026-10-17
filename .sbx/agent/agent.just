@@ -6,7 +6,7 @@
 #   sync-secrets    set the tokens in .sbx/secrets.json as sbx custom secrets, so the VM can use them without holding them (run does it first)
 #   build           maintainer: build the dev-tools kit, push it to ghcr.io and pin its digest in ../sbxenv.yaml
 #   allow-egress    host only: allow the hosts of the dev-tools.yaml allow list in the local sbx policy now, without the kit rebuild
-#   setup-vscode    write the Remote-SSH and update settings, and the extensions of the recipe, into your host VS Code user settings (run does it first)
+#   setup-vscode    write the Remote-SSH and update settings, and the extensions of the recipe, into your host VS Code user settings, and remove the ms-python extensions from the VM (run does it first)
 #   kubeconfig      host only: write .sbx/kubeconfig, a read-only view of the kind cluster that the sandbox reads through the host repo mount
 
 kit_repo := 'ghcr.io/raghav19/dev-agent-sandbox/dev-tools'
@@ -90,7 +90,9 @@ sync-secrets: _check-daemon
 
 # Remote-SSH installs `remote.SSH.defaultExtensions` on the VM when it starts the VS Code server. The recipe sets that list to the static one below, so the
 # list on the host is exactly this one (Python gets ty and Ruff only). A server that is already running installs nothing new: it takes a new sandbox, or
-# `code --install-extension <id>` in a terminal of the VM. An extension that a VM already has stays until `code --uninstall-extension <id>`.
+# `code --install-extension <id>` in a terminal of the VM. That list only installs, so the recipe also removes the ms-python extensions (Pylance, Python, Debugger,
+# Environments and the linters that Ruff replaces) from the VM, with the server CLI of the VM over ssh: the host `code` CLI does not act on a remote. Best effort,
+# so a stopped VM or a VM without a VS Code server yet never fails it. A VS Code window that is open needs a reload afterwards.
 
 # Write the Remote-SSH and update settings into your host VS Code user settings (application scope, so a workspace file cannot set them)
 setup-vscode:
@@ -121,6 +123,18 @@ setup-vscode:
       "extensions.autoCheckUpdates": false
     }' "$f")
     if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings updated in $f (applies to windows opened from now on)"; fi
+    # Order matters: the Debugger depends on the Python extension, so it goes first. stdin is /dev/null for the server CLI so it cannot read the script.
+    ssh -o BatchMode=yes -o ConnectTimeout=10 {{ name }}.sbx bash -s <<'EOF' || echo "setup-vscode: the VM is not reachable, ms-python extensions not removed"
+    server=$(ls -t ~/.vscode-server/bin/*/bin/code-server 2>/dev/null | head -1)
+    [ -n "$server" ] || exit 0
+    for id in ms-python.debugpy ms-python.python ms-python.vscode-python-envs ms-python.vscode-pylance \
+              ms-python.black-formatter ms-python.isort ms-python.pylint ms-python.flake8 ms-python.mypy-type-checker; do
+      # The list is read again each time: removing the Python extension removes its pack (Environments, Pylance) too
+      if "$server" --list-extensions </dev/null | grep -qix "$id"; then
+        "$server" --uninstall-extension "$id" </dev/null || echo "could not remove $id"
+      fi
+    done
+    EOF
 
 # The sandbox reaches the kind API server (host 127.0.0.1) as host.docker.internal through the sbx proxy, which needs `sbx policy allow network localhost:<port>`
 # once. It holds a ServiceAccount token bound to the built-in `view` role and to `sandbox-viewer-extra` (no Secrets, read-only), not the kind admin
