@@ -56,8 +56,8 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # placeholder-ghcr.io is replaced by the sbx proxy
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
-# where the pulled build functions are linked, by the `_tools` recipe of tools/tools.just (the same path is set there)
-tools := root / 'out' / '.tools'
+# where the build functions are: tools/tools.just builds them there
+tools := root / 'out' / 'tools'
 
 # The `path` of a Flux Kustomization is relative to the root of the Git repository, as in Flux. These turn
 # the absolute paths of this checkout into that form, for the stubs flate reads:

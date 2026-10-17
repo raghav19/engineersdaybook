@@ -101,11 +101,11 @@ part-3-mcp-guardrails/
 
 ## The manifest
 
-`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `publish-artifact` writes it, and `compose-stack` and `package-artifact` read it. One file holds both kinds of pin:
+`out/manifest.yaml` is next to `out/values.yaml`. It is local, and Git ignores it. `publish-artifact` writes the components, and the `push` of a tool writes the tools. `compose-stack` reads the components. One file holds both kinds of pin:
 
 ```yaml
 tools:                        # just tools/<name>/push
-  stack-composer: { digest: 'sha256:51d0…', binary: 'sha256:3c91…' }
+  stack-composer: { tag: sha256-3c91…, digest: 'sha256:51d0…' }
 components:                   # just <component>/publish-artifact
   local-kind:                 # sync: of clusters/<cluster>/cluster.yaml
     istio: { tag: 60b6d97d2498, digest: 'sha256:9f68…' }
@@ -113,4 +113,4 @@ components:                   # just <component>/publish-artifact
 
 - The write is one assignment of one key. It adds the entry or replaces the one of the last publish.
 - The durable pin of an artifact is the stack in Git. The manifest is what this machine published last.
-- The pin of a tool is only here. A fresh clone has none: run `just tools/<name>/push` once for each tool.
+- A tool needs no step of its own. The first `package-artifact` or `compose-stack` builds and pushes the tools it runs. The next runs skip them. A skipped tool has a cached binary, and the manifest has its tag: the sha256 of the binary. `out/` is local, so a fresh clone does this once.

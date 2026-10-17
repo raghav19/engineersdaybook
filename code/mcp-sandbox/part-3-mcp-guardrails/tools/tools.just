@@ -3,11 +3,12 @@
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: tools/pyproject.toml, locked in uv.lock.
 #
-#   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>
-#   just push    build, push once, then record its digest and binary sha256 in out/manifest.yaml (under `tools:`).
-#   just _tools  pull every function at the digest that out/manifest.yaml records -> out/.tools/<name>/<name>.
-#                out/ is local: a fresh clone has no record yet, so run `just tools/<name>/push` once (the build is deterministic: same digest).
-#                lib/workflow/workflow.just loads this file as the module `tools` and every component build runs `tools::_tools`.
+#   just build   ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
+#                A binary that is newer than its inputs (the script, model/, pyproject.toml, uv.lock and this file) is not built again.
+#   just push    build, push once, then record its tag and digest in out/manifest.yaml (under `tools:`).
+#                A binary that the manifest already records is not pushed again.
+#   just _tools  build and push the functions that a recipe needs. The first run does the work, and the next runs do nothing.
+#                lib/workflow/workflow.just loads this file as the module `tools` and every component recipe runs `tools::_tools`.
 #
 # The identity of a function is the sha256 of its binary. The build is deterministic (fixed Python and hash seed, locked
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
@@ -40,9 +41,8 @@ data := if path_exists(justfile_directory() / 'model') == 'true' { '--add-data '
 # every tool of the build group (pyinstaller, ruff) runs from uv.lock, in the venv of tools/
 uv := 'uv run --quiet --locked --python ' + python + ' --project .. --group build'
 
-# the root of part 3 (this file is tools/tools.just) and where a build finds the pulled functions
+# the root of part 3 (this file is tools/tools.just)
 root := parent_directory(source_directory())
-tools := root / 'out' / '.tools'
 # what `push` (tools) and `publish-artifact` (components, lib/workflow/publish.just) recorded. Local, next to out/values.yaml
 manifest := root / 'out' / 'manifest.yaml'
 
@@ -57,12 +57,16 @@ creds := ghcr_user + ':' + ghcr_push_token
 
 # RECIPES
 
-# reads:  the script of this folder (and its model/ folder, if it has one), tools/pyproject.toml and uv.lock
+# reads:  the script of this folder (and its model/ folder, if it has one), tools/pyproject.toml, uv.lock and this file
 # writes: out/tools/<name>/<name>
-# output: the binary, it runs without Python
+# output: the binary, it runs without Python. Nothing happens when the binary is newer than all of its inputs
 # validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
-[default]
+[default, script('bash')]
 build:
+    set -euo pipefail
+    inputs=({{ script }} ../pyproject.toml ../uv.lock {{ root }}/tools/tools.just)
+    [ ! -d model ] || inputs+=(model)
+    if [ -x {{ binary }} ] && [ -z "$(find "${inputs[@]}" -type f -newer {{ binary }})" ]; then exit 0; fi
     {{ uv }} ruff check --quiet {{ script }}
     {{ uv }} ruff format --check --quiet {{ script }}
     {{ uv }} \
@@ -73,16 +77,19 @@ build:
         --specpath {{ out }}/{{ name }}/work \
         {{ script }}
 
-# reads:  out/tools/<name>/<name>
+# reads:  out/tools/<name>/<name>, and out/manifest.yaml
 # writes: the registry, <repo>:sha256-<sha256 of the binary>
-# writes: out/manifest.yaml: `tools: <name>: {digest, binary}`, the digest of the artifact and the sha256 of the binary. The file is created when it is not there
-# build, push the binary once and record its pin
+# writes: out/manifest.yaml: `tools: <name>: {tag, digest}`. The file is created when it is not there
+# output: nothing when the manifest already records this binary: the tag is its sha256, so the same binary is the same tag
+# build, push the binary once and record it
 [script('bash')]
 push: build
     set -euo pipefail
     sha=$(sha256sum {{ binary }} | cut -d' ' -f1)
+    tag=sha256-$sha
+    if [ -f {{ manifest }} ] && [ "$(N={{ name }} yq '.tools[strenv(N)].tag // ""' {{ manifest }})" = "$tag" ]; then exit 0; fi
     # flux requires a revision; taken from the binary, not from HEAD, so the digest does not change with every commit
-    digest=$(flux push artifact {{ repo }}:sha256-$sha \
+    digest=$(flux push artifact {{ repo }}:$tag \
       --path {{ binary }} \
       --reproducible \
       --source {{ source }} \
@@ -91,35 +98,13 @@ push: build
       --output json \
       | jq -r .digest)
     touch {{ manifest }}
-    N={{ name }} DIGEST=$digest BINARY=sha256:$sha \
-      yq -i '.tools[strenv(N)] = {"digest": strenv(DIGEST), "binary": strenv(BINARY)}' {{ manifest }}
-    echo "{{ name }}: $digest"
+    N={{ name }} TAG=$tag DIGEST=$digest \
+      yq -i '.tools[strenv(N)] = {"tag": strenv(TAG), "digest": strenv(DIGEST)}' {{ manifest }}
+    echo "{{ name }}: $tag $digest"
 
-# reads:  the digests and binary sha256 under `tools:` in out/manifest.yaml, then the registry, only for a digest that is not in out/.tools/ yet
-# writes: out/.tools/<name>/<digest>/<name>, and the link out/.tools/<name>/<name> to it
-# output: nothing; _config and _apply run the links
-# pull the build functions (tools/) at the digests the config pins: config-builder and value-injector, or the names given
-# (`compose-stack` asks for stack-composer, which only it uses)
+# build and push the functions (tools/) that a recipe runs: config-builder and value-injector, or the names given
+# (`compose-stack` asks for stack-composer, which only it uses). A function that is built and recorded is skipped
 [script('bash')]
 _tools *names='config-builder value-injector':
     set -euo pipefail
-    pull() {
-      digest=""; binary=""
-      if [ -f {{ manifest }} ]; then
-        digest=$(N=$1 yq '.tools[strenv(N)].digest // ""' {{ manifest }})
-        binary=$(N=$1 yq '.tools[strenv(N)].binary // ""' {{ manifest }})
-      fi
-      [ -n "$digest" ] && [ -n "$binary" ] || { echo "$1 has no pin in out/manifest.yaml: run 'just tools/$1/push' (host), it records the pin" >&2; exit 1; }
-      dir={{ tools }}/$1/${digest#sha256:}
-      if [ ! -x "$dir/$1" ]; then
-        rm -rf "$dir" && mkdir -p "$dir"
-        flux pull artifact {{ registry }}/tools/$1@$digest -o "$dir" \
-          --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1 \
-          || { rm -rf "$dir"; echo "cannot pull {{ registry }}/tools/$1@$digest" >&2; exit 1; }
-      fi
-      # the pinned sha256 of the binary is checked on every run, not only after a pull
-      [ "sha256:$(sha256sum "$dir/$1" | cut -d' ' -f1)" = "$binary" ] \
-        || { echo "$1: the binary of $digest is not $binary" >&2; rm -rf "$dir"; exit 1; }
-      ln -sfn "${digest#sha256:}/$1" {{ tools }}/$1/$1
-    }
-    for function in {{ names }}; do pull "$function"; done
+    for function in {{ names }}; do just {{ root }}/tools/$function/push; done
