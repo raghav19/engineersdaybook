@@ -13,7 +13,7 @@ set quiet
 set lazy
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-import 'shared.just'
+import 'lib/common.just'
 
 mod host 'host/host.just'
 mod agent 'agent/agent.just'

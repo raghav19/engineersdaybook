@@ -9,7 +9,7 @@ flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
 
 # ghcr
 ghcr_user := env('GHCR_USER', 'raghav19')
-# the tokens of the sandbox (the host-keyed entries of the root .env.secrets.json), SOPS-encrypted to your age key: ghcr.io (ghcr-pull) and api.githubcopilot.com (github-upstream)
+# the root .env.secrets.json, SOPS-encrypted to your age key: GITHUB_TOKEN (ghcr-pull) and GITHUB_APP_CLIENT_SECRET (github-upstream)
 ghcr_token_file := justfile_directory() / '../../../../../.env.secrets.json'
 
 # misc
@@ -31,13 +31,13 @@ credentials: _host
     kubectl --context {{ ctx }} -n flux-system create secret generic sops-age --from-file=age.agekey="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
     kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username={{ ghcr_user }} \
-      --docker-password="$(sops -d --extract '["ghcr.io"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
+      --docker-password="$(sops -d --extract '["GITHUB_TOKEN"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
     # The upstream credential of the gateway (platform/mcp-servers, backend.yaml). The namespace is created here so the Secret can come first. The
     # agentgateway component (namespace.yaml) takes it over. The token is read here and goes into the pipe: no file, no Git, no artifact.
     kubectl --context {{ ctx }} create namespace agentgateway-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
     kubectl --context {{ ctx }} -n agentgateway-system create secret generic github-upstream \
-      --from-literal=Authorization="$(sops -d --extract '["api.githubcopilot.com"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
+      --from-literal=Authorization="$(sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
 
 down: _host
