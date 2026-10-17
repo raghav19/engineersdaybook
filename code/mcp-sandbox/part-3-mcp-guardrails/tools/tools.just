@@ -8,7 +8,7 @@
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: tools/pyproject.toml, locked in uv.lock.
 #
 #   just build [tool]  ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
-#                      A binary that is newer than its inputs (the script, model/, pyproject.toml, uv.lock and this file) is not built again.
+#                      PyInstaller keeps its own cache in out/tools/<name>/work: a second build with the same inputs takes under a second.
 #   just push [tool]   build, push once, then record its tag and digest in out/manifest.yaml (under `tools:`).
 #                      A binary that the manifest already records is not pushed again.
 #
@@ -21,19 +21,17 @@ import '../lib/workflow/common.just'
 
 # the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary
 python := '3.13.15'
-# PyInstaller flags; another set is another binary
-flags := '--onefile --clean --noconfirm --log-level WARN'
+# PyInstaller flags; another set is another binary. No --clean: its cache is what makes a second build fast, and the binary is the same without it
+flags := '--onefile --noconfirm --log-level WARN'
 source := 'https://github.com/raghav19/engineersdaybook'
 creds := ghcr_user + ':' + ghcr_push_token
 
 # PYTHONHASHSEED  Python gives strings a random hash on every start, which changes the order PyInstaller lists the modules in the bundle, so two
 #                 builds of one source differ. A fixed seed gives one order. The value itself does not matter. It is set here, not for every recipe.
-# model/          goes into the binary, when the function has one (PyInstaller reads a relative path from the spec folder, so the path is absolute).
-#                 The function and its model are one pinned unit. The contents of the files decide, not their dates and not the folder of the checkout.
-
-# reads:  the script of the function (and its model/ folder, if it has one), tools/pyproject.toml, uv.lock and this file
+#
+# reads:  the script of the function, tools/pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
-# output: the binary, it runs without Python. Nothing happens when the binary is newer than all of its inputs
+# output: the binary, it runs without Python
 # a build function: validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
 [script('bash')]
 build tool=name:
@@ -41,16 +39,10 @@ build tool=name:
     export PYTHONHASHSEED=1
     cd {{ root }}/tools/{{ tool }}
     script={{ replace(tool, '-', '_') }}.py
-    binary={{ tools }}/{{ tool }}/{{ tool }}
-    inputs=("$script" ../pyproject.toml ../uv.lock {{ root }}/tools/tools.just)
-    [ ! -d model ] || inputs+=(model)
-    if [ -x "$binary" ] && [ -z "$(find "${inputs[@]}" -type f -newer "$binary")" ]; then exit 0; fi
-    data=()
-    [ ! -d model ] || data=(--add-data "$PWD/model:model")
     uv=(uv run --quiet --locked --python {{ python }} --project {{ root }}/tools --group build)
     "${uv[@]}" ruff check --quiet "$script"
     "${uv[@]}" ruff format --check --quiet "$script"
-    "${uv[@]}" pyinstaller {{ flags }} ${data[@]+"${data[@]}"} \
+    "${uv[@]}" pyinstaller {{ flags }} \
       --name {{ tool }} \
       --distpath {{ tools }}/{{ tool }} \
       --workpath {{ tools }}/{{ tool }}/work \
