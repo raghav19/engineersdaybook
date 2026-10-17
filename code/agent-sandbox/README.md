@@ -238,14 +238,13 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
    just sandbox agent skills-install
    ```
 
-6. Optional, once per kind cluster. Give the sandbox a read-only identity on the cluster that your kubectl context points to (a `kind-*` context), then check it from the running sandbox. The identity can read the namespaces in `viewer_namespaces` (`.sbx/agent/agent.just`) and the kinds in `.sbx/agent/sandbox-viewer.yaml`, and no Secret. Run `kubeconfig-install` again after you change either:
+6. Optional, once per kind cluster. Give the sandbox a read-only identity on the cluster that your kubectl context points to (a `kind-*` context). It can read the namespaces in `viewer_namespaces` (`.sbx/agent/agent.just`) and the kinds in `.sbx/agent/sandbox-viewer.yaml`, and no Secret. Run it again after you change either:
 
    ```shell
    just sandbox agent kubeconfig-install
-   just sandbox agent kubeconfig-check
    ```
 
-   The VM holds no credential for the cluster. `.sbx/kubeconfig` is committed, the same for everyone, and has only the placeholder `placeholder-kube` as its token. `kubeconfig-install` registers an sbx custom secret for `host.docker.internal`: the sbx proxy replaces the placeholder with a token that the sbx daemon gets from `kubectl create token` on your host (8 hours, asked again when its cached value is 6 hours old). Custom secrets are experimental. `kubeconfig-check` runs `kubectl get namespaces` in the sandbox and says what a failure means, in particular whether the proxy can reach the API server (it must trust the kind CA).
+   `just sandbox run` then writes `.sbx/kubeconfig` (gitignored, one per developer) at every start, with a new token that lives 30 days (`SANDBOX_KUBE_TOKEN_DURATION`, default `720h`). The sbx proxy passes TLS to the cluster through, so it cannot swap a placeholder for a token: the VM needs the real token in that file.
 
 7. Connect VS Code:
 
@@ -273,10 +272,11 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
 ### What `just sandbox run` does, in order
 
 1. **Checks and the secret sync**, as dependencies, before anything starts: the daemon is running (`_check-daemon`), the proxy is healthy (`_check-proxy`), and the sandbox tokens in `.env.secrets.json` are registered with sbx (`agent secrets-sync`).
-2. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
-3. **`agent mcp-install`** registers the MCP servers on the gateway and attaches them to the sandbox.
-4. **`host vscode-setup`** writes the Remote-SSH settings into your host VS Code user settings.
-5. **VS Code** opens on the sandbox.
+2. **`agent kubeconfig`** writes the read-only kubeconfig for the current kubectl context, when that context is a kind cluster (`kind-*`). Another context is skipped unless you name it with `SANDBOX_KUBE_CONTEXT`. It changes nothing in the cluster. A cluster without the identity is skipped, and the message names the install command (step 6 of Getting started).
+3. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
+4. **`agent mcp-install`** registers the MCP servers on the gateway and attaches them to the sandbox.
+5. **`host vscode-setup`** writes the Remote-SSH settings into your host VS Code user settings.
+6. **VS Code** opens on the sandbox.
 
 Every recipe runs on the host machine and stops with a message if you run it in the sandbox. The path says what a recipe changes: `just sandbox host ...` is the services on the host, `just sandbox agent ...` is what the VM receives. `just sandbox` lists them with the step number of each setup recipe.
 
@@ -292,11 +292,9 @@ Day to day: run `just sandbox run` again to reopen the window. `just sandbox age
 ├── lib/
 │   └── common.just                 variables and checks that the three justfiles share (`_host-only`, `_check-daemon`, `_check-proxy`)
 ├── sbxenv.yaml                     the sandbox: kits (with digests), size, clone workspace
-├── kubeconfig                      the kubeconfig of the VM, committed: placeholder token, no CA (see Getting started, step 6)
 ├── agent/                          `just sandbox agent ...`: what the VM receives
-│   ├── agent.just                  skills-install, skills-update, secrets-sync, mcp-install, kubeconfig-install, kubeconfig-check, allow-hosts, kit-build
+│   ├── agent.just                  skills-install, skills-update, secrets-sync, mcp-install, kubeconfig-install, kubeconfig, allow-hosts, kit-build
 │   ├── sandbox-viewer.yaml         the read-only RBAC that kubeconfig-install applies: the ServiceAccount and its cluster-wide read rules
-│   ├── kube-token.sh               prints a token for that ServiceAccount: the command sbx stores for the host.docker.internal custom secret
 │   └── secret-token.sh             prints one token from .env.secrets.json by host: the command sbx stores for each custom secret
 ├── kits/                           one folder per Docker kit v3; the folder is the build context of the kit
 │   ├── dev-tools/                  the tools

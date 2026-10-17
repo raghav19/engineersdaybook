@@ -17,6 +17,8 @@ kit_registry := 'ghcr.io/raghav19/dev-agent-sandbox'
 
 # The namespaces where the agent may read with the built-in `view` role (kubeconfig). Override with SANDBOX_KUBE_NAMESPACES, a list separated by spaces.
 viewer_namespaces := env('SANDBOX_KUBE_NAMESPACES', 'default kube-system flux-system agentgateway-system istio-system istio-ingress spire-system mcp-guardrails')
+# How long the token in .sbx/kubeconfig lives (kubectl create token --duration). Every `run` writes a new one, so it lapses only when you stay away this long.
+kube_token_duration := env('SANDBOX_KUBE_TOKEN_DURATION', '720h')
 
 # The hosts of the egress allow list in the policy kit, on one line (allow-hosts)
 egress_hosts := shell('yq -r "$1" "$2"', '.capabilities[] | select(.type == "com.docker.sandbox/network-policy@2") | .config.runtime.allow | join(" ")', sbx_dir / 'kits/policy/policy.yaml')
@@ -117,19 +119,19 @@ mcp-install: _host-only _check-daemon _check-proxy
     sbx mcp load flux-schema-catalog --sandbox {{ name }}
     sbx mcp load github --sandbox {{ name }}
 
-# The agent reaches a kind API server (host 127.0.0.1:6444, the apiServerPort of Part 3's kind-config.yaml) as host.docker.internal through the sbx proxy. The
-# policy kit allows localhost:6444 for that. The VM holds no real credential: .sbx/kubeconfig (committed, the same for everyone) has the placeholder
-# "placeholder-kube" as its token, and no CA. kubeconfig-install does two things, once per cluster:
-#   1. It creates a read-only identity in the cluster: sandbox-viewer.yaml, and the built-in `view` role in each of viewer_namespaces only, so the other
-#      workloads of a shared cluster stay unreadable.
-#   2. It registers an sbx custom secret for host.docker.internal. The proxy replaces the placeholder with a token that the sbx daemon gets from the host:
-#      kube-token.sh runs `kubectl create token` (8 hours), and the daemon runs it again when its cached value is older than 6 hours. The token never
-#      enters the VM and never expires there, and no timer is needed.
-# Experimental: custom secrets may change between sbx releases. Whether the proxy can reach the API server (it must trust the kind CA) depends on the
-# sbx proxy, not on this repo: run kubeconfig-check to find out.
+# The agent reaches a kind API server (host 127.0.0.1) as host.docker.internal through the sbx proxy, which passes the TLS session through: it cannot read or
+# change the request. So the VM needs a real token, in a kubeconfig that the host writes. The policy kit allows localhost:6444, the apiServerPort of Part 3's
+# kind-config.yaml. The token is a ServiceAccount token, not the admin certificate, and it can only read. Two recipes, because the parts change at different rates:
+#   kubeconfig-install  once per cluster: the read-only RBAC in the cluster. It does not change from run to run.
+#   kubeconfig          every run: the file .sbx/kubeconfig, which holds three values that do change: a token (kube_token_duration), the CA (new after
+#                       `kind delete` + `kind create`) and the server port. It makes no change in the cluster.
+# The file is gitignored: it holds a credential and differs per developer. The host repo is mounted read-only in the VM, so it is
+# /run/sandbox/source/.sbx/kubeconfig there, where KUBECONFIG in tools.toml points, and kubectl reads it at every command. tls-server-name is a SAN every kind
+# API server certificate has, so the cluster needs no change. Both recipes take the context as the argument, else SANDBOX_KUBE_CONTEXT, else the current
+# context of kubectl.
 
-# Once per cluster, and after editing sandbox-viewer.yaml or viewer_namespaces. Create the read-only identity of the sandbox in a kubectl context (default: the current kind one) and register its token source
-kubeconfig-install context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only _check-daemon
+# Once per cluster, and after editing sandbox-viewer.yaml or viewer_namespaces. Create the read-only identity of the sandbox in a kubectl context (default: the current kind one)
+kubeconfig-install context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only
     #!/usr/bin/env bash
     set -euo pipefail
     ctx="{{ context }}"
@@ -142,6 +144,8 @@ kubeconfig-install context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only _check-da
     sa=sandbox-viewer
     ns=sandbox-viewer
     k() { kubectl --context "$ctx" "$@"; }
+    # sandbox-viewer.yaml has the ServiceAccount and the cluster-wide read rules (no Secrets). `view` is bound below in each listed namespace only, so the
+    # other workloads of a shared cluster stay unreadable.
     k apply -f {{ sbx_dir }}/agent/sandbox-viewer.yaml > /dev/null
     # The label marks the bindings of this recipe, so a namespace that left the list loses its binding.
     wanted=" {{ viewer_namespaces }} "
@@ -156,33 +160,61 @@ kubeconfig-install context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only _check-da
     k get rolebinding -A -l app.kubernetes.io/managed-by=sandbox-viewer -o jsonpath='{range .items[*]}{.metadata.namespace}{"\n"}{end}' | while read -r n; do
       [[ $wanted == *" $n "* ]] || k -n "$n" delete rolebinding "$sa-view" > /dev/null
     done
-    # The stored command has no double quote and an absolute path: sandboxd runs it outside this shell (see kube-token.sh). Global, like secrets-sync: one
-    # cluster at a time, and the placeholder means nothing for any other request.
-    kubectl_bin=$(command -v kubectl)
-    sbx secret set-custom --host host.docker.internal --placeholder placeholder-kube \
-      --command "{{ sbx_dir }}/agent/kube-token.sh $kubectl_bin $ctx" --refresh 6h > /dev/null
     echo "kubeconfig-install: $ctx has the read-only identity $ns/$sa, with view in: {{ viewer_namespaces }}"
-    echo "kubeconfig-install: the token source is registered. Check it from the sandbox: just sandbox agent kubeconfig-check"
 
-# Run kubectl in the sandbox and say what the result means. Run it after kubeconfig-install, with the sandbox running
-kubeconfig-check: _host-only
+# Write .sbx/kubeconfig for a kubectl context (default: the current one), for the sandbox to read (run does it for a kind context). Needs kubeconfig-install first
+kubeconfig context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ctx="{{ context }}"
+    [ -n "$ctx" ] || ctx=$(kubectl config current-context 2>/dev/null) || true
+    [ -n "$ctx" ] || { echo "kubectl has no current context. Name one: just sandbox agent kubeconfig <context>" >&2; exit 1; }
+    sa=sandbox-viewer
+    ns=sandbox-viewer
+    k() { kubectl --context "$ctx" "$@"; }
+    k -n "$ns" get serviceaccount "$sa" > /dev/null 2>&1 \
+      || { echo "$ctx has no read-only identity yet. Run once: just sandbox agent kubeconfig-install $ctx" >&2; exit 1; }
+    server=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+    tls=""
+    if [[ $server == *//127.0.0.1:* ]]; then
+      server=${server/\/\/127.0.0.1:/\/\/host.docker.internal:}
+      tls="tls-server-name: localhost"
+    fi
+    ca=$(k config view --minify --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
+    token=$(k -n "$ns" create token "$sa" --duration={{ kube_token_duration }})
+    cat > {{ sbx_dir }}/kubeconfig <<EOF
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - name: $ctx
+      cluster:
+        server: $server
+        $tls
+        certificate-authority-data: $ca
+    users:
+    - name: $sa
+      user:
+        token: $token
+    contexts:
+    - name: $ctx
+      context:
+        cluster: $ctx
+        user: $sa
+    current-context: $ctx
+    EOF
+    echo "wrote {{ sbx_dir }}/kubeconfig for $ctx ($server), read-only, token valid {{ kube_token_duration }}"
+
+# run calls this first. Best effort, so a missing or stopped cluster never keeps the sandbox from starting. It uses SANDBOX_KUBE_CONTEXT, else the current
+# context of kubectl, and only when that is a kind context (kind-*): a context that you did not name is never a remote or shared one. A new token is written
+# at every run, so the CA is always current. A cluster without the read-only identity is skipped with the command that creates it.
+_kubeconfig-auto: _host-only
     #!/usr/bin/env bash
     set -u
-    out=$(sbx exec {{ name }} sh -c 'KUBECONFIG=/run/sandbox/source/.sbx/kubeconfig kubectl get namespaces --request-timeout=20s' 2>&1)
-    rc=$?
-    lower=$(tr 'A-Z' 'a-z' <<< "$out")
-    if [ $rc -eq 0 ]; then
-      echo "ok: the sandbox reads the cluster with a token that the host mints. Nothing else is needed."
+    ctx="${SANDBOX_KUBE_CONTEXT:-$(kubectl config current-context 2>/dev/null)}" || exit 0
+    [ -n "$ctx" ] || exit 0
+    if [[ $ctx != kind-* && -z "${SANDBOX_KUBE_CONTEXT:-}" ]]; then
+      echo "kubeconfig: the current context $ctx is not a kind cluster, skipped (name it with SANDBOX_KUBE_CONTEXT to use it)"
       exit 0
     fi
-    echo "$out" | head -5
-    echo
-    case $lower in
-      *x509*)                       echo "x509: the VM does not trust the certificate it got. The proxy passes the TLS session through, or its certificate is not trusted. The placeholder cannot be replaced: this design does not work here." ;;
-      *"502"*|*"bad gateway"*)      echo "502: the proxy cannot trust or reach the API server (it must trust the kind CA). This design does not work here." ;;
-      *unauthorized*|*"401"*)       echo "401: the TLS session works, but the placeholder was not replaced. Check 'sbx secret ls' for the host.docker.internal secret, and run kubeconfig-install again." ;;
-      *forbidden*)                  echo "403: the token works, but the identity cannot read this. Run kubeconfig-install again, or the proxy policy blocks it: 'sbx policy log'." ;;
-      *refused*|*timeout*|*"no such host"*|*"i/o timeout"*) echo "network: the cluster is down, or the policy does not allow localhost:6444. Check 'kind get clusters' and 'sbx policy ls'." ;;
-      *)                            echo "unknown result: read the lines above." ;;
-    esac
-    exit 1
+    just --justfile "{{ sbx_dir }}/justfile" agent kubeconfig "$ctx" \
+      || echo "kubeconfig: $ctx skipped (the sandbox keeps the .sbx/kubeconfig it has, if any)"

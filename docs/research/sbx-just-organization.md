@@ -43,3 +43,15 @@ https://github.com/docker/sandbox-kit-spec
 - Docker's own `dev-tools` example keeps tools and egress in one kit. Both layouts are valid. The repo splits them because the allow list changed in 12 of 33 commits to the old kit file.
 - The old build sent the whole repository as context. There was no `.dockerignore`. The new context is 2.61 kB.
 - The build date of a kit is the time of its last commit, README excluded. A new host leaves the digest of `dev-tools` as it is.
+
+## Kubeconfig token for the VM (tested, did not work)
+
+Goal: the VM holds no token. An sbx custom secret (`sbx secret set-custom --host host.docker.internal --placeholder ... --command ... --refresh 6h`) would let the proxy replace a placeholder with a token that the host mints. Source: `sbx secret set-custom` and the credentials page on docs.docker.com.
+
+Tested from inside the sandbox, after `kubeconfig-install` had registered the secret:
+
+- `openssl s_client -proxy gateway.docker.internal:3128 -connect host.docker.internal:6444` returns the kind API server certificate (`issuer=CN=kubernetes`). The proxy passes this TLS session through.
+- The same test for `api.anthropic.com:443` returns a certificate from "Docker Sandboxes Proxy CA", which the VM trusts. The proxy does open TLS for some hosts, not for this one.
+- `kubectl get namespaces --insecure-skip-tls-verify` returns `Unauthorized`: the API server got the placeholder unchanged.
+
+Result: the VM needs a real token in a kubeconfig that the host writes. The repo keeps that design: `agent kubeconfig-install` once per cluster, and `agent kubeconfig` at every `run`, with a 30-day token (`SANDBOX_KUBE_TOKEN_DURATION`). Open question for a later try: why the proxy skips this host (the port, or a host that is not a known service).
