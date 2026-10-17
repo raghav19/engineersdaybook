@@ -265,7 +265,7 @@ Run these in order, from the repo root. Steps 1 to 8 are once per machine; step 
 1. **Checks and the secret sync**, as dependencies, before anything starts: the daemon is running (`check-daemon`), the proxy is healthy (`check-egress`), and the tokens in `.sbx/secrets.json` are registered with sbx (`sync-secrets`).
 2. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
 3. **`install-mcp`** registers the MCP servers on the gateway and attaches them to the sandbox.
-4. **`setup-vscode`** writes the Remote-SSH settings into your host VS Code user settings, and removes the ms-python extensions (Pylance and the rest) from the VM, so ty and Ruff are the only Python tools.
+4. **`setup-vscode`** writes the Remote-SSH settings into your host VS Code user settings.
 5. **VS Code** opens on the sandbox.
 
 Day to day: run `just sandbox run` again to reopen the window. `just sandbox build` (maintainer) rebuilds and pushes the tools image, `just sandbox update-skills` refreshes the skills. Egress rules for the VM live in the kit image, so after changing them run `just sandbox build` and create a new sandbox.
