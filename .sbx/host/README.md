@@ -12,11 +12,11 @@ flowchart LR
         agent["Claude Code<br/>no real credential"]
     end
     subgraph host["your machine"]
-        egress["sbx egress proxy<br/>AGENT POLICY<br/>.sbx/agent/dev-tools.yaml"]
+        egress["sbx egress proxy<br/>AGENT POLICY<br/>.sbx/kits/policy/policy.yaml"]
         subgraph daemon["sbx daemon (sbx-daemon.service)"]
             gw["MCP gateway<br/>OAuth token, tool filter, tool-call log"]
         end
-        squid["squid 127.0.0.1:3128<br/>DAEMON POLICY<br/>egress/squid.conf"]
+        squid["squid 127.0.0.1:3128<br/>DAEMON POLICY<br/>proxy/squid.conf"]
     end
     agent -- "VM network calls" --> egress --> net1["internet:<br/>kit allow list"]
     agent -- "MCP tool calls" --> gw
@@ -27,35 +27,34 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    start["just sandbox start-daemon"] --> egress["just sandbox start-egress<br/>docker compose up -d --wait<br/>squid healthy on 127.0.0.1:3128"]
+    start["just sandbox host daemon-start"] --> egress["just sandbox host proxy-start<br/>docker compose up -d --wait<br/>squid healthy on 127.0.0.1:3128"]
     egress --> unit["systemctl --user start sbx-daemon.service<br/>sbx daemon start<br/>proxy.daemon = http://127.0.0.1:3128"]
-    stop["just sandbox stop-daemon"] --> unitstop["stop sbx-daemon.service"] --> egressstop["just sandbox stop-egress<br/>docker compose down"]
+    stop["just sandbox host daemon-stop"] --> unitstop["stop sbx-daemon.service"] --> egressstop["just sandbox host proxy-stop<br/>docker compose down"]
 ```
 
 At login, linger starts `sbx-daemon.service` (after Docker), and Docker restarts the squid container because of `restart: unless-stopped`. Nothing orders the two
-at login: the daemon can come up a few seconds before squid is healthy. After a `stop-daemon` the container is gone, so run `just sandbox start-daemon` (not
+at login: the daemon can come up a few seconds before squid is healthy. After a `daemon-stop` the container is gone, so run `just sandbox host daemon-start` (not
 a reboot) to bring both back.
 
 ## Files
 
 | File | What it is |
 |---|---|
-| `daemon.just` | `install-daemon` (once per machine; its comments hold the steps, checks and undo), `start-daemon`, `stop-daemon`, `restart-daemon` and `install-mcp` |
+| `host.just` | the recipes of `just sandbox host ...`: `login`, `proxy-install`, `proxy-start`, `proxy-stop`, `daemon-install` (once per machine; its comments hold the steps, checks and undo), `daemon-start`, `daemon-stop`, `daemon-restart` and `vscode-setup` |
 | `systemd/sbx-daemon.service` | runs the sbx daemon, supervised and restarted on failure |
-| `egress/egress.just` | `install-egress`, `start-egress`, `stop-egress` for the proxy container |
-| `egress/compose.yaml` | the squid container, listening on `127.0.0.1:3128` only |
-| `egress/squid.conf` | the allowlist: the file to edit to let the daemon reach another host |
+| `proxy/compose.yaml` | the squid container, listening on `127.0.0.1:3128` only |
+| `proxy/squid.conf` | the allowlist: the file to edit to let the daemon reach another host |
 
 ## Install
 
 sbx comes from mise (`mise install`); the daemon unit runs it from the mise install dir.
 
 ```shell
-just sandbox install-egress     # once per machine: pulls the squid image
-just sandbox install-daemon     # once per machine, and after editing the unit: copies and enables it, sets proxy.daemon. Starts nothing
-just sandbox start-daemon       # starts the proxy, then the daemon; prints the journal if the daemon does not stay up
-just sandbox stop-daemon        # stops the daemon, then the proxy. Ends running sandboxes
-just sandbox restart-daemon     # stop then start, e.g. after editing squid.conf
+just sandbox host proxy-install      # step 2, once per machine: pulls the squid image
+just sandbox host daemon-install     # step 3, once per machine, and after editing the unit: copies and enables it, sets proxy.daemon. Starts nothing
+just sandbox host daemon-start       # step 4: starts the proxy, then the daemon; prints the journal if the daemon does not stay up
+just sandbox host daemon-stop        # stops the daemon, then the proxy. Ends running sandboxes
+just sandbox host daemon-restart     # stop then start, e.g. after editing squid.conf
 ```
 
 If the daemon will not start, the reason is in `journalctl --user -u sbx-daemon.service`, not in `docker logs sbx-daemon-egress` (squid only).

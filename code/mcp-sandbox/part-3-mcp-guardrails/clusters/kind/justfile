@@ -9,8 +9,8 @@ flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
 
 # ghcr
 ghcr_user := env('GHCR_USER', 'raghav19')
-# the tokens of the sandbox, one per host, SOPS-encrypted to your age key: ghcr.io (ghcr-pull) and api.githubcopilot.com (github-upstream)
-ghcr_token_file := justfile_directory() / '../../../../../.sbx/secrets.json'
+# the tokens of the sandbox (the host-keyed entries of the root .env.secrets.json), SOPS-encrypted to your age key: ghcr.io (ghcr-pull) and api.githubcopilot.com (github-upstream)
+ghcr_token_file := justfile_directory() / '../../../../../.env.secrets.json'
 
 # misc
 name := `yq .name kind-config.yaml`

@@ -47,7 +47,7 @@
       <rect x="416" y="338" width="380" height="94" rx="16" fill="var(--proxy)" stroke="var(--accent)" stroke-width="2"/>
       <text x="434" y="362" class="t">squid proxy we run: daemon policy</text>
       <text x="434" y="386" class="sub">the sbx daemon's own outbound calls: MCP servers,</text>
-      <text x="434" y="404" class="sub">kit pulls, sign-in. Allowlist in egress/squid.conf,</text>
+      <text x="434" y="404" class="sub">kit pulls, sign-in. Allowlist in proxy/squid.conf,</text>
       <text x="434" y="422" class="sub">kept running by systemd</text>
 
       <line x1="214" y1="354" x2="214" y2="462" class="arrow"/>
