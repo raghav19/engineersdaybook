@@ -11,7 +11,7 @@ LANG = "C.UTF-8"
 TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
 CHECKPOINT_DISABLE = "1"  # no Terraform version check to checkpoint-api.hashicorp.com
 COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/sandbox/completions') }}"  # dev-tools.dockerfile sets it at build; by hand in the VM /opt/sandbox is root-owned
-KUBECONFIG = "/run/sandbox/source/.sbx/kubeconfig"  # the host repo, read-only in the VM; `just sandbox agent kubeconfig` writes it on the host
+KUBECONFIG = "/run/sandbox/source/.sbx/kubeconfig"  # the host repo, read-only in the VM; committed, the same for everyone (a placeholder token, see agent/agent.just)
 
 [tools]
 just = "1.58"
