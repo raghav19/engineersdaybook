@@ -1,7 +1,7 @@
 # What the sandbox, host and agent modules share. A just module cannot use another module's variables or recipes, so each of the three justfiles imports this
 # file. The settings (`set ...`) cannot live here: each module has its own.
 
-sbx_dir := source_directory()
+sbx_dir := parent_directory(source_directory())
 repo := parent_directory(sbx_dir)
 secrets := repo / '.env.secrets.json'
 name := shell('yq .name "$1"', sbx_dir / 'sbxenv.yaml')

@@ -21,14 +21,14 @@ Source: the just manual, version 1.58.0 (the installed version). https://just.sy
 ## Tested on just 1.58.0 in a throwaway copy
 
 - A private recipe in a module can be a dependency of a parent recipe (`run: host::_check-proxy`).
-- A file imported by the parent and by each module (`shared.just`) gives each one its own copy of the variables and checks. `source_directory()` inside it is the folder of `shared.just`.
+- A file imported by the parent and by each module (`lib/common.just`) gives each one its own copy of the variables and checks. `source_directory()` inside it is the folder of `common.just`, so `sbx_dir` is its parent.
 - A recipe dependency replaces a `just <recipe>` call inside a module. `&&` runs a recipe after the body, so `daemon-restart: daemon-stop && daemon-start` stops first and starts last.
 - `set lazy` and the other settings are per module. Each module file repeats them.
 - `--dry-run` prints a `shell(...)` variable as its source text. A real run prints the value.
 
 ## Decision
 
-Two modules, `host` and `agent`, with `shared.just` for what they share. The path (`just sandbox host daemon-start`) says what a recipe changes. A "Step N of 6" doc comment says the order. `help` uses `--unsorted`, so the list follows the file order.
+Two modules, `host` and `agent`, with `lib/common.just` for what they share (the same place and name as Part 3's `lib/workflow/common.just`, and no loose file at the top of `.sbx/`). The path (`just sandbox host daemon-start`) says what a recipe changes. A "Step N of 6" doc comment says the order. `help` uses `--unsorted`, so the list follows the file order.
 
 Rejected: name prefixes in one namespace (`host-daemon-start`). It keeps `run` simple, but just does not know about the split, so `--list` stays one flat list.
 

@@ -152,7 +152,7 @@ One exception in sbx: a kit with OAuth `passthrough: true` sends the real token 
 
 #### Tokens the sandbox uses: `.env.secrets.json`
 
-The VM has no age key and no `sops`, so it never decrypts anything. A token it needs lives in the sops file [`.env.secrets.json`](../../.env.secrets.json) at the repo root, the same file as the env-style secrets of the other projects. A sandbox token is an entry with the host as the key:
+The VM has no age key and no `sops`, so it never decrypts anything. The sandbox reads the sops file [`.env.secrets.json`](../../.env.secrets.json) at the repo root, the same file as the env-style secrets of the other projects. A token the VM needs is an entry with the host as the key:
 
 ```json
 { "api.example.com": "the-token", "*.example.org": "another-token" }
@@ -162,7 +162,8 @@ The VM has no age key and no `sops`, so it never decrypts anything. A token it n
 
 - **Add or change one:** `sops .env.secrets.json`, then run the sync (`just sandbox run` does). No rebuild, unless the host is not yet allowed by the egress rules in `.sbx/kits/policy/policy.yaml`.
 - **Remove one:** delete the entry, then `sbx secret rm --placeholder placeholder-<host>`.
-- **Every entry whose key has a dot in it is injected**, as a global sbx secret, and the agent can use it against that host. An entry without a dot (`GITHUB_TOKEN`) is not a host and is never registered. Today the host entries are `ghcr.io` (read by `just sandbox host login`) and `api.githubcopilot.com` (read by `just sandbox agent mcp-install`).
+- **Every entry whose key has a dot in it is injected**, as a global sbx secret, and the agent can use it against that host. An entry without a dot is not a host and is never registered. No host entry exists today, so the sync registers nothing.
+- **Two env-style entries are for the host recipes only** and are never injected: `GITHUB_TOKEN` (the ghcr.io token, read by `just sandbox host login`) and `GITHUB_APP_CLIENT_SECRET` (read by `just sandbox agent mcp-install`).
 
 ## Prerequisites
 
@@ -191,8 +192,8 @@ Have these in place before the first command in [Getting started](#getting-start
 
    | Secret | Stored in | Used by |
    |---|---|---|
-   | `ghcr.io`, a token for the ghcr.io kit image | `.env.secrets.json` | `just sandbox host login`, once |
-   | `api.githubcopilot.com`, the App's client secret | `.env.secrets.json` | `just sandbox agent mcp-install`, piped into sbx's secret store, never printed |
+   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | `.env.secrets.json` | `just sandbox host login`, once |
+   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | `.env.secrets.json` | `just sandbox agent mcp-install`, piped into sbx's secret store, never printed |
    | GitHub's OAuth token | sbx's host credential store, created by the browser consent | the gateway; never inside the VM |
    | your age key (decrypts the file) | `~/.config/sops/age/keys.txt` | `sops` |
 
@@ -215,7 +216,7 @@ Run these in order, from the repo root. Steps 1 to 8 are once per machine; step 
    sbx settings set ssh.agentForwardingEnabled false    # do not forward your SSH agent into the sandbox
    ```
 
-3. Log in to the registry (reads the `ghcr.io` token from `.env.secrets.json`, needs your age key):
+3. Log in to the registry (reads `GITHUB_TOKEN` from `.env.secrets.json`, needs your age key):
 
    ```shell
    just sandbox host login
@@ -280,7 +281,8 @@ Day to day: run `just sandbox run` again to reopen the window. `just sandbox age
 ```text
 .sbx/                               everything that spawns the sandbox (the sandbox tokens are in `.env.secrets.json` at the repo root)
 ├── justfile                        `run` (the ordered start) and `help`; mounts the two modules below. The repo root justfile mounts it as `just sandbox`
-├── shared.just                     variables and checks that the three justfiles share (`_host-only`, `_check-daemon`, `_check-proxy`)
+├── lib/
+│   └── common.just                 variables and checks that the three justfiles share (`_host-only`, `_check-daemon`, `_check-proxy`)
 ├── sbxenv.yaml                     the sandbox: kits (with digests), size, clone workspace
 ├── agent/                          `just sandbox agent ...`: what the VM receives
 │   ├── agent.just                  skills-install, skills-update, secrets-sync, mcp-install, kubeconfig, allow-hosts, kit-build

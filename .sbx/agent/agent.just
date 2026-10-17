@@ -6,7 +6,7 @@ set quiet
 set lazy
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-import '../shared.just'
+import '../lib/common.just'
 
 github_app_client_id := 'Iv23liVvjK9IHk8lWmIh'
 github_toolsets := 'context,issues,pull_requests,repos'
@@ -78,9 +78,10 @@ allow-hosts: _host-only
       sbx policy allow network "$host"
     done
 
-# .env.secrets.json (repo root, SOPS-encrypted to your age key) holds the tokens of the sandbox next to the env-style secrets of the other projects. A key with a
-# dot in it is a host and a sandbox token: it is injected (the key is the host, the value the token), and login reads ghcr.io and mcp-install reads
-# api.githubcopilot.com from the same file. A key without a dot (GITHUB_TOKEN) is not for the sandbox and is never registered. Edit with `sops .env.secrets.json`:
+# .env.secrets.json (repo root, SOPS-encrypted to your age key) is shared with the other projects. The host recipes read two env-style keys from it: login reads
+# GITHUB_TOKEN (the ghcr.io token) and mcp-install reads GITHUB_APP_CLIENT_SECRET (the client secret of the GitHub App). Neither is injected into the VM.
+# A key with a dot in it is a host and a sandbox token: secrets-sync injects it (the key is the host, the value the token). A key without a dot is never
+# registered. No such key exists today, so secrets-sync registers nothing. Edit with `sops .env.secrets.json`:
 #   { "api.example.com": "the-token", "*.example.org": "another-token" }
 # The sbx proxy swaps the placeholder "placeholder-<host>" for the token on requests to that host only (exact, or *.example.com), so the VM uses
 # that placeholder wherever it would use the token. The host must also be allowed by the egress rules of the policy kit. set-custom creates or
@@ -88,7 +89,7 @@ allow-hosts: _host-only
 # token is never stored in sbx's config. The command has no double quote on purpose: sbx 0.47 saves such a secret empty (see secret-token.sh). A hostname
 # pattern must not be expanded by the shell, hence set -f.
 
-# Make the sandbox tokens in .env.secrets.json available to the sandbox as sbx custom secrets (run does it)
+# Make the host-keyed tokens in .env.secrets.json (if any) available to the sandbox as sbx custom secrets (run does it)
 secrets-sync: _host-only _check-daemon
     #!/usr/bin/env bash
     set -f -euo pipefail
@@ -105,7 +106,7 @@ mcp-install: _host-only _check-daemon _check-proxy
     # register the MCP servers
     sbx mcp add drawio --url https://mcp.draw.io/mcp
     sbx mcp add flux-schema-catalog --url https://schemas.fluxoperator.dev/mcp
-    sops -d --extract '["api.githubcopilot.com"]' {{ secrets }} | sbx secret set -f mcp:github:client_secret
+    sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' {{ secrets }} | sbx secret set -f mcp:github:client_secret
     sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
                        --client-id {{ github_app_client_id }} \
                        --no-scope \
