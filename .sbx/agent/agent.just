@@ -15,8 +15,9 @@ github_exclude_tools := 'delete_repository,delete_file,merge_pull_request,create
 # The kits (kits/<kit>/<kit>.yaml) are published under this repository, one package per kit. The version of a kit is the version: in its descriptor.
 kit_registry := 'ghcr.io/raghav19/dev-agent-sandbox'
 
-# The namespaces where the agent may read with the built-in `view` role (kubeconfig). Override with SANDBOX_KUBE_NAMESPACES, a list separated by spaces.
-viewer_namespaces := env('SANDBOX_KUBE_NAMESPACES', 'default kube-system flux-system agentgateway-system istio-system istio-ingress spire-system mcp-guardrails')
+# The namespaces where the agent may read with the built-in `view` role (kubeconfig-install): `*` for all of them, or a list separated by spaces for a shared
+# cluster where the other workloads must stay unreadable. Override with SANDBOX_KUBE_NAMESPACES. `view` reads no Secret in either case.
+viewer_namespaces := env('SANDBOX_KUBE_NAMESPACES', '*')
 # How long the token in .sbx/kubeconfig lives (kubectl create token --duration). Every `run` writes a new one, so it lapses only when you stay away this long.
 kube_token_duration := env('SANDBOX_KUBE_TOKEN_DURATION', '720h')
 
@@ -144,23 +145,37 @@ kubeconfig-install context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only
     sa=sandbox-viewer
     ns=sandbox-viewer
     k() { kubectl --context "$ctx" "$@"; }
-    # sandbox-viewer.yaml has the ServiceAccount and the cluster-wide read rules (no Secrets). `view` is bound below in each listed namespace only, so the
-    # other workloads of a shared cluster stay unreadable.
+    # sandbox-viewer.yaml has the ServiceAccount and the cluster-wide read rules (no Secrets). The label marks the bindings of this recipe, so a switch between
+    # the two modes below, or a namespace that left the list, loses its old binding.
+    label=app.kubernetes.io/managed-by=sandbox-viewer
+    if [ "{{ viewer_namespaces }}" = "*" ]; then
+      wanted=" "
+      where="all namespaces"
+    else
+      wanted=" {{ viewer_namespaces }} "
+      where="{{ viewer_namespaces }}"
+    fi
     k apply -f {{ sbx_dir }}/agent/sandbox-viewer.yaml > /dev/null
-    # The label marks the bindings of this recipe, so a namespace that left the list loses its binding.
-    wanted=" {{ viewer_namespaces }} "
-    for n in {{ viewer_namespaces }}; do
-      if k get namespace "$n" > /dev/null 2>&1; then
-        k -n "$n" create rolebinding "$sa-view" --clusterrole=view --serviceaccount="$ns:$sa" --dry-run=client -o yaml \
-          | k label --local -f - app.kubernetes.io/managed-by=sandbox-viewer -o yaml | k apply -f - > /dev/null
-      else
-        echo "kubeconfig-install: namespace $n is not in $ctx, skipped"
-      fi
-    done
-    k get rolebinding -A -l app.kubernetes.io/managed-by=sandbox-viewer -o jsonpath='{range .items[*]}{.metadata.namespace}{"\n"}{end}' | while read -r n; do
+    if [ "{{ viewer_namespaces }}" = "*" ]; then
+      # `view` in every namespace, now and later
+      k create clusterrolebinding "$sa-view" --clusterrole=view --serviceaccount="$ns:$sa" --dry-run=client -o yaml \
+        | k label --local -f - "$label" -o yaml | k apply -f - > /dev/null
+    else
+      # `view` in each listed namespace only, so the other workloads of a shared cluster stay unreadable
+      k delete clusterrolebinding "$sa-view" --ignore-not-found > /dev/null
+      for n in {{ viewer_namespaces }}; do
+        if k get namespace "$n" > /dev/null 2>&1; then
+          k -n "$n" create rolebinding "$sa-view" --clusterrole=view --serviceaccount="$ns:$sa" --dry-run=client -o yaml \
+            | k label --local -f - "$label" -o yaml | k apply -f - > /dev/null
+        else
+          echo "kubeconfig-install: namespace $n is not in $ctx, skipped"
+        fi
+      done
+    fi
+    k get rolebinding -A -l "$label" -o jsonpath='{range .items[*]}{.metadata.namespace}{"\n"}{end}' | while read -r n; do
       [[ $wanted == *" $n "* ]] || k -n "$n" delete rolebinding "$sa-view" > /dev/null
     done
-    echo "kubeconfig-install: $ctx has the read-only identity $ns/$sa, with view in: {{ viewer_namespaces }}"
+    echo "kubeconfig-install: $ctx has the read-only identity $ns/$sa, with view in: $where"
 
 # Write .sbx/kubeconfig for a kubectl context (default: the current one), for the sandbox to read (run does it for a kind context). Needs kubeconfig-install first
 kubeconfig context=env('SANDBOX_KUBE_CONTEXT', ''): _host-only
