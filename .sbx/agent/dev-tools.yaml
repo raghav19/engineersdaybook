@@ -57,6 +57,8 @@ capabilities:
       - istio.io
       - cuelang.org
       - spiffe.io
+      - owasp.org
+      - fluxcd.control-plane.io
       # VS Code and Copilot
       - marketplace.visualstudio.com
       - "**.vsassets.io"
