@@ -9,6 +9,7 @@
       "icon": "terminal-bash"
     }
   },
+  "ruff.importStrategy": "useBundled",
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.formatOnSave": true,
@@ -21,7 +22,11 @@
     "**/.git/**": true,
     "**/node_modules/**": true,
     "**/dist/**": true,
-    "**/.cache/**": true
+    "**/.cache/**": true,
+    "**/.venv/**": true,
+    "**/out/**": true,
+    "**/__pycache__/**": true,
+    "**/.ruff_cache/**": true
   },
   "search.exclude": {
     "**/node_modules": true,

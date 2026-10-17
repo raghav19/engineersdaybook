@@ -1,0 +1,11 @@
+{
+  "recommendations": ["astral-sh.ty", "charliermarsh.ruff"],
+  "unwantedRecommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "ms-python.black-formatter",
+    "ms-python.isort"
+  ]
+}

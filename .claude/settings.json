@@ -1,4 +1,7 @@
 {
   "model": "claude-sonnet-5-5",
-  "effortLevel": "high"
+  "effortLevel": "high",
+  "env": {
+    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1"
+  }
 }
