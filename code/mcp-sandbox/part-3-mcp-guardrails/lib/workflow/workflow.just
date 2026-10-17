@@ -1,5 +1,5 @@
 # Shared by every component justfile: `import '<../>lib/workflow/workflow.just'`. This file holds the settings, the variables and the
-# help; the recipes are in package.just (package-artifact), diff.just (diff) and publish.just (publish-artifact, compose-stack).
+# help; the recipes are in package.just (package-artifact), diff.just (diff), publish.just (publish-artifact) and compose.just (compose-stack).
 #
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
 # also the OCIRepository / Kustomization name in sync/<full name>/infra-stack.yaml.
@@ -82,4 +82,5 @@ help:
 import 'package.just'
 import 'diff.just'
 import 'publish.just'
+import 'compose.just'
 import '../../tools/tools.just'
