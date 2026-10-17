@@ -113,4 +113,4 @@ components:                   # just <component>/publish-artifact
 
 - The write is one assignment of one key. It adds the entry or replaces the one of the last publish.
 - The durable pin of an artifact is the stack in Git. The manifest is what this machine published last.
-- A tool needs no step of its own. The first `package-artifact` or `compose-stack` builds and pushes the tools it runs, and the next runs skip them: the binary is cached, and the manifest records its tag, which is the sha256 of the binary. `out/` is local, so a fresh clone does this once.
+- A tool needs no step of its own. The first `package-artifact` or `compose-stack` builds and pushes the tools it runs. The next runs skip them. A skipped tool has a cached binary, and the manifest has its tag: the sha256 of the binary. `out/` is local, so a fresh clone does this once.
