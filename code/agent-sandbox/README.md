@@ -238,7 +238,7 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
    just sandbox agent skills-install
    ```
 
-6. Optional, once per kind cluster. Give the sandbox a read-only identity on the cluster that your kubectl context points to (a `kind-*` context). It can read the namespaces in `viewer_namespaces` (`.sbx/agent/agent.just`) and the kinds in `.sbx/agent/sandbox-viewer.yaml`, and no Secret. Run it again after you change either:
+6. Optional, once per kind cluster. Give the sandbox a read-only identity on the cluster that your kubectl context points to (a `kind-*` context). It can read every namespace and the kinds in `.sbx/agent/sandbox-viewer.yaml`, and no Secret. To limit it on a shared cluster, set `SANDBOX_KUBE_NAMESPACES` to a list of namespaces (default `*`, all). Run it again after you change either:
 
    ```shell
    just sandbox agent kubeconfig-install
