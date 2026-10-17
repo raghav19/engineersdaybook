@@ -30,7 +30,7 @@ publish-artifact: package-artifact
 # rollback: git revert the commit
 # rollout: record the published artifact in the stack
 [script('bash')]
-compose-stack: _config (tools::_tools 'stack-composer')
+compose-stack: _config (push 'stack-composer')
     set -euo pipefail
     args=()
     args+=(--manifest {{ manifest }} --cluster {{ cluster_name }})

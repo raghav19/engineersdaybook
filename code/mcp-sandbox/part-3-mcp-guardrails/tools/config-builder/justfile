@@ -1,1 +1,5 @@
 import '../tools.just'
+
+# just tools/config-builder/ builds the function
+[default]
+default: build
