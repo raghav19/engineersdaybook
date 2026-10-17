@@ -101,7 +101,6 @@ setup-vscode:
     [ -f "$f" ] || echo '{}' > "$f"
     merged=$(jq '. * {
       "remote.SSH.defaultExtensions": [
-        "anthropic.claude-code",
         "astral-sh.ty",
         "charliermarsh.ruff",
         "tamasfe.even-better-toml",
