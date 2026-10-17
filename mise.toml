@@ -1,6 +1,6 @@
-# What the host needs. The sandbox image never reads this file (its tools are in .sbx/agent/tools.toml), so a tool both sides use is listed in both.
+# What the host needs. The sandbox image never reads this file (its tools are in .sbx/kits/dev-tools/tools.toml), so a tool both sides use is listed in both.
 # just runs the justfiles of .sbx (`just sandbox ...`) and Part 3 (flux, kustomize, yq, jq, helm are used by its recipes),
-# flate renders the plan-style diff of Part 3, prek is for the secret-detection hook, sops decrypts .sbx/secrets.json (never loaded into the environment).
+# flate renders the plan-style diff of Part 3, prek is for the secret-detection hook, sops decrypts .env.secrets.json (never loaded into the environment).
 # kind and cloud-provider-kind run the Part 3 cluster, sbx runs the sandboxes.
 [tools]
 just = "1.58"

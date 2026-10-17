@@ -1,50 +1,32 @@
 # Sandbox tooling, loaded by the root justfile as `mod sandbox`, so recipes are run as `just sandbox <recipe>` from the repo root, from any
 # subfolder and from this folder.
 #
-# This file orchestrates and holds what the parts share. The two policies live in their own folders, imported below (flat, so a recipe can depend on
-# another folder's recipe):
-#   agent/    agent.just: what runs inside the VM: the kit, its egress allow and deny lists, the tools, the skills
-#   daemon/   daemon.just, egress/egress.just: what the sbx daemon and its MCP gateway may reach: the MCP registrations, the daemon's systemd unit, and the
-#             squid allowlist and its container. Once per machine: install-egress, install-daemon. Then start-daemon / stop-daemon / restart-daemon
+# Every recipe runs on the host machine, and the module path says what it changes:
+#   host    host/host.just: the services on the host: the ghcr.io login, the squid proxy, the sbx daemon, VS Code
+#   agent   agent/agent.just: what the VM receives: the kit, its allowed hosts, the skills, the secrets, the MCP servers, the kubeconfig
+# `just sandbox` lists both with the step number of each recipe. The README has the one-time setup and the order.
 #
-#   login     once per machine: log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json
-#   run       developer: sync the secrets, write the kind kubeconfig (when the host has the cluster), `sbx env run . --detach`, register and attach the MCP servers, open VS Code on it
-#
-# sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval. The README has the one-time setup.
+# This file holds `run`, the ordered start that uses both modules. sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints
+# that plan and asks for approval.
 
 set quiet
 set lazy
-set allow-duplicate-recipes
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-import 'agent/agent.just'
-import 'daemon/daemon.just'
-import 'daemon/egress/egress.just'
+import 'shared.just'
 
-# VARIABLES
-sbx_dir := source_directory()
-repo := parent_directory(sbx_dir)
-secrets := sbx_dir / 'secrets.json'
-ghcr_user := env('GHCR_USER', 'raghav19')
-name := `yq .name sbxenv.yaml`
+mod host 'host/host.just'
+mod agent 'agent/agent.just'
 
-# RECIPES
-
-# list the sandbox recipes
+# list the sandbox recipes, host and agent, in the order to run them
 [default]
 help:
-    just --list
-
-# Once per machine. Log docker and sbx in to ghcr.io with the ghcr.io token in .sbx/secrets.json (the kit is a private package)
-login:
-    token=$(sops -d --extract '["ghcr.io"]' "{{ secrets }}"); \
-    printf %s "$token" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin; \
-    printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{ ghcr_user }} --password-stdin
+    just --list --list-submodules --unsorted
 
 # the sandbox's MCP calls go through the daemon, and the daemon's through the proxy; the secrets must be in sbx before the sandbox starts
 
-# Developer. Create or start the sandbox and open VS Code on it, then return (detach)
-run *args: _check-daemon _check-egress sync-secrets _kubeconfig-auto && install-mcp setup-vscode _open-vscode
+# Step 6 of 6, then every day. Create or start the sandbox and open VS Code on it, then return (detach)
+run *args: _host-only _check-daemon host::_check-proxy agent::secrets-sync agent::_kubeconfig-auto && agent::mcp-install host::vscode-setup _open-vscode
     sbx env run {{ sbx_dir }} --detach {{ args }}
 
 _open-vscode:
