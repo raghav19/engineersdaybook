@@ -82,5 +82,4 @@ help:
 import 'package.just'
 import 'diff.just'
 import 'publish.just'
-# build and push a build function (config-builder, value-injector, stack-composer): the recipes depend on it, see package.just and publish.just
 import '../../tools/tools.just'
