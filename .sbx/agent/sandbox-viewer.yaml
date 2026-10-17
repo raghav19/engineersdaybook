@@ -1,5 +1,5 @@
-# What the agent in the sandbox may read on a kind cluster. Applied by `just sandbox agent kubeconfig-install`, which also binds the built-in `view` role in each listed
-# namespace (viewer_namespaces in agent.just). Nothing here can write, and nothing can read a Secret: `view` has no Secrets, and the rules below name none.
+# What the agent in the sandbox may read on a kind cluster. Applied by `just sandbox agent kubeconfig-install`, which also binds the built-in `view` role in every namespace,
+# or only in the namespaces of viewer_namespaces in agent.just. Nothing here can write, and nothing can read a Secret: `view` has no Secrets, and the rules below name none.
 # Keep the age key (`sops-age`) and the pull and upstream credentials out of every rule you add.
 #
 # The ServiceAccount has its own namespace, so it does not mix with the workloads of a shared cluster.
