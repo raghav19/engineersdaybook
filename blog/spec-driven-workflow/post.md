@@ -65,5 +65,3 @@ the four skills — `grill-me`, `to-spec`, `to-tickets`, `wizard` — aren't min
 `/setup-matt-pocock-skills` ([docs](https://github.com/mattpocock/skills/blob/main/docs/engineering/setup-matt-pocock-skills.md)) is what wired this specific repo up — it wrote my `AGENTS.md`/`CLAUDE.md` and the `docs/agents/` files that tell every skill where specs live and what my labels mean, so `/to-tickets` can publish without asking me where issues go. those same files also carry a rule that has nothing to do with tickets — how the agent is allowed to handle secrets: reference a credential by name, never echo or paste its raw value, stop and ask rather than requesting one be pasted into chat. that rule is why the one real credential in the mcp-sandbox poc never once showed up in a chat transcript, it lived in a terminal and a config file, nowhere else.
 
 `mise.toml` is what keeps the skills themselves installed and up to date in any shell i open. none of the four commands above do anything useful without that underneath them — the skills are the well-known part, the scaffolding is the part that's actually mine.
-
-

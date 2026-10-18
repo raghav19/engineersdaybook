@@ -9,4 +9,4 @@ spec:
     - name: grpc
       port: 4445
       targetPort: 4445
-      appProtocol: kubernetes.io/h2c   # agentgateway talks gRPC to ExtMCP over h2c
+      appProtocol: kubernetes.io/h2c # agentgateway talks gRPC to ExtMCP over h2c

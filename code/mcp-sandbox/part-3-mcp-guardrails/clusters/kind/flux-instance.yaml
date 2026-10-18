@@ -17,9 +17,9 @@ spec:
   # source-controller reads Git and the artifacts, kustomize-controller applies the chains, helm-controller installs the two agentgateway charts.
   # No image automation. Add notification-controller when you want alerts on a failed chain.
   components:
-  - source-controller
-  - kustomize-controller
-  - helm-controller
+    - source-controller
+    - kustomize-controller
+    - helm-controller
   sync:
     kind: GitRepository
     url: https://github.com/raghav19/engineersdaybook.git

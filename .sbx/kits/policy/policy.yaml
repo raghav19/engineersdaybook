@@ -10,66 +10,66 @@ sourceUrl: https://github.com/raghav19/engineersdaybook
 version: "0.1.0"
 
 capabilities:
-# Egress rules for the sandboxed environment. @2 adds method and path rules; deny wins over any allow,
-# including the host's own sbx policy. The MCP servers (GitHub, draw.io, the Flux schema catalog) are not listed:
-# the agent reaches them only through the host's sbx MCP gateway, which holds their credentials.
-# The deny below is defense in depth: it stops a DELETE on a repository through the REST API.
-- type: com.docker.sandbox/network-policy@2
-  config:
-    runtime:
-      allow:
-      # Tool downloads
-      - releases.hashicorp.com
-      - registry.terraform.io
-      - mise.jdx.dev
-      - "**.astral.sh"
-      # Chart and OCI registries the cluster pulls from. blob.istio.io redirects to istio-release.r2.istio.io,
-      # which "**.istio.io" does not match, so both are needed.
-      - "**.istio.io"
-      - istio-release.r2.istio.io
-      - istio-release.storage.googleapis.com
-      - cr.agentgateway.dev
-      # The cert-manager chart is an OCI chart on quay.io (oci://quay.io/jetstack/charts/cert-manager). quay.io redirects blob downloads to
-      # cdn01.quay.io, which "quay.io" does not match, so "**.quay.io" is needed too.
-      - quay.io
-      - "**.quay.io"
-      - charts.dexidp.io
-      # Schemas
-      - www.schemastore.org
-      - schemas.fluxoperator.dev
-      # Docs and project sites, for research
-      - kind.sigs.k8s.io
-      - just.systems
-      - fluxcd.io
-      - fluxoperator.dev
-      - spiffe.github.io
-      - docs.ansible.com
-      - argo-cd.readthedocs.io
-      - pkl-lang.org
-      - kubernetes.io
-      - helm.sh
-      - kubectl.docs.kubernetes.io
-      - docs.aws.amazon.com
-      - agentgateway.dev
-      - istio.io
-      - cuelang.org
-      - spiffe.io
-      - owasp.org
-      - fluxcd.control-plane.io
-      # VS Code and Copilot
-      - marketplace.visualstudio.com
-      - "**.vsassets.io"
-      - "**.vscode-cdn.net"
-      - api.githubcopilot.com
-      # Other
-      - crl.microsoft.com
-      - www.githubstatus.com
-      - localhost:6444
-      deny:
-      - hosts: [ api.github.com ]
-        methods: [ DELETE ]
-        paths: [ /repos/** ]
+  # Egress rules for the sandboxed environment. @2 adds method and path rules; deny wins over any allow,
+  # including the host's own sbx policy. The MCP servers (GitHub, draw.io, the Flux schema catalog) are not listed:
+  # the agent reaches them only through the host's sbx MCP gateway, which holds their credentials.
+  # The deny below is defense in depth: it stops a DELETE on a repository through the REST API.
+  - type: com.docker.sandbox/network-policy@2
+    config:
+      runtime:
+        allow:
+          # Tool downloads
+          - releases.hashicorp.com
+          - registry.terraform.io
+          - mise.jdx.dev
+          - "**.astral.sh"
+          # Chart and OCI registries the cluster pulls from. blob.istio.io redirects to istio-release.r2.istio.io,
+          # which "**.istio.io" does not match, so both are needed.
+          - "**.istio.io"
+          - istio-release.r2.istio.io
+          - istio-release.storage.googleapis.com
+          - cr.agentgateway.dev
+          # The cert-manager chart is an OCI chart on quay.io (oci://quay.io/jetstack/charts/cert-manager). quay.io redirects blob downloads to
+          # cdn01.quay.io, which "quay.io" does not match, so "**.quay.io" is needed too.
+          - quay.io
+          - "**.quay.io"
+          - charts.dexidp.io
+          # Schemas
+          - www.schemastore.org
+          - schemas.fluxoperator.dev
+          # Docs and project sites, for research
+          - kind.sigs.k8s.io
+          - just.systems
+          - fluxcd.io
+          - fluxoperator.dev
+          - spiffe.github.io
+          - docs.ansible.com
+          - argo-cd.readthedocs.io
+          - pkl-lang.org
+          - kubernetes.io
+          - helm.sh
+          - kubectl.docs.kubernetes.io
+          - docs.aws.amazon.com
+          - agentgateway.dev
+          - istio.io
+          - cuelang.org
+          - spiffe.io
+          - owasp.org
+          - fluxcd.control-plane.io
+          # VS Code and Copilot
+          - marketplace.visualstudio.com
+          - "**.vsassets.io"
+          - "**.vscode-cdn.net"
+          - api.githubcopilot.com
+          # Other
+          - crl.microsoft.com
+          - www.githubstatus.com
+          - localhost:6444
+        deny:
+          - hosts: [api.github.com]
+            methods: [DELETE]
+            paths: [/repos/**]
 
-- type: com.docker.sandbox/agent-context@1
-  config:
-    contentFile: ./policy-context.md
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      contentFile: ./policy-context.md

@@ -24,21 +24,21 @@ kind: ClusterRole
 metadata:
   name: sandbox-operator
 rules:
-- apiGroups: [ "" ]
-  resources: [ namespaces, nodes, persistentvolumes ]
-  verbs: [ get, list, watch ]
-- apiGroups: [ storage.k8s.io ]
-  resources: [ storageclasses, csidrivers ]
-  verbs: [ get, list, watch ]
-- apiGroups: [ apiextensions.k8s.io ]
-  resources: [ customresourcedefinitions ]
-  verbs: [ get, list, watch ]
-- apiGroups: [ admissionregistration.k8s.io ]
-  resources: [ validatingwebhookconfigurations, mutatingwebhookconfigurations ]
-  verbs: [ get, list, watch ]
-- apiGroups: [ gateway.networking.k8s.io, agentgateway.dev, fluxcd.controlplane.io, spire.spiffe.io, external-secrets.io ]
-  resources: [ "*" ]
-  verbs: [ get, list, watch ]
+  - apiGroups: [""]
+    resources: [namespaces, nodes, persistentvolumes]
+    verbs: [get, list, watch]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses, csidrivers]
+    verbs: [get, list, watch]
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    verbs: [get, list, watch]
+  - apiGroups: [admissionregistration.k8s.io]
+    resources: [validatingwebhookconfigurations, mutatingwebhookconfigurations]
+    verbs: [get, list, watch]
+  - apiGroups: [gateway.networking.k8s.io, agentgateway.dev, fluxcd.controlplane.io, spire.spiffe.io, external-secrets.io]
+    resources: ["*"]
+    verbs: [get, list, watch]
 ---
 # What the agent may read and change, in every namespace: the workload and config kinds of core, the standard groups listed below, and the custom resources of
 # the stack (Flux, Gateway API, agentgateway, cert-manager, Istio, SPIRE). RBAC only adds, so "everything but Secrets" is a list. What is not in it, and why:
@@ -54,16 +54,15 @@ kind: ClusterRole
 metadata:
   name: sandbox-writer
 rules:
-- apiGroups: [ "" ]
-  resources: [ configmaps, endpoints, events, limitranges, namespaces, persistentvolumeclaims, pods, pods/log, pods/status, podtemplates, replicationcontrollers, resourcequotas, serviceaccounts, services, services/status ]
-  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
-- apiGroups: [ apps, batch, autoscaling, policy, networking.k8s.io, storage.k8s.io, discovery.k8s.io, coordination.k8s.io, node.k8s.io, scheduling.k8s.io, events.k8s.io, apiextensions.k8s.io ]
-  resources: [ "*" ]
-  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
-- apiGroups: [ source.toolkit.fluxcd.io, kustomize.toolkit.fluxcd.io, helm.toolkit.fluxcd.io, notification.toolkit.fluxcd.io, image.toolkit.fluxcd.io, fluxcd.controlplane.io,
-              gateway.networking.k8s.io, agentgateway.dev, cert-manager.io, acme.cert-manager.io, networking.istio.io, security.istio.io, extensions.istio.io, telemetry.istio.io, spire.spiffe.io ]
-  resources: [ "*" ]
-  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
+  - apiGroups: [""]
+    resources: [configmaps, endpoints, events, limitranges, namespaces, persistentvolumeclaims, pods, pods/log, pods/status, podtemplates, replicationcontrollers, resourcequotas, serviceaccounts, services, services/status]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+  - apiGroups: [apps, batch, autoscaling, policy, networking.k8s.io, storage.k8s.io, discovery.k8s.io, coordination.k8s.io, node.k8s.io, scheduling.k8s.io, events.k8s.io, apiextensions.k8s.io]
+    resources: ["*"]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
+  - apiGroups: [source.toolkit.fluxcd.io, kustomize.toolkit.fluxcd.io, helm.toolkit.fluxcd.io, notification.toolkit.fluxcd.io, image.toolkit.fluxcd.io, fluxcd.controlplane.io, gateway.networking.k8s.io, agentgateway.dev, cert-manager.io, acme.cert-manager.io, networking.istio.io, security.istio.io, extensions.istio.io, telemetry.istio.io, spire.spiffe.io]
+    resources: ["*"]
+    verbs: [get, list, watch, create, update, patch, delete, deletecollection]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -74,9 +73,9 @@ roleRef:
   kind: ClusterRole
   name: sandbox-operator
 subjects:
-- kind: ServiceAccount
-  name: sandbox-operator
-  namespace: sandbox-operator
+  - kind: ServiceAccount
+    name: sandbox-operator
+    namespace: sandbox-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -87,9 +86,9 @@ roleRef:
   kind: ClusterRole
   name: view
 subjects:
-- kind: ServiceAccount
-  name: sandbox-operator
-  namespace: sandbox-operator
+  - kind: ServiceAccount
+    name: sandbox-operator
+    namespace: sandbox-operator
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -100,6 +99,6 @@ roleRef:
   kind: ClusterRole
   name: sandbox-writer
 subjects:
-- kind: ServiceAccount
-  name: sandbox-operator
-  namespace: sandbox-operator
+  - kind: ServiceAccount
+    name: sandbox-operator
+    namespace: sandbox-operator
