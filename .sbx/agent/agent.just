@@ -91,8 +91,11 @@ secrets-sync: _host-only _check-daemon
     #!/usr/bin/env bash
     set -euo pipefail
     bin_path=$(dirname "$(command -v bws)"):$(dirname "$(command -v jq)"):/usr/bin:/bin
+    # the daemon may have another HOME than your shell, so the command gets the path of the token file, not the default
+    token_file=${BWS_ACCESS_TOKEN_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/bws/access-token}
+    # sbx runs the command once to verify it. Run it by hand to see its message: BWS_NO_PROMPT=1 {{ bws_secret }} GITHUB_TOKEN | wc -c
     sbx secret set-custom --host ghcr.io --placeholder placeholder-ghcr.io \
-      --command "/usr/bin/env PATH=$bin_path BWS_NO_PROMPT=1 {{ bws_secret }} GITHUB_TOKEN" > /dev/null
+      --command "/usr/bin/env PATH=$bin_path BWS_NO_PROMPT=1 BWS_ACCESS_TOKEN_FILE=$token_file {{ bws_secret }} GITHUB_TOKEN" > /dev/null
     echo "sbx secret placeholder-ghcr.io for ghcr.io"
 
 # The client secret of the GitHub App is the Bitwarden secret GITHUB_APP_CLIENT_SECRET. It goes into the sbx secret store, never into the VM. bws-secret.sh asks for
