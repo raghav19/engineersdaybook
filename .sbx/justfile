@@ -1,13 +1,9 @@
-# Sandbox tooling, loaded by the root justfile as `mod sandbox`, so recipes are run as `just sandbox <recipe>` from the repo root, from any
-# subfolder and from this folder.
-#
-# Every recipe runs on the host machine, and the module path says what it changes:
-#   host    host/host.just: the services on the host: the ghcr.io login, the squid proxy, the sbx daemon, VS Code
-#   agent   agent/agent.just: what the VM receives: the kit, its allowed hosts, the skills, the secrets, the MCP servers, the kubeconfig
-# `just sandbox` lists both with the step number of each recipe. The README has the one-time setup and the order.
-#
-# This file holds `run`, the ordered start that uses both modules. sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints
-# that plan and asks for approval.
+# Sandbox tooling, loaded by the root justfile as `mod sandbox`: `just sandbox <recipe>` from the repo root, any subfolder and this folder.
+# Every recipe runs on the host. The module path says what it changes:
+#   host    host/host.just: the services on the host: the ghcr.io login, the sbx daemon, VS Code
+#   agent   agent/agent.just: what the VM receives: the skills, the secrets, the MCP servers, the kubeconfig, the kits
+# Setup is 3 commands, in this order: `host setup`, `agent setup`, `agent kube` (optional). Then `run` every day. The README has the prerequisites.
+# sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval.
 
 set quiet
 set lazy
@@ -18,16 +14,15 @@ import 'lib/common.just'
 mod host 'host/host.just'
 mod agent 'agent/agent.just'
 
-# list the sandbox recipes, host and agent, in the order to run them
+# List the sandbox recipes, host and agent
 [default]
 help:
     just --list --list-submodules --unsorted
 
-# the sandbox's MCP calls go through the daemon, and the daemon's through the proxy
-
-# Step 6 of 6, then every day. Create or start the sandbox and open VS Code on it, then return (detach)
-run *args: _host-only _check-daemon host::_check-proxy agent::secrets-sync agent::_kubeconfig-auto && agent::mcp-install host::vscode-setup _open-vscode
+# Every day. Create or start the sandbox and open VS Code on it, then return (detach)
+run *args: _host-only _check-daemon agent::_kube-refresh && agent::mcp-load host::vscode-setup _open-vscode
     sbx env run {{ sbx_dir }} --detach {{ args }}
 
+[private]
 _open-vscode:
     code --folder-uri "vscode-remote://ssh-remote+{{ name }}.sbx$(git rev-parse --show-toplevel)"
