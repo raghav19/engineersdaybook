@@ -1,10 +1,6 @@
-# Installed by `just sandbox host daemon-install`. See ../README.md.
+# Installed by `just sandbox host daemon-install`. See ../../README.md.
 [Unit]
 Description=Docker Sandboxes daemon (sandboxd), with its temp files on disk
-# The daemon's egress goes through the squid container (sbx setting proxy.daemon), which Docker restarts at login. After= only starts Docker first;
-# starting the proxy ahead of the daemon is `just sandbox host daemon-start`, not this unit.
-Wants=docker.service
-After=docker.service
 # /tmp is a RAM disk on some machines; kit assembly unpacks the kit images into TMPDIR and can fill it.
 
 [Service]

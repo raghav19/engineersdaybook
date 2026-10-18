@@ -1,0 +1,105 @@
+# What the agent in the sandbox may read and change on a kind cluster. `just sandbox agent kube` applies this file. It binds the built-in `view` role and
+# the `sandbox-writer` role below in every namespace. No rule names a Secret: `view` has none, and neither has `sandbox-writer`.
+# Keep the Bitwarden access token (`bitwarden-access-token`) and the pull and upstream credentials out of every rule you add.
+# Limit of that: the API denies the Secret kind and the routes above. A workload that the agent creates can mount a Secret, and a Flux object that it edits makes Flux apply what it pulls with its own rights.
+# So this keeps a Secret out of the agent's reach by accident and by the direct routes. It does not stop an agent that sets out to get one.
+#
+# The ServiceAccount has its own namespace, so it does not mix with the workloads of a shared cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sandbox-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sandbox-operator
+  namespace: sandbox-operator
+---
+# `view` is namespaced, so it has no cluster-scoped kinds and none of the stack's custom resources. This role adds get/list/watch on the namespaces
+# themselves, nodes, volumes, storage classes, CSI drivers, CRDs and webhook configurations, and on every resource of the groups below. The groups are
+# the one cluster-wide grant: they hold the stack's infrastructure objects (gateways, Flux, SPIRE and External Secrets resources), and some of their kinds are cluster-scoped.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sandbox-operator
+rules:
+- apiGroups: [ "" ]
+  resources: [ namespaces, nodes, persistentvolumes ]
+  verbs: [ get, list, watch ]
+- apiGroups: [ storage.k8s.io ]
+  resources: [ storageclasses, csidrivers ]
+  verbs: [ get, list, watch ]
+- apiGroups: [ apiextensions.k8s.io ]
+  resources: [ customresourcedefinitions ]
+  verbs: [ get, list, watch ]
+- apiGroups: [ admissionregistration.k8s.io ]
+  resources: [ validatingwebhookconfigurations, mutatingwebhookconfigurations ]
+  verbs: [ get, list, watch ]
+- apiGroups: [ gateway.networking.k8s.io, agentgateway.dev, fluxcd.controlplane.io, spire.spiffe.io, external-secrets.io ]
+  resources: [ "*" ]
+  verbs: [ get, list, watch ]
+---
+# What the agent may read and change, in every namespace: the workload and config kinds of core, the standard groups listed below, and the custom resources of
+# the stack (Flux, Gateway API, agentgateway, cert-manager, Istio, SPIRE). RBAC only adds, so "everything but Secrets" is a list. What is not in it, and why:
+#   secrets                              the point of this file
+#   pods/exec, pods/attach, pods/portforward, serviceaccounts/token   a way to run code with a Secret, or to act as another ServiceAccount
+#   rbac.authorization.k8s.io, certificates.k8s.io                    a way to grant rights, or to mint an identity
+#   admissionregistration.k8s.io         a webhook receives every request, a Secret write included
+#   authentication, authorization        token and access reviews
+#   external-secrets.io and its generators                            they write Secrets, and a webhook provider sends data to a URL
+# They stay readable where `view` or the sandbox-operator role says so.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sandbox-writer
+rules:
+- apiGroups: [ "" ]
+  resources: [ configmaps, endpoints, events, limitranges, namespaces, persistentvolumeclaims, pods, pods/log, pods/status, podtemplates, replicationcontrollers, resourcequotas, serviceaccounts, services, services/status ]
+  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
+- apiGroups: [ apps, batch, autoscaling, policy, networking.k8s.io, storage.k8s.io, discovery.k8s.io, coordination.k8s.io, node.k8s.io, scheduling.k8s.io, events.k8s.io, apiextensions.k8s.io ]
+  resources: [ "*" ]
+  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
+- apiGroups: [ source.toolkit.fluxcd.io, kustomize.toolkit.fluxcd.io, helm.toolkit.fluxcd.io, notification.toolkit.fluxcd.io, image.toolkit.fluxcd.io, fluxcd.controlplane.io,
+              gateway.networking.k8s.io, agentgateway.dev, cert-manager.io, acme.cert-manager.io, networking.istio.io, security.istio.io, extensions.istio.io, telemetry.istio.io, spire.spiffe.io ]
+  resources: [ "*" ]
+  verbs: [ get, list, watch, create, update, patch, delete, deletecollection ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sandbox-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sandbox-operator
+subjects:
+- kind: ServiceAccount
+  name: sandbox-operator
+  namespace: sandbox-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sandbox-operator-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: sandbox-operator
+  namespace: sandbox-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sandbox-operator-writer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sandbox-writer
+subjects:
+- kind: ServiceAccount
+  name: sandbox-operator
+  namespace: sandbox-operator
