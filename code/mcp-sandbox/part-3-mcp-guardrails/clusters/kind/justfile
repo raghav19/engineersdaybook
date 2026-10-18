@@ -42,8 +42,10 @@ _seed: _host
     kubectl --context {{ ctx }} create namespace external-secrets --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
     kubectl --context {{ ctx }} -n external-secrets create secret generic bitwarden-access-token --from-literal=token="$BWS_ACCESS_TOKEN" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
+    # its own line: a failed lookup inside the argument would not stop the script
+    ghcr_token=$({{ bws_secret }} GITHUB_TOKEN)
     kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username={{ ghcr_user }} \
-      --docker-password="$({{ bws_secret }} GITHUB_TOKEN)" --dry-run=client -o yaml \
+      --docker-password="$ghcr_token" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
 
 credentials: _host
