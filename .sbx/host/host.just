@@ -35,7 +35,6 @@ daemon-install: _host-only
     cp "{{ sbx_dir }}/host/systemd/sbx-daemon.service" "$HOME/.config/systemd/user/"
     systemctl --user daemon-reload
     systemctl --user enable sbx-daemon.service
-    sbx settings unset proxy.daemon >/dev/null 2>&1 || true # clears the squid proxy of an earlier install
     # `sbx settings` starts a daemon outside systemd when none runs. Stop that one, never the daemon under its unit.
     systemctl --user is-active --quiet sbx-daemon.service || sbx daemon stop >/dev/null 2>&1 || true
 
