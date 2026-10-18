@@ -1,12 +1,14 @@
 # What the host needs. The sandbox image never reads this file (its tools are in .sbx/kits/dev-tools/tools.toml), so a tool both sides use is listed in both.
 # just runs the justfiles of .sbx (`just sandbox ...`) and Part 3 (flux, kustomize, yq, jq, helm are used by its recipes),
-# flate renders the plan-style diff of Part 3, prek is for the secret-detection hook, sops decrypts .env.secrets.json (never loaded into the environment).
+# flate renders the plan-style diff of Part 3, prek is for the secret-detection hook, sops decrypts .env.secrets.json (never loaded into the environment),
+# bws (the Bitwarden Secrets Manager CLI) reads the secrets that `just clusters/kind/up` puts in the cluster (.sbx/agent/bws-secret.sh).
 # kind and cloud-provider-kind run the Part 3 cluster, sbx runs the sandboxes.
 [tools]
 just = "1.58"
 yq = "4.54"
 jq = "1.8"
 sops = "3.13"
+bitwarden-secrets-manager = "2.1.0" # bws
 kind = "0.33.0"
 kubectl = "1.37"
 kustomize = "5.8.3"
