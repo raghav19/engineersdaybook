@@ -12,7 +12,7 @@ What we take as given, so the sandbox's value shows on its own:
 
 - a Linux host with KVM, rootless Docker, systemd user services and `sbx` installed ([Prerequisites](#prerequisites));
 - one GitHub App on one repository, with `main` protected (a pull request and one approval);
-- secrets in a sops-encrypted file on the host
+- secrets in Bitwarden Secrets Manager, read on the host with the `bws` CLI
 - review before merge with pull requests
 
 
@@ -150,20 +150,14 @@ sequenceDiagram
 
 One exception in sbx: a kit with OAuth `passthrough: true` sends the real token into the VM. This kit does not use it.
 
-#### Tokens the sandbox uses: `.env.secrets.json`
+#### Secrets the host reads: Bitwarden
 
-The VM has no age key and no `sops`, so it never decrypts anything. The sandbox reads the sops file [`.env.secrets.json`](../../.env.secrets.json) at the repo root, the same file as the env-style secrets of the other projects. A token the VM needs is an entry with the host as the key:
+The VM has no Bitwarden access token and no `bws`. The host recipes read two secrets of the Bitwarden project `ai-infra` with [`.sbx/agent/bws-secret.sh`](../../.sbx/agent/bws-secret.sh). The script asks for the access token of the machine account `vault-dev`, or reads `BWS_ACCESS_TOKEN` when you export it.
 
-```json
-{ "api.example.com": "the-token", "*.example.org": "another-token" }
-```
+- `GITHUB_TOKEN`: the ghcr.io token, read by `just sandbox host login`.
+- `GITHUB_APP_CLIENT_SECRET`: the client secret of the GitHub App, read by `just sandbox agent mcp-install`.
 
-`just sandbox run` first runs `just sandbox agent secrets-sync`, which registers each entry with `sbx secret set-custom`. In the VM, use `placeholder-<host>` wherever the token would go (`curl -H "Authorization: Bearer placeholder-api.example.com" https://api.example.com/...`). The proxy swaps in the real token on requests to that host and only there, and nothing in the VM can print it.
-
-- **Add or change one:** `sops .env.secrets.json`, then run the sync (`just sandbox run` does). No rebuild, unless the host is not yet allowed by the egress rules in `.sbx/kits/policy/policy.yaml`.
-- **Remove one:** delete the entry, then `sbx secret rm --placeholder placeholder-<host>`.
-- **Every entry whose key has a dot in it is injected**, as a global sbx secret, and the agent can use it against that host. An entry without a dot is not a host and is never registered. No host entry exists today, so the sync registers nothing.
-- **Two env-style entries are for the host recipes only** and are never injected: `GITHUB_TOKEN` (the ghcr.io token, read by `just sandbox host login`) and `GITHUB_APP_CLIENT_SECRET` (read by `just sandbox agent mcp-install`).
+Neither secret is injected into the VM. A token that the VM would need as a placeholder (`sbx secret set-custom`) has no recipe today.
 
 ## Prerequisites
 
@@ -188,14 +182,14 @@ Have these in place before the first command in [Getting started](#getting-start
    - Add the callback URL `http://127.0.0.1:8765/callback`, turn on **Expire user authorization tokens**, and generate a client secret.
    - Its client id is in `.sbx/agent/agent.just`.
    
-5. **Secrets.** Two live in the sops-encrypted `.env.secrets.json`; edit it with `sops .env.secrets.json`.
+5. **Secrets.** Two live in the Bitwarden project `ai-infra`. Create them in the web vault, and create the read-only machine account `vault-dev` with an access token.
 
    | Secret | Stored in | Used by |
    |---|---|---|
-   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | `.env.secrets.json` | `just sandbox host login`, once |
-   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | `.env.secrets.json` | `just sandbox agent mcp-install`, piped into sbx's secret store, never printed |
+   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | Bitwarden, project `ai-infra` | `just sandbox host login`, once |
+   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | Bitwarden, project `ai-infra` | `just sandbox agent mcp-install`, piped into sbx's secret store, never printed |
    | GitHub's OAuth token | sbx's host credential store, created by the browser consent | the gateway; never inside the VM |
-   | your age key (decrypts the file) | `~/.config/sops/age/keys.txt` | `sops` |
+   | the access token of `vault-dev` | the Bitwarden web vault. You enter it at a prompt, or export `BWS_ACCESS_TOKEN` | `bws-secret.sh` |
 
 ## Getting started
 
@@ -216,7 +210,7 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
    sbx settings set ssh.agentForwardingEnabled false    # do not forward your SSH agent into the sandbox
    ```
 
-3. Log in to the registry (reads `GITHUB_TOKEN` from `.env.secrets.json`, needs your age key):
+3. Log in to the registry (reads `GITHUB_TOKEN` from Bitwarden, asks for the access token):
 
    ```shell
    just sandbox host login
@@ -253,10 +247,10 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
    code --install-extension ms-vscode-remote.remote-ssh
    ```
 
-8. Add the tokens the sandbox may use, if you have any (none is needed to start; see [Tokens the sandbox uses](#tokens-the-sandbox-uses-envsecretsjson)):
+8. Optional: export the Bitwarden access token, so `mcp-install` does not ask for it on every `just sandbox run`:
 
    ```shell
-   sops .env.secrets.json
+   export BWS_ACCESS_TOKEN=...
    ```
 
 9. Commit your work. Only committed files are in the sandbox's clone.
@@ -271,7 +265,7 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
 
 ### What `just sandbox run` does, in order
 
-1. **Checks and the secret sync**, as dependencies, before anything starts: the daemon is running (`_check-daemon`), the proxy is healthy (`_check-proxy`), and the sandbox tokens in `.env.secrets.json` are registered with sbx (`agent secrets-sync`).
+1. **Checks**, as dependencies, before anything starts: the daemon is running (`_check-daemon`) and the proxy is healthy (`_check-proxy`).
 2. **`agent kubeconfig`** writes the read-only kubeconfig for the current kubectl context, when that context is a kind cluster (`kind-*`). Another context is skipped unless you name it with `SANDBOX_KUBE_CONTEXT`. It changes nothing in the cluster. A cluster without the identity is skipped, and the message names the install command (step 6 of Getting started).
 3. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
 4. **`agent mcp-install`** registers the MCP servers on the gateway and attaches them to the sandbox.
@@ -287,15 +281,15 @@ Day to day: run `just sandbox run` again to reopen the window. `just sandbox age
 ### Directory structure
 
 ```text
-.sbx/                               everything that spawns the sandbox (the sandbox tokens are in `.env.secrets.json` at the repo root)
+.sbx/                               everything that spawns the sandbox (the secrets are in Bitwarden, read with `agent/bws-secret.sh`)
 ├── justfile                        `run` (the ordered start) and `help`; mounts the two modules below. The repo root justfile mounts it as `just sandbox`
 ├── lib/
 │   └── common.just                 variables and checks that the three justfiles share (`_host-only`, `_check-daemon`, `_check-proxy`)
 ├── sbxenv.yaml                     the sandbox: kits (with digests), size, clone workspace
 ├── agent/                          `just sandbox agent ...`: what the VM receives
-│   ├── agent.just                  skills-install, skills-update, secrets-sync, mcp-install, kubeconfig-install, kubeconfig, allow-hosts, kit-build
+│   ├── agent.just                  skills-install, skills-update, mcp-install, kubeconfig-install, kubeconfig, allow-hosts, kit-build
 │   ├── sandbox-viewer.yaml         the read-only RBAC that kubeconfig-install applies: the ServiceAccount and its cluster-wide read rules
-│   └── secret-token.sh             prints one token from .env.secrets.json by host: the command sbx stores for each custom secret
+│   └── bws-secret.sh               prints one secret of the Bitwarden project by name, or the access token: the host recipes use it
 ├── kits/                           one folder per Docker kit v3; the folder is the build context of the kit
 │   ├── dev-tools/                  the tools
 │   │   ├── dev-tools.yaml          the descriptor: args, the Terraform cache volume, the shell setup
