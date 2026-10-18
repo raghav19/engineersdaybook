@@ -12,6 +12,7 @@ codekit-config.json
 Gemfile.lock
 node_modules
 npm-debug.log*
+.ruff_cache
 # .sbx is committed here; the sandbox's global excludes file ignores it by default
 !.sbx
 .sbx/kubeconfig
