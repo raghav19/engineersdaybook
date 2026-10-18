@@ -60,7 +60,7 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 
 | ID | Control | Where |
 |---|---|---|
-| MCP01 | The gateway holds the upstream credential. ext-mcp redacts secrets. | `platform/mcp-servers`, host-created Secret, `platform/ext-mcp` |
+| MCP01 | The gateway holds the upstream credential. ext-mcp redacts secrets. | `platform/mcp-servers`, `ExternalSecret` from Bitwarden, `platform/ext-mcp` |
 | MCP02 | A grant per user for each server and tool. A rate limit per user. | `platform/policies/tool-rbac`, `platform/policies/rate-limit` |
 | MCP03 | Tool names carry the target name. ext-mcp pins tool descriptions. | `platform/mcp-servers`, `platform/ext-mcp` |
 | MCP04 | One list of registered targets. This reduces the risk. It does not solve it. | `platform/mcp-servers` |
@@ -88,12 +88,13 @@ part-3-mcp-guardrails/
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
 ├── platform/
-│   ├── addons/           gateway-api, agentgateway, spire, istio, istio-ingress (each component has flux/stack.yaml)
+│   ├── addons/           gateway-api, agentgateway, spire, istio, istio-ingress, cert-manager, external-secrets (each component has flux/stack.yaml)
+│   ├── secret-store/     the ClusterSecretStore `bitwarden`: ESO reads the Bitwarden project `ai-infra` with it
 │   ├── mcp-servers/      the three servers behind /mcp (one AgentgatewayBackend)
 │   ├── routes/           Gateway, AgentgatewayParameters, HTTPRoute
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
-├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux)
+├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux, and the two Secrets from the host)
 ├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored

@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The External Secrets addon: its namespace, the ESO chart (external-secrets.yaml, with the CRDs and bitwarden-sdk-server) installed by Flux as a HelmRelease,
+# and the certificate of bitwarden-sdk-server (sdk-server-tls.yaml). One folder, one artifact.
+resources:
+  - namespace.yaml
+  - external-secrets.yaml
+  - sdk-server-tls.yaml

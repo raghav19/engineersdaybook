@@ -21,8 +21,14 @@ spec:
   retryInterval: 1m
   timeout: 2m
   prune: true
-  wait: true # the Backend refers to the Secret github-upstream by name. `just clusters/kind/credentials` creates it on the host.
+  wait: true # the Backend refers to the Secret github-upstream by name. The ExternalSecret reports Ready when ESO wrote it.
+  healthCheckExprs:
+    - apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      current: status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+      failed: status.conditions.exists(c, c.type == 'Ready' && c.status == 'False')
   path: ./
   sourceRef: {kind: OCIRepository, name: mcp-servers}
   dependsOn:
     - name: agentgateway # the namespace of the Secret
+    - name: secret-store # the ClusterSecretStore that the ExternalSecret reads

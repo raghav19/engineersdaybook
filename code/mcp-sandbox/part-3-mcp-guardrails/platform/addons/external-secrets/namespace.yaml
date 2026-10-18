@@ -1,0 +1,9 @@
+# The namespace of ESO: the controller, the webhook, the cert-controller and bitwarden-sdk-server run here. It also holds the Secret
+# bitwarden-access-token (`just clusters/kind/up` creates it on the host) and the Secret bitwarden-tls-certs (cert-manager issues it).
+# It travels with this addon. Flux must never prune it: removing a namespace removes everything in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

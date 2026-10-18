@@ -1,0 +1,14 @@
+# The fields of this folder a config value can override: name, then the object and the path it goes into. The two IDs have no default in the
+# manifest: config/ must set them, and the build fails without. The two URLs keep the US cloud unless config/ sets them.
+bitwarden_organization_id:
+  - object: ClusterSecretStore/bitwarden
+    path: spec.provider.bitwardensecretsmanager.organizationID
+bitwarden_project_id:
+  - object: ClusterSecretStore/bitwarden
+    path: spec.provider.bitwardensecretsmanager.projectID
+bitwarden_api_url:
+  - object: ClusterSecretStore/bitwarden
+    path: spec.provider.bitwardensecretsmanager.apiURL
+bitwarden_identity_url:
+  - object: ClusterSecretStore/bitwarden
+    path: spec.provider.bitwardensecretsmanager.identityURL
