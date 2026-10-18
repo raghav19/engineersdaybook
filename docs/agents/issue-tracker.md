@@ -1,8 +1,29 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues and specs for this repo live as GitHub issues on `raghav19/engineersdaybook`. Outside the sandbox, use the `gh` CLI for all operations. Inside the sandbox (`$SANDBOX_NAME` is set), use the gateway tools in the next section instead, and do not run `gh` or `curl` against GitHub (see `AGENTS.md`, section 6).
 
-## Conventions
+## Inside the sandbox: gateway tools
+
+Every `gh` command in this file, the PR and wayfinding ones included, maps to a tool on the sbx MCP gateway. Each tool is `mcp__mcp-gateway__<name>`. The tools are deferred, so load their schemas first with ToolSearch (`select:mcp__mcp-gateway__issue_read,...`). Pass `owner` = `raghav19` and `repo` = `engineersdaybook`.
+
+| `gh` command | Gateway tool |
+| --- | --- |
+| `gh issue create` | `issue_write` with `method: create` (`title`, `body`, `labels`) |
+| `gh issue view <n> --comments` | `issue_read` with `method: get`, then `get_comments` and `get_labels` |
+| `gh issue list` | `list_issues` (`state`: `OPEN`/`CLOSED`, `labels`; use `fields` to drop `body`) |
+| `gh issue comment <n>` | `add_issue_comment` (`issue_number`, `body`) |
+| `gh issue edit --add-label` / `--remove-label` | `issue_write` with `method: update` and the full `labels` list. It replaces the current set, so read it first with `issue_read` `get_labels` |
+| `gh issue edit --add-assignee @me` | `issue_write` with `method: update` and `assignees` (the login from `get_me`) |
+| `gh issue close <n> --comment` | `issue_write` with `method: update`, `state: closed`, `state_reason`; add the comment with `add_issue_comment` first |
+| `gh pr view <n>` / `gh pr diff <n>` | `pull_request_read` with `method: get` / `get_diff` (also `get_comments`, `get_files`, `get_check_runs`) |
+| `gh pr list` | `list_pull_requests` (`state`, `head` as `user:branch`); `search_pull_requests` to filter by author |
+| `gh pr create` / `gh pr edit` / `gh pr close` | `create_pull_request` / `update_pull_request` (`title`, `body`, `state`) |
+| `gh pr comment <n>` | `add_issue_comment` with the PR number as `issue_number` |
+| sub-issue through `gh api` | `sub_issue_write` with `method: add`. `sub_issue_id` is the database id, not the number; `issue_read` `get_sub_issues` lists the children |
+
+There is no gateway tool for issue dependencies (`.../dependencies/blocked_by`). In the sandbox, use the `Blocked by: #<n>, #<n>` fallback line from the wayfinding section.
+
+## Conventions (`gh`, outside the sandbox)
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
 - **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
