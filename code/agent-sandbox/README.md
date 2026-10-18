@@ -157,7 +157,9 @@ The VM has no Bitwarden access token and no `bws`. The host recipes read two sec
 - `GITHUB_TOKEN`: the ghcr.io token, read by `just sandbox host login`.
 - `GITHUB_APP_CLIENT_SECRET`: the client secret of the GitHub App, read by `just sandbox agent mcp-install`.
 
-Neither secret is injected into the VM. A token that the VM would need as a placeholder (`sbx secret set-custom`) has no recipe today.
+Neither secret is injected into the VM.
+
+One more entry reaches the VM as a placeholder: `just sandbox agent secrets-sync` (run does it) registers `placeholder-ghcr.io` for `ghcr.io` with `sbx secret set-custom`. The sbx proxy swaps in the Bitwarden secret `GITHUB_TOKEN` on requests to `ghcr.io` only. Part 3 uses it as the registry push password. The token needs `write:packages` to push. The sbx daemon runs the command with no terminal, so the access token must be in the file `~/.config/bws/access-token` (mode 600, `BWS_ACCESS_TOKEN_FILE` changes the path). `bws-secret.sh` reads that file when `BWS_ACCESS_TOKEN` is empty.
 
 ## Prerequisites
 
@@ -247,10 +249,10 @@ Run these in order, from the repo root. Steps 1 to 9 are once per machine (step 
    code --install-extension ms-vscode-remote.remote-ssh
    ```
 
-8. Optional: export the Bitwarden access token, so `mcp-install` does not ask for it on every `just sandbox run`:
+8. Save the Bitwarden access token in a file that only you can read. `secrets-sync` and `mcp-install` read it, so `just sandbox run` does not ask for it:
 
    ```shell
-   export BWS_ACCESS_TOKEN=...
+   mkdir -p ~/.config/bws && (umask 077; cat > ~/.config/bws/access-token)   # paste the token, then Ctrl-D
    ```
 
 9. Commit your work. Only committed files are in the sandbox's clone.
@@ -287,7 +289,7 @@ Day to day: run `just sandbox run` again to reopen the window. `just sandbox age
 │   └── common.just                 variables and checks that the three justfiles share (`_host-only`, `_check-daemon`, `_check-proxy`)
 ├── sbxenv.yaml                     the sandbox: kits (with digests), size, clone workspace
 ├── agent/                          `just sandbox agent ...`: what the VM receives
-│   ├── agent.just                  skills-install, skills-update, mcp-install, kubeconfig-install, kubeconfig, allow-hosts, kit-build
+│   ├── agent.just                  skills-install, skills-update, secrets-sync, mcp-install, kubeconfig-install, kubeconfig, allow-hosts, kit-build
 │   ├── sandbox-viewer.yaml         the read-only RBAC that kubeconfig-install applies: the ServiceAccount and its cluster-wide read rules
 │   └── bws-secret.sh               prints one secret of the Bitwarden project by name, or the access token: the host recipes use it
 ├── kits/                           one folder per Docker kit v3; the folder is the build context of the kit
