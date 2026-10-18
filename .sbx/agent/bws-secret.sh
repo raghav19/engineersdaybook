@@ -6,7 +6,9 @@
 #   1. BWS_ACCESS_TOKEN
 #   2. the file BWS_ACCESS_TOKEN_FILE (default ~/.config/bws/access-token), when it exists. Its mode must be 600 or 400. The sbx daemon runs this script
 #      on demand with no terminal (the secret ghcr.io, `secrets-sync` in agent.just), so it can read the token only from a file.
-#   3. a prompt on the terminal, without an echo
+#   3. a prompt on the terminal, without an echo. BWS_NO_PROMPT=1 turns the prompt off: the script fails at once when 1 and 2 give no token.
+#      The command of `secrets-sync` sets it, because sbx may run that command while a terminal is attached, and a hidden prompt looks like a hang.
+# The call to Bitwarden stops after 30 seconds.
 # Run it on the host only. The microVM holds no access token. For the EU cloud set BWS_SERVER_URL=https://vault.bitwarden.eu.
 set -eu
 
@@ -21,6 +23,7 @@ if [ -z "${BWS_ACCESS_TOKEN:-}" ] && [ -f "$token_file" ]; then
 fi
 
 if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+  [ -z "${BWS_NO_PROMPT:-}" ] || { echo "bws-secret.sh: no access token. Set BWS_ACCESS_TOKEN or save it in $token_file." >&2; exit 1; }
   (: < /dev/tty) 2> /dev/null || { echo "bws-secret.sh: set BWS_ACCESS_TOKEN, there is no token file and no terminal to ask on." >&2; exit 1; }
   printf 'Bitwarden access token (machine account): ' >&2
   trap 'stty echo < /dev/tty' EXIT
@@ -38,5 +41,7 @@ if [ "$1" = token ]; then
 fi
 
 export BWS_ACCESS_TOKEN
-bws secret list --output json \
+# its own line: a failure of bws (a wrong token, the timeout) must stop the script, and a pipe would hide it
+secrets=$(timeout 30 bws secret list --output json)
+printf %s "$secrets" \
   | jq -j --arg key "$1" '[.[] | select(.key == $key)] | if length == 1 then .[0].value else error("expected one secret named " + $key + ", found " + (length | tostring)) end'
