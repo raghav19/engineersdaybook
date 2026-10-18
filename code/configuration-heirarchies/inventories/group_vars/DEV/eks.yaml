@@ -1,3 +1,2 @@
----
 eks_cluster_version: v2
 eks_k8s_version: "1.34"

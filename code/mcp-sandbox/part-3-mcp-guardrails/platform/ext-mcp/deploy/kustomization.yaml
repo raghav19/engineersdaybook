@@ -10,4 +10,4 @@ resources:
 images:
   - name: ext-mcp
     newName: ext-mcp
-    newTag: dev   # `task ext-mcp:build` loads this into kind; pin a digest for any shared cluster
+    newTag: dev # `task ext-mcp:build` loads this into kind; pin a digest for any shared cluster

@@ -1,15 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml
+  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.1/standard-install.yaml
 
 # Flux must never prune a CRD: deleting it deletes every custom resource of that kind.
 patches:
-- target: { kind: CustomResourceDefinition }
-  patch: |-
-    apiVersion: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    metadata:
-      name: ignored
-      annotations:
-        kustomize.toolkit.fluxcd.io/prune: disabled
+  - target: {kind: CustomResourceDefinition}
+    patch: |-
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: ignored
+        annotations:
+          kustomize.toolkit.fluxcd.io/prune: disabled
