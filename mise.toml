@@ -10,6 +10,9 @@ helm = "4.3.0"
 flux2 = "2.9"
 "github:home-operations/flate" = "0.6"
 "github:docker/sbx-releases" = "v0.48"
+prek = "0.5"
+gitleaks = "8.30"
+yamlfmt = "0.21"
 
 [env]
 EDITOR="code --wait"

@@ -1,0 +1,30 @@
+# Pre-commit checks, run by prek on every commit. The sandbox installs the hook at start (.sbx/kits/dev-tools/dev-tools.yaml).
+# The builtin hooks need no network. gitleaks and yamlfmt come from mise (mise.toml on the host, tools.toml in the sandbox).
+
+exclude = '^_archive/'  # the old Jekyll site, with vendored minified files
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "check-added-large-files", args = ["--maxkb=1024"] },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml", args = ["--allow-multiple-documents"] },
+  { id = "detect-private-key" },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "gitleaks"
+name = "gitleaks"
+language = "system"
+entry = "gitleaks git --pre-commit --staged --redact --verbose"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "yamlfmt"
+name = "yamlfmt"
+language = "system"
+entry = "yamlfmt"
+types = ["yaml"]

@@ -58,3 +58,9 @@ capabilities:
         rm -rf /home/agent/.cache/terraform-providers/lost+found
       user: "0"
       description: Set bash as the login shell, source the shell setup from ~/.bashrc, give agent the provider cache
+    - command:
+      - sh
+      - -c
+      - cd "${{ kit.args.workspace }}" && prek install --allow-missing-config  # the git hook is not versioned, so a fresh clone has none
+      user: agent
+      description: Install the prek pre-commit hook in the workspace clone
