@@ -92,7 +92,7 @@ secrets-sync: _host-only _check-daemon
     set -euo pipefail
     bin_path=$(dirname "$(command -v bws)"):$(dirname "$(command -v jq)"):/usr/bin:/bin
     sbx secret set-custom --host ghcr.io --placeholder placeholder-ghcr.io \
-      --command "/usr/bin/env PATH=$bin_path {{ bws_secret }} GITHUB_TOKEN" > /dev/null
+      --command "/usr/bin/env PATH=$bin_path BWS_NO_PROMPT=1 {{ bws_secret }} GITHUB_TOKEN" > /dev/null
     echo "sbx secret placeholder-ghcr.io for ghcr.io"
 
 # The client secret of the GitHub App is the Bitwarden secret GITHUB_APP_CLIENT_SECRET. It goes into the sbx secret store, never into the VM. bws-secret.sh asks for
