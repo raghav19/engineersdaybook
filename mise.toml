@@ -2,7 +2,6 @@
 just = "1.58"
 yq = "4.54"
 jq = "1.8"
-sops = "3.13"
 bitwarden-secrets-manager = "2.1.0"
 kind = "0.33.0"
 kubectl = "1.37"

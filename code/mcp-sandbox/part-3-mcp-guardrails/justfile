@@ -15,7 +15,7 @@ help:
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
       just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the published tag and digest
 
-      just clusters/kind/up | credentials | down   the kind cluster and the hand-over to Flux (host)
+      just clusters/kind/up | down                 the kind cluster and the hand-over to Flux, asks for the Bitwarden access token (host)
       just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)
       just tests/run                               the attack cases against the gateway
 

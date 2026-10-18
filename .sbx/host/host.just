@@ -18,9 +18,9 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # Check:  docker ps --filter name=sbx-daemon-egress   healthy
 compose := docker_env + ' docker compose -f ' + sbx_dir + '/host/proxy/compose.yaml'
 
-# Step 1 of 6, once per machine. Log docker and sbx in to ghcr.io with GITHUB_TOKEN from .env.secrets.json (the kit is a private package)
+# Step 1 of 6, once per machine. Log docker and sbx in to ghcr.io with the Bitwarden secret GITHUB_TOKEN (the kit is a private package)
 login: _host-only
-    token=$(sops -d --extract '["GITHUB_TOKEN"]' "{{ secrets }}"); \
+    token=$({{ bws_secret }} GITHUB_TOKEN); \
     printf %s "$token" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin; \
     printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{ ghcr_user }} --password-stdin
 

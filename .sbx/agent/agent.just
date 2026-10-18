@@ -80,35 +80,15 @@ allow-hosts: _host-only
       sbx policy allow network "$host"
     done
 
-# .env.secrets.json (repo root, SOPS-encrypted to your age key) is shared with the other projects. The host recipes read two env-style keys from it: login reads
-# GITHUB_TOKEN (the ghcr.io token) and mcp-install reads GITHUB_APP_CLIENT_SECRET (the client secret of the GitHub App). Neither is injected into the VM.
-# A key with a dot in it is a host and a sandbox token: secrets-sync injects it (the key is the host, the value the token). A key without a dot is never
-# registered. No such key exists today, so secrets-sync registers nothing. Edit with `sops .env.secrets.json`:
-#   { "api.example.com": "the-token", "*.example.org": "another-token" }
-# The sbx proxy swaps the placeholder "placeholder-<host>" for the token on requests to that host only (exact, or *.example.com), so the VM uses
-# that placeholder wherever it would use the token. The host must also be allowed by the egress rules of the policy kit. set-custom creates or
-# updates, so this is safe to run every time. sbx stores the --command and sandboxd runs it outside this shell, hence the absolute sops path; the
-# token is never stored in sbx's config. The command has no double quote on purpose: sbx 0.47 saves such a secret empty (see secret-token.sh). A hostname
-# pattern must not be expanded by the shell, hence set -f.
-
-# Make the host-keyed tokens in .env.secrets.json (if any) available to the sandbox as sbx custom secrets (run does it)
-secrets-sync: _host-only _check-daemon
-    #!/usr/bin/env bash
-    set -f -euo pipefail
-    sops_bin=$(command -v sops)
-    file={{ secrets }}
-    "$sops_bin" -d "$file" | jq -r 'keys[] | select(contains("."))' | while read -r host; do
-      sbx secret set-custom --host "$host" --placeholder "placeholder-$host" \
-        --command "{{ sbx_dir }}/agent/secret-token.sh $sops_bin $host" > /dev/null
-      echo "sbx secret placeholder-$host for $host"
-    done
+# The client secret of the GitHub App is the Bitwarden secret GITHUB_APP_CLIENT_SECRET. It goes into the sbx secret store, never into the VM. bws-secret.sh asks for
+# the Bitwarden access token unless BWS_ACCESS_TOKEN is set.
 
 # Register the MCP servers on the sbx gateway and attach them to the running sandbox (run does it)
 mcp-install: _host-only _check-daemon _check-proxy
     # register the MCP servers
     sbx mcp add drawio --url https://mcp.draw.io/mcp
     sbx mcp add flux-schema-catalog --url https://schemas.fluxoperator.dev/mcp
-    sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' {{ secrets }} | sbx secret set -f mcp:github:client_secret
+    {{ bws_secret }} GITHUB_APP_CLIENT_SECRET | sbx secret set -f mcp:github:client_secret
     sbx mcp add github --url https://api.githubcopilot.com/mcp/ \
                        --client-id {{ github_app_client_id }} \
                        --no-scope \

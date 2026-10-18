@@ -33,7 +33,9 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 | `spire` | Attests workloads. Issues SVIDs. | `spire-system` |
 | `istio` | Runs the sidecars. Enforces mTLS with the SVID from SPIRE. | `istio-system` |
 | `flux` | Applies each component from its OCI artifact. | `flux-system` |
-| Secret `github-upstream` | Holds the GitHub credential. `just clusters/kind/credentials` creates it on the host. | `agentgateway-system` |
+| `external-secrets` | Copies a secret of Bitwarden Secrets Manager into a Kubernetes Secret. Calls Bitwarden through `bitwarden-sdk-server`. | `external-secrets` |
+| `cert-manager` | Issues the certificate of `bitwarden-sdk-server`. | `cert-manager` |
+| Secret `github-upstream` | Holds the GitHub credential. ESO writes it from Bitwarden (`ExternalSecret` in `mcp-servers`). | `agentgateway-system` |
 
 The pins of the OCI artifacts are in `sync/local-kind/infra-stack.yaml`. How Flux syncs them, and in which order, is in [orchestration](orchestration.md).
 
@@ -132,13 +134,13 @@ The user config has one entry, for the gateway. The JWT is the same for all thre
 |---|---|---|---|
 | Gateway JWT | Dex | MCP config on the host | Every call to the gateway |
 | GitHub user token | GitHub | Dex only | Read the user profile at login |
-| Upstream credential | GitHub | Secret `github-upstream` in the gateway | Calls to the GitHub MCP server |
+| Upstream credential | GitHub | Secret `github-upstream` in the gateway. Bitwarden holds the source. ESO copies it. | Calls to the GitHub MCP server |
 
 | Item | Location |
 |---|---|
 | Grant (user to servers) | `onboarding/users/*.yaml`, rendered into the `tool-rbac` artifact |
 | GitHub OAuth App | One app, owned by the platform owner. Its callback URL is the Dex callback. |
-| OAuth App secret and Dex config | `dex` artifact and a SOPS Secret |
+| OAuth App secret and Dex config | `dex` artifact and a Bitwarden secret that ESO copies |
 | JWT of a user | MCP config on the host. Never in Git. |
 
 The gateway checks each JWT on its own, with the Dex signing keys. It does not call Dex or GitHub per call.

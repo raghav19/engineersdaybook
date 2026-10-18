@@ -1,0 +1,8 @@
+# The namespace of cert-manager: the controller, the cainjector and the webhook run here. It travels with this addon.
+# Flux must never prune it: removing a namespace removes everything in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
