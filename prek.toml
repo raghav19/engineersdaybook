@@ -1,5 +1,5 @@
 # Pre-commit checks, run by prek on every commit. The sandbox installs the hook at start (.sbx/kits/dev-tools/dev-tools.yaml).
-# The builtin hooks need no network. gitleaks and yamlfmt come from mise (mise.toml on the host, tools.toml in the sandbox).
+# The builtin hooks need no network. gitleaks, yamlfmt and ruff come from mise, from the sandbox image (.sbx/kits/dev-tools/tools.toml).
 
 exclude = '^_archive/'  # the old Jekyll site, with vendored minified files
 
@@ -28,3 +28,18 @@ name = "yamlfmt"
 language = "system"
 entry = "yamlfmt"
 types = ["yaml"]
+
+# ruff finds its settings per file: the nearest pyproject.toml with [tool.ruff] (tools/ sets line-length 140), else its defaults.
+[[repos.hooks]]
+id = "ruff-check"
+name = "ruff check"
+language = "system"
+entry = "ruff check --fix"
+types = ["python"]
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format"
+language = "system"
+entry = "ruff format"
+types = ["python"]

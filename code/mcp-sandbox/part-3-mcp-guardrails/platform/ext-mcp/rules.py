@@ -3,6 +3,7 @@
 Each check returns None when the call passes, or a short rule id when it must be denied.
 Rule ids are what the audit log and the test expectations name, never the offending value.
 """
+
 import posixpath
 import re
 
