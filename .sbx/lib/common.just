@@ -3,7 +3,8 @@
 
 sbx_dir := parent_directory(source_directory())
 repo := parent_directory(sbx_dir)
-secrets := repo / '.env.secrets.json'
+# Prints one secret of the Bitwarden project by name (`bws-secret.sh GITHUB_TOKEN`). It asks for the access token unless BWS_ACCESS_TOKEN is set.
+bws_secret := sbx_dir / 'agent/bws-secret.sh'
 name := shell('yq .name "$1"', sbx_dir / 'sbxenv.yaml')
 
 # The rootless Docker socket. DOCKER_HOST is set per directory by mise, so recipes that call docker set it themselves and work from anywhere. Set per

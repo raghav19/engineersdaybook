@@ -1,5 +1,5 @@
 # Everything the sandbox has: the dev tools, the Terraform cache settings and the bash completions. dev-tools.dockerfile bakes these exact versions
-# into the image (as /etc/mise/conf.d/sandbox.toml). The root mise.toml is for the host only (kind, sbx, sops) and the image never reads it,
+# into the image (as /etc/mise/conf.d/sandbox.toml). The root mise.toml is for the host only (kind, sbx, bws) and the image never reads it,
 # so a tool both sides use (kubectl, helm, kustomize) is listed in both files.
 # It is not named mise.toml on purpose: the host's mise would load it from this folder and ask to trust it.
 # node, python and uv are not here: the sandbox's shell kit ships them.

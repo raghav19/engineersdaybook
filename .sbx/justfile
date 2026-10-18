@@ -23,10 +23,10 @@ mod agent 'agent/agent.just'
 help:
     just --list --list-submodules --unsorted
 
-# the sandbox's MCP calls go through the daemon, and the daemon's through the proxy; the secrets must be in sbx before the sandbox starts
+# the sandbox's MCP calls go through the daemon, and the daemon's through the proxy
 
 # Step 6 of 6, then every day. Create or start the sandbox and open VS Code on it, then return (detach)
-run *args: _host-only _check-daemon host::_check-proxy agent::secrets-sync agent::_kubeconfig-auto && agent::mcp-install host::vscode-setup _open-vscode
+run *args: _host-only _check-daemon host::_check-proxy agent::_kubeconfig-auto && agent::mcp-install host::vscode-setup _open-vscode
     sbx env run {{ sbx_dir }} --detach {{ args }}
 
 _open-vscode:
