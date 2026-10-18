@@ -40,6 +40,40 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: cert-manager
+  timeout: 5m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: cert-manager
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: external-secrets
+  timeout: 5m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: gateway-api
   namespace: flux-system
 spec:
@@ -98,6 +132,12 @@ metadata:
 spec:
   dependsOn:
   - name: agentgateway
+  - name: secret-store
+  healthCheckExprs:
+  - apiVersion: external-secrets.io/v1
+    current: status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+    failed: status.conditions.exists(c, c.type == 'Ready' && c.status == 'False')
+    kind: ExternalSecret
   interval: 10m
   path: ./
   prune: true
@@ -153,6 +193,29 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: secret-store
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: external-secrets
+  healthCheckExprs:
+  - apiVersion: external-secrets.io/v1
+    current: status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+    failed: status.conditions.exists(c, c.type == 'Ready' && c.status == 'False')
+    kind: ClusterSecretStore
+  interval: 10m
+  path: ./
+  prune: true
+  retryInterval: 1m
+  sourceRef:
+    kind: OCIRepository
+    name: secret-store
+  timeout: 3m
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: spire
   namespace: flux-system
 spec:
@@ -192,8 +255,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:cd4e5e01c29dcd59ef23b188ec0852ff675e63c24f6714753cab68d328d77328
-    tag: 5f7e9eee881c
+    digest: sha256:062994770362936b38b6a69e23e662a36f5328f8cefd4f22ae76b3782159c72b
+    tag: 168b0255e960
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/agentgateway
@@ -206,11 +269,39 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:5340220fe1061b294700fa49079650f1169e173fbc5e89379fef19306be27282
-    tag: 8034f68cb62a
+    digest: sha256:ba14505784bd668da71abeb848cb43ac1fb801cbc269db803ea5a2f2395755e2
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/authn-jwt
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:b42f4e67aa5928365f5fb70da68f156417ed06fd8913b7abbf216af20fa41e62
+    tag: 62267329963d
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/cert-manager
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: external-secrets
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:4e20949f25b879a53ff66c13b9a92ef0c20366027dbedea6bbe07752ef069a46
+    tag: 62267329963d
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/external-secrets
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -220,8 +311,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:c1bd1df5838e4c33c9126c892a5ce43ef3f1a57db7fe99ecfc04235246d5de0a
-    tag: 5f7e9eee881c
+    digest: sha256:569406b828666aeec3a05bb94a307185d095ad71a27fc0f91695f722d925d293
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/gateway-api
@@ -234,8 +325,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:9f68ea87b363e620c0963556e199f9877848fb9dbba418ce5538e139cbdcb4be
-    tag: 60b6d97d2498
+    digest: sha256:e09e1f224014b34d4ebbc23dd660d1e0477bf4972ea77349ee6c321a8ae734d9
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/istio
@@ -248,8 +339,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:9e75f218cc724b7208e92943444461d48e033a4a32e747bf5f3dc65a985fcb2b
-    tag: 60b6d97d2498
+    digest: sha256:0c965bd8615694ed5b97365bf1130a50f804661402171d960a3064a6cf59c783
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
@@ -262,8 +353,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:4bea923fe4daa63421bc699a7dee8f5b71b4de4992fb91ba94f6bd5fc97d091b
-    tag: 5f7e9eee881c
+    digest: sha256:3af9163ccf9f72f89dcb8d15878cf3bddaefc69f56af0bd56eee9b9ce7075ac2
+    tag: 62267329963d
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/mcp-servers
@@ -276,8 +367,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:a1af46e03d885e4e8002f2b15466f8b89a3af743218e79e0d7e3646615ebaf19
-    tag: 8034f68cb62a
+    digest: sha256:e24174797cf2dbf586ab52e628fd39d0f58193105c54b62ae52eaa2e5cbcec46
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/rate-limit
@@ -290,11 +381,25 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:4c5465a706faaa0e4d79004373a6b60f1c1a4db2b686c1552e70d1e4b5097028
-    tag: 5f7e9eee881c
+    digest: sha256:558bc4e9c2cf1ea723459bf1692321c4fb1b87cd5718c58962a8303ae4bedb2e
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/routes
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: secret-store
+  namespace: flux-system
+spec:
+  interval: 5m
+  ref:
+    digest: sha256:363505758906192e49c3c40169535057cef28d968056041621858cea11d7ced1
+    tag: 62267329963d
+  secretRef:
+    name: ghcr-pull
+  url: oci://ghcr.io/raghav19/mcp-guardrails/secret-store
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -304,8 +409,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:9ded63ee01b3e10fede99a4332f86c18039d753680eaa38475e52636889ac6fb
-    tag: 0e08da687020
+    digest: sha256:6db87b9968ae5659e58b767187fa9475060cf3e76a49c89e9ca98919a82963ec
+    tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/spire
@@ -318,8 +423,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:81cc8b58a3718334401922c062b53629cb95449c04185bbd657b887e7e2eca3c
-    tag: 8034f68cb62a
+    digest: sha256:209d99ebc4fd5991c03aa2e68c6a3803cb647c660b39338f106e5f01edb8959a
+    tag: 803f75629f73
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/tool-rbac
