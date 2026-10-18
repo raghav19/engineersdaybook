@@ -93,7 +93,10 @@ secrets-sync: _host-only _check-daemon
     bin_path=$(dirname "$(command -v bws)"):$(dirname "$(command -v jq)"):/usr/bin:/bin
     # the daemon may have another HOME than your shell, so the command gets the path of the token file, not the default
     token_file=${BWS_ACCESS_TOKEN_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/bws/access-token}
-    # sbx runs the command once to verify it. Run it by hand to see its message: BWS_NO_PROMPT=1 {{ bws_secret }} GITHUB_TOKEN | wc -c
+    # sbx runs the command once to verify it, and shows only "exit status 1". Run it here first, with the same environment: its message
+    # (no token file, a wrong mode, no secret of that name) reaches you, and the token goes nowhere.
+    env PATH="$bin_path" BWS_NO_PROMPT=1 BWS_ACCESS_TOKEN_FILE="$token_file" {{ bws_secret }} GITHUB_TOKEN > /dev/null \
+      || { echo "secrets-sync: the command that the daemon would run failed (the message is above)." >&2; exit 1; }
     sbx secret set-custom --host ghcr.io --placeholder placeholder-ghcr.io \
       --command "/usr/bin/env PATH=$bin_path BWS_NO_PROMPT=1 BWS_ACCESS_TOKEN_FILE=$token_file {{ bws_secret }} GITHUB_TOKEN" > /dev/null
     echo "sbx secret placeholder-ghcr.io for ghcr.io"
