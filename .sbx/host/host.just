@@ -18,11 +18,14 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # Check:  docker ps --filter name=sbx-daemon-egress   healthy
 compose := docker_env + ' docker compose -f ' + sbx_dir + '/host/proxy/compose.yaml'
 
+# --all-sandboxes: without it the registry credential is host-only (kit pulls) and a sandbox cannot push to or pull from ghcr.io. With it the sbx proxy
+# injects the credential into the registry login of every NEW sandbox, and the credential never enters the VM. Create a new sandbox after this change.
+
 # Step 1 of 6, once per machine. Log docker and sbx in to ghcr.io with the Bitwarden secret GITHUB_TOKEN (the kit is a private package)
 login: _host-only
     token=$({{ bws_secret }} GITHUB_TOKEN); \
     printf %s "$token" | docker login ghcr.io -u {{ ghcr_user }} --password-stdin; \
-    printf %s "$token" | sbx secret set -f --registry ghcr.io --username {{ ghcr_user }} --password-stdin
+    printf %s "$token" | sbx secret set -f --all-sandboxes --registry ghcr.io --username {{ ghcr_user }} --password-stdin
 
 # Step 2 of 6, once per machine. Pull the squid image for the daemon's egress proxy
 proxy-install: _host-only
