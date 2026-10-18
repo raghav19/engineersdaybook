@@ -29,6 +29,10 @@ capabilities:
       - istio-release.r2.istio.io
       - istio-release.storage.googleapis.com
       - cr.agentgateway.dev
+      # The cert-manager chart is an OCI chart on quay.io (oci://quay.io/jetstack/charts/cert-manager). quay.io redirects blob downloads to
+      # cdn01.quay.io, which "quay.io" does not match, so "**.quay.io" is needed too.
+      - quay.io
+      - "**.quay.io"
       - charts.dexidp.io
       # Schemas
       - www.schemastore.org
