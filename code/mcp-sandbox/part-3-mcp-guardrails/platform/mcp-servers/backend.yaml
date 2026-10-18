@@ -18,7 +18,7 @@ spec:
           policies:
             tls:
               sni: api.githubcopilot.com
-            # The upstream credential lives only in this Secret (created on the host by `just clusters/kind/credentials`, never in Git).
+            # The upstream credential lives only in this Secret (ESO writes it from Bitwarden, externalsecret.yaml, never in Git).
             # Its key is `Authorization`; the client never holds it (MCP01).
             auth:
               secretRef:

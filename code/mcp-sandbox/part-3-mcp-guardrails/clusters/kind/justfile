@@ -9,8 +9,8 @@ flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
 
 # ghcr
 ghcr_user := env('GHCR_USER', 'raghav19')
-# the root .env.secrets.json, SOPS-encrypted to your age key: GITHUB_TOKEN (ghcr-pull) and GITHUB_APP_CLIENT_SECRET (github-upstream)
-ghcr_token_file := justfile_directory() / '../../../../../.env.secrets.json'
+# prints one secret of the Bitwarden project by name, or the access token of the machine account (it asks for the token when BWS_ACCESS_TOKEN is empty)
+bws_secret := justfile_directory() / '../../../../../.sbx/agent/bws-secret.sh'
 
 # misc
 name := `yq .name kind-config.yaml`
@@ -24,20 +24,23 @@ up: _host
     kubectl --context {{ ctx }} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
     helm upgrade --install flux-operator {{ flux_operator_chart }} --version {{ flux_operator_version }} \
       --kube-context {{ ctx }} --namespace flux-system --wait --timeout {{ flux_operator_timeout }}
+    just --justfile {{ justfile() }} _seed
     kubectl --context {{ ctx }} apply -f flux-instance.yaml
-    echo "Flux waits for the credentials: just credentials"
 
-credentials: _host
-    kubectl --context {{ ctx }} -n flux-system create secret generic sops-age --from-file=age.agekey="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}" --dry-run=client -o yaml \
+# The two Secrets the cluster needs before ESO runs, created on the host. Everything else comes from Bitwarden through ESO (platform/secret-store).
+#   ghcr-pull               Flux pulls every artifact from the private ghcr.io packages with it. ESO is one of those artifacts, so ESO cannot create it.
+#   bitwarden-access-token  the read-only access token of the machine account. ESO reads Bitwarden with it (the ClusterSecretStore names it).
+# The token is read here and goes into the pipe: no file, no Git, no artifact. The namespace external-secrets is created here so the Secret can come first.
+# The external-secrets component (namespace.yaml) takes it over. Set BWS_ACCESS_TOKEN to skip the prompt.
+[script('bash')]
+_seed: _host
+    set -euo pipefail
+    export BWS_ACCESS_TOKEN=$({{ bws_secret }} token)
+    kubectl --context {{ ctx }} create namespace external-secrets --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
+    kubectl --context {{ ctx }} -n external-secrets create secret generic bitwarden-access-token --from-literal=token="$BWS_ACCESS_TOKEN" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
     kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username={{ ghcr_user }} \
-      --docker-password="$(sops -d --extract '["GITHUB_TOKEN"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
-      | kubectl --context {{ ctx }} apply -f -
-    # The upstream credential of the gateway (platform/mcp-servers, backend.yaml). The namespace is created here so the Secret can come first. The
-    # agentgateway component (namespace.yaml) takes it over. The token is read here and goes into the pipe: no file, no Git, no artifact.
-    kubectl --context {{ ctx }} create namespace agentgateway-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
-    kubectl --context {{ ctx }} -n agentgateway-system create secret generic github-upstream \
-      --from-literal=Authorization="$(sops -d --extract '["GITHUB_APP_CLIENT_SECRET"]' {{ ghcr_token_file }})" --dry-run=client -o yaml \
+      --docker-password="$({{ bws_secret }} GITHUB_TOKEN)" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
 
 down: _host
@@ -45,9 +48,9 @@ down: _host
 
 # delete the CRDs of the stack, and with them every custom resource of those kinds. Flux never prunes a CRD (the artifacts mark them), so this is
 # the explicit step. Run it after the stack is removed from Flux, otherwise the next reconcile applies them again. `down` needs none of this.
-[confirm('Delete the agentgateway, Gateway API, SPIRE and Istio CRDs and every custom resource of those kinds?')]
+[confirm('Delete the agentgateway, Gateway API, SPIRE, Istio, cert-manager and External Secrets CRDs and every custom resource of those kinds?')]
 delete-crds: _host
-    kubectl --context {{ ctx }} get crd -o name | grep -E '\.(agentgateway\.dev|gateway\.networking\.k8s\.io|spiffe\.io|istio\.io)$' | xargs -r kubectl --context {{ ctx }} delete --wait
+    kubectl --context {{ ctx }} get crd -o name | grep -E '\.(agentgateway\.dev|gateway\.networking\.k8s\.io|spiffe\.io|istio\.io|cert-manager\.io|external-secrets\.io)$' | xargs -r kubectl --context {{ ctx }} delete --wait
 
 _host:
-    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): the ghcr.io token and the sops key are not usable here." >&2; exit 1; }
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): the Bitwarden access token and the ghcr.io token are not for the sandbox." >&2; exit 1; }

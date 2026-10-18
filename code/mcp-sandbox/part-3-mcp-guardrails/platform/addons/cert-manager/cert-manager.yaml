@@ -1,0 +1,52 @@
+# The cert-manager chart, installed by Flux (helm-controller). The version is the tag below, here only.
+# It issues the certificate of bitwarden-sdk-server (platform/addons/external-secrets/sdk-server-tls.yaml). The CRDs are part of this chart.
+# Chart values: put them under spec.values. `just diff` shows what a value changes in the objects the chart renders.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 10m
+  url: oci://quay.io/jetstack/charts/cert-manager
+  ref:
+    tag: v1.21.2
+  # A HelmRelease reads a chart from an OCIRepository when this layer selector names the chart layer.
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 10m
+  releaseName: cert-manager
+  chartRef:
+    kind: OCIRepository
+    name: cert-manager
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  driftDetection:
+    mode: enabled
+  values:
+    crds:
+      enabled: true
+    # The artifact holds rendered objects, so the post-install check hook would become a plain Job that runs on every apply.
+    # The `wait: true` of the Kustomization already waits for the webhook Deployment.
+    startupapicheck:
+      enabled: false
+  # The artifact holds the rendered CRDs. Flux must never prune one: deleting a CRD deletes every custom resource of its kind.
+  # Delete them explicitly: `just clusters/kind/delete-crds`.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target: {kind: CustomResourceDefinition}
+            patch: |
+              - op: add
+                path: /metadata/annotations/kustomize.toolkit.fluxcd.io~1prune
+                value: disabled

@@ -1,0 +1,33 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: secret-store
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/raghav19/mcp-guardrails/secret-store
+  secretRef:
+    name: ghcr-pull
+  ref:
+    tag: unpinned
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secret-store
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m # the webhook of ESO can reject the store of the first apply: the retry settles it
+  timeout: 3m
+  prune: true
+  wait: true # the store reports Ready when it reads the project with the access token. Without the Secret bitwarden-access-token it stays not Ready.
+  healthCheckExprs:
+    - apiVersion: external-secrets.io/v1
+      kind: ClusterSecretStore
+      current: status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
+      failed: status.conditions.exists(c, c.type == 'Ready' && c.status == 'False')
+  path: ./
+  sourceRef: {kind: OCIRepository, name: secret-store}
+  dependsOn:
+    - name: external-secrets # the CRDs and the webhook of ESO, and bitwarden-sdk-server

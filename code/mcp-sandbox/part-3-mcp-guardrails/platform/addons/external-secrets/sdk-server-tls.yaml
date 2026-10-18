@@ -1,0 +1,34 @@
+# The certificate of bitwarden-sdk-server. ESO calls the server over HTTPS and trusts the ca.crt of this Secret (the store, platform/secret-store).
+# The chart mounts the Secret bitwarden-tls-certs (tls.crt, tls.key, ca.crt) in the pod. This file stays in this addon on purpose: the pod waits for the
+# Secret, so a Certificate in the unit of the store would keep this unit from becoming Ready.
+# The certificate is self-signed and is its own CA. The server reads it at start only, and ESO reads ca.crt at each call. A renewal that changes
+# the certificate would break the call until the pod restarts, so the lifetime is 10 years and `renewBefore` leaves no renewal in that time.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: bitwarden-sdk-server-selfsigned
+  namespace: external-secrets
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bitwarden-tls-certs
+  namespace: external-secrets
+spec:
+  secretName: bitwarden-tls-certs
+  isCA: true
+  duration: 87600h
+  renewBefore: 24h
+  dnsNames:
+    - bitwarden-sdk-server.external-secrets.svc.cluster.local
+    - bitwarden-sdk-server.external-secrets.svc
+    - bitwarden-sdk-server
+    - localhost
+  ipAddresses:
+    - 127.0.0.1
+    - ::1
+  issuerRef:
+    kind: Issuer
+    name: bitwarden-sdk-server-selfsigned

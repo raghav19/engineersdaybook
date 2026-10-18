@@ -29,7 +29,7 @@ Flux itself is not in the sync folder:
 ```text
 sync/local-kind/                   what Flux reconciles
 ├── kustomization.yaml
-└── infra-stack.yaml               all 10 units
+└── infra-stack.yaml               all 13 units
 clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 ```
 
@@ -50,15 +50,16 @@ sequenceDiagram
     participant S as source-controller
     participant C as kustomize-controller
 
-    Note over H: host only: needs the age key and the registry token
+    Note over H: host only: needs the Bitwarden access token (a prompt, or BWS_ACCESS_TOKEN)
     H->>K: just clusters/kind/up: create the cluster
     H->>K: install the Flux Operator
+    H->>K: create the Secrets ghcr-pull and bitwarden-access-token (the token comes from the prompt, ghcr-pull from Bitwarden)
     H->>K: apply clusters/kind/flux-instance.yaml
     O->>K: install the Flux controllers
     O->>K: create the Kustomization flux-system (path sync/local-kind)
-    H->>K: just clusters/kind/credentials: create the Secrets
     S->>S: clone main from GitHub
-    C->>K: apply the ten units, each after its dependsOn
+    C->>K: apply the 13 units, each after its dependsOn
+    Note over C,K: ESO then writes the other Secrets from Bitwarden, for example github-upstream
 ```
 
 ## 4. Flow B: a change reaches the cluster
