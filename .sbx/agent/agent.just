@@ -80,6 +80,21 @@ allow-hosts: _host-only
       sbx policy allow network "$host"
     done
 
+# The push token of the registry for the sandbox: the sbx proxy replaces the placeholder "placeholder-ghcr.io" with the Bitwarden secret GITHUB_TOKEN on requests to
+# ghcr.io only (publish-artifact in Part 3 uses the placeholder as its password). sbx runs the command on demand, outside this shell, with no terminal and no mise on its PATH:
+# so the command sets PATH to the folders of bws and jq, and bws-secret.sh reads the access token from ~/.config/bws/access-token (mode 600), see bws-secret.sh.
+# The command has no double quote on purpose: sbx 0.47 saves such a secret empty. set-custom creates or updates, so this is safe to run every time.
+# The token needs write:packages to push. It is never stored in sbx's config and never in the VM.
+
+# Make the registry push token available to the sandbox as an sbx custom secret (run does it)
+secrets-sync: _host-only _check-daemon
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bin_path=$(dirname "$(command -v bws)"):$(dirname "$(command -v jq)"):/usr/bin:/bin
+    sbx secret set-custom --host ghcr.io --placeholder placeholder-ghcr.io \
+      --command "/usr/bin/env PATH=$bin_path {{ bws_secret }} GITHUB_TOKEN" > /dev/null
+    echo "sbx secret placeholder-ghcr.io for ghcr.io"
+
 # The client secret of the GitHub App is the Bitwarden secret GITHUB_APP_CLIENT_SECRET. It goes into the sbx secret store, never into the VM. bws-secret.sh asks for
 # the Bitwarden access token unless BWS_ACCESS_TOKEN is set.
 
