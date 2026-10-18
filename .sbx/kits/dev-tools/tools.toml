@@ -31,6 +31,8 @@ age = "1.2"
 "github:fluxcd/flux-schema" = "0.15"
 prek = "0.5"
 ruff = "0.17"
+gitleaks = "8.30"
+yamlfmt = "0.21"
 
 # dev-tools.dockerfile runs this with the tools in place. COMPLETIONS_DIR comes from [env]: the build sets it, and run by hand in the VM it
 # defaults to ~/.local/share/sandbox/completions, which the shell setup in dev-tools.yaml also sources (/opt/sandbox is root-owned there).
