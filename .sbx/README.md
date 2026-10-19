@@ -76,6 +76,24 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 
 To change what the VM may reach, edit `kits/policy/policy.yaml`. Then run `agent allow-hosts` and `agent kit-build policy`. Create a new sandbox to use the new kit.
 
+## Token savings with Headroom
+
+The dev-tools kit has [Headroom](https://github.com/headroomlabs-ai/headroom) at a pinned version. Headroom is a proxy that compresses the input of Claude Code. The research and the trial are in `docs/research/headroom.md`. A short trial saved 1.11% of the input tokens. Measure your own long sessions.
+
+- Run `claude-hr` instead of `claude`. It starts the proxy on `127.0.0.1:8787` in the VM and routes Claude Code through it. It keeps tool search on. It accepts the same arguments as `claude`.
+- Run `claude` to use the direct path. Nothing else changes.
+- The proxy keeps running after Claude Code exits. Stop it with `pkill -f 'headroom.cli proxy'`.
+- Read the savings with `curl -s 127.0.0.1:8787/stats`. The fields `total_before_compression` and `input` give the saving.
+- The telemetry beacon, the update check and the Hugging Face download are off (`tools.toml`). The proxy works without the Hugging Face model.
+
+To open the dashboard on the host:
+
+1. Connect to the sandbox with VS Code (`just sandbox run`).
+2. Open the **Ports** tab. Choose **Forward a Port** and enter `8787`.
+3. Open `http://localhost:8787/dashboard` in the browser of the host.
+
+The proxy listens only on `127.0.0.1` in the VM, so `sbx ports --publish` cannot reach it. Do not bind the proxy to `0.0.0.0`. The proxy has no login for the model routes.
+
 ## When something fails
 
 - The daemon does not start. Read the reason with `journalctl --user -u sbx-daemon.service`.

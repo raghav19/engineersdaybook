@@ -8,7 +8,7 @@ displayName: dev-tools
 description: >-
   Exact-version dev tools from tools.toml
 sourceUrl: https://github.com/raghav19/engineersdaybook
-version: "0.1.0"
+version: "0.2.0"
 
 args:
   workspace:
@@ -39,6 +39,8 @@ capabilities:
             for f in /opt/sandbox/completions/* ~/.local/share/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
             alias k=kubectl
             alias f=flux
+            # Claude Code through the Headroom proxy (127.0.0.1:8787). Plain `claude` stays the direct path. The proxy keeps running after claude exits.
+            claude-hr() { headroom wrap claude --code-memory none -- "$@"; }
             complete -o default -F __start_kubectl k
             complete -o default -F __start_flux f
             command -v fzf >/dev/null && eval "$(fzf --bash)"
