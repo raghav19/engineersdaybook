@@ -5,9 +5,11 @@ FROM dhi.io/debian-base:trixie-dev AS build
 ARG MISE_VERSION=v2026.10.0
 
 # Set once, read by mise and the tasks. mise sits in /usr/local/bin because the shims it makes link to that path.
+# UV_PYTHON_INSTALL_DIR: the pypi tool (headroom-ai) gets a venv whose Python uv downloads. Under /opt/mise it is copied to the image with the venv.
 ENV MISE_DATA_DIR=/opt/mise \
     MISE_CACHE_DIR=/tmp/mise-cache \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
+    UV_PYTHON_INSTALL_DIR=/opt/mise/uv-python \
     COMPLETIONS_DIR=/out/opt/sandbox/completions
 
 RUN apt-get update \

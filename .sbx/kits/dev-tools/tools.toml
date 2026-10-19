@@ -2,8 +2,8 @@
 # into the image (as /etc/mise/conf.d/sandbox.toml). The root mise.toml is for the host only (kind, sbx, bws) and the image never reads it,
 # so a tool both sides use (kubectl, helm, kustomize) is listed in both files.
 # It is not named mise.toml on purpose: the host's mise would load it from this folder and ask to trust it.
-# node is not here: the sandbox's shell kit ships it. python and uv are here only because the mise pypi backend (headroom-ai) needs them at
-# build time and needs the venv to point at a Python under /opt/mise. They take the place of the shell kit's python and uv on PATH.
+# node and python are not here: the sandbox's shell kit ships them. uv is here only because the mise pypi backend (headroom-ai) needs it at
+# build time (the build image has no uv or pipx). It takes the place of the shell kit's uv on PATH.
 
 # Applied by the mise shims in the sandbox. The provider cache is a volume of the dev-tools kit.
 [env]
@@ -40,7 +40,6 @@ prek = "0.5"
 ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
-python = "3.14"
 uv = "0.12"
 "pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox" }  # Claude Code token proxy; the sandbox extra has no torch. docs/research/headroom.md
 
