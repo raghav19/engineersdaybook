@@ -30,6 +30,7 @@
    |---|---|---|
    | `GITHUB_TOKEN` | the ghcr.io token from the previous step | `host setup`, `agent setup` |
    | `GITHUB_APP_CLIENT_SECRET` | the client secret of the GitHub App | `agent setup` |
+   | `CRAWL4AI_API_TOKEN` | the bearer token of the Crawl4AI server. Make it with `openssl rand -hex 32` | `host setup` |
 
 5. **Save the access token of the secret manager** in a file that only you can read. The sbx daemon runs the secret command on its own. It has no terminal, none of your shell variables and no mise on its path. It cannot ask you for the token, so it reads the token from a file.
    - The path `~/.config/bws/access-token` is only the default of `agent/bws-secret.sh`. Any path works. Set `BWS_ACCESS_TOKEN_FILE` to that path when you run `agent setup`.
@@ -54,7 +55,7 @@ just sandbox run             # 4. every day
 
 | Step | Command | What it does for you |
 |---|---|---|
-| 1 | `host setup` | Logs in to ghcr.io with `GITHUB_TOKEN`. Sets the sbx settings: kits only from docker.io and this repo, and no SSH agent forwarding. Installs the sbx daemon as a systemd user service and starts it. Connects VS Code: runs `sbx setup ssh` and installs the Remote-SSH extension. |
+| 1 | `host setup` | Logs in to ghcr.io with `GITHUB_TOKEN`. Sets the sbx settings: kits only from docker.io and this repo, and no SSH agent forwarding. Installs the sbx daemon as a systemd user service and starts it. Connects VS Code: runs `sbx setup ssh` and installs the Remote-SSH extension. Starts the Crawl4AI scraper in Docker on `127.0.0.1:11235` (`crawl4ai-up`). |
 | 2 | `agent setup` | Installs the agent skills. Registers the ghcr.io secret, so the VM can push to ghcr.io without the token. Registers the MCP servers (draw.io, the Flux schema catalog and GitHub) on the sbx gateway. |
 | 3 | `agent kube` | Creates the sandbox identity on your kind cluster. The agent can read every namespace and change workloads and Flux objects. It cannot read a Secret. Then it writes `.sbx/kubeconfig`. |
 | 4 | `run` | Checks that the daemon runs. Writes a new kubeconfig token. Creates the sandbox from `sbxenv.yaml`, or starts it. Attaches the MCP servers. Writes the VS Code Remote-SSH settings. Opens VS Code on the sandbox. |
@@ -67,7 +68,7 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 |---|---|
 | `justfile` | `run` and `help`. It loads the two modules below. |
 | `sbxenv.yaml` | The sandbox: the kits with their digests, the size and the clone workspace. |
-| `host/` | The `host` commands and the systemd unit of the sbx daemon. |
+| `host/` | The `host` commands, the systemd unit of the sbx daemon and the Crawl4AI compose file (`crawl4ai/compose.yaml`). |
 | `agent/` | The `agent` commands, `kube.sh`, the cluster RBAC and `bws-secret.sh`. |
 | `kits/dev-tools/` | The tools kit: tools at exact versions (`tools.toml`) and the shell setup. |
 | `kits/policy/` | The policy kit: the egress allow and deny lists (`policy.yaml`) and the note for the agent. |

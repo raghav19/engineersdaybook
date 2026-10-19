@@ -1,6 +1,6 @@
 # Sandbox tooling, loaded by the root justfile as `mod sandbox`: `just sandbox <recipe>` from the repo root, any subfolder and this folder.
 # Every recipe runs on the host. The module path says what it changes:
-#   host    host/host.just: the services on the host: the ghcr.io login, the sbx daemon, VS Code
+#   host    host/host.just: the services on the host: the ghcr.io login, the sbx daemon, VS Code, the Crawl4AI scraper
 #   agent   agent/agent.just: what the VM receives: the skills, the secrets, the MCP servers, the kubeconfig, the kits
 # Setup is 3 commands, in this order: `host setup`, `agent setup`, `agent kube` (optional). Then `run` every day. The README has the prerequisites.
 # sbxenv.yaml declares the sandbox (kits, size, clone workspace). `sbx env run` prints that plan and asks for approval.

@@ -1,0 +1,26 @@
+# Crawl4AI on the host: the web scraper that the agent reaches through the sbx MCP gateway (agent/agent.just, mcp-register).
+# Run by `just sandbox host crawl4ai-up`, which sets CRAWL4AI_API_TOKEN from the Bitwarden secret of the same name. The token is never in this file.
+# The browser in the container uses the host network, so the egress allow list of the sandbox (kits/policy/policy.yaml) does not limit it.
+name: crawl4ai
+
+services:
+  crawl4ai:
+    image: unclecode/crawl4ai:0.9.5
+    # Loopback only. The sbx daemon runs on the host, so it reaches the server here. The VM does not.
+    ports:
+      - "127.0.0.1:11235:11235"
+    environment:
+      # Every route except /health needs "Authorization: Bearer <token>". Without a token the server listens on loopback inside the container.
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:?run just sandbox host crawl4ai-up}
+      # Not set on purpose: CRAWL4AI_EXECUTE_JS_ENABLED and CRAWL4AI_HOOKS_ENABLED stay off, and no LLM key is passed.
+    shm_size: 1g
+    mem_limit: 4g
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:11235/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

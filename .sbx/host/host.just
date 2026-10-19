@@ -1,4 +1,4 @@
-# Host module: the services on the host that the sandbox needs: the ghcr.io login, the sbx daemon and VS Code.
+# Host module: the services on the host that the sandbox needs: the ghcr.io login, the sbx daemon, VS Code and the Crawl4AI scraper.
 # Loaded by ../justfile as `mod host`: `just sandbox host <recipe>`. Every recipe runs on the host, never in the VM.
 
 set quiet
@@ -9,9 +9,10 @@ set script-interpreter := ['bash', '-euo', 'pipefail']
 import '../lib/common.just'
 
 ghcr_user := env('GHCR_USER', 'raghav19')
+crawl4ai_compose := sbx_dir / 'host/crawl4ai/compose.yaml'
 
-# Once per machine, safe to run again: log in, set sbx, install and start the daemon, connect VS Code
-setup: login settings-apply daemon-install daemon-start vscode-connect
+# Once per machine, safe to run again: log in, set sbx, install and start the daemon, connect VS Code, start Crawl4AI
+setup: login settings-apply daemon-install daemon-start vscode-connect crawl4ai-up
 
 # Log docker and sbx in to ghcr.io with the Bitwarden secret GITHUB_TOKEN. Every NEW sandbox gets the login (--all-sandboxes)
 login: _host-only
@@ -57,6 +58,19 @@ daemon-restart: _host-only daemon-stop && daemon-start
 vscode-connect: _host-only
     sbx setup ssh
     code --install-extension ms-vscode-remote.remote-ssh
+
+# Start Crawl4AI (host/crawl4ai/compose.yaml) with the Bitwarden secret CRAWL4AI_API_TOKEN. The token goes to the container only, never to a file. The first pull is about 2 GB
+crawl4ai-up: _host-only
+    CRAWL4AI_API_TOKEN=$({{ bws_secret }} CRAWL4AI_API_TOKEN) docker compose -f {{ crawl4ai_compose }} up -d --wait
+
+# Stop and remove the Crawl4AI container
+crawl4ai-down: _host-only
+    CRAWL4AI_API_TOKEN=unused docker compose -f {{ crawl4ai_compose }} down
+
+# Show the Crawl4AI container and its /health answer
+crawl4ai-status: _host-only
+    CRAWL4AI_API_TOKEN=unused docker compose -f {{ crawl4ai_compose }} ps
+    curl -fsS http://127.0.0.1:11235/health; echo
 
 # Write the Remote-SSH and update settings into your host VS Code user settings. `run` does it
 [script]
