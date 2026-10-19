@@ -70,6 +70,6 @@ capabilities:
         - command:
             - sh
             - -c
-            - setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 & # binds 127.0.0.1 only; takes about 40 s to answer; the log is ~/.headroom/logs/proxy.log
+            - setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 & # binds 127.0.0.1 only; the log is ~/.headroom/logs/proxy.log
           user: agent
           description: Start the Headroom proxy in the background
