@@ -115,7 +115,7 @@ Use 15% as the realistic low end.
 
 - `tools.toml` pins `headroom-ai` 0.41.0 with the extra `sandbox` (`pypi:` backend). Read the changelog before each bump.
 - `tools.toml` also pins `uv` 0.12. The mise `pypi:` backend needs `uv` or `pipx`, and the build image (`dhi.io/debian-base:trixie-dev`) has neither, nor Python. It fails without them ("pipx" not found). `uv` replaces the shell kit's `uv` on PATH.
-- `dev-tools.dockerfile` sets `UV_PYTHON_INSTALL_DIR=/opt/mise/uv-python` in the build stage. Without it, `uv` downloads Python to `/root/.local/share/uv/python`, which the image does not copy, and the venv breaks. A test in the build image confirmed that with the variable the venv `home` is `/opt/mise/uv-python/...` and `headroom --version` runs after `uv`'s default directory is deleted. The shell kit's `python` is not replaced.
+- `tools.toml` `[env]` sets `UV_PYTHON_INSTALL_DIR=/opt/mise/uv-python`. mise applies it during the install, so the Dockerfile has no Headroom line. Without it, `uv` downloads Python to `/root/.local/share/uv/python`, which the image does not copy, and the venv breaks. A test in the build image confirmed that with the variable the venv `home` is `/opt/mise/uv-python/...` and `headroom --version` runs after `uv`'s default directory is deleted. The shell kit's `python` is not replaced.
 - The install is about 855 MB in the image. The extras `proxy,code` give 774 MB. The base extra `proxy` (onnxruntime, transformers) is most of the size.
 - `tools.toml` `[env]` sets `HEADROOM_TELEMETRY=off`, `HEADROOM_BEACON=off`, `HEADROOM_UPDATE_CHECK=off`, `DO_NOT_TRACK=1` and `HF_HUB_OFFLINE=1`.
 - `dev-tools.yaml` adds `claude-hr() { headroom wrap claude --code-memory none -- "$@"; }`. Plain `claude` stays the direct path.
