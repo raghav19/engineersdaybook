@@ -61,7 +61,8 @@ vscode-connect: _host-only
 
 # Start Crawl4AI (host/crawl4ai/compose.yaml) with the Bitwarden secret CRAWL4AI_API_TOKEN. The token goes to the container only, never to a file. The first pull is about 2 GB
 crawl4ai-up: _host-only
-    CRAWL4AI_API_TOKEN=$({{ bws_secret }} CRAWL4AI_API_TOKEN) docker compose -f {{ crawl4ai_compose }} up -d --wait
+    token=$({{ bws_secret }} CRAWL4AI_API_TOKEN); \
+    CRAWL4AI_API_TOKEN="$token" docker compose -f {{ crawl4ai_compose }} up -d --wait
 
 # Stop and remove the Crawl4AI container
 crawl4ai-down: _host-only
