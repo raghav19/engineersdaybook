@@ -2,7 +2,8 @@
 # into the image (as /etc/mise/conf.d/sandbox.toml). The root mise.toml is for the host only (kind, sbx, bws) and the image never reads it,
 # so a tool both sides use (kubectl, helm, kustomize) is listed in both files.
 # It is not named mise.toml on purpose: the host's mise would load it from this folder and ask to trust it.
-# node, python and uv are not here: the sandbox's shell kit ships them.
+# node and python are not here: the sandbox's shell kit ships them. uv is here only because the mise pypi backend (headroom-ai) needs it at
+# build time (the build image has no uv or pipx). It takes the place of the shell kit's uv on PATH.
 
 # Applied by the mise shims in the sandbox. The provider cache is a volume of the dev-tools kit.
 [env]
@@ -12,6 +13,13 @@ TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
 CHECKPOINT_DISABLE = "1"  # no Terraform version check to checkpoint-api.hashicorp.com
 COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/sandbox/completions') }}"  # dev-tools.dockerfile sets it at build; by hand in the VM /opt/sandbox is root-owned
 KUBECONFIG = "/run/sandbox/source/.sbx/kubeconfig"  # the host repo, read-only in the VM; `just sandbox agent kube` writes it on the host
+# Headroom (claude-hr in dev-tools.yaml): no telemetry beacon, no update check, no Hugging Face download (huggingface.co is not on the egress allow list)
+HEADROOM_TELEMETRY = "off"
+HEADROOM_BEACON = "off"
+HEADROOM_UPDATE_CHECK = "off"
+DO_NOT_TRACK = "1"
+HF_HUB_OFFLINE = "1"
+UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build, the Python of the headroom-ai venv: under /opt/mise the image copies it with the venv (else uv puts it in ~/.local/share/uv)
 
 [tools]
 just = "1.58"
@@ -33,6 +41,8 @@ prek = "0.5"
 ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
+uv = "0.12"
+"pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox" }  # Claude Code token proxy; the sandbox extra has no torch. docs/research/headroom.md
 
 # dev-tools.dockerfile runs this with the tools in place. COMPLETIONS_DIR comes from [env]: the build sets it, and run by hand in the VM it
 # defaults to ~/.local/share/sandbox/completions, which the shell setup in dev-tools.yaml also sources (/opt/sandbox is root-owned there).
