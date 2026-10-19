@@ -2,6 +2,8 @@
   "model": "claude-sonnet-5-5",
   "effortLevel": "high",
   "env": {
-    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1"
+    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
+    "ENABLE_TOOL_SEARCH": "true"
   }
 }

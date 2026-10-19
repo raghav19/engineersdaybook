@@ -39,7 +39,8 @@ capabilities:
             for f in /opt/sandbox/completions/* ~/.local/share/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
             alias k=kubectl
             alias f=flux
-            # Claude Code through the Headroom proxy (127.0.0.1:8787). Plain `claude` stays the direct path. The proxy keeps running after claude exits.
+            # Claude Code through the Headroom proxy (127.0.0.1:8787, started at boot by the startup command below). Plain `claude` reaches it
+            # through the env in .claude/settings.json. claude-hr is the same path with the proxy started by wrap if it is down.
             claude-hr() { headroom wrap claude --code-memory none -- "$@"; }
             complete -o default -F __start_kubectl k
             complete -o default -F __start_flux f
@@ -66,3 +67,9 @@ capabilities:
             - cd "${{ kit.args.workspace }}" && prek install --allow-missing-config # the git hook is not versioned, so a fresh clone has none
           user: agent
           description: Install the prek pre-commit hook in the workspace clone
+        - command:
+            - sh
+            - -c
+            - setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 & # binds 127.0.0.1 only; takes about 40 s to answer; the log is ~/.headroom/logs/proxy.log
+          user: agent
+          description: Start the Headroom proxy in the background
