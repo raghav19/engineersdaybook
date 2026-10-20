@@ -61,81 +61,59 @@ just sandbox run             # 4. every day
 
 The first `run` shows the sbx plan and asks you to approve it. A browser opens once for the GitHub consent. Run Claude Code in the VS Code terminal. It runs inside the sandbox.
 
+To change what the VM may reach, edit `kits/policy/policy.yaml`. Then run `agent allow-hosts` and `agent kit-build policy`. Create a new sandbox to use the new kit.
+
 ### Node identity of the VM (SPIRE)
 
 The VM proves to the SPIRE server of your cluster that it is an approved machine. It shows a one-time token once. After that it keeps its identity by itself.
 
 ```mermaid
-flowchart LR
-    subgraph host["Host"]
-        script["agent/spire.py"]
-        folder[("~/.sbx/spire<br/>token + trust bundle")]
-    end
-    subgraph cluster["Cluster"]
-        server["SPIRE server"]
-    end
-    subgraph vm["microVM"]
-        agent["spire-agent"]
-    end
+sequenceDiagram
+    autonumber
+    participant H as host: agent/spire.py
+    participant S as SPIRE server (cluster)
+    participant F as host folder ~/.sbx/spire
+    participant A as spire-agent (microVM)
 
-    script -- "1 ask for a token" --> server
-    script -- "2 write" --> folder
-    folder -. "3 mounted read-only" .-> agent
-    agent -- "4 show the token once" --> server
-    server -- "5 node identity (SVID)" --> agent
-    agent -. "renews the SVID by itself" .-> server
+    H->>S: kubectl exec: token generate
+    S-->>H: one-time join token
+    H->>F: write the token and the trust bundle
+    Note over F,A: sbx mounts the folder read-only in the VM
+    A->>F: read the token and the bundle
+    A->>S: show the token once, through host port 18081
+    S-->>A: node identity (SVID)
+    A->>S: renew the SVID by itself, no new token
 ```
 
-`sbxenv.yaml` runs `spire.py` on the host before every create and run, and before a removal:
+`sbxenv.yaml` runs `spire.py` on the host before every create and run of the sandbox, and before its removal:
 
 ```mermaid
 flowchart TD
-    run(["sbx env run"]) --> enroll["spire.py enroll"]
-    enroll --> attested{"agent of the user<br/>attested, SVID valid<br/>for 10+ minutes?"}
-    attested -- yes --> nothing["do nothing"]
-    attested -- no --> token["make a token<br/>write ~/.sbx/spire"]
-    token --> boot["VM starts, agent attests"]
-    nothing --> boot
-    rm(["sbx env rm"]) --> remove["spire.py remove<br/>evict agent, delete entries and files"]
+    run(["sbx env run"]) --> id{"SANDBOX_GITHUB_ID set?"}
+    id -- no --> stop(["run stops"])
+    id -- yes --> cluster{"SPIRE server reachable?"}
+    cluster -- no --> skip["run goes on, the agent does not start"]
+    cluster -- yes --> attested{"agent of the user attested,<br/>SVID valid for 10+ minutes?"}
+    attested -- yes --> keep["VM starts, the agent keeps its SVID"]
+    attested -- no --> token["make a token, write ~/.sbx/spire"]
+    token --> attest["VM starts, the agent attests"]
+    rm(["sbx env rm"]) --> remove["spire.py remove: evict the agent,<br/>delete its entries and the files"]
 ```
 
-Set up:
+Prerequisites on the host:
 
-1. The host needs `python3` (3.8 or later), `kubectl` and `yq`.
-2. `export SANDBOX_GITHUB_ID=$(gh api user --jq .id)`. It is the numeric id of your GitHub account, not the login.
-3. Recreate the kind cluster once. It must publish the SPIRE server on `127.0.0.1:18081` (`clusters/kind/kind-config.yaml`). Run `just clusters/kind/down` and `just clusters/kind/up` in `code/mcp-sandbox/part-3-mcp-guardrails`.
-4. `just sandbox run`. sbx asks you to approve the host command each time. `sbx settings set env.rememberHostCommands true` approves it once.
+- `python3` (3.8 or later), `kubectl` and `yq`.
+- A current `kubectl` context for the cluster that runs the SPIRE server.
+- `SANDBOX_GITHUB_ID`: the numeric id of your GitHub account. The login does not work.
 
-| Situation | Result |
-|---|---|
-| New sandbox | A token is made. The agent attests. |
-| Stop and start, agent still valid | No token. The agent reuses its SVID in `~/.spire/data`. |
-| Stopped longer than the SVID life (4h) | The next `run` makes a new token. |
-| `sbx env rm` | The agent and its entries are removed from the server. |
-| `SANDBOX_GITHUB_ID` is unset | `run` stops and says how to set it. |
-| No kubectl context or no SPIRE server | `run` goes on. The agent does not start. |
-| Sandbox removed in another way | `SPIRE_ENROLL_FORCE=1 just sandbox agent spire-enroll` |
+Run:
 
-- The agent log is `~/.spire/agent.log` in the VM.
-- `/home/rana/.sbx/spire` is in three files: `sbxenv.yaml`, `agent/spire.py` and the start command of `kits/dev-tools/dev-tools.yaml`. Change all three together.
-- A mount is set at creation. An existing sandbox needs a remove and a new create.
-- Any process in the VM can read the folder during the 10 minutes a token lives.
-- Check that the sbx tool does not use `~/.sbx` itself: `ls ~/.sbx` before the first run.
-
-## Files
-
-| Path | What it is |
-|---|---|
-| `justfile` | `run` and `help`. It loads the two modules below. |
-| `sbxenv.yaml` | The sandbox: the kits with their digests, the size and the clone workspace. |
-| `host/` | The `host` commands and the systemd unit of the sbx daemon. |
-| `agent/` | The `agent` commands, `kube.sh`, `spire.py`, `ruff.toml`, the cluster RBAC and `bws-secret.sh`. |
-| `kits/dev-tools/` | The tools kit: tools at exact versions (`tools.toml`) and the shell setup. |
-| `kits/policy/` | The policy kit: the egress allow and deny lists (`policy.yaml`) and the note for the agent. |
-| `lib/common.just` | Variables and checks that the justfiles share. |
-| `docs/` | The diagram of the sbx model, as `.drawio` and `.svg`. |
-
-To change what the VM may reach, edit `kits/policy/policy.yaml`. Then run `agent allow-hosts` and `agent kit-build policy`. Create a new sandbox to use the new kit.
+```shell
+export SANDBOX_GITHUB_ID=$(gh api user --jq .id)
+sbx settings set env.rememberHostCommands true   # optional: approve the host command once, not at every run
+just sandbox run
+just sandbox agent spire-enroll                  # optional: make the token by hand
+```
 
 ## Token savings with Headroom
 
@@ -152,3 +130,7 @@ The proxy listens only on `127.0.0.1` in the VM, so `sbx ports --publish` cannot
 - The daemon does not start. Read the reason with `journalctl --user -u sbx-daemon.service`.
 - `host setup` stops and names a missing requirement. Run the command that it prints, then run `host setup` again.
 - To delete the daemon service, run `systemctl --user disable --now sbx-daemon.service`. Then delete `~/.config/systemd/user/sbx-daemon.service`.
+- The SPIRE agent does not attest. Read `~/.spire/agent.log` in the VM.
+  - "no trust bundle": the host script did not run, or the VM has no `~/.sbx/spire` mount. Remove the sandbox and create it again.
+  - The token was used or has expired: on the host, run `SPIRE_ENROLL_FORCE=1 just sandbox agent spire-enroll`, then restart the sandbox.
+  - The connection to `host.docker.internal:18081` fails: the kind cluster was created before the port mapping. Run `just clusters/kind/down` and `just clusters/kind/up` in `code/mcp-sandbox/part-3-mcp-guardrails`.
