@@ -1,6 +1,6 @@
-# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it. For each component that the PR changes:
-# hydrate (render with flate and validate: package-artifact), publish (push the artifact: publish-artifact), then diff (against the artifact that origin/main pins: diff).
-# The comment is the output of `just <component>/diff`, unchanged. The recipes are in lib/workflow/.
+# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it. For each component:
+# diff (render with flate and compare with the artifact that origin/main pins: diff). A component with a diff is then published (package-artifact validates it,
+# then publish-artifact pushes it). The comment is the output of `just <component>/diff`, unchanged. The recipes are in lib/workflow/.
 name: manifest-diff
 
 on:
@@ -41,34 +41,20 @@ jobs:
         with:
           install_args: just yq jq flux2 github:home-operations/flate uv
 
-      # a component is the nearest folder above a changed file that has a justfile
-      - name: Select the changed components
+      # Every component runs. A component with no diff is skipped, so only a changed one is pushed. These four are not pinned in the stack,
+      # so their diff is always the whole artifact: remove a name when its component is pinned
+      - name: Hydrate, publish and diff
+        env:
+          SKIP: platform/ext-mcp platform/policies/ext-mcp-checks platform/policies/ext-mcp-isolation platform/policies/mcp-mtls
         run: |
-          set -o pipefail
-          git diff --relative --name-only origin/main...HEAD -- platform | while read -r f; do
-            d=$(dirname "$f")
-            while [ "$d" != . ] && [ ! -f "$d/justfile" ]; do d=$(dirname "$d"); done
-            [ "$d" = . ] || echo "$d"
-          done | sort -u > "$RUNNER_TEMP/components"
-          cat "$RUNNER_TEMP/components"
-
-      - name: Hydrate (render and validate)
-        run: for c in $(cat "$RUNNER_TEMP/components"); do just "$c/package-artifact"; done
-
-      - name: Publish (push the artifact)
-        run: for c in $(cat "$RUNNER_TEMP/components"); do just "$c/publish-artifact"; done
-
-      - name: Diff
-        run: |
-          {
-            echo '## Rendered manifest diff'
-            echo
-            [ -s "$RUNNER_TEMP/components" ] || echo 'No rendered manifest changes.'
-            for c in $(cat "$RUNNER_TEMP/components"); do
-              out=$(just "$c/diff")
-              printf '### %s\n\n````diff\n%s\n````\n\n' "$c" "$out"
-            done
-          } > "$RUNNER_TEMP/report.md"
+          for c in $(find platform -name justfile -exec dirname {} \; | sort); do
+            case " $SKIP " in *" $c "*) continue ;; esac
+            out=$(just "$c/diff")
+            grep -q '^@@' <<<"$out" || continue
+            just "$c/publish-artifact"
+            printf '### %s\n\n````diff\n%s\n````\n\n' "$c" "$out" >> "$RUNNER_TEMP/report.md"
+          done
+          [ -s "$RUNNER_TEMP/report.md" ] || echo 'No rendered manifest changes.' > "$RUNNER_TEMP/report.md"
 
       - name: Write the job summary
         run: cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
