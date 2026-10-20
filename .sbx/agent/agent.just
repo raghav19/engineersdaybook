@@ -101,6 +101,18 @@ mcp-load: _host-only _check-daemon
     sbx mcp load flux-schema-catalog --sandbox {{ name }}
     sbx mcp load github --sandbox {{ name }}
 
+# `run` calls this once the sandbox exists: copy the token of the host `gh` login into the sbx secret `github` of this sandbox, which the sbx proxy adds to git over HTTPS in the VM. A failure prints its message and `run` goes on
+[script]
+git-token-sync: _host-only _check-daemon
+    if ! token=$(gh auth token 2>/dev/null) || [ -z "$token" ]; then
+      echo "git-token-sync: gh has no valid login, so git push in the VM may fail. Run: gh auth login" >&2
+      exit 0
+    fi
+    # the token goes in through stdin, never as an argument (ps shows arguments)
+    printf '%s' "$token" | sbx secret set github --sandbox {{ name }} > /dev/null \
+      || { echo "git-token-sync: sbx could not set the github secret of {{ name }}" >&2; exit 0; }
+    echo "sbx secret github of {{ name }} refreshed from gh"
+
 # Once per cluster, safe to run again: create the sandbox identity in a kind context (default: the current one), then write .sbx/kubeconfig
 kube *context: _host-only
     {{ sbx_dir }}/agent/kube.sh install {{ context }}
