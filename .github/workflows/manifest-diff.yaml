@@ -1,6 +1,7 @@
-# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it. Three steps:
-# hydrate (render with flate and validate every component: package-artifact), publish (push each component that has a diff: publish-artifact),
-# diff (the job summary and the comment: the output of `just <component>/diff`, unchanged). The recipes are in lib/workflow/.
+# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
+# One job for each component that Flux delivers (`just components`: the folders with a flux/stack.yaml). A job runs the recipes of its component:
+# hydrate (render with flate and validate: package-artifact), diff (compare with the artifact that origin/main pins: diff),
+# publish (push the artifact, only when there is a diff: publish-artifact). The comment of the component is the output of `just <component>/diff`, unchanged.
 name: manifest-diff
 
 on:
@@ -15,66 +16,89 @@ concurrency:
 permissions:
   contents: read
   packages: write # publish-artifact: push the artifact to ghcr.io
-  pull-requests: write # the comment
+  pull-requests: write # the comments
 
 jobs:
-  manifest-diff:
+  components:
     # a pull request from a fork has a read-only token: it cannot push
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: code/mcp-sandbox/part-3-mcp-guardrails
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # v5.2.1. The versions are in the root mise.toml
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+        with:
+          install_args: just jq
+
+      - id: list
+        run: echo "list=$(just components)" >> "$GITHUB_OUTPUT"
+
+  manifest-diff:
+    needs: components
+    name: ${{ matrix.component }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.components.outputs.list) }}
     defaults:
       run:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
     env:
+      COMPONENT: ${{ matrix.component }}
       GHCR_USER: ${{ github.actor }}
       GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_TOKEN: ${{ github.token }}
     steps:
-      # v7.0.1. fetch-depth 0: the recipes read the stack at origin/main
+      # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
-      # v5.2.1. Only the tools that the recipes run: the versions are in the root mise.toml
+      # v5.2.1. Only the tools that the recipes run
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
           install_args: just yq jq flux2 github:home-operations/flate uv
 
-      # Every component is hydrated. A component with no diff is not pushed. These four are not pinned in the stack, so their diff is always the
-      # whole artifact: remove a name when its component is pinned. Hydrate writes the list of components that the next steps read
       - name: Hydrate (render and validate)
-        env:
-          SKIP: platform/ext-mcp platform/policies/ext-mcp-checks platform/policies/ext-mcp-isolation platform/policies/mcp-mtls
-        run: |
-          for c in $(find platform -name justfile -exec dirname {} \; | sort); do
-            case " $SKIP " in *" $c "*) continue ;; esac
-            echo "$c" >> "$RUNNER_TEMP/components"
-            just "$c/package-artifact"
-          done
+        run: just "$COMPONENT/package-artifact"
 
       # diff compares with the artifact that origin/main pins, so it does not depend on the push
-      - name: Publish (push each component that has a diff)
+      - name: Diff
+        id: diff
         run: |
-          touch "$RUNNER_TEMP/changed"
-          for c in $(cat "$RUNNER_TEMP/components"); do
-            out=$(just "$c/diff")
-            grep -q '^@@' <<<"$out" || { echo "skip $c: no diff"; continue; }
-            echo "$c" >> "$RUNNER_TEMP/changed"
-            just "$c/publish-artifact"
-          done
+          out=$(just "$COMPONENT/diff")
+          printf '### %s\n\n````diff\n%s\n````\n' "$COMPONENT" "$out" > "$RUNNER_TEMP/diff.md"
+          cat "$RUNNER_TEMP/diff.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "id=manifest-diff-${COMPONENT//\//-}" >> "$GITHUB_OUTPUT"
+          if grep -q '^@@' <<<"$out"; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
 
-      - name: Diff (job summary and comment)
-        run: |
-          {
-            echo '## Rendered manifest diff'
-            echo
-            [ -s "$RUNNER_TEMP/changed" ] || echo 'No rendered manifest changes.'
-            for c in $(cat "$RUNNER_TEMP/changed"); do
-              out=$(just "$c/diff")
-              printf '### %s\n\n````diff\n%s\n````\n\n' "$c" "$out"
-            done
-          } > "$RUNNER_TEMP/report.md"
-          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
-          # a comment holds 65,536 characters
-          head -c 60000 "$RUNNER_TEMP/report.md" | gh pr comment "${{ github.event.pull_request.number }}" --edit-last --create-if-none -F -
+      - name: Publish (push the artifact)
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        run: just "$COMPONENT/publish-artifact"
+
+      # v3.12.0. One comment for each component, updated on each push
+      - name: Comment the diff
+        if: ${{ steps.diff.outputs.changed == 'true' }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
+        with:
+          message-id: ${{ steps.diff.outputs.id }}
+          message-path: ${{ runner.temp }}/diff.md
+          truncate: simple
+
+      # replaces the comment of an earlier push. A component that never had a diff gets no comment
+      - name: Comment that the diff is gone
+        if: ${{ steps.diff.outputs.changed != 'true' }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
+        with:
+          message-id: ${{ steps.diff.outputs.id }}
+          message: "### ${{ matrix.component }}\n\nNo rendered manifest changes."
+          update-only: true
