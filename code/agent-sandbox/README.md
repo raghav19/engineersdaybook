@@ -119,7 +119,7 @@ sequenceDiagram
 
 ### How secrets get in
 
-The same turn from the microVM's side, for credentials only. The VM holds a sentinel; the real value is added on the host after the request has left the VM. Putting the secrets in the host store (sops, `sbx secret set`) is in [Prerequisites](#prerequisites).
+The same turn from the microVM's side, for credentials only. The VM holds a sentinel; the real value is added on the host after the request has left the VM. Putting the secrets in the host store (Bitwarden, `sbx secret set`) is in [Prerequisites](#prerequisites).
 
 ```mermaid
 sequenceDiagram
