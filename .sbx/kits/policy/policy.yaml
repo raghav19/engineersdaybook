@@ -56,6 +56,7 @@ capabilities:
           - spiffe.io
           - owasp.org
           - fluxcd.control-plane.io
+          - code.claude.com
           # VS Code and Copilot
           - marketplace.visualstudio.com
           - "**.vsassets.io"
