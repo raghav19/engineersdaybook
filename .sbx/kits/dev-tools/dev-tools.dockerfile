@@ -19,15 +19,8 @@ RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
 COPY tools.toml /etc/mise/conf.d/sandbox.toml
 RUN mise install --yes
 
-# The SPIRE agent (node attestation of the VM), the version of the SPIRE server in the spire chart (platform/addons/spire/spire.yaml, chart 0.30.3 pins
-# 1.15.3). The musl build is static. The checksum is the one published with the release (spire-1.15.3-linux-amd64-musl_sha256sum.txt). amd64 only.
-ARG SPIRE_VERSION=1.15.3
-ARG SPIRE_SHA256=ca1a4d1155317bdd2afc7f36663828a10410c7c840e54725b90b4064b0a301c7
-RUN curl -fsSL -o /tmp/spire.tgz "https://github.com/spiffe/spire/releases/download/v${SPIRE_VERSION}/spire-${SPIRE_VERSION}-linux-amd64-musl.tar.gz" \
- && echo "${SPIRE_SHA256}  /tmp/spire.tgz" | sha256sum -c - \
- && tar -xzf /tmp/spire.tgz -C /tmp "spire-${SPIRE_VERSION}/bin/spire-agent" \
- && install -D -m 0755 "/tmp/spire-${SPIRE_VERSION}/bin/spire-agent" /out/usr/local/bin/spire-agent \
- && rm -rf /tmp/spire.tgz "/tmp/spire-${SPIRE_VERSION}"
+# The SPIRE release holds the agent and the server. The VM runs only the agent, so the 167 MB server binary goes before the copy to /out.
+RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
 # The bash completions come from a task in tools.toml.
 RUN mise run sandbox:completions

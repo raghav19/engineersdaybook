@@ -117,6 +117,6 @@ capabilities:
               log=/home/agent/.spire/agent.log
               [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: run 'just sandbox agent spire-enroll' on the host, then restart the sandbox" > "$log"; exit 0; }
               args=; [ -r "$src/join-token" ] && args="-joinTokenFile $src/join-token"
-              setsid nohup /usr/local/bin/spire-agent run -config /home/agent/.spire-agent.conf $args >> "$log" 2>&1 &
+              setsid nohup spire-agent run -config /home/agent/.spire-agent.conf $args >> "$log" 2>&1 &
           user: agent
           description: Start the SPIRE agent in the background (node attestation of this VM)
