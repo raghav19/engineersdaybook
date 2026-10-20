@@ -63,24 +63,64 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 
 ### Node identity of the VM (SPIRE)
 
-The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of the current kubectl context, with a join token. The token works once and lives 10 minutes.
+The VM proves to the SPIRE server of your cluster that it is an approved machine. It shows a one-time token once. After that it keeps its identity by itself.
 
-0. The host needs `python3` (3.8 or later), `kubectl` and `yq` for `agent/spire.py`.
-1. Set `SANDBOX_GITHUB_ID` to the numeric id of your GitHub account. The login does not work. Find the id with `gh api user --jq .id`.
-2. Run `just sandbox run`. `sbxenv.yaml` runs `agent/spire.py enroll` on the host before every create and run (`lifecycle.initialize`). The script asks the SPIRE server whether an agent of your user is attested with an SVID that stays valid for 10 more minutes. If so, it does nothing: that agent renews its SVID by itself. If not, it makes a token in the SPIRE server pod and writes it, with the trust bundle, to `~/.sbx/spire/` (mode 700, the token mode 600). It never prints the token. `SPIRE_ENROLL_FORCE=1` makes a token anyway.
-3. `sbxenv.yaml` mounts `~/.sbx/spire` read-only in the VM (`additionalWorkspaces`) at the same path. The dev-tools kit starts the agent, which reads both files there. The agent keeps its SVID in `~/.spire/data`. After a stop and start it needs no new token while the SVID is valid.
+```mermaid
+flowchart LR
+    subgraph host["Host"]
+        script["agent/spire.py"]
+        folder[("~/.sbx/spire<br/>token + trust bundle")]
+    end
+    subgraph cluster["Cluster"]
+        server["SPIRE server"]
+    end
+    subgraph vm["microVM"]
+        agent["spire-agent"]
+    end
 
-Without `SANDBOX_GITHUB_ID`, `run` stops and prints how to set it. If there is no kubectl context or no SPIRE server, the script exits with code 3. `sbxenv.yaml` lets the run go on, and the agent does not start. The agent log is `~/.spire/agent.log` in the VM.
+    script -- "1 ask for a token" --> server
+    script -- "2 write" --> folder
+    folder -. "3 mounted read-only" .-> agent
+    agent -- "4 show the token once" --> server
+    server -- "5 node identity (SVID)" --> agent
+    agent -. "renews the SVID by itself" .-> server
+```
 
-- **Removal.** `sbx env rm` runs `agent/spire.py remove` first (`lifecycle.preRemove`). It evicts the agent and deletes the alias entries on the SPIRE server, and the files in `~/.sbx/spire`. A failure only warns. A sandbox removed in another way stays "attested" on the server until its SVID expires (4h in the chart). Then run `SPIRE_ENROLL_FORCE=1 just sandbox agent spire-enroll`.
-- **A stop longer than the SVID life.** The agent cannot renew an expired SVID and a join token cannot re-attest. The next `run` makes a new token, because the SVID has expired on the server too.
+`sbxenv.yaml` runs `spire.py` on the host before every create and run, and before a removal:
 
-- **Host commands need approval.** sbx shows the command in the plan at every run. To approve once until the command changes, run `sbx settings set env.rememberHostCommands true`.
-- **Same path in three places.** `/home/rana/.sbx/spire` is in `sbxenv.yaml` (`additionalWorkspaces`), in `agent/spire.py` (`$HOME/.sbx/spire`) and in the start command of `kits/dev-tools/dev-tools.yaml`. Change them together. The script stops if `sbxenv.yaml` does not mount its folder.
-- **Existing sandbox.** A mount is set at creation. Remove the sandbox and create it again to get the folder.
-- **Exposure.** Any process in the VM can read the folder during the 10 minutes. Docker advises keeping secrets outside the repo, and the folder is outside it.
-- **Cluster.** The cluster must publish the SPIRE server on the host (`127.0.0.1:18081`, `clusters/kind/kind-config.yaml`). That port exists only on a cluster created after the change. From `code/mcp-sandbox/part-3-mcp-guardrails`, run `just clusters/kind/down` and `just clusters/kind/up` once.
-- **Name.** Check that `~/.sbx` is not used by the sbx tool itself.
+```mermaid
+flowchart TD
+    run(["sbx env run"]) --> enroll["spire.py enroll"]
+    enroll --> attested{"agent of the user<br/>attested, SVID valid<br/>for 10+ minutes?"}
+    attested -- yes --> nothing["do nothing"]
+    attested -- no --> token["make a token<br/>write ~/.sbx/spire"]
+    token --> boot["VM starts, agent attests"]
+    nothing --> boot
+    rm(["sbx env rm"]) --> remove["spire.py remove<br/>evict agent, delete entries and files"]
+```
+
+Set up:
+
+1. The host needs `python3` (3.8 or later), `kubectl` and `yq`.
+2. `export SANDBOX_GITHUB_ID=$(gh api user --jq .id)`. It is the numeric id of your GitHub account, not the login.
+3. Recreate the kind cluster once. It must publish the SPIRE server on `127.0.0.1:18081` (`clusters/kind/kind-config.yaml`). Run `just clusters/kind/down` and `just clusters/kind/up` in `code/mcp-sandbox/part-3-mcp-guardrails`.
+4. `just sandbox run`. sbx asks you to approve the host command each time. `sbx settings set env.rememberHostCommands true` approves it once.
+
+| Situation | Result |
+|---|---|
+| New sandbox | A token is made. The agent attests. |
+| Stop and start, agent still valid | No token. The agent reuses its SVID in `~/.spire/data`. |
+| Stopped longer than the SVID life (4h) | The next `run` makes a new token. |
+| `sbx env rm` | The agent and its entries are removed from the server. |
+| `SANDBOX_GITHUB_ID` is unset | `run` stops and says how to set it. |
+| No kubectl context or no SPIRE server | `run` goes on. The agent does not start. |
+| Sandbox removed in another way | `SPIRE_ENROLL_FORCE=1 just sandbox agent spire-enroll` |
+
+- The agent log is `~/.spire/agent.log` in the VM.
+- `/home/rana/.sbx/spire` is in three files: `sbxenv.yaml`, `agent/spire.py` and the start command of `kits/dev-tools/dev-tools.yaml`. Change all three together.
+- A mount is set at creation. An existing sandbox needs a remove and a new create.
+- Any process in the VM can read the folder during the 10 minutes a token lives.
+- Check that the sbx tool does not use `~/.sbx` itself: `ls ~/.sbx` before the first run.
 
 ## Files
 
