@@ -16,7 +16,3 @@ flowchart LR
 3. Read the **Local Address** column of the Ports tab. Open `http://<local address>/dashboard` in the browser of the host.
 
 If port 8787 is in use on the host, VS Code forwards to another local port, for example 8788. The proxy in the VM stays on 8787. Only the local address changes.
-
-## Do not publish the port
-
-The proxy listens only on `127.0.0.1` in the VM, so `sbx ports --publish` cannot reach it. Do not bind the proxy to `0.0.0.0`. The proxy has no login for the model routes.
