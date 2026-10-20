@@ -109,3 +109,11 @@ kube *context: _host-only
 # `run` calls this: a new token and CA for the current kind context (the CA changes after `kind delete`). A failure prints its message and `run` goes on
 _kube-refresh: _host-only
     -{{ sbx_dir }}/agent/kube.sh write
+
+# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle. SANDBOX_GITHUB_ID is your numeric GitHub id. The VM reads both files at start
+spire-enroll *context: _host-only
+    {{ sbx_dir }}/agent/spire.sh enroll {{ context }}
+
+# `run` calls this before the VM starts: a new token and bundle. Without SANDBOX_GITHUB_ID it does nothing. A failure prints its message and `run` goes on
+_spire-refresh: _host-only
+    -[ -z "${SANDBOX_GITHUB_ID:-}" ] || {{ sbx_dir }}/agent/spire.sh enroll

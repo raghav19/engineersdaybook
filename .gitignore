@@ -16,3 +16,4 @@ npm-debug.log*
 # .sbx is committed here; the sandbox's global excludes file ignores it by default
 !.sbx
 .sbx/kubeconfig
+.sbx/spire/

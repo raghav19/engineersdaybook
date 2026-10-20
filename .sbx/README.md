@@ -61,6 +61,18 @@ just sandbox run             # 4. every day
 
 The first `run` shows the sbx plan and asks you to approve it. A browser opens once for the GitHub consent. Run Claude Code in the VS Code terminal. It runs inside the sandbox.
 
+### Node identity of the VM (SPIRE)
+
+The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of the kind cluster, with a join token. The token works once.
+
+1. Set `SANDBOX_GITHUB_ID` to your numeric GitHub id. The login does not work. Find the id with `gh api user --jq .id`.
+2. Run `just sandbox run`. Before the VM starts, it runs `just sandbox agent spire-enroll`. The recipe makes the token in the SPIRE server pod and writes it, with the trust bundle, to `.sbx/spire/`. It never prints the token.
+3. The VM reads both files at `/run/sandbox/source/.sbx/spire/` and starts the agent. The agent keeps its SVID in a volume. After a stop and start, it needs no new token while the SVID is valid.
+
+Without `SANDBOX_GITHUB_ID`, `run` skips the recipe and the agent does not start. The agent log is `~/.spire/agent.log` in the VM.
+
+The cluster must publish the SPIRE server on the host (`127.0.0.1:18081`, `clusters/kind/kind-config.yaml`). That port exists only on a cluster created after the change. From `code/mcp-sandbox/part-3-mcp-guardrails`, run `just clusters/kind/down` and `just clusters/kind/up` once.
+
 ## Files
 
 | Path | What it is |
@@ -68,7 +80,7 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 | `justfile` | `run` and `help`. It loads the two modules below. |
 | `sbxenv.yaml` | The sandbox: the kits with their digests, the size and the clone workspace. |
 | `host/` | The `host` commands and the systemd unit of the sbx daemon. |
-| `agent/` | The `agent` commands, `kube.sh`, the cluster RBAC and `bws-secret.sh`. |
+| `agent/` | The `agent` commands, `kube.sh`, `spire.sh`, the cluster RBAC and `bws-secret.sh`. |
 | `kits/dev-tools/` | The tools kit: tools at exact versions (`tools.toml`) and the shell setup. |
 | `kits/policy/` | The policy kit: the egress allow and deny lists (`policy.yaml`) and the note for the agent. |
 | `lib/common.just` | Variables and checks that the justfiles share. |

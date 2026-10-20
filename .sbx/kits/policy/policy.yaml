@@ -65,6 +65,8 @@ capabilities:
           - crl.microsoft.com
           - www.githubstatus.com
           - localhost:6444
+          # The SPIRE server of the kind cluster (NodePort 30081, host 127.0.0.1:18081): the SPIRE agent in the VM attests its node there.
+          - localhost:18081
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
