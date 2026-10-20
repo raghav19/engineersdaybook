@@ -69,7 +69,7 @@ The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of th
 2. Run `just sandbox run`. Before the VM starts, it runs `just sandbox agent spire-enroll`. The recipe makes the token in the SPIRE server pod and writes it, with the trust bundle, to `.sbx/spire/`. It never prints the token.
 3. The VM reads both files at `/run/sandbox/source/.sbx/spire/` and starts the agent. The agent keeps its SVID in a volume. After a stop and start, it needs no new token while the SVID is valid.
 
-Without `SANDBOX_GITHUB_ID`, `run` skips the recipe and the agent does not start. The agent log is `~/.spire/agent.log` in the VM.
+Without `SANDBOX_GITHUB_ID`, `run` stops and prints how to set it. If the SPIRE server cannot be reached (no cluster, no kubectl context), `run` prints the error and goes on, and the agent does not start. The recipe uses the current kubectl context, so it works with any cluster. The agent log is `~/.spire/agent.log` in the VM.
 
 The cluster must publish the SPIRE server on the host (`127.0.0.1:18081`, `clusters/kind/kind-config.yaml`). That port exists only on a cluster created after the change. From `code/mcp-sandbox/part-3-mcp-guardrails`, run `just clusters/kind/down` and `just clusters/kind/up` once.
 

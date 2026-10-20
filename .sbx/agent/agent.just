@@ -110,10 +110,11 @@ kube *context: _host-only
 _kube-refresh: _host-only
     -{{ sbx_dir }}/agent/kube.sh write
 
-# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle. SANDBOX_GITHUB_ID is your numeric GitHub id. The VM reads both files at start
-spire-enroll *context: _host-only
-    {{ sbx_dir }}/agent/spire.sh enroll {{ context }}
+# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle, with the SPIRE server of the current kubectl context. SANDBOX_GITHUB_ID is the numeric id of your GitHub account
+spire-enroll: _host-only
+    {{ sbx_dir }}/agent/spire.sh enroll
 
-# `run` calls this before the VM starts: a new token and bundle. Without SANDBOX_GITHUB_ID it does nothing. A failure prints its message and `run` goes on
+# `run` calls this before the VM starts. Without SANDBOX_GITHUB_ID it stops `run`. Any other failure (no cluster, no SPIRE server) prints its message and `run` goes on
 _spire-refresh: _host-only
-    -[ -z "${SANDBOX_GITHUB_ID:-}" ] || {{ sbx_dir }}/agent/spire.sh enroll
+    [ -n "${SANDBOX_GITHUB_ID:-}" ] || { echo "SANDBOX_GITHUB_ID is not set: export SANDBOX_GITHUB_ID=\$(gh api user --jq .id) and run again. It is the numeric id of your GitHub account." >&2; exit 1; }
+    -{{ sbx_dir }}/agent/spire.sh enroll
