@@ -78,18 +78,16 @@ jobs:
       # v5.2.1. Only the tools that the recipes run
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
-          install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv bitwarden-secrets-manager
+          install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv
 
-      # The only secret in GitHub is the access token of the Bitwarden machine account (BWS_ACCESS_TOKEN). The ghcr.io token is the secret GITHUB_TOKEN
-      # of its project. Same script as the host commands. The value is masked in the log and kept in the environment of the next steps
+      # The only secret in GitHub is the access token of the Bitwarden machine account (BWS_ACCESS_TOKEN). The ghcr.io token is a secret of its project
+      # (the id is not secret). The action sets GHCR_PUSH_TOKEN for the next steps and masks it. Bitwarden cloud, US region
       - name: Read the ghcr.io token from Bitwarden
-        env:
-          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
-          BWS_NO_PROMPT: "1"
-        run: |
-          token=$("$GITHUB_WORKSPACE/.sbx/agent/bws-secret.sh" GITHUB_TOKEN)
-          echo "::add-mask::$token"
-          echo "GHCR_PUSH_TOKEN=$token" >> "$GITHUB_ENV"
+        uses: bitwarden/sm-action@1238aae8fc64b212641190a9227c8a734ab1a793 # v3.0.1
+        with:
+          access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
+          secrets: |
+            a50e4877-62c5-40a6-87bd-b4e700949eba > GHCR_PUSH_TOKEN
 
       - name: Hydrate (render and validate)
         run: just "$COMPONENT/package-artifact"
