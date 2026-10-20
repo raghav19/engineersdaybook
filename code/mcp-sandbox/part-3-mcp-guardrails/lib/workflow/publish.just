@@ -12,7 +12,7 @@ publish-artifact: package-artifact
       --path {{ out }} \
       --ignore-paths '/*,!/manifests.yaml' \
       --source "$(git remote get-url origin)" \
-      --revision "$(git branch --show-current)@sha1:$(git rev-parse HEAD)" \
+      --revision "${GITHUB_HEAD_REF:-$(git branch --show-current)}@sha1:$(git rev-parse HEAD)" \
       --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" \
       --output json)
     digest=$(jq -r .digest <<<"$result")

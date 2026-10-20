@@ -1,15 +1,12 @@
-# Shows the rendered manifest diff of part 3 in the pull request. It runs for a change of what Flux delivers (platform/) or of the config
-# values that are injected into it (config/). `just diff-report` (code/mcp-sandbox/part-3-mcp-guardrails/justfile) renders each component with flate
-# and compares it with the artifact that origin/main pins. The workflow installs the tools and posts the result: in the job summary, and in one pull
-# request comment that each push updates. It does not publish an artifact.
+# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it. For each component that the PR changes:
+# hydrate (render with flate and validate: package-artifact), publish (push the artifact: publish-artifact), then diff (against the artifact that origin/main pins: diff).
+# The comment is the output of `just <component>/diff`, unchanged. The recipes are in lib/workflow/.
 name: manifest-diff
 
 on:
   pull_request:
     paths:
       - code/mcp-sandbox/part-3-mcp-guardrails/platform/**
-      - code/mcp-sandbox/part-3-mcp-guardrails/config/**
-      - .github/workflows/manifest-diff.yaml
 
 concurrency:
   group: manifest-diff-${{ github.event.pull_request.number }}
@@ -17,18 +14,24 @@ concurrency:
 
 permissions:
   contents: read
-  packages: read # flux pull artifact: the baseline of each component
+  packages: write # publish-artifact: push the artifact to ghcr.io
   pull-requests: write # the comment
 
 jobs:
   manifest-diff:
+    # a pull request from a fork has a read-only token: it cannot push
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
+    env:
+      GHCR_USER: ${{ github.actor }}
+      GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
+      # v7.0.1. fetch-depth 0: the recipes read the stack at origin/main
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -38,50 +41,38 @@ jobs:
         with:
           install_args: just yq jq flux2 github:home-operations/flate uv
 
-      # a render error stops the job: the log names the component, and no comment is posted
-      - name: Render the diff of every component
-        env:
-          GHCR_USER: ${{ github.actor }}
-          GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: just diff-report > "$RUNNER_TEMP/report.md"
+      # a component is the nearest folder above a changed file that has a justfile
+      - name: Select the changed components
+        run: |
+          set -o pipefail
+          git diff --relative --name-only origin/main...HEAD -- platform | while read -r f; do
+            d=$(dirname "$f")
+            while [ "$d" != . ] && [ ! -f "$d/justfile" ]; do d=$(dirname "$d"); done
+            [ "$d" = . ] || echo "$d"
+          done | sort -u > "$RUNNER_TEMP/components"
+          cat "$RUNNER_TEMP/components"
+
+      - name: Hydrate (render and validate)
+        run: for c in $(cat "$RUNNER_TEMP/components"); do just "$c/package-artifact"; done
+
+      - name: Publish (push the artifact)
+        run: for c in $(cat "$RUNNER_TEMP/components"); do just "$c/publish-artifact"; done
+
+      - name: Diff
+        run: |
+          {
+            echo '## Rendered manifest diff'
+            echo
+            [ -s "$RUNNER_TEMP/components" ] || echo 'No rendered manifest changes.'
+            for c in $(cat "$RUNNER_TEMP/components"); do
+              out=$(just "$c/diff")
+              printf '### %s\n\n````diff\n%s\n````\n\n' "$c" "$out"
+            done
+          } > "$RUNNER_TEMP/report.md"
 
       - name: Write the job summary
-        run: |
-          {
-            echo '## Rendered manifest diff'
-            echo
-            if [ -s "$RUNNER_TEMP/report.md" ]; then head -c 1000000 "$RUNNER_TEMP/report.md"; else echo 'No rendered manifest changes.'; fi
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
 
-      # a pull request from a fork has a read-only token: it keeps the job summary only
+      # a comment holds 65,536 characters
       - name: Create or update the pull request comment
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          report="$RUNNER_TEMP/report.md"
-          comment="$RUNNER_TEMP/comment.md"
-          {
-            echo '<!-- manifest-diff -->'
-            echo '## Rendered manifest diff'
-            echo
-            if [ ! -s "$report" ]; then
-              echo 'No rendered manifest changes.'
-            elif [ "$(wc -c < "$report")" -gt 60000 ]; then
-              # a comment holds 65,536 characters. The cut can fall inside a block, so close the fence and the block
-              head -c 60000 "$report"
-              printf '\n````\n\n</details>\n\nCut. See the job summary for the whole diff.\n'
-            else
-              cat "$report"
-            fi
-          } > "$comment"
-          ids=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
-            --jq '.[] | select(.body | startswith("<!-- manifest-diff -->")) | .id')
-          id=${ids%%$'\n'*}
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$comment" > /dev/null
-          else
-            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$comment" > /dev/null
-          fi
+        run: head -c 60000 "$RUNNER_TEMP/report.md" | gh pr comment "${{ github.event.pull_request.number }}" --edit-last --create-if-none -F -

@@ -78,7 +78,7 @@ sequenceDiagram
     D->>R: publish-artifact (push to the registry, tag and digest)
     D->>D: compose-stack (patch the stack with the new pin)
     D->>G: open a pull request with the new pin
-    Note over D,G: the diff shows the objects that change (the manifest-diff workflow posts it in the pull request)
+    Note over D,G: the diff shows the objects that change (the manifest-diff workflow hydrates, publishes and posts it in the pull request)
     G->>G: review and merge
     S->>G: read sync/local-kind
     C->>K: update the unit
