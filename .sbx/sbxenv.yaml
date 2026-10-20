@@ -13,8 +13,8 @@ sandboxOptions:
   cpus: 4
   memory: 4g
 additionalWorkspaces:
-  # The join token and the trust bundle of the SPIRE agent in the VM (agent/spire.sh). Outside the repo, read-only. It shows at the same
-  # absolute path in the VM. The same path is in agent/spire.sh and in the start command of the dev-tools kit: change all three together.
+  # The join token and the trust bundle of the SPIRE agent in the VM (agent/spire.py). Outside the repo, read-only. It shows at the same
+  # absolute path in the VM. The same path is in agent/spire.py and in the start command of the dev-tools kit: change all three together.
   - path: /home/rana/.sbx/spire
     readOnly: true
 lifecycle:
@@ -22,10 +22,10 @@ lifecycle:
     # Runs on the host before every create and run. Exit code 3 (no cluster, no SPIRE server) lets the run go on without a token. Any other
     # failure, for example an unset SANDBOX_GITHUB_ID, stops it. The script makes no token while an attested agent has a valid SVID: the agent renews it.
     - name: Make the SPIRE join token
-      command: '${{ env.fileDir }}/agent/spire.sh enroll || [ $? -eq 3 ]'
+      command: '${{ env.fileDir }}/agent/spire.py enroll || [ $? -eq 3 ]'
       timeout: 2m
   preRemove:
     # Before the sandbox is removed: evict its agent and delete its alias entries on the SPIRE server. A failure only warns and the removal goes on.
     - name: Remove the SPIRE agent of the sandbox
-      command: '${{ env.fileDir }}/agent/spire.sh remove'
+      command: '${{ env.fileDir }}/agent/spire.py remove'
       timeout: 2m

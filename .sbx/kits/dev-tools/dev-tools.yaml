@@ -81,7 +81,7 @@ capabilities:
               src=/home/rana/.sbx/spire
               dir=/home/agent/.spire
               mkdir -p "$dir/data"
-              [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: the host script agent/spire.sh makes it. Check the mount and run the sandbox again" > "$dir/agent.log"; exit 0; }
+              [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: the host script agent/spire.py makes it. Check the mount and run the sandbox again" > "$dir/agent.log"; exit 0; }
               args="-trustBundle $src/bundle.spiffe"
               # A join token works once. An agent that holds a valid SVID ignores the token, so the file is always passed when it is there.
               if [ -r "$src/join-token" ]; then args="$args -joinTokenFile $src/join-token"; else echo "no readable join token in $src" >> "$dir/agent.log"; fi
