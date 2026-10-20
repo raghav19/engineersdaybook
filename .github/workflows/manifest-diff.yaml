@@ -1,14 +1,15 @@
-# Shows the rendered manifest diff of part 3 in the pull request: `just diff-report` (code/mcp-sandbox/part-3-mcp-guardrails/justfile) runs the
-# `diff` recipe of each changed component against the artifacts that origin/main pins. The workflow installs the tools and posts the result:
-# in the job summary, and in one pull request comment that each push updates. It does not build, validate or publish an artifact.
+# Shows the rendered manifest diff of part 3 in the pull request. It runs for a change of what Flux delivers (platform/) or of the config
+# values that are injected into it (config/). `just diff-report` (code/mcp-sandbox/part-3-mcp-guardrails/justfile) renders each component with flate
+# and compares it with the artifact that origin/main pins. The workflow installs the tools and posts the result: in the job summary, and in one pull
+# request comment that each push updates. It does not publish an artifact.
 name: manifest-diff
 
 on:
   pull_request:
     paths:
-      - code/mcp-sandbox/part-3-mcp-guardrails/**
+      - code/mcp-sandbox/part-3-mcp-guardrails/platform/**
+      - code/mcp-sandbox/part-3-mcp-guardrails/config/**
       - .github/workflows/manifest-diff.yaml
-      - mise.toml
 
 concurrency:
   group: manifest-diff-${{ github.event.pull_request.number }}
@@ -27,7 +28,7 @@ jobs:
       run:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
     steps:
-      # v7.0.1. fetch-depth 0: the recipes need origin/main and its history (merge-base)
+      # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
@@ -37,31 +38,50 @@ jobs:
         with:
           install_args: just yq jq flux2 github:home-operations/flate uv
 
-      - name: Render the diff of the changed components
-        id: report
+      # a render error stops the job: the log names the component, and no comment is posted
+      - name: Render the diff of every component
         env:
           GHCR_USER: ${{ github.actor }}
           GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: just diff-report
+        run: just diff-report > "$RUNNER_TEMP/report.md"
 
-      # also after a failed diff: the report holds the error text
       - name: Write the job summary
-        if: ${{ !cancelled() && hashFiles('code/mcp-sandbox/part-3-mcp-guardrails/out/diff-report.md') != '' }}
-        run: head -c 1000000 out/diff-report.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          {
+            echo '## Rendered manifest diff'
+            echo
+            if [ -s "$RUNNER_TEMP/report.md" ]; then head -c 1000000 "$RUNNER_TEMP/report.md"; else echo 'No rendered manifest changes.'; fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # a pull request from a fork has a read-only token: it keeps the job summary only
       - name: Create or update the pull request comment
-        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('code/mcp-sandbox/part-3-mcp-guardrails/out/diff-comment.md') != '' }}
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
+          report="$RUNNER_TEMP/report.md"
+          comment="$RUNNER_TEMP/comment.md"
+          {
+            echo '<!-- manifest-diff -->'
+            echo '## Rendered manifest diff'
+            echo
+            if [ ! -s "$report" ]; then
+              echo 'No rendered manifest changes.'
+            elif [ "$(wc -c < "$report")" -gt 60000 ]; then
+              # a comment holds 65,536 characters. The cut can fall inside a block, so close the fence and the block
+              head -c 60000 "$report"
+              printf '\n````\n\n</details>\n\nCut. See the job summary for the whole diff.\n'
+            else
+              cat "$report"
+            fi
+          } > "$comment"
           ids=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
             --jq '.[] | select(.body | startswith("<!-- manifest-diff -->")) | .id')
           id=${ids%%$'\n'*}
           if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@out/diff-comment.md > /dev/null
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$comment" > /dev/null
           else
-            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@out/diff-comment.md > /dev/null
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@"$comment" > /dev/null
           fi

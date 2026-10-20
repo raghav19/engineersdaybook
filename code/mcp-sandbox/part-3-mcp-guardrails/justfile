@@ -2,7 +2,7 @@
 
 set quiet
 
-# the revision that `changed` and `diff-report` compare with (the same default as `base` of lib/workflow/workflow.just)
+# the revision that `diff-report` compares with (the same default as `base` of lib/workflow/workflow.just)
 base := 'origin/main'
 
 # the commands of this project
@@ -15,8 +15,7 @@ help:
       just <component>/package-artifact    render the folder (charts included), check it, write out/<component>/manifests.yaml
       just <component>/diff                the change against the artifact origin/main pins, that is what the cluster runs
                                            (`just --set base <rev> <component>/diff` compares with another revision)
-      just changed                         the components that differ from origin/main (all of them when config/, lib/workflow/, tools/ or a cluster.yaml differ)
-      just diff-report                     the diff of each changed component, as Markdown in out/diff-report.md (the pull request workflow posts it)
+      just diff-report                     the rendered manifest diff of every component, as Markdown (the pull request workflow posts it)
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
       just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the published tag and digest
 
@@ -27,67 +26,19 @@ help:
     Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/workflow/workflow.just.
     EOF
 
-# reads:  git (the tracked files that differ between the merge base of `base` and the working tree)
-# writes: nothing
-# output: one component folder per line. All components when config/, lib/workflow/, tools/ or a cluster.yaml differ: they feed every component
-# the components that differ from `base`
-[script('bash')]
-changed:
-    set -euo pipefail
-    components=$(grep -rl --include=justfile 'lib/workflow/workflow.just' platform | xargs -r -n1 dirname | sort)
-    files=$(git diff --relative --name-only "$(git merge-base {{ base }} HEAD)" -- .)
-    if grep -qE '^(config/|lib/workflow/|tools/|clusters/[^/]+/cluster\.yaml$)' <<<"$files"; then
-      echo "$components"
-      exit 0
-    fi
-    while read -r c; do
-      if grep -q "^$c/" <<<"$files"; then echo "$c"; fi
-    done <<<"$components"
-
-# reads:  `changed`, and the diff recipe of each component it lists
-# writes: out/diff-report.md (the full report), out/diff-comment.md (the same, held under the limit of a pull request comment)
-# output: one <details> block for each changed component. The first line of both files is the marker that the workflow uses to find its comment.
-#         The recipe runs every component, then exits with 1 when the diff of one of them failed (the error text is in the report)
-# the diff of the changed components as Markdown
+# reads:  every component that Flux delivers (the folders of platform/ that have flux/stack.yaml), through the diff recipe of each one (lib/workflow/diff.just)
+# writes: nothing (the diff recipe writes out/<component>/)
+# output: Markdown on standard output, one <details> block for each component that has a rendered manifest diff, nothing for a component without one.
+#         The diff recipe renders the folder with flate, so the diff is of the rendered objects (charts inflated, config values applied).
+#         A failed render stops the recipe. The workflow .github/workflows/manifest-diff.yaml posts this output in the pull request
+# the rendered manifest diff of every component
 [script('bash')]
 diff-report:
     set -euo pipefail
-    limit=60000
-    mkdir -p out
-    head='<!-- manifest-diff -->'$'\n''## Rendered manifest diff'$'\n\n''Against the artifacts that `{{ base }}` pins. CRDs and Secrets are left out.'$'\n'
-    full=$head
-    comment=$head
-    failed=0
-    components=$(just --set base {{ base }} changed)
-    if [ -z "$components" ]; then
-      full+=$'\n''No component changed.'$'\n'
-      comment=$full
-    fi
-    while read -r c; do
-      [ -n "$c" ] || continue
-      if result=$(just --set base {{ base }} "$c/diff" 2>&1); then
-        if grep -q '^@@' <<<"$result"; then
-          added=$(grep -c '^+[^+]' <<<"$result" || true)
-          removed=$(grep -c '^-[^-]' <<<"$result" || true)
-          summary="$c: +$added -$removed lines"
-        else
-          full+=$'\n'"- \`$c\`: no change"$'\n'
-          comment+=$'\n'"- \`$c\`: no change"$'\n'
-          continue
-        fi
-      else
-        failed=1
-        summary="$c: the diff failed"
-      fi
-      section=$'\n'"<details><summary>$summary</summary>"$'\n\n''````diff'$'\n'"$result"$'\n''````'$'\n\n''</details>'$'\n'
-      full+=$section
-      if [ $(( ${#comment} + ${#section} )) -le $limit ]; then
-        comment+=$section
-      else
-        comment+=$'\n'"$summary (too long for a comment, see the job summary)"$'\n'
-      fi
-    done <<<"$components"
-    printf '%s' "$full" > out/diff-report.md
-    printf '%s' "$comment" > out/diff-comment.md
-    echo "wrote out/diff-report.md and out/diff-comment.md"
-    exit $failed
+    for stack in $(find platform -path '*/flux/stack.yaml' | sort); do
+      c=${stack%/flux/stack.yaml}
+      # the diff recipe prints config: and baseline: lines first, the diff starts at --- baseline
+      diff=$(just --set base {{ base }} "$c/diff" | sed -n '/^--- baseline/,$p')
+      [ -n "$diff" ] || continue
+      printf '<details><summary>%s</summary>\n\n````diff\n%s\n````\n\n</details>\n\n' "$c" "$diff"
+    done
