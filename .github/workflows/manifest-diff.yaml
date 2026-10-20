@@ -66,7 +66,7 @@ jobs:
       # v5.2.1. Only the tools that the recipes run
       - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
-          install_args: just yq jq flux2 github:home-operations/flate uv
+          install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv
 
       - name: Hydrate (render and validate)
         run: just "$COMPONENT/package-artifact"
