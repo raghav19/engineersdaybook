@@ -39,7 +39,9 @@
    mkdir -p ~/.config/bws && (umask 077; cat > ~/.config/bws/access-token)   # paste the token, then press Ctrl-D
    ```
 
-6. **Commit your work.** The sandbox clone holds only committed files.
+6. **Log in to GitHub with `gh` on the host** (`gh auth login`). `run` copies this login's token into the sbx secret `github` of the sandbox, and the sbx proxy adds it to `git push` in the VM. It is your user token, which is broader than the one-repo App token of the gateway. To limit it, log in with a fine-grained token for this repository: `gh auth login --with-token`.
+
+7. **Commit your work.** The sandbox clone holds only committed files.
 
 ## Getting started
 
@@ -57,7 +59,7 @@ just sandbox run             # 4. every day
 | 1 | `host setup` | Logs in to ghcr.io with `GITHUB_TOKEN`. Sets the sbx settings: kits only from docker.io and this repo, and no SSH agent forwarding. Installs the sbx daemon as a systemd user service and starts it. Connects VS Code: runs `sbx setup ssh` and installs the Remote-SSH extension. |
 | 2 | `agent setup` | Installs the agent skills. Registers the ghcr.io secret, so the VM can push to ghcr.io without the token. Registers the MCP servers (draw.io, the Flux schema catalog and GitHub) on the sbx gateway. |
 | 3 | `agent kube` | Creates the sandbox identity on your kind cluster. The agent can read every namespace and change workloads and Flux objects. It cannot read a Secret. Then it writes `.sbx/kubeconfig`. |
-| 4 | `run` | Checks that the daemon runs. Writes a new kubeconfig token. Creates the sandbox from `sbxenv.yaml`, or starts it. Attaches the MCP servers. Writes the VS Code Remote-SSH settings. Opens VS Code on the sandbox. |
+| 4 | `run` | Checks that the daemon runs. Writes a new kubeconfig token. Creates the sandbox from `sbxenv.yaml`, or starts it. Attaches the MCP servers. Copies the token of your `gh` login into the sbx secret `github`, so `git push` in the VM works. Writes the VS Code Remote-SSH settings. Opens VS Code on the sandbox. |
 
 The first `run` shows the sbx plan and asks you to approve it. A browser opens once for the GitHub consent. Run Claude Code in the VS Code terminal. It runs inside the sandbox.
 
