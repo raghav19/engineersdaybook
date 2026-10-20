@@ -10,7 +10,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /mcp-test
+            value: /mcp
       backendRefs:
         - group: agentgateway.dev
           kind: AgentgatewayBackend
