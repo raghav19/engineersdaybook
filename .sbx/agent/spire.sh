@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# The node identity of the microVM, host side. Run it on the host. Usage: spire.sh enroll
-#   enroll   make a one-time join token for the user and write it, with the trust bundle, into ~/.sbx/spire/
-# sbxenv.yaml runs it before every create and run of the sandbox (lifecycle.initialize) and mounts ~/.sbx/spire read-only in the VM
-# (additionalWorkspaces). The SPIRE agent in the VM reads both files there and attests its node to the SPIRE server of the current
-# kubectl context. Needs SANDBOX_GITHUB_ID, the numeric id of your GitHub account (gh api user --jq .id).
-# The token is a secret until the agent has used it. It goes into a file with mode 600 and is never printed.
+# The node identity of the microVM, host side. Run it on the host. Usage: spire.sh enroll|remove
+#   enroll   make a one-time join token for the user and write it, with the trust bundle, into ~/.sbx/spire/. It makes no token when an agent
+#            of the user is attested and its SVID stays valid for 10 more minutes: that agent renews its SVID by itself. SPIRE_ENROLL_FORCE=1
+#            makes a token anyway.
+#   remove   evict the agent of the user and delete its alias entries on the SPIRE server, and delete the files in ~/.sbx/spire/
+# sbxenv.yaml runs enroll before every create and run of the sandbox (lifecycle.initialize), remove before the sandbox is removed
+# (lifecycle.preRemove), and mounts ~/.sbx/spire read-only in the VM (additionalWorkspaces). The SPIRE agent in the VM reads both files there
+# and attests its node to the SPIRE server of the current kubectl context. Needs SANDBOX_GITHUB_ID, the numeric id of your GitHub account
+# (gh api user --jq .id). The token is a secret until the agent has used it. It goes into a file with mode 600 and is never printed.
 # Exit codes: 1 = a wrong setup (not on the host, no or wrong id, no trust domain, sbxenv.yaml does not mount the folder): stop.
-#             3 = the cluster cannot make the token (no kubectl context, no SPIRE server): sbxenv.yaml lets the run go on without it.
+#             3 = the cluster cannot be reached (no kubectl context, no SPIRE server): sbxenv.yaml lets the run go on without a token.
 set -euo pipefail
 
 # --- Variables
@@ -16,6 +19,8 @@ out=$HOME/.sbx/spire # the same absolute path is in additionalWorkspaces of sbxe
 sbxenv=$sbx_dir/sbxenv.yaml
 identity_file=$repo/code/mcp-sandbox/part-3-mcp-guardrails/config/cloud/kind/identity.yaml
 ttl=600 # seconds; the agent starts with the VM, a minute after this script
+margin=600 # seconds; an attested agent with less SVID time left than this gets a new token
+mode=${1:-}
 github_id=${SANDBOX_GITHUB_ID:-}
 context=$(kubectl config current-context 2>/dev/null || true)
 trust_domain=$(yq -r .trust_domain "$identity_file" 2>/dev/null || true)
@@ -27,15 +32,51 @@ alias=spiffe://$trust_domain/microvm/$github_id
 die() { echo "spire.sh: $1" >&2; exit "${2:-1}"; }
 
 [ -z "${SANDBOX_NAME:-}" ] || die "run this on the host, not in the sandbox ($SANDBOX_NAME): the token is made by the SPIRE server of the cluster."
-[ "${1:-}" = enroll ] || die "usage: spire.sh enroll"
+[ "$mode" = enroll ] || [ "$mode" = remove ] || die "usage: spire.sh enroll|remove"
 [[ $github_id =~ ^[0-9]+$ ]] || die "SANDBOX_GITHUB_ID is not set to a number. Use the numeric id of your GitHub account, not the login: export SANDBOX_GITHUB_ID=\$(gh api user --jq .id)"
 { [ -n "$trust_domain" ] && [ "$trust_domain" != null ]; } || die "cannot read trust_domain from $identity_file"
-[ -n "$mounted" ] || die "$sbxenv does not mount $out. Put this under additionalWorkspaces: - path: $out, readOnly: true"
-[ -n "$context" ] || die "kubectl has no current context, so no join token is made. Set one: kubectl config use-context <name>" 3
+[ "$mode" = remove ] || [ -n "$mounted" ] || die "$sbxenv does not mount $out. Put this under additionalWorkspaces: - path: $out, readOnly: true"
+[ -n "$context" ] || die "kubectl has no current context, so the SPIRE server cannot be reached. Set one: kubectl config use-context <name>" 3
 
-# --- Token generation
+# --- Functions
 k() { kubectl --context "$context" "$@"; }
 spire_server() { k -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/spire-server "$@"; }
+
+# The agents that attested under the alias, one SPIFFE ID per line. An entry of the alias has the agent as its parent. A token that nobody
+# used has an entry but no agent, so it does not count.
+agents_of_alias() {
+  local parents agents
+  # errexit is off inside a function that is called with ||, so each step returns on its own failure
+  parents=$(spire_server entry show -spiffeID "$alias" -output json | jq -r '.entries[]? | "spiffe://" + .parent_id.trust_domain + .parent_id.path') || return 1
+  agents=$(spire_server agent list -output json) || return 1
+  jq -r --argjson parents "$(jq -R . <<< "$parents" | jq -s .)" \
+    '.agents[]? | ("spiffe://" + .id.trust_domain + .id.path) as $id | select($parents | index($id)) | [$id, (.x509svid_expires_at | tonumber)] | @tsv' <<< "$agents"
+}
+
+# --- Remove
+if [ "$mode" = remove ]; then
+  attested=$(agents_of_alias) || die "cannot ask the SPIRE server of $context. Is it running?" 3
+  while read -r id _; do
+    [ -z "$id" ] || spire_server agent evict -spiffeID "$id" > /dev/null
+  done <<< "$attested"
+  # Eviction deletes the alias entry of that agent. The entries of tokens that nobody used stay, so delete what is left.
+  entry_ids=$(spire_server entry show -spiffeID "$alias" -output json | jq -r '.entries[]? | .id') || die "cannot ask the SPIRE server of $context. Is it running?" 3
+  while read -r entry_id; do
+    [ -z "$entry_id" ] || spire_server entry delete -entryID "$entry_id" > /dev/null
+  done <<< "$entry_ids"
+  rm -f "$out/join-token" "$out/bundle.spiffe"
+  echo "spire: removed the agent and the alias entries of user $github_id"
+  exit 0
+fi
+
+# --- Token generation
+now=$(date +%s)
+attested=$(agents_of_alias) || die "cannot ask the SPIRE server of $context. Is it running?" 3
+valid_until=$(cut -f2 <<< "$attested" | sort -n | tail -n 1)
+if [ -z "${SPIRE_ENROLL_FORCE:-}" ] && [ -n "$valid_until" ] && [ "$valid_until" -gt $((now + margin)) ]; then
+  echo "spire: an agent of user $github_id is attested until $(date -d "@$valid_until" '+%F %T'), so no new join token (SPIRE_ENROLL_FORCE=1 makes one)"
+  exit 0
+fi
 
 mkdir -p "$out"
 chmod 700 "$out"

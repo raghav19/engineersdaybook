@@ -20,7 +20,12 @@ additionalWorkspaces:
 lifecycle:
   initialize:
     # Runs on the host before every create and run. Exit code 3 (no cluster, no SPIRE server) lets the run go on without a token. Any other
-    # failure, for example an unset SANDBOX_GITHUB_ID, stops it. A new token each time: a token works once and lives 10 minutes.
+    # failure, for example an unset SANDBOX_GITHUB_ID, stops it. The script makes no token while an attested agent has a valid SVID: the agent renews it.
     - name: Make the SPIRE join token
       command: '${{ env.fileDir }}/agent/spire.sh enroll || [ $? -eq 3 ]'
+      timeout: 2m
+  preRemove:
+    # Before the sandbox is removed: evict its agent and delete its alias entries on the SPIRE server. A failure only warns and the removal goes on.
+    - name: Remove the SPIRE agent of the sandbox
+      command: '${{ env.fileDir }}/agent/spire.sh remove'
       timeout: 2m

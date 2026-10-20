@@ -66,10 +66,13 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of the current kubectl context, with a join token. The token works once and lives 10 minutes.
 
 1. Set `SANDBOX_GITHUB_ID` to the numeric id of your GitHub account. The login does not work. Find the id with `gh api user --jq .id`.
-2. Run `just sandbox run`. `sbxenv.yaml` runs `agent/spire.sh enroll` on the host before every create and run (`lifecycle.initialize`). The script makes the token in the SPIRE server pod and writes it, with the trust bundle, to `~/.sbx/spire/` (mode 700, the token mode 600). It never prints the token.
+2. Run `just sandbox run`. `sbxenv.yaml` runs `agent/spire.sh enroll` on the host before every create and run (`lifecycle.initialize`). The script asks the SPIRE server whether an agent of your user is attested with an SVID that stays valid for 10 more minutes. If so, it does nothing: that agent renews its SVID by itself. If not, it makes a token in the SPIRE server pod and writes it, with the trust bundle, to `~/.sbx/spire/` (mode 700, the token mode 600). It never prints the token. `SPIRE_ENROLL_FORCE=1` makes a token anyway.
 3. `sbxenv.yaml` mounts `~/.sbx/spire` read-only in the VM (`additionalWorkspaces`) at the same path. The dev-tools kit starts the agent, which reads both files there. The agent keeps its SVID in `~/.spire/data`. After a stop and start it needs no new token while the SVID is valid.
 
 Without `SANDBOX_GITHUB_ID`, `run` stops and prints how to set it. If there is no kubectl context or no SPIRE server, the script exits with code 3. `sbxenv.yaml` lets the run go on, and the agent does not start. The agent log is `~/.spire/agent.log` in the VM.
+
+- **Removal.** `sbx env rm` runs `agent/spire.sh remove` first (`lifecycle.preRemove`). It evicts the agent and deletes the alias entries on the SPIRE server, and the files in `~/.sbx/spire`. A failure only warns. A sandbox removed in another way stays "attested" on the server until its SVID expires (4h in the chart). Then run `SPIRE_ENROLL_FORCE=1 just sandbox agent spire-enroll`.
+- **A stop longer than the SVID life.** The agent cannot renew an expired SVID and a join token cannot re-attest. The next `run` makes a new token, because the SVID has expired on the server too.
 
 - **Host commands need approval.** sbx shows the command in the plan at every run. To approve once until the command changes, run `sbx settings set env.rememberHostCommands true`.
 - **Same path in three places.** `/home/rana/.sbx/spire` is in `sbxenv.yaml` (`additionalWorkspaces`), in `agent/spire.sh` (`$HOME/.sbx/spire`) and in the start command of `kits/dev-tools/dev-tools.yaml`. Change them together. The script stops if `sbxenv.yaml` does not mount its folder.
