@@ -1,0 +1,13 @@
+{% set body %}
+{% for section in sections %}
+{{ section }}
+{% endfor %}
+{% endset %}
+## Rendered manifest diff (commit {{ sha7 }})
+{% if body | length > limit | int %}
+
+> [!NOTE]
+> The diff is larger than {{ limit }} characters. A comment cannot show it. See the full diff: {{ run_url }}
+{% else %}
+{{ body }}
+{% endif %}

@@ -12,6 +12,7 @@ help:
       just <component>/package-artifact    render the folder (charts included), check it, write out/<component>/manifests.yaml
       just <component>/diff                the change against the artifact origin/main pins, that is what the cluster runs
                                            (`just --set base <rev> <component>/diff` compares with another revision)
+      just components                      the components that Flux delivers (each has flux/stack.yaml), as a JSON array: the matrix of the pull request workflow
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
       just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the published tag and digest
 
@@ -21,3 +22,11 @@ help:
 
     Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/workflow/workflow.just.
     EOF
+
+# reads:  the folders of platform/
+# writes: nothing
+# output: a JSON array of the component folders that have flux/stack.yaml, that is the components the stack delivers. The workflow
+#         .github/workflows/manifest-diff.yaml runs one job for each. A new component joins when it has a flux/stack.yaml
+# the components that Flux delivers
+components:
+    find platform -path '*/flux/stack.yaml' | sed 's#/flux/stack.yaml$##' | sort | jq -R . | jq -sc .
