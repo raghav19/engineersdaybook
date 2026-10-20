@@ -8,7 +8,7 @@ displayName: dev-tools
 description: >-
   Exact-version dev tools from tools.toml
 sourceUrl: https://github.com/raghav19/engineersdaybook
-version: "0.2.0"
+version: "0.3.0"
 
 args:
   workspace:
@@ -73,3 +73,18 @@ capabilities:
             - setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 & # binds 127.0.0.1 only; the log is ~/.headroom/logs/proxy.log
           user: agent
           description: Start the Headroom proxy in the background
+        - command:
+            - sh
+            - -c
+            - |
+              # src: ~/.sbx/spire of the host, mounted read-only (additionalWorkspaces in sbxenv.yaml). Same path as there.
+              src=/home/rana/.sbx/spire
+              dir=/home/agent/.spire
+              mkdir -p "$dir/data"
+              [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: the host script agent/spire.py makes it. Check the mount and run the sandbox again" > "$dir/agent.log"; exit 0; }
+              args="-trustBundle $src/bundle.spiffe"
+              # An agent with a valid SVID ignores the token.
+              if [ -r "$src/join-token" ]; then args="$args -joinTokenFile $src/join-token"; else echo "no readable join token in $src" >> "$dir/agent.log"; fi
+              setsid nohup spire-agent run -config /etc/spire/agent.conf $args >> "$dir/agent.log" 2>&1 &
+          user: agent
+          description: Start the SPIRE agent (config /etc/spire/agent.conf, log ~/.spire/agent.log)

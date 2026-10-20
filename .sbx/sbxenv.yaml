@@ -12,3 +12,19 @@ kits:
 sandboxOptions:
   cpus: 4
   memory: 4g
+additionalWorkspaces:
+  # SPIRE join token and trust bundle, made by agent/spire.py. Read-only, same path in the VM.
+  # Keep the path equal in agent/spire.py and in the start command of the dev-tools kit.
+  - path: /home/rana/.sbx/spire
+    readOnly: true
+lifecycle:
+  initialize:
+    # Exit code 3 (cluster unreachable) lets the run go on. Any other failure stops it.
+    - name: Make the SPIRE join token
+      command: '${{ env.fileDir }}/agent/spire.py enroll || [ $? -eq 3 ]'
+      timeout: 2m
+  preRemove:
+    # Evict the agent and delete its entries on the SPIRE server. A failure only warns.
+    - name: Remove the SPIRE agent of the sandbox
+      command: '${{ env.fileDir }}/agent/spire.py remove'
+      timeout: 2m

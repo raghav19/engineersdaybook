@@ -109,3 +109,7 @@ kube *context: _host-only
 # `run` calls this: a new token and CA for the current kind context (the CA changes after `kind delete`). A failure prints its message and `run` goes on
 _kube-refresh: _host-only
     -{{ sbx_dir }}/agent/kube.sh write
+
+# Make the SPIRE join token and the trust bundle in ~/.sbx/spire (needs SANDBOX_GITHUB_ID)
+spire-enroll: _host-only
+    {{ sbx_dir }}/agent/spire.py enroll

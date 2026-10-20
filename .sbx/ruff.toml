@@ -1,0 +1,2 @@
+# ruff settings for agent/spire.py: line length 140, as in tools/
+line-length = 140
