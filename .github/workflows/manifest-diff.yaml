@@ -3,8 +3,8 @@
 # hydrate (render with flate and validate: package-artifact), diff (compare with the artifact that origin/main pins: diff),
 # publish (push the artifact, only when there is a diff: publish-artifact). The last job posts ONE comment for the commit: the output of
 # `just <component>/diff`, unchanged, in one block for each changed component. A diff over 60,000 bytes does not fit in a comment: the comment
-# then holds a note and the link to the run, where each job summary has its full diff. The text of the comment is in .github/templates/manifest-diff-*.md
-# (envsubst fills the ${VARIABLES}).
+# then holds a note and the link to the run, where each job summary has its full diff. The text of the comment is in .github/templates/manifest-diff-*.md.j2
+# (Jinja), filled by .github/scripts/manifest_diff.py. uv runs the script and installs jinja2 from the lock file next to it.
 name: manifest-diff
 
 on:
@@ -19,6 +19,14 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write # the comments
+
+# the paths and the limit that the jobs share
+env:
+  SCRIPT: ${{ github.workspace }}/.github/scripts/manifest_diff.py
+  DIFF_FILE: ${{ github.workspace }}/out/manifest-diff/diff.txt
+  COLLECTED_DIR: ${{ github.workspace }}/out/manifest-diff/collected
+  REPORT_FILE: ${{ github.workspace }}/out/manifest-diff/report.md
+  LIMIT: "60000"
 
 jobs:
   components:
@@ -78,13 +86,9 @@ jobs:
       - name: Diff
         id: diff
         run: |
-          just "$COMPONENT/diff" > "$RUNNER_TEMP/diff.txt"
-          if grep -q '^@@' "$RUNNER_TEMP/diff.txt"; then
-            mkdir -p "$RUNNER_TEMP/out"
-            DIFF=$(cat "$RUNNER_TEMP/diff.txt") envsubst '$COMPONENT $DIFF' < "$GITHUB_WORKSPACE/.github/templates/manifest-diff-section.md" > "$RUNNER_TEMP/out/${COMPONENT//\//-}.section"
-            cat "$RUNNER_TEMP/out/${COMPONENT//\//-}.section" >> "$GITHUB_STEP_SUMMARY"
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          mkdir -p "$(dirname "$DIFF_FILE")"
+          just "$COMPONENT/diff" > "$DIFF_FILE"
+          uv run --locked --script "$SCRIPT" collect "$COMPONENT" "$DIFF_FILE" "$COLLECTED_DIR"
 
       - name: Publish (push the artifact)
         if: ${{ steps.diff.outputs.changed == 'true' }}
@@ -96,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: diff-${{ strategy.job-index }}
-          path: ${{ runner.temp }}/out
+          path: ${{ env.COLLECTED_DIR }}
           retention-days: 7
 
   comment:
@@ -106,30 +110,27 @@ jobs:
     timeout-minutes: 5
     env:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      LIMIT: "60000"
     steps:
-      # v7.0.1. The templates
+      # v7.0.1. The script and the templates
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # v5.2.1. uv runs the script. The version is in the root mise.toml
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+        with:
+          install_args: uv
 
       # v8.0.2. No changed component means no artifact and no comment
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: diff-*
           merge-multiple: true
-          path: diffs
+          path: ${{ env.COLLECTED_DIR }}
 
       - name: Build the comment
         id: report
         run: |
-          shopt -s nullglob
-          sections=(diffs/*.section)
-          [ ${#sections[@]} -gt 0 ] || exit 0
-          export SHA7=${HEAD_SHA::7} RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          SECTIONS=$(cat "${sections[@]}") envsubst '$SHA7 $SECTIONS' < .github/templates/manifest-diff-comment.md > report.md
-          if [ "$(wc -c < report.md)" -gt "$LIMIT" ]; then
-            envsubst '$SHA7 $LIMIT $RUN_URL' < .github/templates/manifest-diff-overflow.md > report.md
-          fi
-          echo "post=true" >> "$GITHUB_OUTPUT"
+          mkdir -p "$(dirname "$REPORT_FILE")"
+          uv run --locked --script "$SCRIPT" comment "$COLLECTED_DIR" "$REPORT_FILE"
 
       # v3.12.0. One comment for each commit: a new push adds a comment, so the diffs of the earlier commits stay
       - name: Comment the diff
@@ -137,4 +138,4 @@ jobs:
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
         with:
           message-id: manifest-diff-${{ github.event.pull_request.head.sha }}
-          message-path: report.md
+          message-path: ${{ env.REPORT_FILE }}

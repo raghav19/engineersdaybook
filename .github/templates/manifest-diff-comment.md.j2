@@ -1,0 +1,10 @@
+## Rendered manifest diff (commit {{ sha7 }})
+{% if too_big %}
+
+> [!NOTE]
+> The diff is larger than {{ limit }} bytes. A comment cannot show it. See the full diff: {{ run_url }}
+{% else %}
+{% for component in components %}
+{% include "manifest-diff-section.md.j2" %}
+{% endfor %}
+{% endif %}
