@@ -63,15 +63,20 @@ The first `run` shows the sbx plan and asks you to approve it. A browser opens o
 
 ### Node identity of the VM (SPIRE)
 
-The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of the kind cluster, with a join token. The token works once.
+The VM runs a SPIRE agent. It attests the VM as a node to the SPIRE server of the current kubectl context, with a join token. The token works once and lives 10 minutes.
 
-1. Set `SANDBOX_GITHUB_ID` to your numeric GitHub id. The login does not work. Find the id with `gh api user --jq .id`.
-2. Run `just sandbox run`. Before the VM starts, it runs `just sandbox agent spire-enroll`. The recipe makes the token in the SPIRE server pod and writes it, with the trust bundle, to `.sbx/spire/`. It never prints the token.
-3. The VM reads both files at `/run/sandbox/source/.sbx/spire/` and starts the agent. The agent keeps its SVID in a volume. After a stop and start, it needs no new token while the SVID is valid.
+1. Set `SANDBOX_GITHUB_ID` to the numeric id of your GitHub account. The login does not work. Find the id with `gh api user --jq .id`.
+2. Run `just sandbox run`. `sbxenv.yaml` runs `agent/spire.sh enroll` on the host before every create and run (`lifecycle.initialize`). The script makes the token in the SPIRE server pod and writes it, with the trust bundle, to `~/.sbx/spire/` (mode 700, the token mode 600). It never prints the token.
+3. `sbxenv.yaml` mounts `~/.sbx/spire` read-only in the VM (`additionalWorkspaces`) at the same path. The dev-tools kit starts the agent, which reads both files there. The agent keeps its SVID in `~/.spire/data`. After a stop and start it needs no new token while the SVID is valid.
 
-Without `SANDBOX_GITHUB_ID`, `run` stops and prints how to set it. If the SPIRE server cannot be reached (no cluster, no kubectl context), `run` prints the error and goes on, and the agent does not start. The recipe uses the current kubectl context, so it works with any cluster. The agent log is `~/.spire/agent.log` in the VM.
+Without `SANDBOX_GITHUB_ID`, `run` stops and prints how to set it. If there is no kubectl context or no SPIRE server, the script exits with code 3. `sbxenv.yaml` lets the run go on, and the agent does not start. The agent log is `~/.spire/agent.log` in the VM.
 
-The cluster must publish the SPIRE server on the host (`127.0.0.1:18081`, `clusters/kind/kind-config.yaml`). That port exists only on a cluster created after the change. From `code/mcp-sandbox/part-3-mcp-guardrails`, run `just clusters/kind/down` and `just clusters/kind/up` once.
+- **Host commands need approval.** sbx shows the command in the plan at every run. To approve once until the command changes, run `sbx settings set env.rememberHostCommands true`.
+- **Same path in three places.** `/home/rana/.sbx/spire` is in `sbxenv.yaml` (`additionalWorkspaces`), in `agent/spire.sh` (`$HOME/.sbx/spire`) and in the start command of `kits/dev-tools/dev-tools.yaml`. Change them together. The script stops if `sbxenv.yaml` does not mount its folder.
+- **Existing sandbox.** A mount is set at creation. Remove the sandbox and create it again to get the folder.
+- **Exposure.** Any process in the VM can read the folder during the 10 minutes. Docker advises keeping secrets outside the repo, and the folder is outside it.
+- **Cluster.** The cluster must publish the SPIRE server on the host (`127.0.0.1:18081`, `clusters/kind/kind-config.yaml`). That port exists only on a cluster created after the change. From `code/mcp-sandbox/part-3-mcp-guardrails`, run `just clusters/kind/down` and `just clusters/kind/up` once.
+- **Name.** Check that `~/.sbx` is not used by the sbx tool itself.
 
 ## Files
 

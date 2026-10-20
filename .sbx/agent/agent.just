@@ -110,11 +110,7 @@ kube *context: _host-only
 _kube-refresh: _host-only
     -{{ sbx_dir }}/agent/kube.sh write
 
-# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle, with the SPIRE server of the current kubectl context. SANDBOX_GITHUB_ID is the numeric id of your GitHub account
+# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle, with the SPIRE server of the current kubectl context. SANDBOX_GITHUB_ID is the numeric id of your GitHub account.
+# sbxenv.yaml runs the same script before every create and run, so this recipe is only for a manual check
 spire-enroll: _host-only
     {{ sbx_dir }}/agent/spire.sh enroll
-
-# `run` calls this before the VM starts. Without SANDBOX_GITHUB_ID it stops `run`. Any other failure (no cluster, no SPIRE server) prints its message and `run` goes on
-_spire-refresh: _host-only
-    [ -n "${SANDBOX_GITHUB_ID:-}" ] || { echo "SANDBOX_GITHUB_ID is not set: export SANDBOX_GITHUB_ID=\$(gh api user --jq .id) and run again. It is the numeric id of your GitHub account." >&2; exit 1; }
-    -{{ sbx_dir }}/agent/spire.sh enroll
