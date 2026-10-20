@@ -1,7 +1,9 @@
 # Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
 # One job for each component that Flux delivers (`just components`: the folders with a flux/stack.yaml). A job runs the recipes of its component:
 # hydrate (render with flate and validate: package-artifact), diff (compare with the artifact that origin/main pins: diff),
-# publish (push the artifact, only when there is a diff: publish-artifact). The comment is the output of `just <component>/diff`, unchanged: one comment for each component and commit.
+# publish (push the artifact, only when there is a diff: publish-artifact). The last job posts ONE comment for the commit: the output of
+# `just <component>/diff`, unchanged, in one block for each changed component. A diff over 60,000 bytes does not fit in a comment: the comment
+# then holds a note and the link to the run, where each job summary has its full diff.
 name: manifest-diff
 
 on:
@@ -75,19 +77,63 @@ jobs:
       - name: Diff
         id: diff
         run: |
-          { echo '````diff'; just "$COMPONENT/diff"; echo '````'; } > "$RUNNER_TEMP/diff.md"
-          cat "$RUNNER_TEMP/diff.md" >> "$GITHUB_STEP_SUMMARY"
-          if grep -q '^@@' "$RUNNER_TEMP/diff.md"; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+          just "$COMPONENT/diff" > "$RUNNER_TEMP/diff.txt"
+          { echo "### $COMPONENT"; echo '````diff'; cat "$RUNNER_TEMP/diff.txt"; echo '````'; } >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '^@@' "$RUNNER_TEMP/diff.txt"; then
+            mkdir -p "$RUNNER_TEMP/out"
+            { echo "<details><summary>$COMPONENT</summary>"; echo; echo '````diff'; cat "$RUNNER_TEMP/diff.txt"; echo '````'; echo; echo '</details>'; echo; } > "$RUNNER_TEMP/out/${COMPONENT//\//-}.section"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish (push the artifact)
         if: ${{ steps.diff.outputs.changed == 'true' }}
         run: just "$COMPONENT/publish-artifact"
 
-      # v3.12.0. One comment for each component and commit (the id holds both): a new push adds a comment, so the diffs of the earlier commits stay
-      - name: Comment the diff
+      # v7.0.2. The comment job reads this
+      - name: Keep the diff for the comment
         if: ${{ steps.diff.outputs.changed == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: diff-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/out
+          retention-days: 7
+
+  comment:
+    needs: manifest-diff
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      # v8.0.2. No changed component means no artifact and no comment
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: diff-*
+          merge-multiple: true
+          path: diffs
+
+      - name: Build the comment
+        id: report
+        run: |
+          shopt -s nullglob
+          sections=(diffs/*.section)
+          [ ${#sections[@]} -gt 0 ] || exit 0
+          { echo "## Rendered manifest diff (commit ${HEAD_SHA::7})"; echo; cat "${sections[@]}"; } > report.md
+          if [ "$(wc -c < report.md)" -gt 60000 ]; then
+            {
+              echo "## Rendered manifest diff (commit ${HEAD_SHA::7})"
+              echo
+              echo "> [!NOTE]"
+              echo "> The diff is larger than 60,000 bytes. A comment cannot show it. See the full diff: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            } > report.md
+          fi
+          echo "post=true" >> "$GITHUB_OUTPUT"
+
+      # v3.12.0. One comment for each commit: a new push adds a comment, so the diffs of the earlier commits stay
+      - name: Comment the diff
+        if: ${{ steps.report.outputs.post == 'true' }}
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
         with:
-          message-id: manifest-diff-${{ matrix.component }}-${{ github.event.pull_request.head.sha }}
-          message-path: ${{ runner.temp }}/diff.md
-          truncate: simple
+          message-id: manifest-diff-${{ github.event.pull_request.head.sha }}
+          message-path: report.md
