@@ -43,14 +43,17 @@ jobs:
       list: ${{ steps.list.outputs.list }}
     steps:
       # v7.0.1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # v5.2.1. The versions are in the root mise.toml
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+      - name: Install just and jq
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
           install_args: just jq
 
-      - id: list
+      - name: List the components
+        id: list
         run: echo "list=$(just components)" >> "$GITHUB_OUTPUT"
 
   manifest-diff:
@@ -72,12 +75,14 @@ jobs:
       GHCR_PUSH_TOKEN: ${{ secrets.GHCR_TOKEN }}
     steps:
       # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out the repository (the diff needs origin/main)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       # v5.2.1. Only the tools that the recipes run
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+      - name: Install the tools of the recipes
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
           install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv
 
@@ -105,7 +110,7 @@ jobs:
         run: just "$COMPONENT/publish-artifact"
 
       # v7.0.2. The comment job reads this
-      - name: Keep the diff for the comment
+      - name: Upload the diff block for the comment job
         if: ${{ steps.diff.outputs.changed == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
@@ -122,15 +127,18 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       # v7.0.1. The script and the templates
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out the script and the templates
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # v5.2.1. uv runs the script. The version is in the root mise.toml
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+      - name: Install uv
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
           install_args: uv
 
       # v8.0.2. No changed component means no artifact
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+      - name: Download the diff blocks
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           pattern: diff-*
           merge-multiple: true
