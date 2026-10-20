@@ -33,8 +33,7 @@ nodes:
         hostPort: 18443
         listenAddress: 127.0.0.1
         protocol: TCP
-      # The SPIRE server API: host 127.0.0.1:18081 -> NodePort 30081 (platform/addons/spire/service.yaml). The SPIRE agent in the sandbox VM attests
-      # its node there. Loopback only, above 1024 and below 32768 for the same rootless Docker reasons as the ports above.
+      # SPIRE server API: host 127.0.0.1:18081 -> NodePort 30081 (platform/addons/spire/service.yaml).
       - containerPort: 30081
         hostPort: 18081
         listenAddress: 127.0.0.1

@@ -110,7 +110,6 @@ kube *context: _host-only
 _kube-refresh: _host-only
     -{{ sbx_dir }}/agent/kube.sh write
 
-# Make a one-time join token for the SPIRE agent in the VM, and the trust bundle, with the SPIRE server of the current kubectl context. SANDBOX_GITHUB_ID is the numeric id of your GitHub account.
-# sbxenv.yaml runs the same script before every create and run, so this recipe is only for a manual check
+# Make the SPIRE join token and the trust bundle in ~/.sbx/spire (needs SANDBOX_GITHUB_ID)
 spire-enroll: _host-only
     {{ sbx_dir }}/agent/spire.py enroll

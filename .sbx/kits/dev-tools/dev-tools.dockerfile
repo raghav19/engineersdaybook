@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The content recipe of the dev-tools kit (dev-tools.yaml). Everything is staged under /out and lands on the workload as-is.
-# The build context is this folder. The build reads tools.toml (the tools) and spire-agent.conf (the config of the SPIRE agent).
+# The build reads tools.toml and spire-agent.conf from this folder.
 FROM dhi.io/debian-base:trixie-dev AS build
 ARG MISE_VERSION=v2026.10.0
 
@@ -19,7 +19,7 @@ RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
 COPY tools.toml /etc/mise/conf.d/sandbox.toml
 RUN mise install --yes
 
-# The SPIRE release holds the agent and the server. The VM runs only the agent, so the 167 MB server binary goes before the copy to /out.
+# Remove spire-server: the VM runs only the agent.
 RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
 # The bash completions come from a task in tools.toml.

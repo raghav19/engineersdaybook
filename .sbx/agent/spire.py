@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""The node identity of the microVM, host side: spire.py enroll|remove
+"""Host side of the VM node identity: spire.py enroll|remove
 
-enroll  make a one-time join token for the user and write it, with the trust bundle, into ~/.sbx/spire/. Make none when an agent of the user is
-        attested and its SVID stays valid for 10 more minutes (that agent renews it by itself). SPIRE_ENROLL_FORCE=1 makes one anyway.
-remove  evict the agent of the user, delete its alias entries on the SPIRE server and the files in ~/.sbx/spire/
+enroll  Write a one-time join token and the trust bundle to ~/.sbx/spire/. Skip when an agent of the user is attested with 10+ minutes of SVID
+        left. SPIRE_ENROLL_FORCE=1 forces a token.
+remove  Evict the agent, delete its alias entries on the SPIRE server and the files in ~/.sbx/spire/.
 
-sbxenv.yaml runs enroll before every create and run (lifecycle.initialize), remove before the sandbox is removed (lifecycle.preRemove), and
-mounts ~/.sbx/spire read-only in the VM (additionalWorkspaces). Needs SANDBOX_GITHUB_ID, the numeric id of your GitHub account.
-The token is never printed. Exit 1: a wrong setup, stop. Exit 3: the cluster cannot be reached, sbxenv.yaml lets the run go on.
+Needs SANDBOX_GITHUB_ID (numeric GitHub id). Exit 1: wrong setup. Exit 3: cluster unreachable.
 """
 
 import json
@@ -17,11 +15,11 @@ import sys
 import time
 from pathlib import Path
 
-TTL = 600  # seconds a token lives
-MARGIN = 600  # an attested agent with less SVID time left than this gets a new token
+TTL = 600  # token lifetime, seconds
+MARGIN = 600  # minimum SVID time left, seconds
 
 SBX = Path(__file__).resolve().parent.parent
-OUT = Path.home() / ".sbx" / "spire"  # also in additionalWorkspaces of sbxenv.yaml and in the start command of the dev-tools kit
+OUT = Path.home() / ".sbx" / "spire"  # same path in sbxenv.yaml and dev-tools.yaml
 IDENTITY = SBX.parent / "code/mcp-sandbox/part-3-mcp-guardrails/config/cloud/kind/identity.yaml"
 
 
@@ -38,13 +36,13 @@ def run(cmd):
 
 
 def host(*cmd):
-    """Run a command on the host. Return its output, or None when it fails."""
+    """Run a command. Return its output, or None on failure."""
     done = run(cmd)
     return done.stdout.strip() if done.returncode == 0 else None
 
 
 def server(context, *args):
-    """Run spire-server in the pod of the current context. A failure means the cluster cannot be reached: exit 3."""
+    """Run spire-server in the SPIRE server pod. Exit 3 on failure."""
     pod = ["kubectl", "--context", context, "-n", "spire-system", "exec", "spire-server-0", "-c", "spire-server", "--"]
     done = run([*pod, "/opt/spire/bin/spire-server", *args])
     if done.returncode:
@@ -57,7 +55,7 @@ def spiffe_id(parts):
 
 
 def attested_agents(context, alias):
-    """The agents that attested under the alias, as {agent id: SVID expiry}. A token that nobody used has an entry but no agent."""
+    """Agents attested under the alias, as {agent id: SVID expiry}."""
     entries = json.loads(server(context, "entry", "show", "-spiffeID", alias, "-output", "json")).get("entries") or []
     parents = {spiffe_id(e["parent_id"]) for e in entries}
     agents = json.loads(server(context, "agent", "list", "-output", "json")).get("agents") or []
@@ -87,7 +85,7 @@ def main():
     if not context:
         die("kubectl has no current context, so the SPIRE server cannot be reached. Set one: kubectl config use-context <name>", 3)
 
-    # The alias is the parent of the workload entries of the user. It names the agent, whose own id has a new random part for each token.
+    # The alias is the parent of the workload entries of the user.
     alias = f"spiffe://{trust_domain}/microvm/{github_id}"
 
     if mode == "remove":
@@ -110,11 +108,11 @@ def main():
 
     OUT.mkdir(mode=0o700, parents=True, exist_ok=True)
     OUT.chmod(0o700)
-    (OUT / "join-token").unlink(missing_ok=True)  # a failed run leaves no old token
-    (OUT / "bundle.spiffe").write_text(server(context, "bundle", "show", "-format", "spiffe"))  # public
+    (OUT / "join-token").unlink(missing_ok=True)  # remove the old token
+    (OUT / "bundle.spiffe").write_text(server(context, "bundle", "show", "-format", "spiffe"))  # public data
 
     token = json.loads(server(context, "token", "generate", "-ttl", str(TTL), "-spiffeID", alias, "-output", "json"))["value"]
-    fd = os.open(OUT / "join-token.tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)  # the token goes into this file only
+    fd = os.open(OUT / "join-token.tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)  # mode 600
     with os.fdopen(fd, "w") as f:
         f.write(token)
     os.replace(OUT / "join-token.tmp", OUT / "join-token")

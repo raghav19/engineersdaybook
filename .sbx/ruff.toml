@@ -1,2 +1,2 @@
-# ruff settings for the Python in this folder (agent/spire.py). The code is written for wide lines, as in code/mcp-sandbox/part-3-mcp-guardrails/tools.
+# ruff settings for agent/spire.py: line length 140, as in tools/
 line-length = 140

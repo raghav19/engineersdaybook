@@ -77,14 +77,14 @@ capabilities:
             - sh
             - -c
             - |
-              # src: the host folder ~/.sbx/spire, mounted read-only by additionalWorkspaces in sbxenv.yaml at the same path. Keep the path equal to it.
+              # src: ~/.sbx/spire of the host, mounted read-only (additionalWorkspaces in sbxenv.yaml). Same path as there.
               src=/home/rana/.sbx/spire
               dir=/home/agent/.spire
               mkdir -p "$dir/data"
               [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: the host script agent/spire.py makes it. Check the mount and run the sandbox again" > "$dir/agent.log"; exit 0; }
               args="-trustBundle $src/bundle.spiffe"
-              # A join token works once. An agent that holds a valid SVID ignores the token, so the file is always passed when it is there.
+              # An agent with a valid SVID ignores the token.
               if [ -r "$src/join-token" ]; then args="$args -joinTokenFile $src/join-token"; else echo "no readable join token in $src" >> "$dir/agent.log"; fi
               setsid nohup spire-agent run -config /etc/spire/agent.conf $args >> "$dir/agent.log" 2>&1 &
           user: agent
-          description: Start the SPIRE agent in the background (node attestation of this VM). Config in /etc/spire/agent.conf, log in ~/.spire/agent.log
+          description: Start the SPIRE agent (config /etc/spire/agent.conf, log ~/.spire/agent.log)
