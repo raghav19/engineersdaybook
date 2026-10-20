@@ -1,0 +1,67 @@
+# Shows the rendered manifest diff of part 3 in the pull request: `just diff-report` (code/mcp-sandbox/part-3-mcp-guardrails/justfile) runs the
+# `diff` recipe of each changed component against the artifacts that origin/main pins. The workflow installs the tools and posts the result:
+# in the job summary, and in one pull request comment that each push updates. It does not build, validate or publish an artifact.
+name: manifest-diff
+
+on:
+  pull_request:
+    paths:
+      - code/mcp-sandbox/part-3-mcp-guardrails/**
+      - .github/workflows/manifest-diff.yaml
+      - mise.toml
+
+concurrency:
+  group: manifest-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read # flux pull artifact: the baseline of each component
+  pull-requests: write # the comment
+
+jobs:
+  manifest-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: code/mcp-sandbox/part-3-mcp-guardrails
+    steps:
+      # v7.0.1. fetch-depth 0: the recipes need origin/main and its history (merge-base)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      # v5.2.1. Only the tools that the recipes run: the versions are in the root mise.toml
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+        with:
+          install_args: just yq jq flux2 github:home-operations/flate uv
+
+      - name: Render the diff of the changed components
+        id: report
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: just diff-report
+
+      # also after a failed diff: the report holds the error text
+      - name: Write the job summary
+        if: ${{ !cancelled() && hashFiles('code/mcp-sandbox/part-3-mcp-guardrails/out/diff-report.md') != '' }}
+        run: head -c 1000000 out/diff-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # a pull request from a fork has a read-only token: it keeps the job summary only
+      - name: Create or update the pull request comment
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('code/mcp-sandbox/part-3-mcp-guardrails/out/diff-comment.md') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          ids=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
+            --jq '.[] | select(.body | startswith("<!-- manifest-diff -->")) | .id')
+          id=${ids%%$'\n'*}
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@out/diff-comment.md > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -F body=@out/diff-comment.md > /dev/null
+          fi

@@ -1,6 +1,6 @@
 # The recipes that build and push a build function of tools/ (config-builder, value-injector, stack-composer).
 #
-# lib/workflow/workflow.just imports this file, so a recipe of a component depends on it: `_config: (push 'config-builder')`.
+# lib/workflow/workflow.just imports this file, so a recipe of a component depends on it: `_config: (build 'config-builder')`.
 # The justfile of each function imports it too (`import '../tools.just'`), so `just tools/<name>/push` works. The argument `tool` is the name of the
 # function. It defaults to the folder that the justfile sits in.
 #
