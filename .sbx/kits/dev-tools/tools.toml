@@ -22,7 +22,7 @@ HF_HUB_OFFLINE = "1"
 UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build, the Python of the headroom-ai venv: under /opt/mise the image copies it with the venv (else uv puts it in ~/.local/share/uv)
 
 [tools]
-just = "1.58"
+just = "1.59"
 yq = "4.54"
 jq = "1.8"
 fzf = "0.74"
@@ -34,14 +34,13 @@ kustomize = "5.8"
 terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.9"
-age = "1.2"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.15"
 prek = "0.5"
 ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
-uv = "0.12"
+uv = "0.13"
 "pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox" }  # Claude Code token proxy; the sandbox extra has no torch. docs/research/headroom.md
 
 # dev-tools.dockerfile runs this with the tools in place. COMPLETIONS_DIR comes from [env]: the build sets it, and run by hand in the VM it
