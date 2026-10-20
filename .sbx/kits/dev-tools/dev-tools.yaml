@@ -25,13 +25,6 @@ capabilities:
       path: /home/agent/.cache/terraform-providers
       size: 5g
 
-  # The data directory of the SPIRE agent: its SVID and key (agent.conf below). The agent reuses them after a stop and start, so it needs no new join
-  # token while its SVID is valid. One per sandbox, deleted with it. It comes up root-owned, so the boot command below gives it to agent.
-  - type: com.docker.sandbox/volume@1
-    config:
-      path: /home/agent/.spire/data
-      size: 64m
-
   # The shell setup is a file in the agent's home (written at every start, as the agent user), sourced from ~/.bashrc by
   # the boot command below. The tools are on PATH as mise shims (the image's ENV), so no `mise activate`.
   - type: com.docker.sandbox/lifecycle@1
@@ -53,29 +46,6 @@ capabilities:
             complete -o default -F __start_flux f
             command -v fzf >/dev/null && eval "$(fzf --bash)"
             command -v starship >/dev/null && eval "$(starship init bash)"
-        - path: /home/agent/.spire-agent.conf
-          description: Config of the SPIRE agent, which attests this VM as a node to the SPIRE server in the kind cluster
-          content: |
-            # trust_domain is trust_domain in code/mcp-sandbox/part-3-mcp-guardrails/config/cloud/kind/identity.yaml. The server is the NodePort 30081 of the
-            # kind cluster, published on the host as 127.0.0.1:18081 (clusters/kind/kind-config.yaml). The sbx proxy reaches the host as host.docker.internal.
-            # The trust bundle and the join token are made on the host by `just sandbox agent spire-enroll`; the host repo is read-only at /run/sandbox/source.
-            # The join token is not set here: the start command below passes -joinTokenFile when the file exists. A join token works once. The disk key manager
-            # keeps the agent SVID in the data volume, so a restart reuses it while it is valid.
-            agent {
-              data_dir            = "/home/agent/.spire/data"
-              socket_path         = "/home/agent/.spire/agent.sock"
-              trust_domain        = "mcp.local"
-              server_address      = "host.docker.internal"
-              server_port         = "18081"
-              trust_bundle_path   = "/run/sandbox/source/.sbx/spire/bundle.spiffe"
-              trust_bundle_format = "spiffe"
-              log_level           = "INFO"
-            }
-            plugins {
-              NodeAttestor     "join_token" { plugin_data {} }
-              KeyManager       "disk"       { plugin_data { directory = "/home/agent/.spire/data" } }
-              WorkloadAttestor "unix"       { plugin_data {} }
-            }
       startup:
         - command:
             - sh
@@ -106,17 +76,13 @@ capabilities:
         - command:
             - sh
             - -c
-            - chown agent:agent /home/agent/.spire /home/agent/.spire/data # the data volume comes up root-owned, and its parent holds the agent socket
-          user: "0"
-          description: Give agent the SPIRE data volume and its parent directory
-        - command:
-            - sh
-            - -c
             - |
               src=/run/sandbox/source/.sbx/spire
-              log=/home/agent/.spire/agent.log
-              [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: run 'just sandbox agent spire-enroll' on the host, then restart the sandbox" > "$log"; exit 0; }
-              args=; [ -r "$src/join-token" ] && args="-joinTokenFile $src/join-token"
-              setsid nohup spire-agent run -config /home/agent/.spire-agent.conf $args >> "$log" 2>&1 &
+              dir=/home/agent/.spire
+              mkdir -p "$dir/data"
+              [ -r "$src/bundle.spiffe" ] || { echo "no trust bundle in $src: run 'just sandbox agent spire-enroll' on the host, then restart the sandbox" > "$dir/agent.log"; exit 0; }
+              args="-trustBundle $src/bundle.spiffe"
+              [ -r "$src/join-token" ] && args="$args -joinTokenFile $src/join-token"
+              setsid nohup spire-agent run -config /etc/spire/agent.conf $args >> "$dir/agent.log" 2>&1 &
           user: agent
-          description: Start the SPIRE agent in the background (node attestation of this VM)
+          description: Start the SPIRE agent in the background (node attestation of this VM). Config in /etc/spire/agent.conf, log in ~/.spire/agent.log
