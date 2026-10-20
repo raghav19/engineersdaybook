@@ -1,7 +1,7 @@
 # Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
 # One job for each component that Flux delivers (`just components`: the folders with a flux/stack.yaml). A job runs the recipes of its component:
 # hydrate (render with flate and validate: package-artifact), diff (compare with the artifact that origin/main pins: diff),
-# publish (push the artifact, only when there is a diff: publish-artifact). The comment of the component is the output of `just <component>/diff`, unchanged.
+# publish (push the artifact, only when there is a diff: publish-artifact). The comment is the output of `just <component>/diff`, unchanged: one comment for each component and commit.
 name: manifest-diff
 
 on:
@@ -55,6 +55,7 @@ jobs:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
     env:
       COMPONENT: ${{ matrix.component }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       GHCR_USER: ${{ github.actor }}
       GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -76,16 +77,16 @@ jobs:
         id: diff
         run: |
           out=$(just "$COMPONENT/diff")
-          printf '### %s\n\n````diff\n%s\n````\n' "$COMPONENT" "$out" > "$RUNNER_TEMP/diff.md"
+          printf '### %s (commit %s)\n\n````diff\n%s\n````\n' "$COMPONENT" "${HEAD_SHA::7}" "$out" > "$RUNNER_TEMP/diff.md"
           cat "$RUNNER_TEMP/diff.md" >> "$GITHUB_STEP_SUMMARY"
-          echo "id=manifest-diff-${COMPONENT//\//-}" >> "$GITHUB_OUTPUT"
+          echo "id=manifest-diff-${COMPONENT//\//-}-${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
           if grep -q '^@@' <<<"$out"; then echo "changed=true" >> "$GITHUB_OUTPUT"; fi
 
       - name: Publish (push the artifact)
         if: ${{ steps.diff.outputs.changed == 'true' }}
         run: just "$COMPONENT/publish-artifact"
 
-      # v3.12.0. One comment for each component, updated on each push
+      # v3.12.0. One comment for each component and commit: a new push adds a comment, so the diffs of the earlier commits stay
       - name: Comment the diff
         if: ${{ steps.diff.outputs.changed == 'true' }}
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
@@ -93,12 +94,3 @@ jobs:
           message-id: ${{ steps.diff.outputs.id }}
           message-path: ${{ runner.temp }}/diff.md
           truncate: simple
-
-      # replaces the comment of an earlier push. A component that never had a diff gets no comment
-      - name: Comment that the diff is gone
-        if: ${{ steps.diff.outputs.changed != 'true' }}
-        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
-        with:
-          message-id: ${{ steps.diff.outputs.id }}
-          message: "### ${{ matrix.component }}\n\nNo rendered manifest changes."
-          update-only: true
