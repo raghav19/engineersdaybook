@@ -65,6 +65,8 @@ capabilities:
           - crl.microsoft.com
           - www.githubstatus.com
           - localhost:6444
+          # SPIRE server of the kind cluster (host 127.0.0.1:18081)
+          - localhost:18081
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]

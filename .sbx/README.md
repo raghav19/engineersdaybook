@@ -61,33 +61,18 @@ just sandbox run             # 4. every day
 
 The first `run` shows the sbx plan and asks you to approve it. A browser opens once for the GitHub consent. Run Claude Code in the VS Code terminal. It runs inside the sandbox.
 
-## Files
-
-| Path | What it is |
-|---|---|
-| `justfile` | `run` and `help`. It loads the two modules below. |
-| `sbxenv.yaml` | The sandbox: the kits with their digests, the size and the clone workspace. |
-| `host/` | The `host` commands and the systemd unit of the sbx daemon. |
-| `agent/` | The `agent` commands, `kube.sh`, the cluster RBAC and `bws-secret.sh`. |
-| `kits/dev-tools/` | The tools kit: tools at exact versions (`tools.toml`) and the shell setup. |
-| `kits/policy/` | The policy kit: the egress allow and deny lists (`policy.yaml`) and the note for the agent. |
-| `lib/common.just` | Variables and checks that the justfiles share. |
-| `docs/` | The diagram of the sbx model, as `.drawio` and `.svg`. |
-
 To change what the VM may reach, edit `kits/policy/policy.yaml`. Then run `agent allow-hosts` and `agent kit-build policy`. Create a new sandbox to use the new kit.
 
-## Token savings with Headroom
+## Guides
 
-The dev-tools kit has [Headroom](https://github.com/headroomlabs-ai/headroom) at a pinned version. Headroom is a proxy that compresses the input of Claude Code. To open the dashboard on the host:
-
-1. Connect to the sandbox with VS Code (`just sandbox run`).
-2. Open the **Ports** tab. Choose **Forward a Port** and enter `8787`.
-3. Open `http://localhost:8787/dashboard` in the browser of the host.
-
-The proxy listens only on `127.0.0.1` in the VM, so `sbx ports --publish` cannot reach it. Do not bind the proxy to `0.0.0.0`. The proxy has no login for the model routes.
+| Guide | What it covers |
+|---|---|
+| [Node identity of the VM](docs/node-identity.md) | How the VM proves to the SPIRE server of your cluster that it is an approved machine. |
+| [Headroom](docs/headroom.md) | The proxy that compresses the input of Claude Code, and its dashboard. |
 
 ## When something fails
 
 - The daemon does not start. Read the reason with `journalctl --user -u sbx-daemon.service`.
 - `host setup` stops and names a missing requirement. Run the command that it prints, then run `host setup` again.
 - To delete the daemon service, run `systemctl --user disable --now sbx-daemon.service`. Then delete `~/.config/systemd/user/sbx-daemon.service`.
+- The SPIRE agent does not attest. See [Node identity of the VM](docs/node-identity.md#when-something-fails).

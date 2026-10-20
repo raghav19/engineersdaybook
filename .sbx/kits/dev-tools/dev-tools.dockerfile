@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The content recipe of the dev-tools kit (dev-tools.yaml). Everything is staged under /out and lands on the workload as-is.
-# The build context is this folder, so tools.toml is the only file the build can read.
+# The build reads tools.toml and spire-agent.conf from this folder.
 FROM dhi.io/debian-base:trixie-dev AS build
 ARG MISE_VERSION=v2026.10.0
 
@@ -19,6 +19,9 @@ RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
 COPY tools.toml /etc/mise/conf.d/sandbox.toml
 RUN mise install --yes
 
+# Remove spire-server: the VM runs only the agent.
+RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
+
 # The bash completions come from a task in tools.toml.
 RUN mise run sandbox:completions
 
@@ -30,6 +33,7 @@ RUN mkdir -p /out/usr/share/bash-completion /out/etc/bash_completion.d \
 
 # The file is also the VM's system config, so the shims resolve from any directory.
 COPY tools.toml /out/etc/mise/conf.d/sandbox.toml
+COPY spire-agent.conf /out/etc/spire/agent.conf
 RUN mkdir -p /out/usr/local/bin && cp -a /opt/mise /out/opt/mise && cp /usr/local/bin/mise /out/usr/local/bin/mise \
  && chown -R 0:0 /out && chown -R 1000:1000 /out/opt/mise  # 1000 is agent in the shell kit: mise installs new tools as agent
 
