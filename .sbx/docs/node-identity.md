@@ -39,12 +39,11 @@ Prerequisites on the host:
 
 - `python3` (3.8 or later), `kubectl` and `yq`.
 - A current `kubectl` context for the cluster that runs the SPIRE server.
-- `SANDBOX_GITHUB_ID`: the numeric id of your GitHub account. The login does not work.
+- `SANDBOX_GITHUB_ID`: the numeric id of your GitHub account. The login does not work. The root `mise.toml` sets it, so `eval "$(mise activate bash)"` is enough. For another account, put your own id in `mise.local.toml`: `[env]` and `SANDBOX_GITHUB_ID = "<id>"` (`gh api user --jq .id` prints it).
 
 Run:
 
 ```shell
-export SANDBOX_GITHUB_ID=$(gh api user --jq .id)
 sbx settings set env.rememberHostCommands true   # optional: approve the host command once, not at every run
 just sandbox run
 just sandbox agent spire-enroll                  # optional: make the token by hand

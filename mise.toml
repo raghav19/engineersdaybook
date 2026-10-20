@@ -13,3 +13,4 @@ flux2 = "2.9"
 
 [env]
 EDITOR="code --wait"
+SANDBOX_GITHUB_ID="21075059"  # numeric id of the GitHub account (raghav19), not a secret. .sbx/agent/spire.py needs it. Another developer: put your own in mise.local.toml
