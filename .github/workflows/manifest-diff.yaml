@@ -15,7 +15,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write # publish-artifact: push the artifact to ghcr.io
   pull-requests: write # the comments
 
 jobs:
@@ -55,8 +54,9 @@ jobs:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
     env:
       COMPONENT: ${{ matrix.component }}
-      GHCR_USER: ${{ github.actor }}
-      GHCR_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # the personal token of the package owner (the secret GHCR_TOKEN): the packages are not open to the GITHUB_TOKEN of this repository
+      GHCR_USER: raghav19
+      GHCR_PUSH_TOKEN: ${{ secrets.GHCR_TOKEN }}
     steps:
       # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
