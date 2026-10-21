@@ -28,7 +28,6 @@ skills-install: _host-only
     sbx skills add --force jfr992/terragrunt-skill
     sbx skills add --force antonbabenko/agent-plugins
     sbx skills add --force fluxcd/agent-skills
-    sbx skills add --force DietrichGebert/ponytail
     sbx skills add --force aws/agent-toolkit-for-aws \
       --skill aws-containers --skill aws-compute --skill aws-iam --skill aws-networking \
       --skill aws-security --skill aws-storage --skill aws-auth

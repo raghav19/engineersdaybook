@@ -20,6 +20,9 @@ HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
 HF_HUB_OFFLINE = "1"
 UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build, the Python of the headroom-ai venv: under /opt/mise the image copies it with the venv (else uv puts it in ~/.local/share/uv)
+# Ponytail (plugin installed at boot by dev-tools.yaml): no codebase map in the session context, which saves input tokens
+PONYTAIL_MAP = "0"
+PONYTAIL_DEFAULT_MODE = "full"
 
 [tools]
 just = "1.59"
