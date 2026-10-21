@@ -8,7 +8,7 @@ requires-python = "==3.13.*"
 dependencies = ["jinja2==3.1.6", "typer==0.27.3"]
 
 [dependency-groups]
-build = ["pyinstaller==6.22.3", "ruff==0.17.0"]
+build = ["pyinstaller==6.22.3", "ruff==0.17.0", "ty==0.0.85"]
 
 [tool.uv]
 package = false
@@ -16,3 +16,11 @@ package = false
 # the same as tools/pyproject.toml: `just tools/platform-pipeline/build` runs `ruff check` and `ruff format --check` on the script
 [tool.ruff]
 line-length = 140
+
+[tool.ruff.lint]
+# ANN: every parameter and return value needs a type hint. ty (the build) checks that the hints are correct.
+extend-select = ["ANN"]
+
+[tool.ty.terminal]
+# a warning fails the build, like an error
+error-on-warning = true
