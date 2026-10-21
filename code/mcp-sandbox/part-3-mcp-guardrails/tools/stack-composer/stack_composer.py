@@ -1,10 +1,11 @@
 """stack-composer: compose stack.yaml for one component: its entry file is the contract, the pin is an input, kustomize does the patching.
 
-usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] <values.yaml> <component> <entry file> <stack.yaml>
+usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] [--also <stack.yaml> ...] <values.yaml> <component> <entry file> <stack.yaml>
 
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
-        <stack.yaml>   the stack of the cluster (sync/<name>/infra-stack.yaml) that Flux reads: it holds the pins
+        <stack.yaml>   the stack of the group of the component (sync/<name>/infra/<group>/stack.yaml) that Flux reads: it holds the pins
+        --also         the stack of another group of the cluster. Read only: its Kustomizations count in the dependsOn check. Repeat it for each stack.
         --manifest     out/manifest.yaml: what `publish-artifact` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
                        component: no new pin. Ignored when the flag is false.
         --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
@@ -15,7 +16,7 @@ Model   The two kustomize folders are the strings of MODEL below. This code only
         Flag false:   delete the documents of the entry that are in the stack.
         Otherwise:    the documents that are in the stack patch it (fields are overridden, none is removed). The others are added.
 
-Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack.
+Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack or of an --also stack.
         kustomize sorts the documents and the keys and drops the comments: the comments are in the entry files.
 
 Words   document   one object of a YAML file (the parts of a file that `---` separates). The entry file has two: the pair.
@@ -23,13 +24,14 @@ Words   document   one object of a YAML file (the parts of a file that `---` sep
         patch      a partial document. kustomize merges it into the document of the same kind, name and namespace.
 """
 
-import argparse
 import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Annotated, Any
 
+import typer
 import yaml
 
 # The kustomize folders of the model: the kustomization.yaml of each step. The input files of a step are written next to it.
@@ -67,8 +69,14 @@ HEADER = """\
 # A digest from the registry looks like this: sha256: and 64 hex digits.
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 
+# One document of a YAML file, as yaml.safe_load returns it.
+Doc = dict[str, Any]
 
-def step(name, files):
+# No rich: plain help and plain tracebacks, so typer never imports rich and the build leaves it out (--exclude-module in tools.just)
+app = typer.Typer(add_completion=False, rich_markup_mode=None, pretty_exceptions_enable=False)
+
+
+def step(name: str, files: dict[str, str]) -> str:
     """Run one kustomize folder of the model on some input files, and return what `kustomize build` prints."""
     with tempfile.TemporaryDirectory() as tmp:
         # 1. Write the kustomization.yaml of the step (MODEL[name]) into a temporary folder.
@@ -86,27 +94,31 @@ def step(name, files):
     return done.stdout
 
 
-def load(text):
+def load(text: str) -> list[Doc]:
     """Return the documents of a YAML text as a list. An empty document is left out."""
     return [d for d in yaml.safe_load_all(text) if d]
 
 
-def ident(doc):
+def ident(doc: Doc) -> tuple[str, str]:
     """The identity of a document: its kind and its name. For example ("Kustomization", "istio")."""
     return doc["kind"], doc["metadata"]["name"]
 
 
-def dependency_errors(docs):
+def dependency_errors(docs: list[Doc], other_docs: list[Doc]) -> list[str]:
     """Return a message for each Kustomization that waits for a Kustomization that is not in the stack.
 
     A Kustomization with `dependsOn: [{name: spire}]` never starts when spire is not there. So this stops a disable that would break it.
-    docs are the documents of the new stack.
+    docs are the documents of the new stack. other_docs are the documents of the other stacks of the cluster: they can hold the Kustomization that is waited for,
+    or the one that waits.
     """
     # The names of all the Kustomizations of the stacks.
-    present = {d["metadata"]["name"] for d in docs if d["kind"] == "Kustomization"}
-    # Every "A waits for B" pair of the stack, as (A, the dependsOn entry of B).
+    present = {d["metadata"]["name"] for d in [*docs, *other_docs] if d["kind"] == "Kustomization"}
+    # Every "A waits for B" pair of the stacks, as (A, the dependsOn entry of B). A unit of the other stack counts: a disable here can break it.
     waits = [
-        (d["metadata"]["name"], dep) for d in docs if d["kind"] == "Kustomization" for dep in (d.get("spec") or {}).get("dependsOn") or []
+        (d["metadata"]["name"], dep)
+        for d in [*docs, *other_docs]
+        if d["kind"] == "Kustomization"
+        for dep in (d.get("spec") or {}).get("dependsOn") or []
     ]
     # The pairs where B is not in the stack.
     return [
@@ -116,16 +128,21 @@ def dependency_errors(docs):
     ]
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Compose the stack of one component.")
-    parser.add_argument("values", help="values.yaml of config-builder")
-    parser.add_argument("component")
-    parser.add_argument("entry", help="the entry file of the component")
-    parser.add_argument("stack", help="the stack of the component, which is rewritten")
-    parser.add_argument("--manifest", help="out/manifest.yaml: the tag and digest of the last publish of each component")
-    parser.add_argument("--cluster", help="the name of the cluster in manifest.yaml")
-    args = parser.parse_args()
-    values_file, component, entry_file, stack_file = args.values, args.component, args.entry, args.stack
+@app.command()
+def main(
+    values_file: Annotated[Path, typer.Argument(help="values.yaml of config-builder")],
+    component: str,
+    entry_file: Annotated[Path, typer.Argument(help="the entry file of the component")],
+    stack_file: Annotated[Path, typer.Argument(help="the stack of the component, which is rewritten")],
+    manifest_file: Annotated[
+        Path | None, typer.Option("--manifest", help="out/manifest.yaml: the tag and digest of the last publish of each component")
+    ] = None,
+    cluster: Annotated[str | None, typer.Option(help="the name of the cluster in manifest.yaml")] = None,
+    also: Annotated[
+        list[Path] | None, typer.Option(help="the stack of another group of the cluster: read only, for the dependsOn check")
+    ] = None,
+) -> None:
+    """Compose the stack of one component."""
 
     # --- 1. Read and check the inputs. Nothing is written yet. ---
 
@@ -142,19 +159,19 @@ def main():
 
     # The pin: the tag and the digest that the last publish of this component wrote into the manifest. It is optional.
     pin = None
-    if args.manifest:
-        if not args.cluster:
+    if manifest_file:
+        if not cluster:
             sys.exit("--manifest needs --cluster")
         try:
-            manifest = yaml.safe_load(Path(args.manifest).read_text()) or {}
+            published = yaml.safe_load(Path(manifest_file).read_text()) or {}
         except FileNotFoundError:  # no publish on this machine yet
-            manifest = {}
+            published = {}
         except (OSError, yaml.YAMLError) as e:
-            sys.exit(f"{args.manifest}: {e}")
-        components = (manifest.get("components") or {}) if isinstance(manifest, dict) else {}
-        pin = ((components.get(args.cluster) or {}) if isinstance(components, dict) else {}).get(component)
+            sys.exit(f"{manifest_file}: {e}")
+        components = (published.get("components") or {}) if isinstance(published, dict) else {}
+        pin = ((components.get(cluster) or {}) if isinstance(components, dict) else {}).get(component)
     if pin and not (isinstance(pin, dict) and isinstance(pin.get("tag"), str) and pin["tag"] and DIGEST.match(str(pin.get("digest")))):
-        sys.exit(f"{args.manifest}: {args.cluster}/{component} needs a tag and a digest (sha256:<64 hex digits>), found {pin}")
+        sys.exit(f"{manifest_file}: {cluster}/{component} needs a tag and a digest (sha256:<64 hex digits>), found {pin}")
     if pin:
         pin = {"tag": pin["tag"], "digest": pin["digest"]}
 
@@ -196,7 +213,8 @@ def main():
     new_text = step("stack", files)
 
     # --- 4. Check the new stack. Write it only if the check passes, so a refused run leaves stack.yaml as it was. ---
-    problems = dependency_errors(load(new_text))
+    other_docs = [d for f in also or [] for d in load(Path(f).read_text())]
+    problems = dependency_errors(load(new_text), other_docs)
     if problems:
         sys.exit("\n".join(problems))
     # The header goes first, then `---` (the start of the first document).
@@ -204,4 +222,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    app()

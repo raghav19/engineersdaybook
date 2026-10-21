@@ -8,16 +8,16 @@
 publish-artifact: package-artifact
     set -euo pipefail
     [ -s {{ out }}/manifests.yaml ] || { echo "disabled: nothing to publish"; exit 0; }
-    result=$(flux push artifact {{ registry }}/{{ name }}:{{ tag }} \
+    result=$(flux push artifact {{ registry }}/{{ name }}:{{ artifact_tag }} \
       --path {{ out }} \
       --ignore-paths '/*,!/manifests.yaml' \
       --source "$(git remote get-url origin)" \
-      --revision "$(git branch --show-current)@sha1:$(git rev-parse HEAD)" \
+      --revision "${GITHUB_HEAD_REF:-$(git branch --show-current)}@sha1:$(git rev-parse HEAD)" \
       --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" \
       --output json)
     digest=$(jq -r .digest <<<"$result")
     # one assignment: it adds the entry or replaces the one of the last publish. The file is created when it is not there.
     touch {{ manifest }}
-    C={{ cluster_name }} N={{ name }} TAG={{ tag }} DIGEST=$digest \
+    C={{ cluster_name }} N={{ name }} TAG={{ artifact_tag }} DIGEST=$digest \
       yq -i '.components[strenv(C)][strenv(N)] = {"tag": strenv(TAG), "digest": strenv(DIGEST)}' {{ manifest }}
-    echo "{{ name }}: {{ tag }} $digest"
+    echo "{{ name }}: {{ artifact_tag }} $digest"

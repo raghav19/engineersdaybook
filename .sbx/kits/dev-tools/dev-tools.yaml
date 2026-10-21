@@ -8,7 +8,7 @@ displayName: dev-tools
 description: >-
   Exact-version dev tools from tools.toml
 sourceUrl: https://github.com/raghav19/engineersdaybook
-version: "0.3.0"
+version: "0.4.0"
 
 args:
   workspace:
@@ -73,6 +73,15 @@ capabilities:
             - setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 & # binds 127.0.0.1 only; the log is ~/.headroom/logs/proxy.log
           user: agent
           description: Start the Headroom proxy in the background
+        - command:
+            - sh
+            - -c
+            - |
+              # Each step may fail (github.com down, already installed) without stopping the boot
+              claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 || true
+              claude plugin install ponytail@ponytail || true
+          user: agent
+          description: Install the ponytail plugin for Claude Code, pinned to a release tag
         - command:
             - sh
             - -c

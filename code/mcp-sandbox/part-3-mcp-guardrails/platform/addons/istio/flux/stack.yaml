@@ -16,6 +16,8 @@ kind: Kustomization
 metadata:
   name: istio
   namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: mesh # the group of the stack: sync/<cluster>/infra/mesh/stack.yaml
 spec:
   interval: 10m
   retryInterval: 1m

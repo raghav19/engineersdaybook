@@ -1,0 +1,25 @@
+# The dependencies of the build functions in this folder (config-builder, value-injector). `uv lock` writes uv.lock from it;
+# the build (tools.just) installs exactly what uv.lock says, with hashes. Not a package: nothing here is installed or published.
+[project]
+name = "lib-tools"
+version = "0"
+requires-python = "==3.13.*"
+dependencies = ["pyyaml==6.0.3", "typer==0.27.3"]
+
+[dependency-groups]
+build = ["pyinstaller==6.22.3", "ruff==0.17.0", "ty==0.0.85", "types-pyyaml==6.0.12.20260906"]
+
+[tool.uv]
+package = false
+
+# `just <name>/build` runs `ruff check` and `ruff format --check` on the script before it builds. The code is written for wide lines.
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.lint]
+# ANN: every parameter and return value needs a type hint. ty (the build) checks that the hints are correct.
+extend-select = ["ANN"]
+
+[tool.ty.terminal]
+# a warning fails the build, like an error
+error-on-warning = true

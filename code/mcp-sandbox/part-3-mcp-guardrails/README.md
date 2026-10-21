@@ -75,15 +75,24 @@ The gateway holds the upstream credential and sets it on the outbound call. The 
 
 ![High-level architecture](docs/diagrams/architecture.drawio.svg)
 
-The flows are in [docs/arch.md](docs/arch.md): login, workload identity, mTLS and the guardrails.
-The L7 policy chain of the gateway is in [docs/arch.md](docs/arch.md#l7-policy-chain).
-How Flux applies the units (the sync model, the apply order, a change, enable or disable) is in [docs/orchestration.md](docs/orchestration.md).
+## Guides
+
+Each guide covers one part of the design. Start with the architecture, then read the others in any order.
+
+| Guide | What it covers |
+|---|---|
+| [Architecture](docs/arch.md) | The components and the four flows: login and onboarding, workload identity (SPIFFE), mTLS between hops and the MCP guardrails. It also covers the L7 policy chain of the gateway. It also covers the egress policies. |
+| [Orchestration](docs/orchestration.md) | How Flux applies the units: the sync model, the bring-up of the cluster, how a change reaches the cluster, and how to enable or disable a component. |
+| [The rendered manifest pattern](docs/rendered-manifest-pattern.md) | Why part 3 renders the manifests in CI and not in the cluster. Two diagrams (without and with), a comparison table, and the steps to see the rendered manifest in a pull request and on your machine. |
+| [Diagrams](docs/diagrams/README.md) | The draw.io sources of the diagrams, their image files and how to open them. |
+
+The research behind the rendered manifest pattern is in [docs/research/rendered-manifest-pattern.md](../../../docs/research/rendered-manifest-pattern.md).
 
 ## Repo structure
 
 ```text
 part-3-mcp-guardrails/
-├── docs/                 arch.md, orchestration.md and diagrams/ (the draw.io sources and their SVGs)
+├── docs/                 arch.md, orchestration.md, rendered-manifest-pattern.md and diagrams/ (the draw.io sources and their SVGs)
 ├── lib/workflow/         shared just recipes: package-artifact, diff, publish-artifact, compose-stack
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
@@ -95,7 +104,7 @@ part-3-mcp-guardrails/
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux, and the two Secrets from the host)
-├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml
+├── sync/local-kind/      what Flux reconciles for the cluster: apps.yaml (the groups secrets, mesh and gateway) and infra/<group>/stack.yaml (their units)
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```

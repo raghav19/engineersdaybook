@@ -109,7 +109,7 @@ git-token-sync: _host-only _check-daemon
       exit 0
     fi
     # the token goes in through stdin, never as an argument (ps shows arguments)
-    printf '%s' "$token" | sbx secret set github --sandbox {{ name }} > /dev/null \
+    printf '%s' "$token" | sbx secret set github --sandbox {{ name }} --force > /dev/null \
       || { echo "git-token-sync: sbx could not set the github secret of {{ name }}" >&2; exit 0; }
     echo "sbx secret github of {{ name }} refreshed from gh"
 

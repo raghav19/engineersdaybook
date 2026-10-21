@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # What Flux reads from Git for the cluster `local-kind` (sync/<full name>/, named in clusters/kind/cluster.yaml).:
-#   infra-stack.yaml  every component: CRDs, controllers, gateways, the MCP servers, the routes and the policies. Each `Kustomization` waits
-#                     (dependsOn) for the ones it needs. A second stack comes back only when a second owner needs one.
+#   apps.yaml      the groups: secrets, mesh and gateway. Each group is a `Kustomization` that applies the stack of its folder.
+#   infra/<group>/ the stack of the group: the units of its components (infra/secrets/stack.yaml, infra/mesh/stack.yaml, infra/gateway/stack.yaml). This build does not enter these folders.
 # Flux itself (the FluxInstance, clusters/kind/flux-instance.yaml) is not here on purpose: this folder cannot remove it.
 resources:
-  - infra-stack.yaml
+  - apps.yaml

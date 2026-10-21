@@ -1,0 +1,87 @@
+# Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
+# One job with three key steps. Each step runs one recipe of code/mcp-sandbox/part-3-mcp-guardrails/platform/justfile. The recipe pulls and runs
+# platform-pipeline (tools/platform-pipeline/, pulled from the registry by commit tag), which goes over all components that Flux delivers (the folders of platform/ with a flux/stack.yaml),
+# one after the other. You can run the same recipes on your machine.
+# Build (`just platform/package-artifacts`: `just <component>/package-artifact`: render with flate and validate), Diff (`just platform/diff-artifacts`:
+# `just <component>/diff`: compare with the artifact that origin/main pins) and Publish (`just platform/publish-artifacts`:
+# `just <component>/publish-artifact`: push the artifact, only for a component with a diff).
+# A failed component does not stop the others, and the step fails at the end. The last step posts ONE comment for the commit: the output of
+# `just <component>/diff`, unchanged, in one block for each changed component. A diff over 60,000 characters does not fit in a comment: the comment
+# then holds a note and the link to the run, where the job summary has the full diff. The text of the comment is in the script platform_pipeline.py.
+name: manifest-diff
+
+on:
+  pull_request:
+    paths:
+      - code/mcp-sandbox/part-3-mcp-guardrails/platform/**
+
+concurrency:
+  group: manifest-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write # the comment
+
+# the paths, the limit and the run link that the steps share
+env:
+  REPORT_FILE: ${{ github.workspace }}/code/mcp-sandbox/part-3-mcp-guardrails/out/manifest-diff/report.md
+  LIMIT: "60000"
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  manifest-diff:
+    # a pull request from a fork has a read-only token: it cannot push
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    # the components run one after the other. TODO: set this from the run time of the spike
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: code/mcp-sandbox/part-3-mcp-guardrails
+    env:
+      # the owner of the packages. The token (GHCR_PUSH_TOKEN) comes from Bitwarden, see the step below: the packages are not open to the GITHUB_TOKEN of this repository
+      GHCR_USER: raghav19
+    steps:
+      # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
+      - name: "Set up: checkout"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      # v5.2.1. Only the tools that the recipes run
+      - name: "Set up: tools"
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+        with:
+          install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv
+
+      # The only secret in GitHub is the access token of the Bitwarden machine account (BWS_ACCESS_TOKEN). The ghcr.io token is a secret of its project
+      # (the id is not secret). The action sets GHCR_PUSH_TOKEN for the next steps and masks it. Bitwarden cloud, US region
+      - name: "Set up: read the ghcr.io token from Bitwarden"
+        uses: bitwarden/sm-action@1238aae8fc64b212641190a9227c8a734ab1a793 # v3.0.1
+        with:
+          access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
+          secrets: |
+            a50e4877-62c5-40a6-87bd-b4e700949eba > GHCR_PUSH_TOKEN
+
+      - name: Build
+        run: just platform/package-artifacts
+
+      # diff compares with the artifact that origin/main pins, so it does not depend on the push. It writes the job summary, and the comment text
+      # when a component changed
+      - name: Diff
+        if: ${{ !cancelled() }}
+        run: just platform/diff-artifacts --sha7 "${HEAD_SHA::7}" --run-url "$RUN_URL" --limit "$LIMIT"
+
+      # No changed component means nothing to push
+      - name: Publish
+        run: just platform/publish-artifacts
+
+      # v3.12.0. One comment for each commit: a new push adds a comment, so the diffs of the earlier commits stay. No changed component means no comment text
+      - name: "Report: comment the diff"
+        if: ${{ !cancelled() && hashFiles(env.REPORT_FILE) != '' }}
+        uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
+        with:
+          message-id: manifest-diff-${{ github.event.pull_request.head.sha }}
+          message-path: ${{ env.REPORT_FILE }}

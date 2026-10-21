@@ -10,7 +10,9 @@
 | source-controller | Reads Git and the OCI registry. Keeps the artifacts. |
 | kustomize-controller | Applies an artifact to the cluster. Removes what is no longer in it. |
 | Sync folder | `sync/<name>/`. The folder in Git that Flux reconciles for a cluster. `<name>` is `sync:` in `clusters/<cluster>/cluster.yaml`. |
-| Stack | `infra-stack.yaml` in the sync folder. It holds every unit of the cluster. |
+| Root | The `Kustomization flux-system`. The `FluxInstance` creates it. It applies the sync folder. |
+| Group | A chain of units that depend on each other. A `Kustomization` in `apps.yaml` that applies the stack of its folder: `secrets`, `mesh` or `gateway`. |
+| Stack | `infra/<group>/stack.yaml` in the sync folder. It holds the units of one group. |
 | Unit | One component as Flux sees it: an `OCIRepository` and a `Kustomization`. |
 | Entry file | `<component>/flux/stack.yaml`. The unit of a component, with `tag: unpinned`. |
 | Pin | The tag and the digest in the `OCIRepository` of a unit. They select the artifact that runs. |
@@ -29,14 +31,21 @@ Flux itself is not in the sync folder:
 ```text
 sync/local-kind/                   what Flux reconciles
 ├── kustomization.yaml
-└── infra-stack.yaml               all 13 units
+├── apps.yaml                      the groups: secrets, mesh, gateway
+└── infra/
+    ├── secrets/stack.yaml         3 units
+    ├── mesh/stack.yaml            3 units
+    └── gateway/stack.yaml         7 units
 clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 ```
 
 - A merge cannot remove the `FluxInstance`. Deleting it uninstalls Flux. The workloads stay.
 - The `FluxInstance` has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`. A sync that once held it cannot prune it.
 - A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/kind/up` on the host.
-- One stack holds every unit. Each `Kustomization` waits for the units it needs. A second stack returns when a second owner needs one.
+- The cluster has three groups. A group holds the units of one chain: a CRD provider with the units that use it. `secrets` (`cert-manager`, `external-secrets`, `secret-store`), `mesh` (`spire`, `istio`, `istio-ingress`) and `gateway` (`gateway-api`, `agentgateway`, `mcp-servers`, `routes`, `authn-jwt`, `rate-limit`, `tool-rbac`).
+- The groups do not wait for each other. A unit names what it needs in its own `dependsOn`, also across the groups: `mcp-servers` in `gateway` waits for `secret-store` in `secrets`. This is the only edge between two groups.
+- A component joins a group with the label `app.kubernetes.io/part-of` on the `Kustomization` of its entry file. The folder under `platform/` does not decide it. The first real workload becomes a new group: add it to `apps.yaml`, add a folder next to `infra/`, and name what it needs in its units.
+- The groups have `deletionPolicy: Orphan`. Removing a group from `apps.yaml` leaves its units running. Flux does not delete in `dependsOn` order, so a delete of a group would remove all its units at once. To remove a group, disable its units first, the ones nothing waits for first (`compose-stack` refuses the others), then remove the group.
 - Another cluster has its own `sync/<name>/` folder and its own `flux-instance.yaml`. Run the recipes with `CLUSTER=<name>`.
 
 ## 3. Flow A: bring-up
@@ -58,7 +67,7 @@ sequenceDiagram
     O->>K: install the Flux controllers
     O->>K: create the Kustomization flux-system (path sync/local-kind)
     S->>S: clone main from GitHub
-    C->>K: apply the 13 units, each after its dependsOn
+    C->>K: apply the groups secrets, mesh and gateway, then the 13 units, each after its dependsOn
     Note over C,K: ESO then writes the other Secrets from Bitwarden, for example github-upstream
 ```
 
@@ -78,7 +87,7 @@ sequenceDiagram
     D->>R: publish-artifact (push to the registry, tag and digest)
     D->>D: compose-stack (patch the stack with the new pin)
     D->>G: open a pull request with the new pin
-    Note over D,G: the diff shows the objects that change
+    Note over D,G: the diff shows the objects that change (the manifest-diff workflow hydrates, publishes and posts it in the pull request)
     G->>G: review and merge
     S->>G: read sync/local-kind
     C->>K: update the unit
@@ -105,7 +114,7 @@ sequenceDiagram
     D->>D: compose-stack (remove the unit from the stack)
     D->>G: open a pull request with the flag and the stack
     G->>G: review and merge
-    C->>K: flux-system reads the stack
+    C->>K: the group reads its stack
     C->>K: prune the unit and its objects
 ```
 
@@ -127,6 +136,6 @@ sequenceDiagram
     D->>D: compose-stack (add the unit with the pin)
     D->>G: open a pull request with the stack
     G->>G: review and merge
-    C->>K: flux-system reads the stack
+    C->>K: the group reads its stack
     C->>K: create the unit and apply its artifact
 ```
