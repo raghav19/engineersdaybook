@@ -2,5 +2,5 @@
 # path is read, and the one further down wins. Later: cloud/aws/dev/us-east-1
 placement: cloud/kind
 # The folder that Flux reconciles for this cluster: sync/<sync>/. Its name is set here: local-kind now (it is the path of the live Flux sync, so it does not follow the placement), and later
-# for example aws-dev-us-east-1 for cloud/aws/dev/us-east-1. It holds infra-stack.yaml.
+# for example aws-dev-us-east-1 for cloud/aws/dev/us-east-1. It holds apps.yaml and infra/<group>/stack.yaml.
 sync: local-kind

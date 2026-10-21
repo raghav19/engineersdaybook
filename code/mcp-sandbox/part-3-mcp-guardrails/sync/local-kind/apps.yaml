@@ -1,0 +1,53 @@
+# The groups of the cluster: each one is a chain of units that depend on each other. A group applies the stack file in its folder (infra/<group>/stack.yaml).
+# A component joins a group with the label app.kubernetes.io/part-of on the Kustomization of its entry file (flux/stack.yaml).
+# The source is the GitRepository that the FluxInstance creates. The path is relative to the root of the Git repository.
+# A later group (the first real workload) is one more entry here and a folder next to infra/.
+# No group has dependsOn on another group. The units name what they need in their own dependsOn, also across the groups (mcp-servers waits for secret-store).
+# The groups share one GitRepository, and a dependsOn between them makes the dependent group wait for the other group to apply every new revision, about 30s for each retry.
+# deletionPolicy Orphan: deleting a group (removing its entry here) leaves its units running. Flux does not delete in dependsOn order, so a delete of a group
+# would delete all its units at once. A unit that leaves its stack is still pruned: that deletes the unit and its workloads, as before.
+# timeout: longer than the longest dependsOn chain that the group waits for. That includes the chain in another group.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: secrets
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 15m # cert-manager, external-secrets, secret-store (13m)
+  prune: true
+  deletionPolicy: Orphan
+  wait: true
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/secrets
+  sourceRef: {kind: GitRepository, name: flux-system}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mesh
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 20m # spire, istio, istio-ingress (15m)
+  prune: true
+  deletionPolicy: Orphan
+  wait: true
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/mesh
+  sourceRef: {kind: GitRepository, name: flux-system}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 25m # cert-manager, external-secrets, secret-store (in secrets), mcp-servers, routes, authn-jwt (23m)
+  prune: true
+  deletionPolicy: Orphan
+  wait: true
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/gateway
+  sourceRef: {kind: GitRepository, name: flux-system}

@@ -18,7 +18,7 @@ diff: _manifest _baseline
     [ -f "$left" ] || left=/dev/null
     diff -u --label baseline --label {{ name }} <(filter "$left") <(filter {{ out }}/manifests.yaml) || [ $? -eq 1 ]
 
-# reads:  the stack of the cluster (infra-stack.yaml) at `base` (the digest of the component), then the registry
+# reads:  the stack of the group of the component at `base` (the digest of the component), then the registry
 # writes: out/<name>/baseline/
 # output: the artifact `base` pins, which is what the cluster runs (left empty when there is no pin yet)
 # pull the artifact `base` pins for the component, by digest
@@ -26,8 +26,9 @@ diff: _manifest _baseline
 _baseline:
     set -euo pipefail
     rm -rf {{ out }}/baseline && mkdir -p {{ out }}/baseline
-    # a stack that is not on `base` yet (a new stack, for example after a move) means no pin yet
-    digest=$( (git -C {{ root }} show {{ base }}:./{{ stack }} 2>/dev/null || true) | yq -N '{{ pinned_digest }}')
+    # a stack that is not on `base` yet (a new stack, for example after a move) means no pin yet.
+    # The legacy stack is the one file that held every component before the groups: remove this fallback after the pull request that introduced the groups.
+    digest=$( (git -C {{ root }} show {{ base }}:./{{ stack }} 2>/dev/null || git -C {{ root }} show {{ base }}:./{{ legacy_stack }} 2>/dev/null || true) | yq -N '{{ pinned_digest }}')
     if [ -z "$digest" ]; then
       echo "baseline: none ({{ name }} has no pin in {{ base }})"
       exit 0

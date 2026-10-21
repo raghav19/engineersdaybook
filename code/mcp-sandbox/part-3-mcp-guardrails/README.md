@@ -104,7 +104,7 @@ part-3-mcp-guardrails/
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
 ├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux, and the two Secrets from the host)
-├── sync/local-kind/      what Flux reconciles for the cluster: infra-stack.yaml
+├── sync/local-kind/      what Flux reconciles for the cluster: apps.yaml (the groups secrets, mesh and gateway) and infra/<group>/stack.yaml (their units)
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```

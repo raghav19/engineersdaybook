@@ -16,6 +16,8 @@ kind: Kustomization
 metadata:
   name: authn-jwt
   namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: gateway # the group of the stack: sync/<cluster>/infra/gateway/stack.yaml
 spec:
   interval: 10m
   retryInterval: 1m

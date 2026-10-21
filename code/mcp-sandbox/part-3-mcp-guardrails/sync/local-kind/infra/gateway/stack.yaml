@@ -3,6 +3,8 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: agentgateway
   namespace: flux-system
 spec:
@@ -21,6 +23,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: authn-jwt
   namespace: flux-system
 spec:
@@ -39,40 +43,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: cert-manager
-  namespace: flux-system
-spec:
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: cert-manager
-  timeout: 5m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: external-secrets
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: cert-manager
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: external-secrets
-  timeout: 5m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: gateway-api
   namespace: flux-system
 spec:
@@ -89,43 +61,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: istio
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: spire
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: istio
-  timeout: 5m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: istio-ingress
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: istio
-    - name: spire
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: istio-ingress
-  timeout: 5m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: mcp-servers
   namespace: flux-system
 spec:
@@ -150,6 +87,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: rate-limit
   namespace: flux-system
 spec:
@@ -168,6 +107,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: routes
   namespace: flux-system
 spec:
@@ -192,45 +133,8 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: secret-store
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: external-secrets
-  healthCheckExprs:
-    - apiVersion: external-secrets.io/v1
-      current: status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')
-      failed: status.conditions.exists(c, c.type == 'Ready' && c.status == 'False')
-      kind: ClusterSecretStore
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: secret-store
-  timeout: 3m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: spire
-  namespace: flux-system
-spec:
-  interval: 10m
-  path: ./
-  prune: true
-  retryInterval: 1m
-  sourceRef:
-    kind: OCIRepository
-    name: spire
-  timeout: 5m
-  wait: true
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
+  labels:
+    app.kubernetes.io/part-of: gateway
   name: tool-rbac
   namespace: flux-system
 spec:
@@ -277,34 +181,6 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: cert-manager
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:b42f4e67aa5928365f5fb70da68f156417ed06fd8913b7abbf216af20fa41e62
-    tag: 62267329963d
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/cert-manager
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: external-secrets
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:4e20949f25b879a53ff66c13b9a92ef0c20366027dbedea6bbe07752ef069a46
-    tag: 62267329963d
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/external-secrets
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
   name: gateway-api
   namespace: flux-system
 spec:
@@ -315,34 +191,6 @@ spec:
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/gateway-api
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: istio
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:e09e1f224014b34d4ebbc23dd660d1e0477bf4972ea77349ee6c321a8ae734d9
-    tag: 9741ff2eb465
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/istio
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: istio-ingress
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:0c965bd8615694ed5b97365bf1130a50f804661402171d960a3064a6cf59c783
-    tag: 9741ff2eb465
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
@@ -385,34 +233,6 @@ spec:
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/routes
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: secret-store
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:363505758906192e49c3c40169535057cef28d968056041621858cea11d7ced1
-    tag: 62267329963d
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/secret-store
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: spire
-  namespace: flux-system
-spec:
-  interval: 5m
-  ref:
-    digest: sha256:ff7253863551c74dffaf0d8e284bb1659c9b3b34080c5d7fc39e2ff37b56b469
-    tag: 0a989a01d8f5
-  secretRef:
-    name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/spire
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository

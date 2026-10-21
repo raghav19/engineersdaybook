@@ -17,7 +17,7 @@ help:
       just platform/publish-artifacts      publish-artifact for each changed component: step Publish
                                            The three recipes pull and run tools/platform-pipeline/ (push it first: just tools/platform-pipeline/push, host)
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
-      just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the published tag and digest
+      just <component>/compose-stack       compose the stack of its group (sync/<cluster>/infra/<group>/stack.yaml): the published tag and digest
 
       just clusters/kind/up | down                 the kind cluster and the hand-over to Flux, asks for the Bitwarden access token (host)
       just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)

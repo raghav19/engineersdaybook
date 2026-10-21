@@ -1,0 +1,42 @@
+# The app-of-apps pattern, and how part 3 applies it with Flux
+
+Question: What is the app-of-apps pattern, does `code/mcp-sandbox/part-3-mcp-guardrails` apply it with Flux, and what does a group level give that the flat stack did not?
+
+Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomization` API page (fetched), both on 2026-10-21. Repo claims are tagged **[repo]** with file and line at `main` `5b5997c`. My own conclusions are tagged **[inference]**.
+
+## Verdict
+
+1. The pattern comes from Argo CD. One parent `Application` holds a folder of child `Application` objects. Applying the parent creates all children. The Argo CD docs call it "(Alternative)" and recommend `ApplicationSet` first. The docs also say only admins should have push access to the parent source, because a parent can create `Application` objects in any project. [docs: Argo CD]
+2. Flux has no `Application` kind. The same shape is a `Kustomization` that applies a folder of `Kustomization` objects. Each child has its own `prune`, `wait`, `timeout` and `dependsOn`. [inference]
+3. Before this change, part 3 had a root and 13 units and no app level. The `FluxInstance` is the installer and not a node of the tree. [repo: `clusters/kind/flux-instance.yaml`, `sync/local-kind/infra-stack.yaml`]
+4. After this change, the root applies three groups: `secrets` (3 units), `mesh` (3 units) and `gateway` (7 units). A group holds a chain of units that depend on each other, a CRD provider with the units that use it. The groups do not wait for each other. The units name what they need in their own `dependsOn`, also across the groups. The only edge between two groups is `mcp-servers` (in `gateway`) to `secret-store` (in `secrets`). A new group for the first real workload is one more entry in `apps.yaml`. [repo: `sync/local-kind/apps.yaml`]
+
+## What the Flux docs say about the parts that matter here
+
+- `dependsOn`: a `Kustomization` applies only after the `Kustomization` objects it names have the `Ready` condition. The same field orders the units, also across the two stacks. [docs: Flux]
+- `prune` and deletion: when a `Kustomization` is deleted, Flux removes the objects it applied. The default `deletionPolicy` is `MirrorPrune`: the objects are deleted when `prune` is `true`. The annotation `kustomize.toolkit.fluxcd.io/prune: disabled` on an object excludes it. [docs: Flux]
+
+## What a group level gives
+
+| Need | Before | After |
+|---|---|---|
+| Check health of a group | Per unit, 13 times | One `Ready` condition per group (`wait: true`) |
+| Order two groups | `dependsOn` on every unit | The unit `dependsOn` stay and also work across the groups. No group-level `dependsOn` (see Cost) |
+| Add a workload after the platform | A new unit in the one stack | A new group. Its units name what they need |
+| Different permissions per group | Not possible | `serviceAccountName` on a group. **Not done in this change.** |
+
+## Cost
+
+- Moving the 13 units from the root to the groups makes the root prune them. A deleted unit with `prune: true` can delete its workloads, so migrate by recreating the kind cluster, or protect the units first with the annotation above. [docs: Flux] [inference]
+- A `dependsOn` between two groups that share one `GitRepository` makes the dependent group wait until the other group has applied each new revision. A spike showed `revision is not up to date` and about 30 s for each retry. So the groups have no `dependsOn` on each other. [spike, 2026-10-21]
+- `stack-composer` writes one stack file per run. A `dependsOn` across the two stacks needs `--also <stack.yaml>`, otherwise the check fails or misses a waiter. [repo: `tools/stack-composer/stack_composer.py`]
+- Flux does not delete in `dependsOn` order, and the Flux docs describe `deletionPolicy` for one `Kustomization` only. Deleting a group with the default `MirrorPrune` would delete all its units at once. [inference] The groups set `deletionPolicy: Orphan`, so deleting a group leaves its units running. A unit that leaves its stack is still pruned. [docs: Flux]
+- Suspending a group does not suspend its units. A suspended `Kustomization` stops applying new revisions and stops drift correction for itself only. The unit `Kustomization` objects keep reconciling. To freeze a group, suspend each unit. [docs: Flux]
+- A group `timeout` must exceed the longest `dependsOn` chain that the group waits for, including a chain in another group. `gateway` waits for `secrets` (13 minutes) and then runs `mcp-servers`, `routes` and `authn-jwt` (23 minutes in total), so its timeout is 25 minutes. [repo: `sync/local-kind/apps.yaml`]
+- The folder of a component under `platform/` no longer decides its group. The label `app.kubernetes.io/part-of` on the `Kustomization` of its entry file does. [repo: `lib/workflow/common.just`]
+
+## Gaps
+
+- Four components have no `flux/stack.yaml` and are not delivered: `platform/ext-mcp`, `ext-mcp-checks`, `ext-mcp-isolation`, `mcp-mtls`. The owner of the repo marked them out of scope. [repo]
+- The orchestration diagram (`docs/diagrams/orchestration.drawio`) still shows 10 units and no group level. It needs a redraw in draw.io. [repo]
+- I did not run the change on a kind cluster. Only `kustomize build`, the object-parity check and four `stack-composer` cases ran.

@@ -32,8 +32,14 @@ cluster := env('CLUSTER', 'kind')
 # the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
 sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
 cluster_name := file_name(sync)
-# every component is in the one stack of the cluster
-stack := sync + '/infra-stack.yaml'
+# the group of this component: the label app.kubernetes.io/part-of on the Kustomization of its entry file (flux/stack.yaml). Empty for a folder that has none
+group := shell('f="$1/flux/stack.yaml"; [ -f "$f" ] && yq -N "$2" "$f" || true', justfile_directory(), 'select(.kind == "Kustomization") | .metadata.labels["app.kubernetes.io/part-of"]')
+# the stack of that group, in the sync folder of the cluster
+stack := sync + '/infra/' + group + '/stack.yaml'
+# the folder of the stacks of the cluster: stack-composer reads the stacks of the other groups to check dependsOn across the groups
+stacks := sync + '/infra'
+# the one stack that held every component before the groups: diff reads it as the baseline in the pull request that introduced the groups
+legacy_stack := sync + '/infra-stack.yaml'
 base := 'origin/main'
 
 # the tag of the artifact of this component: the commit that last changed its folder

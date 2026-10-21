@@ -2,7 +2,7 @@
 # help; the recipes are in package.just (package-artifact), diff.just (diff), publish.just (publish-artifact) and compose.just (compose-stack).
 #
 # The component is the folder the justfile sits in. Its name is the folder name, and the folder name is
-# also the OCIRepository / Kustomization name in sync/<full name>/infra-stack.yaml.
+# also the OCIRepository / Kustomization name in the stack of its group, sync/<full name>/infra/<group>/stack.yaml.
 #
 #   just package-artifact    the folder with the config values applied, rendered completely (charts included)
 #                            -> out/<name>/manifests.yaml, then checked against the Kubernetes, Flux and ecosystem schemas.
@@ -13,7 +13,7 @@
 #   just publish-artifact    package-artifact (which validates), then push out/<name>/manifests.yaml, tagged with the commit. The tag and digest go into out/manifest.yaml
 #   just compose-stack       stack-composer (tools/) composes the stack of this component: the published tag and digest (out/manifest.yaml) patch its
 #                            flux/stack.yaml, which patches the stack, or removes the pair when the flag is false. The stack is
-#                            sync/<full name>/infra-stack.yaml. Never edit it by hand.
+#                            sync/<full name>/infra/<group>/stack.yaml (the group is the label app.kubernetes.io/part-of of flux/stack.yaml). Never edit it by hand.
 #
 # out/<name>/ holds everything of one component. Only manifests.yaml is published:
 #
