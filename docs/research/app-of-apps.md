@@ -20,7 +20,7 @@ Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomi
 
 | Need | Before | After |
 |---|---|---|
-| Suspend, or check health of, a group | Per unit, 13 times | `flux suspend ks policies`; one `Ready` condition per app |
+| Check health of a group | Per unit, 13 times | One `Ready` condition per app (`wait: true`) |
 | Order two groups | `dependsOn` on every unit | `dependsOn: addons` on the `policies` app (the unit `dependsOn` stay) |
 | Add a workload after the platform | A new unit in the one stack | A new app that waits for `addons` and `policies` |
 | Different permissions per group | Not possible | `serviceAccountName` on an app. **Not done in this change.** |
@@ -29,6 +29,7 @@ Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomi
 
 - Moving the 13 units from the root to the apps makes the root prune them. A deleted unit with `prune: true` can delete its workloads, so migrate by recreating the kind cluster, or protect the units first with the annotation above. [docs: Flux] [inference]
 - `stack-composer` writes one stack file per run. A `dependsOn` across the two stacks needs `--also <stack.yaml>`, otherwise the check fails or misses a waiter. [repo: `tools/stack-composer/stack_composer.py`]
+- Suspending an app does not suspend its units. A suspended `Kustomization` stops applying new revisions and stops drift correction for itself only. The unit `Kustomization` objects keep reconciling. To freeze a group, suspend each unit. [docs: Flux]
 - An app `timeout` must exceed the longest `dependsOn` chain of its units. `addons` has a 20-minute chain (cert-manager, external-secrets, secret-store, mcp-servers, routes), so its timeout is 25 minutes. [repo: `sync/local-kind/apps.yaml`]
 
 ## Gaps
