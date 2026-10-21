@@ -1,10 +1,13 @@
 # Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
-# One job for each component that Flux delivers (`just components`: the folders with a flux/stack.yaml). A job runs the recipes of its component:
-# hydrate (render with flate and validate: package-artifact), diff (compare with the artifact that origin/main pins: diff),
-# publish (push the artifact, only when there is a diff: publish-artifact). The last job posts ONE comment for the commit: the output of
+# One job with three key steps. Each step runs one recipe of code/mcp-sandbox/part-3-mcp-guardrails/platform/justfile. The recipe pulls and runs
+# platform-pipeline (tools/platform-pipeline/, pulled from the registry by commit tag), which goes over all components that Flux delivers (the folders of platform/ with a flux/stack.yaml),
+# one after the other. You can run the same recipes on your machine.
+# Build (`just platform/package-artifacts`: `just <component>/package-artifact`: render with flate and validate), Diff (`just platform/diff-artifacts`:
+# `just <component>/diff`: compare with the artifact that origin/main pins) and Publish (`just platform/publish-artifacts`:
+# `just <component>/publish-artifact`: push the artifact, only for a component with a diff).
+# A failed component does not stop the others, and the step fails at the end. The last step posts ONE comment for the commit: the output of
 # `just <component>/diff`, unchanged, in one block for each changed component. A diff over 60,000 characters does not fit in a comment: the comment
-# then holds a note and the link to the run, where each job summary has its full diff. The text of the comment is in .github/templates/manifest-diff-*.md.j2
-# (Jinja). .github/scripts/render.py fills a template with the values of its command line. uv runs it and installs the packages from the lock file next to it.
+# then holds a note and the link to the run, where the job summary has the full diff. The text of the comment is in the script platform_pipeline.py.
 name: manifest-diff
 
 on:
@@ -18,147 +21,66 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write # the comments
+  pull-requests: write # the comment
 
-# the paths, the limit and the run link that the jobs share
+# the paths, the limit and the run link that the steps share
 env:
-  SCRIPT: ${{ github.workspace }}/.github/scripts/render.py
-  TEMPLATES: ${{ github.workspace }}/.github/templates
-  DIFF_FILE: ${{ github.workspace }}/out/manifest-diff/diff.txt
-  COLLECTED_DIR: ${{ github.workspace }}/out/manifest-diff/collected
-  REPORT_FILE: ${{ github.workspace }}/out/manifest-diff/report.md
+  REPORT_FILE: ${{ github.workspace }}/code/mcp-sandbox/part-3-mcp-guardrails/out/manifest-diff/report.md
   LIMIT: "60000"
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
-  components:
+  manifest-diff:
     # a pull request from a fork has a read-only token: it cannot push
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    defaults:
-      run:
-        working-directory: code/mcp-sandbox/part-3-mcp-guardrails
-    outputs:
-      list: ${{ steps.list.outputs.list }}
-    steps:
-      # v7.0.1
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-      # v5.2.1. The versions are in the root mise.toml
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
-        with:
-          install_args: just jq
-
-      - id: list
-        run: echo "list=$(just components)" >> "$GITHUB_OUTPUT"
-
-  manifest-diff:
-    needs: components
-    name: ${{ matrix.component }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        component: ${{ fromJSON(needs.components.outputs.list) }}
+    # the components run one after the other. TODO: set this from the run time of the spike
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: code/mcp-sandbox/part-3-mcp-guardrails
     env:
-      COMPONENT: ${{ matrix.component }}
       # the owner of the packages. The token (GHCR_PUSH_TOKEN) comes from Bitwarden, see the step below: the packages are not open to the GITHUB_TOKEN of this repository
       GHCR_USER: raghav19
     steps:
       # v7.0.1. fetch-depth 0: the diff recipe reads the stack at origin/main
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: "Set up: checkout"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
       # v5.2.1. Only the tools that the recipes run
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
+      - name: "Set up: tools"
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
         with:
           install_args: just yq jq flux2 github:home-operations/flate github:fluxcd/flux-schema uv
 
       # The only secret in GitHub is the access token of the Bitwarden machine account (BWS_ACCESS_TOKEN). The ghcr.io token is a secret of its project
       # (the id is not secret). The action sets GHCR_PUSH_TOKEN for the next steps and masks it. Bitwarden cloud, US region
-      - name: Read the ghcr.io token from Bitwarden
+      - name: "Set up: read the ghcr.io token from Bitwarden"
         uses: bitwarden/sm-action@1238aae8fc64b212641190a9227c8a734ab1a793 # v3.0.1
         with:
           access_token: ${{ secrets.BWS_ACCESS_TOKEN }}
           secrets: |
             a50e4877-62c5-40a6-87bd-b4e700949eba > GHCR_PUSH_TOKEN
 
-      - name: Hydrate (render and validate)
-        run: just "$COMPONENT/package-artifact"
+      - name: Build
+        run: just platform/package-artifacts
 
-      # diff compares with the artifact that origin/main pins, so it does not depend on the push
+      # diff compares with the artifact that origin/main pins, so it does not depend on the push. It writes the job summary, and the comment text
+      # when a component changed
       - name: Diff
-        id: diff
-        run: |
-          mkdir -p "$(dirname "$DIFF_FILE")"
-          just "$COMPONENT/diff" > "$DIFF_FILE"
-          if grep -q '^@@' "$DIFF_FILE"; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            uv run --locked --script "$SCRIPT" \
-              "$TEMPLATES/manifest-diff-section.md.j2" \
-              --var name="$COMPONENT" \
-              --file diff="$DIFF_FILE" \
-              --out "$COLLECTED_DIR/${COMPONENT//\//-}.md"
-            cat "$COLLECTED_DIR/${COMPONENT//\//-}.md" >> "$GITHUB_STEP_SUMMARY"
-          fi
+        if: ${{ !cancelled() }}
+        run: just platform/diff-artifacts --sha7 "${HEAD_SHA::7}" --run-url "$RUN_URL" --limit "$LIMIT"
 
-      - name: Publish (push the artifact)
-        if: ${{ steps.diff.outputs.changed == 'true' }}
-        run: just "$COMPONENT/publish-artifact"
+      # No changed component means nothing to push
+      - name: Publish
+        run: just platform/publish-artifacts
 
-      # v7.0.2. The comment job reads this
-      - name: Upload the diff block for the comment job
-        if: ${{ steps.diff.outputs.changed == 'true' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          name: diff-${{ strategy.job-index }}
-          path: ${{ env.COLLECTED_DIR }}
-          retention-days: 7
-
-  comment:
-    needs: manifest-diff
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-    steps:
-      # v7.0.1. The script and the templates
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-      # v5.2.1. uv runs the script. The version is in the root mise.toml
-      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde
-        with:
-          install_args: uv
-
-      # v8.0.2. No changed component means no artifact
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
-        with:
-          pattern: diff-*
-          merge-multiple: true
-          path: ${{ env.COLLECTED_DIR }}
-
-      # No changed component means no file here, and no comment
-      - name: Build the comment
-        if: ${{ hashFiles(format('{0}/*.md', env.COLLECTED_DIR)) != '' }}
-        run: |
-          uv run --locked --script "$SCRIPT" \
-            "$TEMPLATES/manifest-diff-comment.md.j2" \
-            --var sha7="${HEAD_SHA::7}" \
-            --var limit="$LIMIT" \
-            --var run_url="$RUN_URL" \
-            --glob sections="$COLLECTED_DIR/*.md" \
-            --out "$REPORT_FILE"
-
-      # v3.12.0. One comment for each commit: a new push adds a comment, so the diffs of the earlier commits stay
-      - name: Comment the diff
-        if: ${{ hashFiles(format('{0}/*.md', env.COLLECTED_DIR)) != '' }}
+      # v3.12.0. One comment for each commit: a new push adds a comment, so the diffs of the earlier commits stay. No changed component means no comment text
+      - name: "Report: comment the diff"
+        if: ${{ !cancelled() && hashFiles(env.REPORT_FILE) != '' }}
         uses: mshick/add-pr-comment@ec328af66588ab8f77cdeb2c264f14aba45bbf59
         with:
           message-id: manifest-diff-${{ github.event.pull_request.head.sha }}

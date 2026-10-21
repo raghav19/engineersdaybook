@@ -5,7 +5,7 @@
 # function. It defaults to the folder that the justfile sits in.
 #
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
-# <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: tools/pyproject.toml, locked in uv.lock.
+# <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: pyproject.toml of the function, locked in its uv.lock.
 #
 #   just build [tool]  ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
 #                      PyInstaller keeps a cache in out/tools/<name>/work-<key>: a second build with the same inputs takes under a second.
@@ -33,7 +33,7 @@ creds := ghcr_user + ':' + ghcr_push_token
 #                 binary, or mixes the old and the new. So the work folder is named by a key of the Python release, the flags, uv.lock and pyproject.toml.
 #                 A change of one of them gives a new folder and a clean build. The same inputs give the same folder and a cached build.
 #
-# reads:  the script of the function, tools/pyproject.toml and uv.lock
+# reads:  the script of the function, and its pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python
 # a build function: validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
@@ -43,11 +43,11 @@ build tool=name:
     export PYTHONHASHSEED=1
     cd {{ root }}/tools/{{ tool }}
     script={{ replace(tool, '-', '_') }}.py
-    key=$(cat <(printf '%s %s' "{{ python }}" "{{ flags }}") ../uv.lock ../pyproject.toml | sha256sum | cut -c1-10)
+    key=$(cat <(printf '%s %s' "{{ python }}" "{{ flags }}") uv.lock pyproject.toml | sha256sum | cut -c1-10)
     work={{ tools }}/{{ tool }}/work-$key
     mkdir -p {{ tools }}/{{ tool }}
     find {{ tools }}/{{ tool }} -maxdepth 1 -name 'work*' ! -path "$work" -exec rm -rf {} +
-    uv=(uv run --quiet --locked --python {{ python }} --project {{ root }}/tools --group build)
+    uv=(uv run --quiet --locked --python {{ python }} --project "$PWD" --group build)
     "${uv[@]}" ruff check --quiet "$script"
     "${uv[@]}" ruff format --check --quiet "$script"
     "${uv[@]}" pyinstaller {{ flags }} \
