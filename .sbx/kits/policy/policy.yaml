@@ -65,6 +65,7 @@ capabilities:
           # Other
           - crl.microsoft.com
           - www.githubstatus.com
+          - github.githubassets.com
           - localhost:6444
           # SPIRE server of the kind cluster (host 127.0.0.1:18081)
           - localhost:18081
