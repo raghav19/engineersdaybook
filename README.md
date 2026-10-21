@@ -13,6 +13,12 @@ This repo holds my engineering projects and write-ups. Each project is independe
 | [mcp-sandbox, part 3](code/mcp-sandbox/part-3-mcp-guardrails/README.md) | Puts one gateway in front of three MCP servers. It checks identity, arguments and results against the OWASP MCP Top 10. |
 | [rootless-docker](code/rootless-docker/README.md) | Moves the Docker daemon to a non-root user. Three container-escape CVEs show where this blocks the escape. |
 
+## GitOps
+
+| Project | What it achieves |
+|---|---|
+| [rendered manifest pattern](code/mcp-sandbox/part-3-mcp-guardrails/docs/rendered-manifest-pattern.md) | Renders the manifests of part 3 in CI. A pull request shows the rendered diff. Flux applies plain YAML from an OCI artifact. |
+
 ## Local infra and config
 
 | Project | What it achieves |
