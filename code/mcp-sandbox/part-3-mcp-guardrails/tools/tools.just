@@ -22,7 +22,10 @@ import '../lib/workflow/common.just'
 # the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary
 python := '3.13.15'
 # PyInstaller flags; another set is another binary. No --clean: the cache of PyInstaller makes a second build fast, and the binary is the same without it
-flags := '--onefile --noconfirm --log-level WARN'
+# --strip           remove the symbol table of libpython and of the compiled modules: nothing reads it at runtime (about 3 MiB less)
+# --exclude-module  typer depends on rich, and rich on pygments and markdown_it, but no function uses them: each sets rich_markup_mode=None and
+#                   pretty_exceptions_enable=False, so typer never imports rich (about 3 MiB less). A function that turns rich on fails at runtime
+flags := '--onefile --noconfirm --log-level WARN --strip --exclude-module rich --exclude-module pygments --exclude-module markdown_it'
 source := 'https://github.com/raghav19/engineersdaybook'
 creds := ghcr_user + ':' + ghcr_push_token
 

@@ -71,7 +71,8 @@ DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 # One document of a YAML file, as yaml.safe_load returns it.
 Doc = dict[str, Any]
 
-app = typer.Typer(add_completion=False)
+# No rich: plain help and plain tracebacks, so typer never imports rich and the build leaves it out (--exclude-module in tools.just)
+app = typer.Typer(add_completion=False, rich_markup_mode=None, pretty_exceptions_enable=False)
 
 
 def step(name: str, files: dict[str, str]) -> str:

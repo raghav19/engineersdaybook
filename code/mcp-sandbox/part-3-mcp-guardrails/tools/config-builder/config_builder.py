@@ -25,7 +25,8 @@ from pathlib import Path
 import typer
 import yaml
 
-app = typer.Typer(add_completion=False)
+# No rich: plain help and plain tracebacks, so typer never imports rich and the build leaves it out (--exclude-module in tools.just)
+app = typer.Typer(add_completion=False, rich_markup_mode=None, pretty_exceptions_enable=False)
 
 
 def placement_folders(config_dir: Path, placement: str) -> list[Path]:

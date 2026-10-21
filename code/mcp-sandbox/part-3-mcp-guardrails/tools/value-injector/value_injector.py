@@ -32,7 +32,8 @@ Doc = dict[str, Any]
 # setters.yaml: value name -> the fields it goes to, each {object: <Kind>/<name>, path: <dotted path>}
 Setters = dict[str, list[dict[str, str]]]
 
-app = typer.Typer(add_completion=False)
+# No rich: plain help and plain tracebacks, so typer never imports rich and the build leaves it out (--exclude-module in tools.just)
+app = typer.Typer(add_completion=False, rich_markup_mode=None, pretty_exceptions_enable=False)
 
 
 def parse_path(path: str) -> list[str | int]:
