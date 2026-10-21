@@ -9,11 +9,11 @@ Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomi
 1. The pattern comes from Argo CD. One parent `Application` holds a folder of child `Application` objects. Applying the parent creates all children. The Argo CD docs call it "(Alternative)" and recommend `ApplicationSet` first. The docs also say only admins should have push access to the parent source, because a parent can create `Application` objects in any project. [docs: Argo CD]
 2. Flux has no `Application` kind. The same shape is a `Kustomization` that applies a folder of `Kustomization` objects. Each child has its own `prune`, `wait`, `timeout` and `dependsOn`. [inference]
 3. Before this change, part 3 had a root and 13 units and no app level. The `FluxInstance` is the installer and not a node of the tree. [repo: `clusters/kind/flux-instance.yaml`, `sync/local-kind/infra-stack.yaml`]
-4. After this change, the root applies two apps, `addons` (10 units) and `policies` (3 units). `policies` waits for `addons`. A third app, the first real workload, is one more entry in `apps.yaml`. [repo: `sync/local-kind/apps.yaml`]
+4. After this change, the root applies two apps, `addons` (10 units) and `policies` (3 units). The apps do not wait for each other. The units name what they need in their own `dependsOn`, also across the two apps. A third app, the first real workload, is one more entry in `apps.yaml`. [repo: `sync/local-kind/apps.yaml`]
 
 ## What the Flux docs say about the parts that matter here
 
-- `dependsOn`: a `Kustomization` applies only after the `Kustomization` objects it names have the `Ready` condition. This is how `policies` waits for `addons`, and the same field orders the units. [docs: Flux]
+- `dependsOn`: a `Kustomization` applies only after the `Kustomization` objects it names have the `Ready` condition. The same field orders the units, also across the two stacks. [docs: Flux]
 - `prune` and deletion: when a `Kustomization` is deleted, Flux removes the objects it applied. The default `deletionPolicy` is `MirrorPrune`: the objects are deleted when `prune` is `true`. The annotation `kustomize.toolkit.fluxcd.io/prune: disabled` on an object excludes it. [docs: Flux]
 
 ## What an app level gives
@@ -21,13 +21,14 @@ Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomi
 | Need | Before | After |
 |---|---|---|
 | Check health of a group | Per unit, 13 times | One `Ready` condition per app (`wait: true`) |
-| Order two groups | `dependsOn` on every unit | `dependsOn: addons` on the `policies` app (the unit `dependsOn` stay) |
-| Add a workload after the platform | A new unit in the one stack | A new app that waits for `addons` and `policies` |
+| Order two groups | `dependsOn` on every unit | The unit `dependsOn` stay and also work across the apps. No app-level `dependsOn` (see Cost) |
+| Add a workload after the platform | A new unit in the one stack | A new app. Its units name what they need |
 | Different permissions per group | Not possible | `serviceAccountName` on an app. **Not done in this change.** |
 
 ## Cost
 
 - Moving the 13 units from the root to the apps makes the root prune them. A deleted unit with `prune: true` can delete its workloads, so migrate by recreating the kind cluster, or protect the units first with the annotation above. [docs: Flux] [inference]
+- A `dependsOn` between two apps that share one `GitRepository` makes the dependent app wait until the other app has applied each new revision. A spike showed `revision is not up to date` and about 30 s for each retry. So the apps have no `dependsOn` on each other. [spike, 2026-10-21]
 - `stack-composer` writes one stack file per run. A `dependsOn` across the two stacks needs `--also <stack.yaml>`, otherwise the check fails or misses a waiter. [repo: `tools/stack-composer/stack_composer.py`]
 - Flux does not delete in `dependsOn` order, and the Flux docs describe `deletionPolicy` for one `Kustomization` only. Deleting an app with the default `MirrorPrune` would delete all its units at once. [inference] The apps set `deletionPolicy: Orphan`, so deleting an app leaves its units running. A unit that leaves its stack is still pruned. [docs: Flux]
 - Suspending an app does not suspend its units. A suspended `Kustomization` stops applying new revisions and stops drift correction for itself only. The unit `Kustomization` objects keep reconciling. To freeze a group, suspend each unit. [docs: Flux]

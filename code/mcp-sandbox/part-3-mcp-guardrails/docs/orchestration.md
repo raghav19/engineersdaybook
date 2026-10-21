@@ -31,7 +31,7 @@ Flux itself is not in the sync folder:
 ```text
 sync/local-kind/                   what Flux reconciles
 ├── kustomization.yaml
-├── apps.yaml                      the apps: addons, policies (dependsOn addons)
+├── apps.yaml                      the apps: addons, policies
 └── infra/
     ├── addons/stack.yaml          10 units
     └── policies/stack.yaml        3 units
@@ -41,8 +41,8 @@ clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 - A merge cannot remove the `FluxInstance`. Deleting it uninstalls Flux. The workloads stay.
 - The `FluxInstance` has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`. A sync that once held it cannot prune it.
 - A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/kind/up` on the host.
-- The cluster has two apps. `addons` holds 10 units and `policies` holds 3. `policies` waits for `addons`. Each unit waits for the units it needs.
-- A component in `platform/policies/` is in `policies`. Every other component is in `addons`. The first real workload becomes a third app: add it to `apps.yaml` with `dependsOn` on `addons` and `policies`, and add a folder next to `infra/`.
+- The cluster has two apps. `addons` holds 10 units and `policies` holds 3. The apps do not wait for each other. A unit names what it needs in its own `dependsOn`, also across the two apps: `authn-jwt` in `policies` waits for `routes` in `addons`.
+- A component in `platform/policies/` is in `policies`. Every other component is in `addons`. The first real workload becomes a third app: add it to `apps.yaml` and add a folder next to `infra/`. Its units name what they need in their own `dependsOn`.
 - The apps have `deletionPolicy: Orphan`. Removing an app from `apps.yaml` leaves its units running. Flux does not delete in `dependsOn` order, so a delete of an app would remove all its units at once. To remove an app, disable its units first, the ones nothing waits for first (`compose-stack` refuses the others), then remove the app.
 - Another cluster has its own `sync/<name>/` folder and its own `flux-instance.yaml`. Run the recipes with `CLUSTER=<name>`.
 

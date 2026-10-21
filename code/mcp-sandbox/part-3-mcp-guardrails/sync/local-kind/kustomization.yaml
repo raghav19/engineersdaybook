@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # What Flux reads from Git for the cluster `local-kind` (sync/<full name>/, named in clusters/kind/cluster.yaml).:
-#   apps.yaml    the apps: addons and policies. Each app is a `Kustomization` that applies the stack of its folder and waits (dependsOn) for the apps it needs.
+#   apps.yaml    the apps: addons and policies. Each app is a `Kustomization` that applies the stack of its folder.
 #   infra/<app>/ the stack of the app: the units of its components (infra/addons/stack.yaml, infra/policies/stack.yaml). This build does not enter these folders.
 # Flux itself (the FluxInstance, clusters/kind/flux-instance.yaml) is not here on purpose: this folder cannot remove it.
 resources:

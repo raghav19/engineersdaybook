@@ -1,6 +1,8 @@
 # The apps of the cluster: each one is a group of units. An app applies the stack file in its folder (infra/<app>/stack.yaml).
 # The source is the GitRepository that the FluxInstance creates. The path is relative to the root of the Git repository.
-# A later app (the first real workload) is a third entry here, with dependsOn on addons and policies, and a folder next to infra/.
+# A later app (the first real workload) is a third entry here and a folder next to infra/.
+# No app has dependsOn on another app. The units name what they need in their own dependsOn (authn-jwt waits for routes). Apps share one GitRepository, and a
+# dependsOn between them makes the dependent app wait for the other app to apply every new revision, about 30s for each retry.
 # deletionPolicy Orphan: deleting an app (removing its entry here) leaves its units running. Flux does not delete in dependsOn order, so a delete of an app
 # would delete all its units at once. A unit that leaves its stack is still pruned: that deletes the unit and its workloads, as before.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -32,5 +34,3 @@ spec:
   wait: true
   path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/policies
   sourceRef: {kind: GitRepository, name: flux-system}
-  dependsOn:
-    - name: addons # the policies attach to the Gateway and the Backend of routes and mcp-servers
