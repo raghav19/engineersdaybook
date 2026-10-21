@@ -43,6 +43,7 @@ clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 - A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/kind/up` on the host.
 - The cluster has two apps. `addons` holds 10 units and `policies` holds 3. `policies` waits for `addons`. Each unit waits for the units it needs.
 - A component in `platform/policies/` is in `policies`. Every other component is in `addons`. The first real workload becomes a third app: add it to `apps.yaml` with `dependsOn` on `addons` and `policies`, and add a folder next to `infra/`.
+- The apps have `deletionPolicy: Orphan`. Removing an app from `apps.yaml` leaves its units running. Flux does not delete in `dependsOn` order, so a delete of an app would remove all its units at once. To remove an app, disable its units first, the ones nothing waits for first (`compose-stack` refuses the others), then remove the app.
 - Another cluster has its own `sync/<name>/` folder and its own `flux-instance.yaml`. Run the recipes with `CLUSTER=<name>`.
 
 ## 3. Flow A: bring-up

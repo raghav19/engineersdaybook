@@ -29,6 +29,7 @@ Source: the Argo CD "Cluster Bootstrapping" page (fetched) and the Flux `Kustomi
 
 - Moving the 13 units from the root to the apps makes the root prune them. A deleted unit with `prune: true` can delete its workloads, so migrate by recreating the kind cluster, or protect the units first with the annotation above. [docs: Flux] [inference]
 - `stack-composer` writes one stack file per run. A `dependsOn` across the two stacks needs `--also <stack.yaml>`, otherwise the check fails or misses a waiter. [repo: `tools/stack-composer/stack_composer.py`]
+- Flux does not delete in `dependsOn` order, and the Flux docs describe `deletionPolicy` for one `Kustomization` only. Deleting an app with the default `MirrorPrune` would delete all its units at once. [inference] The apps set `deletionPolicy: Orphan`, so deleting an app leaves its units running. A unit that leaves its stack is still pruned. [docs: Flux]
 - Suspending an app does not suspend its units. A suspended `Kustomization` stops applying new revisions and stops drift correction for itself only. The unit `Kustomization` objects keep reconciling. To freeze a group, suspend each unit. [docs: Flux]
 - An app `timeout` must exceed the longest `dependsOn` chain of its units. `addons` has a 20-minute chain (cert-manager, external-secrets, secret-store, mcp-servers, routes), so its timeout is 25 minutes. [repo: `sync/local-kind/apps.yaml`]
 
