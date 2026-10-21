@@ -41,7 +41,7 @@ ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
 uv = "0.13"
-"pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox" }  # Claude Code token proxy; the sandbox extra has no torch. docs/research/headroom.md
+"pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox", install_env = { UV_PYTHON = "3.13" } }  # Claude Code token proxy; the sandbox extra has no torch. docs/research/headroom.md. install_env: the build image has no Python, so uv fetches the newest (3.15), and onnxruntime has no cp315 wheel
 "github:spiffe/spire" = { version = "1.15.3", asset_pattern = "spire-{{ version }}-linux-amd64-musl.tar.gz", filter_bins = "spire-agent" }  # SPIRE agent for the VM node identity, same version as the SPIRE server
 
 # dev-tools.dockerfile runs this with the tools in place. COMPLETIONS_DIR comes from [env]: the build sets it, and run by hand in the VM it
