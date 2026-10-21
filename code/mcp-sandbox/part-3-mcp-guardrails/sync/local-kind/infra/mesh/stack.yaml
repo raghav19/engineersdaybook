@@ -3,95 +3,100 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: authn-jwt
+  labels:
+    app.kubernetes.io/part-of: mesh
+  name: istio
   namespace: flux-system
 spec:
   dependsOn:
-    - name: routes
+    - name: spire
   interval: 10m
   path: ./
   prune: true
   retryInterval: 1m
   sourceRef:
     kind: OCIRepository
-    name: authn-jwt
-  timeout: 3m
+    name: istio
+  timeout: 5m
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: rate-limit
+  labels:
+    app.kubernetes.io/part-of: mesh
+  name: istio-ingress
   namespace: flux-system
 spec:
   dependsOn:
-    - name: routes
+    - name: istio
+    - name: spire
   interval: 10m
   path: ./
   prune: true
   retryInterval: 1m
   sourceRef:
     kind: OCIRepository
-    name: rate-limit
-  timeout: 3m
+    name: istio-ingress
+  timeout: 5m
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: tool-rbac
+  labels:
+    app.kubernetes.io/part-of: mesh
+  name: spire
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: mcp-servers
   interval: 10m
   path: ./
   prune: true
   retryInterval: 1m
   sourceRef:
     kind: OCIRepository
-    name: tool-rbac
-  timeout: 3m
+    name: spire
+  timeout: 5m
   wait: true
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: authn-jwt
+  name: istio
   namespace: flux-system
 spec:
   interval: 5m
   ref:
-    digest: sha256:ba14505784bd668da71abeb848cb43ac1fb801cbc269db803ea5a2f2395755e2
+    digest: sha256:e09e1f224014b34d4ebbc23dd660d1e0477bf4972ea77349ee6c321a8ae734d9
     tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/authn-jwt
+  url: oci://ghcr.io/raghav19/mcp-guardrails/istio
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: rate-limit
+  name: istio-ingress
   namespace: flux-system
 spec:
   interval: 5m
   ref:
-    digest: sha256:e24174797cf2dbf586ab52e628fd39d0f58193105c54b62ae52eaa2e5cbcec46
+    digest: sha256:0c965bd8615694ed5b97365bf1130a50f804661402171d960a3064a6cf59c783
     tag: 9741ff2eb465
   secretRef:
     name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/rate-limit
+  url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
-  name: tool-rbac
+  name: spire
   namespace: flux-system
 spec:
   interval: 5m
   ref:
-    digest: sha256:209d99ebc4fd5991c03aa2e68c6a3803cb647c660b39338f106e5f01edb8959a
-    tag: 803f75629f73
+    digest: sha256:ff7253863551c74dffaf0d8e284bb1659c9b3b34080c5d7fc39e2ff37b56b469
+    tag: 0a989a01d8f5
   secretRef:
     name: ghcr-pull
-  url: oci://ghcr.io/raghav19/mcp-guardrails/tool-rbac
+  url: oci://ghcr.io/raghav19/mcp-guardrails/spire

@@ -16,6 +16,8 @@ kind: Kustomization
 metadata:
   name: external-secrets
   namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: secrets # the group of the stack: sync/<cluster>/infra/secrets/stack.yaml
 spec:
   interval: 10m
   retryInterval: 1m # the Certificate and its Issuer need the webhook of cert-manager: the retry settles a first apply that it rejects

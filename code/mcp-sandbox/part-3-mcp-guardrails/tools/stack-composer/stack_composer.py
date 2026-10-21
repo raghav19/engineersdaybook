@@ -4,8 +4,8 @@ usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] [--also <
 
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
-        <stack.yaml>   the stack of the app of the component (sync/<name>/infra/<app>/stack.yaml) that Flux reads: it holds the pins
-        --also         the stack of another app of the cluster. Read only: its Kustomizations count in the dependsOn check. Repeat it for each stack.
+        <stack.yaml>   the stack of the group of the component (sync/<name>/infra/<group>/stack.yaml) that Flux reads: it holds the pins
+        --also         the stack of another group of the cluster. Read only: its Kustomizations count in the dependsOn check. Repeat it for each stack.
         --manifest     out/manifest.yaml: what `publish-artifact` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
                        component: no new pin. Ignored when the flag is false.
         --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
@@ -139,7 +139,7 @@ def main(
     ] = None,
     cluster: Annotated[str | None, typer.Option(help="the name of the cluster in manifest.yaml")] = None,
     also: Annotated[
-        list[Path] | None, typer.Option(help="the stack of another app of the cluster: read only, for the dependsOn check")
+        list[Path] | None, typer.Option(help="the stack of another group of the cluster: read only, for the dependsOn check")
     ] = None,
 ) -> None:
     """Compose the stack of one component."""

@@ -16,6 +16,8 @@ kind: Kustomization
 metadata:
   name: secret-store
   namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: secrets # the group of the stack: sync/<cluster>/infra/secrets/stack.yaml
 spec:
   interval: 10m
   retryInterval: 1m # the webhook of ESO can reject the store of the first apply: the retry settles it

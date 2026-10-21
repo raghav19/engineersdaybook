@@ -37,7 +37,7 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 | `cert-manager` | Issues the certificate of `bitwarden-sdk-server`. | `cert-manager` |
 | Secret `github-upstream` | Holds the GitHub credential. ESO writes it from Bitwarden (`ExternalSecret` in `mcp-servers`). | `agentgateway-system` |
 
-The pins of the OCI artifacts are in `sync/local-kind/infra/addons/stack.yaml` and `sync/local-kind/infra/policies/stack.yaml`. How Flux syncs them, and in which order, is in [orchestration](orchestration.md).
+The pins of the OCI artifacts are in `sync/local-kind/infra/<group>/stack.yaml` (`secrets`, `mesh` and `gateway`). How Flux syncs them, and in which order, is in [orchestration](orchestration.md).
 
 The four flows follow this diagram from left to right.
 A is the login (GitHub, Dex). B is the identity (SPIRE). C is the connection (ingress, gateway, ext-mcp). D is the call (policies, egress, upstream).
