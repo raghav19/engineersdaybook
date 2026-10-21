@@ -7,7 +7,7 @@
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: pyproject.toml of the function, locked in its uv.lock.
 #
-#   just build [tool]  ruff check and format check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
+#   just build [tool]  ruff check, format check and ty check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
 #                      PyInstaller keeps a cache in out/tools/<name>/work-<key>: a second build with the same inputs takes under a second.
 #   just push [tool]   build, push once, then record its tag and digest in out/manifest.yaml (under `tools:`).
 #                      A binary that the manifest already records is not pushed again.
@@ -36,7 +36,7 @@ creds := ghcr_user + ':' + ghcr_push_token
 # reads:  the script of the function, and its pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python
-# a build function: validate the script with ruff, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
+# a build function: validate the script with ruff and ty, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
 [script('bash')]
 build tool=name:
     set -euo pipefail
@@ -50,6 +50,7 @@ build tool=name:
     uv=(uv run --quiet --locked --python {{ python }} --project "$PWD" --group build)
     "${uv[@]}" ruff check --quiet "$script"
     "${uv[@]}" ruff format --check --quiet "$script"
+    "${uv[@]}" ty check --quiet "$script"
     "${uv[@]}" pyinstaller {{ flags }} \
       --name {{ tool }} \
       --distpath {{ tools }}/{{ tool }} \

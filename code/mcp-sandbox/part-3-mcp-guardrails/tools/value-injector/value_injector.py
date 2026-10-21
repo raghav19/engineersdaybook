@@ -20,49 +20,68 @@ Rules   - a value in the config overrides the field
 import re
 import shutil
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
+import typer
 import yaml
 
+# One document of a YAML file, as yaml.safe_load returns it.
+Doc = dict[str, Any]
+# setters.yaml: value name -> the fields it goes to, each {object: <Kind>/<name>, path: <dotted path>}
+Setters = dict[str, list[dict[str, str]]]
 
-def parse_path(path):
+app = typer.Typer(add_completion=False)
+
+
+def parse_path(path: str) -> list[str | int]:
     """spec.listeners.0.port -> ['spec', 'listeners', 0, 'port']   (a number is a list position, \\. is a dot inside a key)"""
     parts = [p.replace("\\.", ".") for p in re.split(r"(?<!\\)\.", path)]
     return [int(p) if p.isdigit() else p for p in parts]
 
 
-def set_at_path(doc, path, value):
+def set_at_path(doc: Doc, path: str, value: object) -> None:
     """Write value at a dotted path of a document, creating the missing levels."""
     *parents, last = parse_path(path)
+    node: Any = doc
     for key in parents:
-        doc = doc[key] if isinstance(key, int) else doc.setdefault(key, {})
-    doc[last] = value
+        node = node[key] if isinstance(key, int) else node.setdefault(key, {})
+    node[last] = value
 
 
-def has_path(doc, path):
+def has_path(doc: Doc, path: str) -> bool:
     """Return True when the document already holds a value at the dotted path (that value is the default)."""
+    node: Any = doc
     for key in parse_path(path):
         try:
-            doc = doc[key]
+            node = node[key]
         except (KeyError, IndexError, TypeError):
             return False
     return True
 
 
-def matches_target(doc, target):
+def matches_target(doc: Doc, target: dict[str, str]) -> bool:
     """Return True when a setter target names this document: its kind, and its name unless the target gives none."""
     kind, _, obj = target["object"].partition("/")
     return doc.get("kind") == kind and (not obj or doc.get("metadata", {}).get("name") == obj)
 
 
-def iter_setters(setters):
+def iter_setters(setters: Setters) -> Iterator[tuple[str, dict[str, str]]]:
     """Yield every (value name, target field) of setters.yaml, in file order."""
     for name, targets in setters.items():
         for target in targets:
             yield name, target
 
 
-def apply_setter(doc, name, target, values, applied, written):
+def apply_setter(
+    doc: Doc,
+    name: str,
+    target: dict[str, str],
+    values: dict[str, object],
+    applied: set[tuple[str, str]],
+    written: dict[tuple[str, str], str],
+) -> None:
     """Set one value into one field of one document, or keep the default the manifest holds there."""
     field = (target["object"], target["path"])
     applied.add((name, target["object"]))
@@ -79,14 +98,18 @@ def apply_setter(doc, name, target, values, applied, written):
     set_at_path(doc, target["path"], values[name])
 
 
-def apply_to_doc(doc, setters, values, applied, written):
+def apply_to_doc(
+    doc: Doc, setters: Setters, values: dict[str, object], applied: set[tuple[str, str]], written: dict[tuple[str, str], str]
+) -> None:
     """Apply every setter whose target is this document."""
     for name, target in iter_setters(setters):
         if matches_target(doc, target):
             apply_setter(doc, name, target, values, applied, written)
 
 
-def apply_to_manifest(manifest, setters, values, applied, written):
+def apply_to_manifest(
+    manifest: Path, setters: Setters, values: dict[str, object], applied: set[tuple[str, str]], written: dict[tuple[str, str], str]
+) -> None:
     """Rewrite one manifest file, with the values set in each of its documents."""
     docs = list(yaml.safe_load_all(manifest.read_text()))
     for doc in filter(None, docs):
@@ -94,27 +117,27 @@ def apply_to_manifest(manifest, setters, values, applied, written):
     manifest.write_text(yaml.safe_dump_all(docs, sort_keys=False))
 
 
-def check_setters_matched(setters, applied, src):
+def check_setters_matched(setters: Setters, applied: set[tuple[str, str]], src: Path) -> None:
     """Exit on a setter whose object is in no manifest of the folder (a misspelt Kind/name)."""
     for name, target in iter_setters(setters):
         if (name, target["object"]) not in applied:
             sys.exit(f"setters.yaml: {target['object']} is not in {src}")
 
 
-def main():
-    values_file, src, dst = sys.argv[1:]
+@app.command()
+def main(values_file: Path, src: Path, dst: Path) -> None:
     values = yaml.safe_load(Path(values_file).read_text()) or {}
     setters_file = Path(src) / "setters.yaml"
     setters = yaml.safe_load(setters_file.read_text()) if setters_file.exists() else {}
 
     shutil.copytree(src, dst, dirs_exist_ok=True)  # everything below edits the copy
 
-    applied = set()  # (value name, object) pairs found in a manifest; a setter left over is an error
-    written = {}  # (object, path) -> the value name that set it, to catch two names on one field
+    applied: set[tuple[str, str]] = set()  # (value name, object) pairs found in a manifest; a setter left over is an error
+    written: dict[tuple[str, str], str] = {}  # (object, path) -> the value name that set it, to catch two names on one field
     for manifest in Path(dst).glob("*.yaml"):
         apply_to_manifest(manifest, setters, values, applied, written)
     check_setters_matched(setters, applied, src)
 
 
 if __name__ == "__main__":
-    main()
+    app()
