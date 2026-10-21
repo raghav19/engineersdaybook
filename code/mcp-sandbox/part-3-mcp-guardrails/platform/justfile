@@ -1,9 +1,9 @@
 # The components of platform/: the folders that Flux delivers (each has flux/stack.yaml). The recipes here go over all of them, one after the other.
 # One component has its own justfile (it imports lib/workflow/workflow.just): `just platform/routes/package-artifact`.
 # The loop is in tools/platform-pipeline/, a build function. Each recipe pulls the binary from the registry (it does not build it) and runs it in the root of part 3.
-# The tag is a fixed value (`pipeline_tag` below), so a run always uses a binary that works. To use a new version of the tool:
+# The tag is a fixed value (`tag` below), so a run always uses a binary that works. To use a new version of the tool:
 # 1. commit the change of tools/platform-pipeline/, 2. on the host, `just tools/platform-pipeline/push` (it prints the tag: the commit that last
-# changed the folder), 3. change `pipeline_tag` in a separate commit. A tag that is not in the registry is an error.
+# changed the folder), 3. change `tag` in a separate commit. A tag that is not in the registry is an error.
 # A failed component does not stop the others, and the exit code is 1 at the end.
 
 # the variables of the tools: root, tools, registry, ghcr_user, ghcr_push_token
