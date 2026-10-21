@@ -36,6 +36,11 @@ spec:
   values:
     crds:
       enabled: true
+    # Example change: two controller replicas, and a PodDisruptionBudget that keeps one of them during a node drain.
+    replicaCount: 2
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
     # The artifact holds rendered objects, so the post-install check hook would become a plain Job that runs on every apply.
     # The `wait: true` of the Kustomization already waits for the webhook Deployment.
     startupapicheck:
