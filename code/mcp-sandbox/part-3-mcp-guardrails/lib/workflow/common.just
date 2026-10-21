@@ -32,8 +32,15 @@ cluster := env('CLUSTER', 'kind')
 # the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
 sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
 cluster_name := file_name(sync)
-# every component is in the one stack of the cluster
-stack := sync + '/infra-stack.yaml'
+# the app of this component: a component in platform/policies/ is in the app `policies`, every other component is in the app `addons`
+app := if justfile_directory() =~ '/platform/policies/' { 'policies' } else { 'addons' }
+# the stack of that app, in the sync folder of the cluster
+stack := sync + '/infra/' + app + '/stack.yaml'
+# the stack of the other app: stack-composer reads it to check dependsOn across the two apps
+other_app := if app == 'policies' { 'addons' } else { 'policies' }
+other_stack := sync + '/infra/' + other_app + '/stack.yaml'
+# the one stack that held every component before the apps: diff reads it as the baseline in the pull request that introduced the apps
+legacy_stack := sync + '/infra-stack.yaml'
 base := 'origin/main'
 
 # the tag of the artifact of this component: the commit that last changed its folder

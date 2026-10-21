@@ -10,7 +10,9 @@
 | source-controller | Reads Git and the OCI registry. Keeps the artifacts. |
 | kustomize-controller | Applies an artifact to the cluster. Removes what is no longer in it. |
 | Sync folder | `sync/<name>/`. The folder in Git that Flux reconciles for a cluster. `<name>` is `sync:` in `clusters/<cluster>/cluster.yaml`. |
-| Stack | `infra-stack.yaml` in the sync folder. It holds every unit of the cluster. |
+| Root | The `Kustomization flux-system`. The `FluxInstance` creates it. It applies the sync folder. |
+| App | A group of units. A `Kustomization` in `apps.yaml` that applies the stack of its folder: `addons` or `policies`. |
+| Stack | `infra/<app>/stack.yaml` in the sync folder. It holds the units of one app. |
 | Unit | One component as Flux sees it: an `OCIRepository` and a `Kustomization`. |
 | Entry file | `<component>/flux/stack.yaml`. The unit of a component, with `tag: unpinned`. |
 | Pin | The tag and the digest in the `OCIRepository` of a unit. They select the artifact that runs. |
@@ -29,14 +31,18 @@ Flux itself is not in the sync folder:
 ```text
 sync/local-kind/                   what Flux reconciles
 ├── kustomization.yaml
-└── infra-stack.yaml               all 13 units
+├── apps.yaml                      the apps: addons, policies (dependsOn addons)
+└── infra/
+    ├── addons/stack.yaml          10 units
+    └── policies/stack.yaml        3 units
 clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 ```
 
 - A merge cannot remove the `FluxInstance`. Deleting it uninstalls Flux. The workloads stay.
 - The `FluxInstance` has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`. A sync that once held it cannot prune it.
 - A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/kind/up` on the host.
-- One stack holds every unit. Each `Kustomization` waits for the units it needs. A second stack returns when a second owner needs one.
+- The cluster has two apps. `addons` holds 10 units and `policies` holds 3. `policies` waits for `addons`. Each unit waits for the units it needs.
+- A component in `platform/policies/` is in `policies`. Every other component is in `addons`. The first real workload becomes a third app: add it to `apps.yaml` with `dependsOn` on `addons` and `policies`, and add a folder next to `infra/`.
 - Another cluster has its own `sync/<name>/` folder and its own `flux-instance.yaml`. Run the recipes with `CLUSTER=<name>`.
 
 ## 3. Flow A: bring-up
@@ -58,7 +64,7 @@ sequenceDiagram
     O->>K: install the Flux controllers
     O->>K: create the Kustomization flux-system (path sync/local-kind)
     S->>S: clone main from GitHub
-    C->>K: apply the 13 units, each after its dependsOn
+    C->>K: apply the apps addons and policies, then the 13 units, each after its dependsOn
     Note over C,K: ESO then writes the other Secrets from Bitwarden, for example github-upstream
 ```
 
@@ -105,7 +111,7 @@ sequenceDiagram
     D->>D: compose-stack (remove the unit from the stack)
     D->>G: open a pull request with the flag and the stack
     G->>G: review and merge
-    C->>K: flux-system reads the stack
+    C->>K: the app reads its stack
     C->>K: prune the unit and its objects
 ```
 
@@ -127,6 +133,6 @@ sequenceDiagram
     D->>D: compose-stack (add the unit with the pin)
     D->>G: open a pull request with the stack
     G->>G: review and merge
-    C->>K: flux-system reads the stack
+    C->>K: the app reads its stack
     C->>K: create the unit and apply its artifact
 ```

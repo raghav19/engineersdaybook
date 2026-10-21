@@ -1,0 +1,32 @@
+# The apps of the cluster: each one is a group of units. An app applies the stack file in its folder (infra/<app>/stack.yaml).
+# The source is the GitRepository that the FluxInstance creates. The path is relative to the root of the Git repository.
+# A later app (the first real workload) is a third entry here, with dependsOn on addons and policies, and a folder next to infra/.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: addons
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 25m # the longest dependsOn chain of the units: cert-manager, external-secrets, secret-store, mcp-servers, routes (20m)
+  prune: true
+  wait: true
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/addons
+  sourceRef: {kind: GitRepository, name: flux-system}
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: policies
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m # the units wait for each other in parallel, the longest is 3m
+  prune: true
+  wait: true
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/policies
+  sourceRef: {kind: GitRepository, name: flux-system}
+  dependsOn:
+    - name: addons # the policies attach to the Gateway and the Backend of routes and mcp-servers

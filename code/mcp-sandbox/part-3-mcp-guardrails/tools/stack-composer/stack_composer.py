@@ -1,10 +1,11 @@
 """stack-composer: compose stack.yaml for one component: its entry file is the contract, the pin is an input, kustomize does the patching.
 
-usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] <values.yaml> <component> <entry file> <stack.yaml>
+usage: stack_composer.py [--manifest <manifest.yaml> --cluster <name>] [--also <stack.yaml> ...] <values.yaml> <component> <entry file> <stack.yaml>
 
 Input   <values.yaml>  the converged config (config-builder): the flag <component>_enabled, true when no config sets it
         <entry file>   the contract: the OCIRepository and the Kustomization of the component, with `tag: unpinned`. It is never written.
-        <stack.yaml>   the stack of the cluster (sync/<name>/infra-stack.yaml) that Flux reads: it holds the pins
+        <stack.yaml>   the stack of the app of the component (sync/<name>/infra/<app>/stack.yaml) that Flux reads: it holds the pins
+        --also         the stack of another app of the cluster. Read only: its Kustomizations count in the dependsOn check. Repeat it for each stack.
         --manifest     out/manifest.yaml: what `publish-artifact` recorded, components: <cluster>: <component>: {tag, digest}. Optional. No file, or no entry for the
                        component: no new pin. Ignored when the flag is false.
         --cluster      the name of the cluster in manifest.yaml: `sync:` in clusters/<cluster>/cluster.yaml. Needed with --manifest.
@@ -15,7 +16,7 @@ Model   The two kustomize folders are the strings of MODEL below. This code only
         Flag false:   delete the documents of the entry that are in the stack.
         Otherwise:    the documents that are in the stack patch it (fields are overridden, none is removed). The others are added.
 
-Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack.
+Output  <stack.yaml>, written only after the new stack passes the checks: every dependsOn names a Kustomization of the stack or of an --also stack.
         kustomize sorts the documents and the keys and drops the comments: the comments are in the entry files.
 
 Words   document   one object of a YAML file (the parts of a file that `---` separates). The entry file has two: the pair.
@@ -103,17 +104,21 @@ def ident(doc: Doc) -> tuple[str, str]:
     return doc["kind"], doc["metadata"]["name"]
 
 
-def dependency_errors(docs: list[Doc]) -> list[str]:
+def dependency_errors(docs: list[Doc], other_docs: list[Doc]) -> list[str]:
     """Return a message for each Kustomization that waits for a Kustomization that is not in the stack.
 
     A Kustomization with `dependsOn: [{name: spire}]` never starts when spire is not there. So this stops a disable that would break it.
-    docs are the documents of the new stack.
+    docs are the documents of the new stack. other_docs are the documents of the other stacks of the cluster: they can hold the Kustomization that is waited for,
+    or the one that waits.
     """
     # The names of all the Kustomizations of the stacks.
-    present = {d["metadata"]["name"] for d in docs if d["kind"] == "Kustomization"}
-    # Every "A waits for B" pair of the stack, as (A, the dependsOn entry of B).
+    present = {d["metadata"]["name"] for d in [*docs, *other_docs] if d["kind"] == "Kustomization"}
+    # Every "A waits for B" pair of the stacks, as (A, the dependsOn entry of B). A unit of the other stack counts: a disable here can break it.
     waits = [
-        (d["metadata"]["name"], dep) for d in docs if d["kind"] == "Kustomization" for dep in (d.get("spec") or {}).get("dependsOn") or []
+        (d["metadata"]["name"], dep)
+        for d in [*docs, *other_docs]
+        if d["kind"] == "Kustomization"
+        for dep in (d.get("spec") or {}).get("dependsOn") or []
     ]
     # The pairs where B is not in the stack.
     return [
@@ -133,6 +138,9 @@ def main(
         Path | None, typer.Option("--manifest", help="out/manifest.yaml: the tag and digest of the last publish of each component")
     ] = None,
     cluster: Annotated[str | None, typer.Option(help="the name of the cluster in manifest.yaml")] = None,
+    also: Annotated[
+        list[Path] | None, typer.Option(help="the stack of another app of the cluster: read only, for the dependsOn check")
+    ] = None,
 ) -> None:
     """Compose the stack of one component."""
 
@@ -205,7 +213,8 @@ def main(
     new_text = step("stack", files)
 
     # --- 4. Check the new stack. Write it only if the check passes, so a refused run leaves stack.yaml as it was. ---
-    problems = dependency_errors(load(new_text))
+    other_docs = [d for f in also or [] for d in load(Path(f).read_text())]
+    problems = dependency_errors(load(new_text), other_docs)
     if problems:
         sys.exit("\n".join(problems))
     # The header goes first, then `---` (the start of the first document).
