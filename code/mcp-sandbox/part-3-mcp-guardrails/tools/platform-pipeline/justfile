@@ -1,0 +1,5 @@
+import '../tools.just'
+
+# just tools/platform-pipeline/ builds the function
+[default]
+default: build

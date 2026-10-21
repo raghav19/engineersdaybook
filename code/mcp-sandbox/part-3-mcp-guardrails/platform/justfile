@@ -1,0 +1,33 @@
+# The components of platform/: the folders that Flux delivers (each has flux/stack.yaml). The recipes here go over all of them, one after the other.
+# One component has its own justfile (it imports lib/workflow/workflow.just): `just platform/routes/package-artifact`.
+# The loop is in tools/platform-pipeline/, a build function: each recipe builds it, then runs the binary in the root of part 3.
+# A failed component does not stop the others, and the exit code is 1 at the end.
+
+# the build recipe and the variables of the tools: root, tools
+import '../tools/tools.just'
+
+pipeline := tools / 'platform-pipeline' / 'platform-pipeline'
+
+# reads:  the components
+# writes: out/<component>/ of each component
+# output: the output of package-artifact, one folded group for each component
+# package-artifact for each component
+[working-directory('..')]
+package-artifacts: (build 'platform-pipeline')
+    {{ pipeline }} package
+
+# reads:  the components, and the stack of each at origin/main
+# writes: out/manifest-diff/changed.json (the changed components), and report.md (the text of the pull request comment, only when a component changed)
+# output: the output of diff, one folded group for each component. In GitHub Actions the full text also goes to the job summary
+# diff for each component. Options: --sha7 <hash> --run-url <url> --limit <characters>
+[working-directory('..')]
+diff-artifacts *options: (build 'platform-pipeline')
+    {{ pipeline }} diff {{ options }}
+
+# reads:  out/manifest-diff/changed.json, written by diff-artifacts
+# writes: the registry, and out/manifest.yaml (see publish-artifact)
+# output: the output of publish-artifact, one folded group for each changed component
+# publish-artifact for each changed component
+[working-directory('..')]
+publish-artifacts: (build 'platform-pipeline')
+    {{ pipeline }} publish
