@@ -1,5 +1,30 @@
+set allow-duplicate-recipes
+
 import '../tools.just'
+
+# The tag of the binary in the registry: the commit that last changed this folder, as for the components. platform/justfile pulls the same tag.
+tag := `git log -1 --format=%h --abbrev=12 -- .`
 
 # just tools/platform-pipeline/ builds the function
 [default]
 default: build
+
+# reads:  out/tools/platform-pipeline/platform-pipeline
+# writes: the registry, <registry>/tools/platform-pipeline:<tag>
+# output: the tag and the digest. A tag that the registry has is not pushed again
+# Build the binary, then push it with the commit tag (host). Commit the change first: the tag is the commit that last changed this folder.
+# Unlike the push of the other functions, the tag is a commit and not the sha256 of the binary. platform/justfile pulls it, it does not build
+[script('bash')]
+push: build
+    set -euo pipefail
+    if [ -n "$(git status --porcelain -- .)" ]; then echo "commit the changes of tools/platform-pipeline first: the tag is a commit" >&2; exit 1; fi
+    binary={{ tools }}/platform-pipeline/platform-pipeline
+    digest=$(flux push artifact {{ registry }}/tools/platform-pipeline:{{ tag }} \
+      --path "$binary" \
+      --reproducible \
+      --source {{ source }} \
+      --revision "binary@sha256:$(sha256sum "$binary" | cut -d' ' -f1)" \
+      --creds {{ creds }} \
+      --output json \
+      | jq -r .digest)
+    echo "platform-pipeline: {{ tag }} $digest"

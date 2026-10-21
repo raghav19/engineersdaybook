@@ -1,19 +1,40 @@
 # The components of platform/: the folders that Flux delivers (each has flux/stack.yaml). The recipes here go over all of them, one after the other.
 # One component has its own justfile (it imports lib/workflow/workflow.just): `just platform/routes/package-artifact`.
-# The loop is in tools/platform-pipeline/, a build function: each recipe builds it, then runs the binary in the root of part 3.
+# The loop is in tools/platform-pipeline/, a build function. Each recipe pulls the binary from the registry (it does not build it) and runs it in the root of part 3.
+# The tag is the commit that last changed tools/platform-pipeline/. A tag that is not in the registry is an error: push it first, on the host, with
+# `just tools/platform-pipeline/push`.
 # A failed component does not stop the others, and the exit code is 1 at the end.
 
-# the build recipe and the variables of the tools: root, tools
+# the variables of the tools: root, tools, registry, ghcr_user, ghcr_push_token
 import '../tools/tools.just'
 
 pipeline := tools / 'platform-pipeline' / 'platform-pipeline'
+# the same tag as the push of tools/platform-pipeline/justfile
+tag := `git log -1 --format=%h --abbrev=12 -- ../tools/platform-pipeline`
+
+# reads:  <registry>/tools/platform-pipeline:<tag>
+# writes: out/tools/platform-pipeline/platform-pipeline
+# output: nothing when the binary of this tag is there. The error and the push command when the registry has no such tag
+# pull the binary of the tag, once
+[script('bash')]
+_pipeline:
+    set -euo pipefail
+    [ -x {{ pipeline }} ] && [ "$(cat {{ pipeline }}.tag 2>/dev/null)" = "{{ tag }}" ] && exit 0
+    mkdir -p {{ tools }}/platform-pipeline
+    if ! flux pull artifact {{ registry }}/tools/platform-pipeline:{{ tag }} -o {{ tools }}/platform-pipeline \
+        --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1; then
+      echo "platform-pipeline:{{ tag }} is not in the registry. On the host: just tools/platform-pipeline/push" >&2
+      exit 1
+    fi
+    chmod +x {{ pipeline }}
+    echo "{{ tag }}" > {{ pipeline }}.tag
 
 # reads:  the components
 # writes: out/<component>/ of each component
 # output: the output of package-artifact, one folded group for each component
 # package-artifact for each component
 [working-directory('..')]
-package-artifacts: (build 'platform-pipeline')
+package-artifacts: _pipeline
     {{ pipeline }} package
 
 # reads:  the components, and the stack of each at origin/main
@@ -21,7 +42,7 @@ package-artifacts: (build 'platform-pipeline')
 # output: the output of diff, one folded group for each component. In GitHub Actions the full text also goes to the job summary
 # diff for each component. Options: --sha7 <hash> --run-url <url> --limit <characters>
 [working-directory('..')]
-diff-artifacts *options: (build 'platform-pipeline')
+diff-artifacts *options: _pipeline
     {{ pipeline }} diff {{ options }}
 
 # reads:  out/manifest-diff/changed.json, written by diff-artifacts
@@ -29,5 +50,5 @@ diff-artifacts *options: (build 'platform-pipeline')
 # output: the output of publish-artifact, one folded group for each changed component
 # publish-artifact for each changed component
 [working-directory('..')]
-publish-artifacts: (build 'platform-pipeline')
+publish-artifacts: _pipeline
     {{ pipeline }} publish

@@ -1,6 +1,6 @@
 # Shows the rendered manifest diff of part 3 in the pull request. A change under platform/ (what Flux delivers) starts it.
-# One job with three key steps. Each step runs one recipe of code/mcp-sandbox/part-3-mcp-guardrails/platform/justfile. The recipe builds and runs
-# platform-pipeline (tools/platform-pipeline/), which goes over all components that Flux delivers (the folders of platform/ with a flux/stack.yaml),
+# One job with three key steps. Each step runs one recipe of code/mcp-sandbox/part-3-mcp-guardrails/platform/justfile. The recipe pulls and runs
+# platform-pipeline (tools/platform-pipeline/, pulled from the registry by commit tag), which goes over all components that Flux delivers (the folders of platform/ with a flux/stack.yaml),
 # one after the other. You can run the same recipes on your machine.
 # Build (`just platform/package-artifacts`: `just <component>/package-artifact`: render with flate and validate), Diff (`just platform/diff-artifacts`:
 # `just <component>/diff`: compare with the artifact that origin/main pins) and Publish (`just platform/publish-artifacts`:

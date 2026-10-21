@@ -15,7 +15,7 @@ help:
       just platform/package-artifacts      package-artifact for each component of platform/ (each has flux/stack.yaml), one after the other: step Build of the pull request workflow
       just platform/diff-artifacts         diff for each component; the changed ones go to out/manifest-diff/changed.json and report.md: step Diff
       just platform/publish-artifacts      publish-artifact for each changed component: step Publish
-                                           The three recipes build and run tools/platform-pipeline/
+                                           The three recipes pull and run tools/platform-pipeline/ (push it first: just tools/platform-pipeline/push, host)
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
       just <component>/compose-stack       compose the stack (sync/<cluster>/infra-stack.yaml): the published tag and digest
 
