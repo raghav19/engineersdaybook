@@ -54,7 +54,8 @@ TEMPLATE = """\
 
 OUT = Path("out") / "manifest-diff"
 
-app = typer.Typer(add_completion=False)
+# No rich: plain help and plain tracebacks, so typer never imports rich and the build leaves it out (--exclude-module in tools.just)
+app = typer.Typer(add_completion=False, rich_markup_mode=None, pretty_exceptions_enable=False)
 
 
 def run(*command: str) -> subprocess.CompletedProcess[str]:
