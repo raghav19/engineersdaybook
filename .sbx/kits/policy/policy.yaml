@@ -69,6 +69,8 @@ capabilities:
           - localhost:6444
           # SPIRE server of the kind cluster (host 127.0.0.1:18081)
           - localhost:18081
+          # Flux Operator Web UI of the kind cluster (host 127.0.0.1:19090)
+          - localhost:19090
         deny:
           - hosts: [api.github.com]
             methods: [DELETE]
