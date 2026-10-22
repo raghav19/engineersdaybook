@@ -25,6 +25,7 @@ up: _host
     helm upgrade --install flux-operator {{ flux_operator_chart }} --version {{ flux_operator_version }} \
       --kube-context {{ ctx }} --namespace flux-system --wait --timeout {{ flux_operator_timeout }}
     just --justfile {{ justfile() }} _seed
+    kubectl --context {{ ctx }} apply -f web-ui-service.yaml
     kubectl --context {{ ctx }} apply -f flux-instance.yaml
 
 # The two Secrets the cluster needs before ESO runs, created on the host. Everything else comes from Bitwarden through ESO (platform/secret-store).
