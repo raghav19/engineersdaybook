@@ -83,6 +83,7 @@ Each guide covers one part of the design. Start with the architecture, then read
 |---|---|
 | [Architecture](docs/arch.md) | The components and the four flows: login and onboarding, workload identity (SPIFFE), mTLS between hops and the MCP guardrails. It also covers the L7 policy chain of the gateway. It also covers the egress policies. |
 | [Orchestration](docs/orchestration.md) | How Flux applies the units: the sync model, the bring-up of the cluster, how a change reaches the cluster, and how to enable or disable a component. |
+| [The app of apps pattern](docs/app-of-apps-pattern.md) | Why the root applies three groups and not 13 units. A diagram, a comparison of flat and grouped, how it differs from a generator, how to see the groups in the Flux Operator UI, and how to add a group. |
 | [The rendered manifest pattern](docs/rendered-manifest-pattern.md) | Why part 3 renders the manifests in CI and not in the cluster. Two diagrams (without and with), a comparison table, and the steps to see the rendered manifest in a pull request and on your machine. |
 | [Diagrams](docs/diagrams/README.md) | The draw.io sources of the diagrams, their image files and how to open them. |
 

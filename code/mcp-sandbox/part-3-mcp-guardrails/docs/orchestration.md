@@ -22,7 +22,7 @@
 
 ## 2. High-level orchestration
 
-![Flux orchestration: Git and the FluxInstance create the flux-system Kustomization, which creates ten units that pull their artifacts from ghcr.io](diagrams/orchestration.drawio.svg)
+![Flux orchestration: Git and the FluxInstance create the flux-system Kustomization, which applies three groups. The groups apply 13 units that pull their artifacts from ghcr.io](diagrams/orchestration.drawio.svg)
 
 The source is `diagrams/orchestration.drawio`. See [diagrams](diagrams/README.md) to open it in draw.io.
 

@@ -32,5 +32,13 @@
     "**/node_modules": true,
     "**/dist": true,
     "**/.cache": true
-  }
+  },
+  "remote.autoForwardPorts": false,
+  "remote.forwardOnOpen": false,
+  "remote.portsAttributes": {
+    "8787": {
+      "label": "Headroom"
+    }
+  },
+  "remote.restoreForwardedPorts": true
 }
