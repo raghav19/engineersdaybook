@@ -1,0 +1,20 @@
+# NodePort Service for the Flux Operator Web UI. The host reaches it at http://127.0.0.1:19090 (clusters/kind/kind-config.yaml).
+# The UI has no login (no web.config in the operator chart): read-only, and it shows no Secret. The host mapping binds 127.0.0.1 only.
+# The chart Service (flux-operator) stays ClusterIP, because the next `helm upgrade` would overwrite a change to it.
+# The selector is the label set of the chart Deployment (flux-operator chart 0.61.0). Only `just clusters/kind/up` applies this file.
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux-operator-web-nodeport
+  namespace: flux-system
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: flux-operator
+    app.kubernetes.io/instance: flux-operator
+  ports:
+    - name: http-web
+      port: 9080
+      targetPort: http-web
+      nodePort: 30090
+      protocol: TCP
