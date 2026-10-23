@@ -23,8 +23,3 @@ lifecycle:
     - name: Make the SPIRE join token
       command: '${{ env.fileDir }}/agent/spire.py enroll || [ $? -eq 3 ]'
       timeout: 2m
-  preRemove:
-    # Evict the agent and delete its entries on the SPIRE server. A failure only warns.
-    - name: Remove the SPIRE agent of the sandbox
-      command: '${{ env.fileDir }}/agent/spire.py remove'
-      timeout: 2m
