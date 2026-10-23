@@ -19,7 +19,7 @@ The problem and the solution are in the [README](../README.md#what-we-are-buildi
 
 ## 2. High-level architecture
 
-![High-level architecture: GitHub and Dex, MCP client, istio-ingress, agentgateway, ext-mcp, upstream MCP servers, SPIRE and Flux](diagrams/architecture.drawio.svg)
+![High-level architecture: GitHub and Dex, the microVM with the MCP client, SPIRE agent and Envoy, istio-ingress, agentgateway, ext-mcp, upstream MCP servers, SPIRE and Flux](diagrams/architecture.drawio.svg)
 
 The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md) to open it in draw.io.
 
@@ -27,10 +27,12 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 |---|---|---|
 | GitHub OAuth App | Proves who the user is, once, at login. | github.com, outside the cluster |
 | `dex` | Logs the user in with GitHub. Mints the JWT. | `dex` |
-| `istio-ingress` | Accepts the client connection at L4. Passes it to agentgateway as mTLS. | `istio-ingress` |
+| `istio-ingress` | Accepts the client connection at L4. Passes it to agentgateway as mTLS. Today the client shows a JWT and no SVID. | `istio-ingress` |
 | `agentgateway` | Serves `/mcp`. Applies the policies. Calls ext-mcp. Calls the upstream servers. | `agentgateway-system` |
 | `ext-mcp` | Checks tool arguments and results. Returns allow, deny or a redacted result. | `mcp-guardrails` |
-| `spire` | Attests workloads. Issues SVIDs. | `spire-system` |
+| `spire` | Attests nodes and workloads. Issues SVIDs. | `spire-system` |
+| SPIRE agent | Runs in the microVM. Attests the microVM as a node with a join token. | the microVM |
+| `envoy` (planned) | Runs in the microVM. Holds the workload SVID and opens mTLS to `istio-ingress`. | the microVM |
 | `istio` | Runs the sidecars. Enforces mTLS with the SVID from SPIRE. | `istio-system` |
 | `flux` | Applies each component from its OCI artifact. | `flux-system` |
 | `external-secrets` | Copies a secret of Bitwarden Secrets Manager into a Kubernetes Secret. Calls Bitwarden through `bitwarden-sdk-server`. | `external-secrets` |

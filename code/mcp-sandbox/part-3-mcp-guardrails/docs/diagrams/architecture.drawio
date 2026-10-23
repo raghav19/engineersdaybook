@@ -5,10 +5,19 @@
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
         <mxCell id="frame" value="kind cluster" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
-          <mxGeometry x="290" y="30" width="700" height="500" as="geometry"/>
+          <mxGeometry x="410" y="30" width="700" height="500" as="geometry"/>
         </mxCell>
-        <mxCell id="client" value="&lt;b&gt;MCP client&lt;/b&gt;&lt;br&gt;&lt;font face='Courier New' style='font-size:10px'&gt;&quot;mcpServers&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;guardrails&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;type&quot;: &quot;http&quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;url&quot;: &quot;http://127.0.0.1:8080/mcp&quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;headers&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;Authorization&quot;: &quot;Bearer &amp;lt;JWT&amp;gt;&quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;}&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/font&gt;&lt;br&gt;tools: github_*, drawio_*, flux_*" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="10" y="185" width="250" height="200" as="geometry"/>
+        <mxCell id="vm" value="microVM" style="swimlane;startSize=24;fillColor=none;strokeColor=#666666;dashed=1;fontStyle=1;html=1;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="2" y="150" width="266" height="450" as="geometry"/>
+        </mxCell>
+        <mxCell id="client" value="&lt;b&gt;MCP client&lt;/b&gt;&lt;br&gt;&lt;font face='Courier New' style='font-size:10px'&gt;&quot;mcpServers&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;guardrails&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;type&quot;: &quot;http&quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;url&quot;: &quot;http://127.0.0.1:8080/mcp&quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;headers&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;Authorization&quot;: &quot;Bearer &amp;lt;JWT&amp;gt;&quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;}&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/font&gt;&lt;br&gt;tools: github_*, drawio_*, flux_*" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="vm">
+          <mxGeometry x="8" y="35" width="250" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="envoy" value="&lt;b&gt;Envoy&lt;/b&gt;&lt;br&gt;the workload" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="vm">
+          <mxGeometry x="8" y="275" width="250" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="agent" value="&lt;b&gt;SPIRE agent&lt;/b&gt;&lt;br&gt;node and workload attestation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="vm">
+          <mxGeometry x="8" y="375" width="250" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="ingress" value="&lt;b&gt;istio-ingress&lt;/b&gt;&lt;br&gt;L4 entry gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="frame">
           <mxGeometry x="20" y="215" width="140" height="80" as="geometry"/>
@@ -16,7 +25,7 @@
         <mxCell id="gw" value="agentgateway" style="swimlane;startSize=28;fillColor=#eef4fb;strokeColor=#6c8ebf;fontStyle=1;rounded=1;html=1;" vertex="1" parent="frame">
           <mxGeometry x="220" y="160" width="300" height="170" as="geometry"/>
         </mxCell>
-        <mxCell id="req" value="&lt;b&gt;Request policies&lt;/b&gt;&lt;br&gt;JWT&lt;br&gt;rate limit&lt;br&gt;tool RBAC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="gw">
+        <mxCell id="req" value="&lt;b&gt;Request policies&lt;/b&gt;&lt;br&gt;JWT&lt;br&gt;rate limit&lt;br&gt;tool RBAC&lt;br&gt;SPIFFE ID" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" vertex="1" parent="gw">
           <mxGeometry x="10" y="40" width="130" height="110" as="geometry"/>
         </mxCell>
         <mxCell id="egr" value="&lt;b&gt;Egress policies&lt;/b&gt;&lt;br&gt;TLS&lt;br&gt;credential&lt;br&gt;target allowlist" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" vertex="1" parent="gw">
@@ -25,22 +34,22 @@
         <mxCell id="ext" value="&lt;b&gt;ext-mcp&lt;/b&gt;&lt;br&gt;request and response checks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;" vertex="1" parent="frame">
           <mxGeometry x="220" y="380" width="300" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="spire" value="&lt;b&gt;SPIRE&lt;/b&gt;&lt;br&gt;issues SVIDs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="frame">
-          <mxGeometry x="20" y="380" width="140" height="70" as="geometry"/>
+        <mxCell id="spire" value="&lt;b&gt;SPIRE&lt;/b&gt;&lt;br&gt;attests nodes,&lt;br&gt;workloads, issues&lt;br&gt;SVIDs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" vertex="1" parent="frame">
+          <mxGeometry x="20" y="370" width="140" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="up" value="&lt;b&gt;Upstream MCP servers&lt;/b&gt;&lt;br&gt;GitHub, draw.io,&lt;br&gt;Flux schemas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="1030" y="245" width="160" height="80" as="geometry"/>
+          <mxGeometry x="1150" y="245" width="160" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="dex" value="&lt;b&gt;Dex&lt;/b&gt;&lt;br&gt;logs the user in with GitHub&lt;br&gt;issues the JWT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" vertex="1" parent="frame">
           <mxGeometry x="275" y="35" width="190" height="70" as="geometry"/>
         </mxCell>
         <mxCell id="github" value="&lt;b&gt;GitHub&lt;/b&gt;&lt;br&gt;OAuth App, user login" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6e6e6;strokeColor=#333333;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="1030" y="60" width="160" height="80" as="geometry"/>
+          <mxGeometry x="1150" y="60" width="160" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="flux" value="&lt;b&gt;Flux CD&lt;/b&gt;&lt;br&gt;applies one OCI artifact per component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#000000;" vertex="1" parent="1">
-          <mxGeometry x="490" y="570" width="300" height="50" as="geometry"/>
+          <mxGeometry x="610" y="570" width="300" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="e0" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#333333;" edge="1" parent="1" source="client" target="ingress">
+        <mxCell id="e0" value="mTLS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="envoy" target="ingress">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e1" value="mTLS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#333333;" edge="1" parent="frame" source="ingress" target="req">
@@ -74,6 +83,15 @@
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="e11" value="signing keys (JWKS)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#333333;" edge="1" parent="frame" source="dex" target="gw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#333333;" edge="1" parent="1" source="client" target="envoy">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e13" value="SVID" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="agent" target="envoy">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e14" value="SVID" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;endSize=7;strokeWidth=2;strokeColor=#9673a6;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="spire" target="agent">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
       </root>

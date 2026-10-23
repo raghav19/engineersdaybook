@@ -85,15 +85,17 @@ Each guide covers one part of the design. Start with the architecture, then read
 | [Orchestration](docs/orchestration.md) | How Flux applies the units: the sync model, the bring-up of the cluster, how a change reaches the cluster, and how to enable or disable a component. |
 | [The app of apps pattern](docs/app-of-apps-pattern.md) | Why the root applies three groups and not 13 units. A diagram, a comparison of flat and grouped, how it differs from a generator, how to see the groups in the Flux Operator UI, and how to add a group. |
 | [The rendered manifest pattern](docs/rendered-manifest-pattern.md) | Why part 3 renders the manifests in CI and not in the cluster. Two diagrams (without and with), a comparison table, and the steps to see the rendered manifest in a pull request and on your machine. |
+| [Zero trust: node attestation](docs/zero-trust-node-attestation.md) | How the sandbox microVM proves who it is to the SPIRE server with a join token and an alias. The architecture diagram of the join, the setup diagram of the SPIRE server and agent, a better node attestor (`x509pop`), and the commands to check it. |
 | [Diagrams](docs/diagrams/README.md) | The draw.io sources of the diagrams, their image files and how to open them. |
 
 The research behind the rendered manifest pattern is in [docs/research/rendered-manifest-pattern.md](../../../docs/research/rendered-manifest-pattern.md).
+The research behind the node attestation pattern is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md).
 
 ## Repo structure
 
 ```text
 part-3-mcp-guardrails/
-├── docs/                 arch.md, orchestration.md, rendered-manifest-pattern.md and diagrams/ (the draw.io sources and their SVGs)
+├── docs/                 arch.md, orchestration.md, rendered-manifest-pattern.md, zero-trust-node-attestation.md and diagrams/ (the draw.io sources and their SVGs)
 ├── lib/workflow/         shared just recipes: package-artifact, diff, publish-artifact, compose-stack
 ├── tools/                config-builder, value-injector and stack-composer
 ├── config/               overrides only, by cloud, env and region
