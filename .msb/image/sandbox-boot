@@ -1,0 +1,50 @@
+#!/bin/bash
+# The command of the msb sandbox (cmd in sandbox.yaml). It runs as root at every start, prepares the agent user, then waits.
+# Every step may fail without stopping the boot: a failed step prints its reason to the log (msb logs <name>).
+# Env from sandbox.yaml: SANDBOX_WORKSPACE (repo path, same as on the host), REPO_URL, GIT_USER_NAME, GIT_USER_EMAIL.
+set -u
+
+ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
+home=/home/agent
+log() { echo "sandbox-boot: $*"; }
+as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
+
+mkdir -p "$(dirname "$ws")" "$home/.claude"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" 2>/dev/null
+
+# Git: identity, and the token for GitHub over HTTPS. GITHUB_TOKEN holds only a placeholder; the host swaps it for the real token on the wire.
+as_agent git config --global user.name "${GIT_USER_NAME:-agent}"
+as_agent git config --global user.email "${GIT_USER_EMAIL:-agent@localhost}"
+as_agent git config --global --add safe.directory '*'
+as_agent git config --global credential.https://github.com.helper \
+  '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+
+# The private clone. The host repo is mounted read-only at /run/sandbox/source and is never written. Push goes to GitHub, to a feature branch.
+if [ ! -d "$ws/.git" ]; then
+  as_agent git clone /run/sandbox/source "$ws" || log "clone failed"
+  [ -n "${REPO_URL:-}" ] && as_agent git -C "$ws" remote set-url origin "$REPO_URL"
+fi
+[ -d "$ws/.git" ] && as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || log "prek hook not installed"
+
+# Headroom proxy for Claude Code (127.0.0.1:8787), as in the sbx kit.
+as_agent sh -c 'setsid nohup headroom proxy --port 8787 >/dev/null 2>&1 &'
+
+# Claude Code: MCP servers (HTTP, no gateway) and the deny list. The config dir is on the claude-home volume (CLAUDE_CONFIG_DIR in sandbox.yaml).
+export CLAUDE_CONFIG_DIR="$home/.claude"
+as_agent claude mcp remove -s user drawio >/dev/null 2>&1
+as_agent claude mcp add -s user --transport http drawio https://mcp.draw.io/mcp >/dev/null 2>&1 || log "mcp drawio not added"
+as_agent claude mcp remove -s user flux-schema-catalog >/dev/null 2>&1
+as_agent claude mcp add -s user --transport http flux-schema-catalog https://schemas.fluxoperator.dev/mcp >/dev/null 2>&1 || log "mcp flux-schema-catalog not added"
+as_agent claude mcp remove -s user github >/dev/null 2>&1
+as_agent claude mcp add -s user --transport http github https://api.githubcopilot.com/mcp/ \
+  --header 'Authorization: Bearer ${GITHUB_TOKEN}' \
+  --header 'X-MCP-Toolsets: context,issues,pull_requests,repos' \
+  --header 'X-MCP-Exclude-Tools: delete_repository,delete_file,merge_pull_request,create_repository,fork_repository' >/dev/null 2>&1 || log "mcp github not added"
+settings="$home/.claude/settings.json"
+[ -f "$settings" ] || echo '{}' | as_agent tee "$settings" >/dev/null
+# A soft limit (the client enforces it, not the sandbox): the gateway that filtered these tools in sbx is not here.
+jq '.permissions.deny = ((.permissions.deny // []) + ["mcp__github__merge_pull_request","mcp__github__delete_file","mcp__github__delete_repository","mcp__github__create_repository","mcp__github__fork_repository"] | unique)' \
+  "$settings" | as_agent tee "$settings.new" >/dev/null && as_agent mv "$settings.new" "$settings"
+
+log "ready"
+exec sleep infinity

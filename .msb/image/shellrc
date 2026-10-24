@@ -1,0 +1,14 @@
+# Interactive bash setup of the sandbox, sourced from ~/.bashrc (the Dockerfile adds the line).
+[[ $- == *i* ]] || return
+eval "$(mise activate bash)"
+[ -r /usr/share/bash-completion/bash_completion ] && . /usr/share/bash-completion/bash_completion
+for f in /opt/sandbox/completions/* ~/.local/share/sandbox/completions/*; do [ -r "$f" ] && . "$f"; done
+alias k=kubectl
+alias f=flux
+# Claude Code goes through the Headroom proxy (127.0.0.1:8787, started by sandbox-boot). Plain `claude` reaches it through the env in
+# .claude/settings.json of the repo. claude-hr is the same path, with the proxy started by wrap if it is down.
+claude-hr() { headroom wrap claude --code-memory none -- "$@"; }
+complete -o default -F __start_kubectl k
+complete -o default -F __start_flux f
+command -v fzf >/dev/null && eval "$(fzf --bash)"
+command -v starship >/dev/null && eval "$(starship init bash)"

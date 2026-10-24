@@ -3,10 +3,13 @@
 #
 #   just sandbox            list the sandbox recipes: `host` (services on the host machine) and `agent` (what the VM receives), with the step of each
 #   just sandbox run        developer: create or start the sandbox and open VS Code on it
+#   just msb run            the same on microsandbox (open source, no daemon). See .msb/README.md
 
 set quiet
 
 mod sandbox '.sbx'
+# The same sandbox on microsandbox, declared in .msb/sandbox.yaml. `just msb` lists its recipes. It runs next to the sbx one until you switch.
+mod msb '.msb'
 
 # list the recipes, modules included (the default)
 [default]

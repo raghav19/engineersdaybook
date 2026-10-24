@@ -13,6 +13,7 @@ flux2 = "2.9"
 uv = "0.13"
 ty = "0.0.85"
 "github:docker/sbx-releases" = "v0.49"
+"aqua:superradcompany/microsandbox" = "0.7.10"  # msb, the CLI of the microsandbox sandbox (.msb/)
 
 [env]
 EDITOR="code --wait"

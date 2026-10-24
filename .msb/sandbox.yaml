@@ -1,0 +1,107 @@
+# The msb sandbox, declared. This file is the single source of truth: `just msb run` makes the VM from it, and makes it again when the file changes.
+# Schema: https://docs.microsandbox.dev/cli/configuration.md. ${NAME} is a host variable that `just msb run` exports.
+# Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig, the Flux Operator UI.
+
+image:
+  oci: engineersdaybook-sandbox:local   # built and loaded by `just msb image-build`
+  upper_size: "20G"
+pull_policy: never
+
+cpus: 4
+memory: "4G"
+shell: "/bin/bash"   # the shell of ssh sessions and of `msb exec`, so VS Code terminals load ~/.bashrc (mise, starship)
+
+# sandbox-boot runs as root: it prepares the agent user, clones the repo and starts Headroom (image/sandbox-boot). Then it waits.
+cmd: ["/usr/local/bin/sandbox-boot"]
+
+env:
+  SANDBOX_WORKSPACE: ${SANDBOX_WORKSPACE}               # the repo path, the same as on the host
+  REPO_URL: ${REPO_URL}                                 # the GitHub URL of origin (https)
+  GIT_USER_NAME: ${GIT_USER_NAME}
+  GIT_USER_EMAIL: ${GIT_USER_EMAIL}
+  MISE_TRUSTED_CONFIG_PATHS: ${SANDBOX_WORKSPACE}       # the clone's nested mise.toml files
+  MISE_IGNORED_CONFIG_PATHS: ${SANDBOX_MISE_IGNORED}    # the clone's root mise.toml lists host-only tools
+  CLAUDE_CONFIG_DIR: /home/agent/.claude                # login, settings and MCP servers live on the claude-home volume
+  DISABLE_UPDATES: "1"                                  # the mise-installed claude does not update itself
+
+mounts:
+  # The host repo, read-only. The VM works on a private clone of it (made by sandbox-boot), so uncommitted host files stay invisible.
+  # (a relative path to the parent folder is refused by msb 0.7.10, so the path comes from the host variable)
+  - "${SANDBOX_WORKSPACE}:/run/sandbox/source:ro"
+  # Claude Code login and settings. `just msb rm --volumes` deletes it.
+  - named: claude-home
+    target: /home/agent/.claude
+    create: ensure-exists
+
+# The GitHub token never enters the VM: the VM sees a placeholder and the host swaps it, on these hosts only.
+# Basic auth (git over HTTPS) and Bearer (REST API, GitHub MCP) are both swapped. The value is the host variable GITHUB_TOKEN.
+secrets:
+  GITHUB_TOKEN:
+    allow: [github.com, api.github.com, api.githubcopilot.com]
+
+# The egress allow list. A non-empty `allow` means deny by default. Add a host with `just msb allow-host <host>`.
+# A pattern *.example.com matches the sub-domains only, so the bare domain is listed too where a site needs it.
+network:
+  tls:
+    enabled: true   # the host sees HTTPS requests, which the host rules and the token swap need
+  allow:
+    # Claude Code
+    - api.anthropic.com
+    - claude.ai
+    - console.anthropic.com
+    - platform.claude.com
+    - code.claude.com
+    # GitHub: git, API, release downloads, the GitHub MCP server
+    - github.com
+    - api.github.com
+    - api.githubcopilot.com
+    - "*.githubusercontent.com"
+    - github.githubassets.com
+    - www.githubstatus.com
+    # MCP servers
+    - mcp.draw.io
+    - schemas.fluxoperator.dev
+    # Tool downloads
+    - releases.hashicorp.com
+    - registry.terraform.io
+    - mise.jdx.dev
+    - astral.sh
+    - "*.astral.sh"
+    - pypi.org
+    - files.pythonhosted.org
+    - registry.npmjs.org
+    # Chart and OCI registries the cluster pulls from (blob.istio.io redirects to istio-release.r2.istio.io)
+    - istio.io
+    - "*.istio.io"
+    - istio-release.storage.googleapis.com
+    - cr.agentgateway.dev
+    - quay.io
+    - "*.quay.io"
+    - charts.dexidp.io
+    # Schemas
+    - www.schemastore.org
+    # Docs and project sites, for research
+    - kind.sigs.k8s.io
+    - just.systems
+    - fluxcd.io
+    - fluxoperator.dev
+    - spiffe.github.io
+    - docs.ansible.com
+    - argo-cd.readthedocs.io
+    - pkl-lang.org
+    - kubernetes.io
+    - helm.sh
+    - kubectl.docs.kubernetes.io
+    - docs.aws.amazon.com
+    - agentgateway.dev
+    - cuelang.org
+    - spiffe.io
+    - owasp.org
+    - fluxcd.control-plane.io
+    - docs.microsandbox.dev
+    # VS Code and Copilot
+    - marketplace.visualstudio.com
+    - "*.vsassets.io"
+    - "*.vscode-cdn.net"
+    # Other
+    - crl.microsoft.com
