@@ -3,6 +3,7 @@
 
 Write a one-time join token and the trust bundle to ~/.sbx/spire/. Skip when a node of the user is attested with a valid SVID.
 SPIRE_ENROLL_FORCE=1 forces a token: a new VM cannot use the SVID of the old one, and nothing evicts the old node.
+Also register the workload entry of the VM (parent: the alias) when it is missing.
 
 Needs SANDBOX_GITHUB_ID (numeric GitHub id). Exit 1: wrong setup. Exit 3: cluster unreachable.
 """
@@ -18,6 +19,7 @@ from typing import Any, NoReturn
 type Json = dict[str, Any]
 
 TTL = 600  # token lifetime, seconds
+WORKLOAD = "envoy"  # the one process of the VM with an SVID: its Unix user is the selector, and it ends the SPIFFE ID
 OUT = Path.home() / ".sbx" / "spire"  # same path in sbxenv.yaml and dev-tools.yaml
 IDENTITY = Path(__file__).resolve().parents[2] / "code/mcp-sandbox/part-3-mcp-guardrails/config/cloud/kind/identity.yaml"
 SERVER = ["kubectl", "-n", "spire-system", "exec", "spire-server-0", "-c", "spire-server", "--", "/opt/spire/bin/spire-server"]
@@ -63,6 +65,16 @@ def valid_until(alias: str) -> int:
     return max((int(node["x509svid_expires_at"]) for node in nodes if spiffe_id(node["id"]) in node_ids), default=0)
 
 
+def register_workload(alias: str) -> None:
+    """Create the workload entry under the alias. The alias, not the agent ID (it holds the token), is the parent: it survives a new token."""
+    child = f"{alias}/{WORKLOAD}"
+    entries = server_json("entry", "show", "-parentID", alias).get("entries") or []
+    if any(spiffe_id(entry["spiffe_id"]) == child for entry in entries):
+        return
+    server("entry", "create", "-parentID", alias, "-spiffeID", child, "-selector", f"unix:user:{WORKLOAD}")
+    print(f"spire: workload entry {child} for the Unix user {WORKLOAD}")
+
+
 def write_secret(path: Path, text: str) -> None:
     path.unlink(missing_ok=True)
     path.touch(mode=0o600)  # the mode comes before the content: nobody else can read the token
@@ -82,11 +94,13 @@ def main() -> None:
     expiry = valid_until(alias)
     if expiry > time.time() and not os.environ.get("SPIRE_ENROLL_FORCE"):
         print(f"spire: a node of user {github_id} is attested until {time.strftime('%F %T', time.localtime(expiry))}, so no new join token")
+        register_workload(alias)
         return
 
     OUT.mkdir(mode=0o700, parents=True, exist_ok=True)
     write_secret(OUT / "join-token", server_json("token", "generate", "-ttl", str(TTL), "-spiffeID", alias)["value"])
     (OUT / "bundle.spiffe").write_text(server("bundle", "show", "-format", "spiffe"))  # public data
+    register_workload(alias)
     print(f"spire: join token for user {github_id} in {OUT} (valid {TTL // 60} minutes), alias {alias}")
 
 
