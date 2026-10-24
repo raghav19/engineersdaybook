@@ -8,7 +8,7 @@ displayName: dev-tools
 description: >-
   Exact-version dev tools from tools.toml
 sourceUrl: https://github.com/raghav19/engineersdaybook
-version: "0.4.0"
+version: "0.5.0"
 
 args:
   workspace:
@@ -97,3 +97,14 @@ capabilities:
               setsid nohup spire-agent run -config /etc/spire/agent.conf $args >> "$dir/agent.log" 2>&1 &
           user: agent
           description: Start the SPIRE agent (config /etc/spire/agent.conf, log ~/.spire/agent.log)
+        - command:
+            - sh
+            - -c
+            - |
+              # Envoy runs as the Unix user envoy: that user is the selector of its SPIRE workload entry (agent/spire.py), so only Envoy gets the SVID.
+              # No home and no login. It reads the SVID from the agent socket, and retries until the agent is up. `latest` is the one installed version.
+              id envoy >/dev/null 2>&1 || useradd -r -M -s /usr/sbin/nologin envoy
+              setsid nohup setpriv --reuid=envoy --regid=envoy --clear-groups \
+                /opt/mise/installs/github-envoyproxy-envoy/latest/envoy -c /etc/envoy/envoy.yaml --log-level warn >> /var/log/envoy.log 2>&1 &
+          user: "0"
+          description: Create the envoy user and start Envoy as it (config /etc/envoy/envoy.yaml, log /var/log/envoy.log, admin 127.0.0.1:9901)
