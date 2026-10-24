@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The content recipe of the dev-tools kit (dev-tools.yaml). Everything is staged under /out and lands on the workload as-is.
-# The build reads tools.toml and spire-agent.conf from this folder.
+# The build reads tools.toml, spire-agent.conf and envoy.yaml from this folder.
 FROM dhi.io/debian-base:trixie-dev AS build
 ARG MISE_VERSION=v2026.10.0
 
@@ -34,6 +34,7 @@ RUN mkdir -p /out/usr/share/bash-completion /out/etc/bash_completion.d \
 # The file is also the VM's system config, so the shims resolve from any directory.
 COPY tools.toml /out/etc/mise/conf.d/sandbox.toml
 COPY spire-agent.conf /out/etc/spire/agent.conf
+COPY envoy.yaml /out/etc/envoy/envoy.yaml
 RUN mkdir -p /out/usr/local/bin && cp -a /opt/mise /out/opt/mise && cp /usr/local/bin/mise /out/usr/local/bin/mise \
  && chown -R 0:0 /out && chown -R 1000:1000 /out/opt/mise  # 1000 is agent in the shell kit: mise installs new tools as agent
 
