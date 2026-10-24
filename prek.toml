@@ -43,3 +43,12 @@ name = "ruff format"
 language = "system"
 entry = "ruff format"
 types = ["python"]
+
+# ty reads ty.toml in the repo root. The build functions in tools/ are checked by their build recipe, with their own dependencies (types-pyyaml).
+[[repos.hooks]]
+id = "ty-check"
+name = "ty check"
+language = "system"
+entry = "ty check"
+types = ["python"]
+exclude = '/tools/'

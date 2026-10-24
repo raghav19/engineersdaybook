@@ -1,0 +1,8 @@
+# ty settings for the prek hook (run from the repo root). The build functions in tools/ are not checked here: their build recipe runs ty with their own pyproject.toml.
+[terminal]
+# a warning fails the check, like an error (as in tools/)
+error-on-warning = true
+
+[environment]
+# tests/test_rules.py imports rules through sys.path
+extra-paths = ["code/mcp-sandbox/part-3-mcp-guardrails/platform/ext-mcp"]

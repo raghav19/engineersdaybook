@@ -11,6 +11,7 @@ flux2 = "2.9"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.15"
 uv = "0.13"
+ty = "0.0.85"
 "github:docker/sbx-releases" = "v0.49"
 
 [env]

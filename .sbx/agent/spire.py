@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13.*"
+# dependencies = []
+# ///
 """Host side of the VM node identity: spire.py enroll
 
 Write a one-time join token and the trust bundle to ~/.sbx/spire/. Skip when a node of the user is attested with a valid SVID.
