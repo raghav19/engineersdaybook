@@ -1,0 +1,57 @@
+# Envoy of the sandbox VM, installed as /etc/envoy/envoy.yaml. It runs as the Unix user envoy, the selector of its SPIRE workload entry
+# (agent/spire.py). It gets its SVID from the SPIRE agent over SDS on the agent socket. Nothing in it names a user: the SDS name `default`
+# is the one SVID of this workload, and `ROOTCA` is the trust bundle.
+# The upstream below is a placeholder. SDS secrets load only when a cluster uses them, so it makes the SVID show in the admin /certs.
+# The client hop to istio-ingress replaces it.
+# SDS needs a node id and cluster. The agent does not check them.
+node: {id: sandbox-envoy, cluster: sandbox}
+
+admin:
+  address:
+    socket_address: {address: 127.0.0.1, port_value: 9901}
+
+static_resources:
+  clusters:
+    - name: spire_agent
+      type: STATIC
+      connect_timeout: 1s
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      load_assignment:
+        cluster_name: spire_agent
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    pipe: {path: /home/agent/.spire/agent.sock} # socket_path of /etc/spire/agent.conf
+
+    - name: upstream_placeholder
+      type: STATIC
+      connect_timeout: 1s
+      load_assignment:
+        cluster_name: upstream_placeholder
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: {address: 127.0.0.1, port_value: 9} # nothing listens: no call is made
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+              - name: default
+                sds_config: &sds
+                  resource_api_version: V3
+                  api_config_source:
+                    api_type: GRPC
+                    transport_api_version: V3
+                    grpc_services:
+                      - envoy_grpc: {cluster_name: spire_agent}
+            validation_context_sds_secret_config:
+              name: ROOTCA
+              sds_config: *sds
