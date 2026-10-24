@@ -88,48 +88,23 @@ Per-project, not root-level: each `code/<project>/` is an independent project wi
 
 ### Kubernetes and Flux schemas
 
-Before you write or edit a Kubernetes, Flux, Gateway API or other CRD manifest, look up the real kind and fields on the gateway's flux-schema-catalog (`mcp__mcp-gateway__*`). Use `grep_catalog` to find the apiVersion and kind, `grep_schema` for field names, types and required values, and `get_schema` only when you need the full schema. Do not write fields from memory. If the gateway is not available, say so before you edit.
+Before you write or edit a Kubernetes, Flux, Gateway API or other CRD manifest, read `docs/agents/kubernetes.md` in full.
 
 ## 7. Host handoff
 
-You run in a **clone** of this repo (`/run/sandbox/source` exists). Your edits and commits are invisible to the host until you push them.
-
-- Before you ask the user to run any command on the host that depends on your changes, commit them and `git push` to a feature branch. Never push to `main`.
-- In the same message, name the branch and the exact commit (`git rev-parse --short HEAD`). Give the host command with the checkout, e.g. `git fetch origin && git checkout <branch> && just <target>`.
-- If the push fails, say so and stop. Do not ask the user to run a host command against unpushed changes.
-- Host-only commands that need no repo changes (`sbx policy ...`, `sbx secret ...`, `sbx ports ...`) need no push.
+Never push to `main`. Before you ask the user to run a command on the host, read `docs/agents/host-handoff.md` in full.
 
 ## 7a. Pull requests
 
-In the sandbox, open a PR with the gateway tool `create_pull_request`. Never use `gh pr create` or `curl`. Do these steps in this order. If a step fails, stop and report the exact error text. Do not go on to the next step.
-
-1. Git identity. Run `git config user.name` and `git config user.email`. If either prints nothing, call `get_me`. Then run `git config user.name "<name>"` and `git config user.email "<email>"`. If `email` is null, use `<id>+<login>@users.noreply.github.com`. Never use `--global`. Never invent a value.
-2. GitHub identity. Call `get_me`. If it returns an error, or `login` is not `raghav19`, stop. Tell the user that the gateway has no GitHub authorization. Do not try `gh auth login`.
-3. Branch. `git branch --show-current` must not print `main`. If it does, run `git checkout -b <branch>` before you commit.
-4. Push. Run `git push -u origin <branch>`. Then run `git ls-remote origin refs/heads/<branch>`. The hash must equal `git rev-parse HEAD`. A PR for an unpushed branch always fails.
-5. Duplicate check. Call `list_pull_requests` with `owner: raghav19`, `repo: engineersdaybook`, `head: raghav19:<branch>`, `state: open`. If a PR exists, call `update_pull_request` on it. Do not create a second PR.
-6. Images. A PR body shows an image only as an SVG. Never embed a `.png`. Commit and push the `.svg` in step 4, before you create the PR. Link it with the absolute URL `https://github.com/raghav19/engineersdaybook/blob/<sha>/<path>.svg?raw=true`, where `<sha>` is the output of `git rev-parse HEAD`. Write it as `![<alt text>](<url>)`. A relative path does not render in a PR body, and a branch-name URL breaks when the branch is deleted. If an image has no SVG (a screenshot), do not embed it. Paste the text output instead.
-7. Create. Call `create_pull_request` with `owner: raghav19`, `repo: engineersdaybook`, `head: <branch>` (the branch name only, no `raghav19:` prefix), `base: main`, `title`, and `body`. Write the body with the `pr` skill.
-8. Report. Give the `url` that the tool returned. If the call returned no `url`, the PR does not exist.
+Before you commit, push, or create or update a pull request, read `docs/agents/pull-requests.md` in full. Follow its steps in order.
 
 ## 8. Diagrams
 
-- Save `<name>.drawio`, `.svg` and `.png` (2x, white background) in `docs/diagrams/`. Add each to its README table.
-- Show only what the user named. Add no legend, caption or before-and-after pair unless asked.
-- Match the style of the newest `.drawio`. Make boxes `rounded=1` and arrows `curved=1`.
-- Start each arrow of a fan at a different point on its source box. Leave 80 px between joined rows.
-- Take every fact from a repo file. Before you report, check that the XML parses and read every label in the PNG.
+Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
 ## 9. Python
 
-- Give every parameter and every return value a type hint. ruff rule `ANN` reports a missing hint. ty reports a wrong hint.
-- Before you finish, run `ruff check`, `ruff format --check` and `ty check` on each Python file you changed. Fix every finding.
-- Do not add `# noqa` or `# type: ignore` without a reason in the same comment.
-- A script is a Python file that a recipe or a person runs. Start it with `#!/usr/bin/env -S uv run --script` and a PEP 723 block (`requires-python` and `dependencies`). Pin each dependency to an exact version.
-- A tool is a build function in `tools/`. Build it as one PyInstaller binary with the `build` recipe of `tools/tools.just`. Copy the `pyproject.toml` of a sibling tool. Do not write other PyInstaller flags.
-- To make a binary smaller, add `--exclude-module` to `flags` in `tools/tools.just`. Measure the size before and after.
-- A service that runs in a container (`platform/ext-mcp`) is not a script and not a tool. Keep its Dockerfile.
-- The reasons for each pin are in `docs/research/typer-ty-tools.md`.
+Before you write or edit Python, read `docs/agents/python.md` in full.
 
 ---
 
