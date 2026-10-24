@@ -32,7 +32,7 @@ The source is `diagrams/architecture.drawio`. See [diagrams](diagrams/README.md)
 | `ext-mcp` | Checks tool arguments and results. Returns allow, deny or a redacted result. | `mcp-guardrails` |
 | `spire` | Attests nodes and workloads. Issues SVIDs. | `spire-system` |
 | SPIRE agent | Runs in the microVM. Attests the microVM as a node with a join token. | the microVM |
-| `envoy` (planned) | Runs in the microVM. Holds the workload SVID and opens mTLS to `istio-ingress`. | the microVM |
+| `envoy` | Runs in the microVM as the user `envoy`. Holds the workload SVID, from the SPIRE agent over SDS. It opens no connection to `istio-ingress` yet. | the microVM |
 | `istio` | Runs the sidecars. Enforces mTLS with the SVID from SPIRE. | `istio-system` |
 | `flux` | Applies each component from its OCI artifact. | `flux-system` |
 | `external-secrets` | Copies a secret of Bitwarden Secrets Manager into a Kubernetes Secret. Calls Bitwarden through `bitwarden-sdk-server`. | `external-secrets` |
@@ -194,6 +194,7 @@ sequenceDiagram
 | `agentgateway` | `spiffe://mcp.local/ns/agentgateway-system/sa/<service account>` | `ClusterSPIFFEID` of the gateway |
 | `ext-mcp` | `spiffe://mcp.local/ns/mcp-guardrails/sa/ext-mcp` | `ClusterSPIFFEID mcp-guardrails-workloads` |
 | SPIRE agent in the microVM | `spiffe://mcp.local/spire/agent/join_token/<token>` | join token |
+| `envoy` in the microVM | `spiffe://mcp.local/microvm/<github id>/envoy` | parent: the alias, selector `unix:user:envoy` |
 
 ## 5. Flow C: mTLS in the cluster
 

@@ -73,8 +73,8 @@ Evidence tags: **[spire]** is a SPIRE document on GitHub. **[spiffe]** is the sp
 
 ## 6. Next steps
 
-1. Workload entry for Envoy. Parent: the alias. Selector: `unix:uid` of an Envoy user.
-2. Envoy in the `dev-tools` kit. It reads the SVID through SDS. Restrict the agent socket.
+1. Done: workload entry for Envoy. Parent: the alias. Selector: `unix:user:envoy`, the Unix user of Envoy, and not a uid.
+2. Done: Envoy in the `dev-tools` kit. It reads the SVID through SDS. Restricting the agent socket is open.
 3. Choose how the client hop enforces the SVID. Research the Istio ingress options first.
 4. Add a gateway rule on the source SPIFFE ID. Keep the JWT check.
 5. Add `unix:path` and `unix:sha256`.
