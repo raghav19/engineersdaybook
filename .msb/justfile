@@ -17,17 +17,6 @@ name := 'sandbox-dev'
 image := 'engineersdaybook-sandbox:local'
 volume := 'claude-home'
 
-# The host values that sandbox.yaml names (${NAME}). `run` puts them in its environment, with the [env] lines above it.
-# (A variable that you mark with `export` is evaluated for every recipe, even with `set lazy`. These are only evaluated by `run`.)
-workspace := shell('git -C "$1" rev-parse --show-toplevel', repo)
-git_dir := shell('git -C "$1" rev-parse --path-format=absolute --git-common-dir', repo)
-branch := shell('git -C "$1" branch --show-current', repo)
-repo_url := shell('git -C "$1" remote get-url origin | sed -E "s#^(ssh://)?git@github.com[:/]#https://github.com/#"', repo)
-git_user_name := shell('git -C "$1" config user.name || echo agent', repo)
-git_user_email := shell('git -C "$1" config user.email || echo agent@localhost', repo)
-# The token of the host `gh` login. It is empty without a login, and `run` stops then.
-github_token := shell('gh auth token 2>/dev/null || true')
-
 # List the recipes (the default)
 [default]
 help:
@@ -77,17 +66,17 @@ image-build: _host-only
     docker save {{ image }} | msb load --tag {{ image }}
     echo "image {{ image }} loaded. A VM that exists keeps the old image: just msb rm && just msb run"
 
-# The token is in the environment of this recipe only, so msb sees it and the VM gets a placeholder.
+# `run` puts the host values that sandbox.yaml names (${NAME}) in its environment, so msb sees them. (A variable that you mark with `export` is evaluated for every recipe,
+# even with `set lazy`. These lines only run for `run`.) The VM gets a placeholder for the token. It is empty without a `gh` login, and `run` stops then.
 # Run `run` as often as you like: a VM that runs and is current is left alone. Any other VM is yours to remove (`just msb rm`), because that deletes its clone.
 # Every day. Make the VM from sandbox.yaml if there is none, then open VS Code on it
-[env('GITHUB_TOKEN', github_token)]
-[env('SANDBOX_WORKSPACE', workspace)]
-[env('SANDBOX_MISE_IGNORED', workspace + '/mise.toml')]
-[env('SANDBOX_GIT_DIR', git_dir)]
-[env('SANDBOX_BRANCH', branch)]
-[env('REPO_URL', repo_url)]
-[env('GIT_USER_NAME', git_user_name)]
-[env('GIT_USER_EMAIL', git_user_email)]
+[env('GITHUB_TOKEN', shell('gh auth token 2>/dev/null || true'))]
+[env('SANDBOX_WORKSPACE', shell('git -C "$1" rev-parse --show-toplevel', repo))]
+[env('SANDBOX_GIT_DIR', shell('git -C "$1" rev-parse --path-format=absolute --git-common-dir', repo))]
+[env('SANDBOX_BRANCH', shell('git -C "$1" branch --show-current', repo))]
+[env('REPO_URL', shell('git -C "$1" remote get-url origin | sed -E "s#^(ssh://)?git@github.com[:/]#https://github.com/#"', repo))]
+[env('GIT_AUTHOR_NAME', shell('git -C "$1" config user.name || echo agent', repo))]
+[env('GIT_AUTHOR_EMAIL', shell('git -C "$1" config user.email || echo agent@localhost', repo))]
 [script]
 run: _host-only
     command -v msb >/dev/null || { echo "msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
@@ -96,7 +85,7 @@ run: _host-only
       || { echo "The image {{ image }} does not exist. Run: just msb image-build" >&2; exit 1; }
 
     # The fingerprint of what we would make now: sandbox.yaml, the image, and the host values (another repo path is another mount). The token is not one of them.
-    wanted=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
+    wanted=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$REPO_URL" "$GIT_AUTHOR_NAME" "$GIT_AUTHOR_EMAIL") | sha256sum | cut -c1-16)
 
     # The VM that exists, if any. msb keeps the fingerprint that made it as its label config-sha.
     info=$(msb inspect {{ name }} --format json 2>/dev/null || true)
