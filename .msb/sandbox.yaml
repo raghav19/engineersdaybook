@@ -50,8 +50,8 @@ mounts:
     create: ensure-exists
 
 # No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
-# msb reads the value of each secret from the environment of the host. `just msb run` starts vm.py under `bws run`, so each key of the Bitwarden
-# project is a variable there. A secret of another kind needs a Bitwarden key with the same name. Two secrets are not from Bitwarden: vm.py sets them.
+# msb reads the value of each secret from the environment of the host. `just msb run` starts msb.py under `bws run`, so each key of the Bitwarden
+# project is a variable there. A secret of another kind needs a Bitwarden key with the same name. Two secrets are not from Bitwarden: msb.py sets them.
 # GH_TOKEN is the user token of the GitHub App (`just msb github-login`). The host replaces it in Basic auth (git over HTTPS) and in Bearer
 # auth (REST API and GitHub MCP). It is not named GITHUB_TOKEN, because the Bitwarden key GITHUB_TOKEN is another token (for ghcr.io).
 # CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host (~/.claude/.credentials.json), as in sbx. You do not log in to Claude in the VM.
@@ -64,7 +64,7 @@ secrets:
 # The egress allow list. If `allow` has entries, the VM denies all other hosts. To add a host, run `just msb allow-host <host>`.
 # The pattern *.example.com matches the subdomains at any depth (*.istio.io matches istio-release.r2.istio.io), and not the bare domain.
 # If a site needs the bare domain, the list has it too. msb rejects the pattern **.example.com and an entry with a port.
-# vm.py adds the rules for the ports of the host (HOST_PORTS in vm.py), because this file cannot express them.
+# msb.py adds the rules for the ports of the host (HOST_PORTS in msb.py), because this file cannot express them.
 network:
   tls:
     enabled: true # the host reads HTTPS requests. The host rules and the token replacement need this.

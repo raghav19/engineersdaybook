@@ -1,8 +1,7 @@
 # The msb sandbox: a microsandbox VM for Claude Code and VS Code. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
 # Every recipe runs on the host. sandbox.yaml declares the VM. The recipe `run` makes the VM from it.
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
-# The recipes list the steps in order. Each script of .msb/ has the logic of the steps of one job: vm.py (the VM), github.py (the GitHub login),
-# claude.py (the Claude login of the host), host.py (the setup of this host) and image.py (the tags of the image). common.py has their helpers.
+# The recipes list the steps in order. msb.py has the logic of the steps that need logic.
 #
 #   just msb setup        once for each host: authorize your SSH key and connect VS Code
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
@@ -14,17 +13,14 @@
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-# The scripts of .msb/ read these three values.
+# msb.py reads these three values.
 export MSB_NAME := 'sandbox-dev'
 export MSB_IMAGE := 'engineersdaybook-sandbox:local'
 # The path of the clone in the VM. SANDBOX_WORKSPACE in sandbox.yaml has the same value.
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
 msb_dir := source_directory()
-vm := msb_dir / 'vm.py'
-github := msb_dir / 'github.py'
-host := msb_dir / 'host.py'
-image_py := msb_dir / 'image.py'
+step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
 registry := 'ghcr.io/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
@@ -41,14 +37,14 @@ _host-only:
 
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
 setup: _host-only
-    key=$({{ host }} ssh-key) && msb ssh authorize --file "$key"
+    key=$({{ step }} ssh-key) && msb ssh authorize --file "$key"
     code --install-extension ms-vscode-remote.remote-ssh
-    {{ host }} vscode-settings
+    {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
 
 # Log in to GitHub with the GitHub App: you type a code in the browser. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them
 github-login: _host-only
-    {{ github }} login
+    {{ step }} github-login
 
 # Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
 image-build: _host-only
@@ -71,7 +67,7 @@ _vault:
 # Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits)
 [script]
 image-publish: _host-only _vault
-    tags=$({{ image_py }} tags)
+    tags=$({{ step }} image-tags)
     docker buildx inspect msb-builder >/dev/null 2>&1 || docker buildx create --name msb-builder --driver docker-container >/dev/null
     args=()
     for tag in $tags; do args+=(-t "{{ registry }}:$tag"); done
@@ -94,17 +90,17 @@ image-publish: _host-only _vault
 
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
 run: _host-only _vault
-    {{ vm }} preflight
+    {{ step }} preflight
     # Only this step runs under `bws run`: the Bitwarden keys are variables in its environment. `code` and the other steps do not get them
-    bws run -- '{{ vm }} ensure-vm'
-    {{ vm }} wait-boot
+    bws run -- '{{ step }} ensure-vm'
+    {{ step }} wait-boot
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
-allow-host host_name: _host-only && run
-    {{ host }} check-host '{{ host_name }}'
-    HOST='{{ host_name }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
-    echo "{{ host_name }} is now in network.allow."
+allow-host host: _host-only && run
+    {{ step }} check-host '{{ host }}'
+    HOST='{{ host }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
+    echo "{{ host }} is now in network.allow."
 
 # A bash prompt in the VM, as the agent user
 shell: _host-only
