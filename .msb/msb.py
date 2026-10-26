@@ -74,17 +74,21 @@ VSCODE_SETTINGS = {
 
 
 def die(message: str) -> NoReturn:
+    """Print `msb: <message>` on stderr and exit with 1. Every failed step ends here."""
     print(f"msb: {message}", file=sys.stderr)
     sys.exit(1)
 
 
 def setting(name: str) -> str:
-    """A value that the justfile exports."""
+    """Return a value that the justfile exports (MSB_NAME, MSB_IMAGE, MSB_WORKSPACE). Stop if it is not set, which happens when you run msb.py by hand."""
     return os.environ.get(name) or die(f"{name} is not set. Run this through `just msb <recipe>`.")
 
 
 def out(*cmd: str, default: str | None = None) -> str:
-    """Run a command in .msb/ (inside the repo) and return its output. If it fails, return `default`, or stop when there is no default."""
+    """Run a command in .msb/ (inside the repo) and return its output without the final newline.
+
+    If the command fails, return `default`. If there is no default, stop with the message of the command.
+    """
     done = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=MSB_DIR)
     if done.returncode == 0:
         return done.stdout.strip()
@@ -93,41 +97,36 @@ def out(*cmd: str, default: str | None = None) -> str:
     return default
 
 
+def preflight() -> None:
+    """Check what `run` needs, before it starts anything. It stops at the first problem and prints nothing if all is well.
+
+    It checks: msb and bws are on the PATH, the GitHub token file exists, and the local image exists.
+    """
+    if not shutil.which("msb"):
+        die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
+    if not shutil.which("bws"):
+        die("bws is not on the PATH. Run: mise install")
+    if not GITHUB_TOKEN_FILE.is_file():
+        die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
+    image_id()
+
+
 def image_id() -> str:
+    """Return the id of the local Docker image MSB_IMAGE. Stop with a hint if the image does not exist.
+
+    The id is part of the fingerprint of the VM, so a new image makes the VM not current.
+    """
     image = setting("MSB_IMAGE")
     return out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or die(
         f"the image {image} does not exist. Run: just msb image-build"
     )
 
 
-def host_values() -> dict[str, str]:
-    """The host values that sandbox.yaml names as ${NAME}."""
-    return {
-        "SANDBOX_GIT_DIR": out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
-        "SANDBOX_BRANCH": out("git", "branch", "--show-current"),
-        "GIT_AUTHOR_NAME": out("git", "config", "user.name", default="agent"),
-        "GIT_AUTHOR_EMAIL": out("git", "config", "user.email", default="agent@localhost"),
-    }
-
-
-def host_port_rules() -> list[str]:
-    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
-
-
-def image_tags() -> None:
-    """The commit that the image is built from, `latest` on main, and the git tag of the commit if it has one."""
-    if out("git", "status", "--porcelain", "--", "dev-tools"):
-        die("dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first.")
-    tags = [out("git", "rev-parse", "HEAD")]
-    if out("git", "branch", "--show-current") == "main":
-        tags.append("latest")
-    if git_tag := out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
-        tags.append(git_tag)
-    print("\n".join(tags))
-
-
 def github_post(path: str, **data: str) -> dict[str, Any]:
-    """A request to github.com/login/<path>. GitHub puts an `error` key in the reply when it refuses."""
+    """Send a request to https://github.com/login/<path> and return the JSON reply.
+
+    GitHub answers an error with a JSON body and an HTTP error code, or with code 200 and an `error` key. Both come back as a dict.
+    """
     body = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, **data}).encode()
     request = urllib.request.Request(f"https://github.com/login/{path}", data=body, headers={"Accept": "application/json"})
     try:
@@ -138,7 +137,11 @@ def github_post(path: str, **data: str) -> dict[str, Any]:
 
 
 def github_save(reply: dict[str, Any]) -> str:
-    """Write the tokens of a reply to the token file (mode 600 from the first byte, replaced in one step). Return the access token."""
+    """Write the tokens of a GitHub reply to the token file, and return the access token.
+
+    The file has mode 600 from the first byte. A new file replaces the old one in one step, so a crash never leaves a half-written file.
+    Stop if the reply has no refresh token: the app does not expire its tokens, and then nothing can refresh them.
+    """
     if "refresh_token" not in reply:
         die("GitHub gave a token that does not expire. Turn on 'Expire user authorization tokens' in the settings of the app.")
     now = time.time()
@@ -158,7 +161,15 @@ def github_save(reply: dict[str, Any]) -> str:
 
 
 def github_login() -> None:
-    """The device flow of a GitHub App: you type a code at github.com/login/device. It needs no client secret and no local server."""
+    """Log in to GitHub with the device flow of the GitHub App (`just msb github-login`). It writes the token file.
+
+    1. Ask GitHub for a code. If GitHub refuses, the device flow is off in the app: stop with a hint.
+    2. Print the address and the code. You type the code in the browser and approve.
+    3. Ask GitHub every few seconds if you approved, until you do or the code expires.
+    4. Save the access token and the refresh token with github_save.
+
+    It needs no client secret and no local server. It runs without `bws run`.
+    """
     code = github_post("device/code")
     if "device_code" not in code:
         die(
@@ -187,7 +198,12 @@ def github_login() -> None:
 
 
 def github_token() -> str:
-    """The access token. If it expires in less than REFRESH_MARGIN seconds, refresh it first."""
+    """Return a valid GitHub access token from the token file. `ensure-vm` calls this.
+
+    If the access token expires in less than REFRESH_MARGIN seconds, send the refresh token to GitHub and save the two new tokens.
+    Each refresh makes the old refresh token useless. Stop with a message if there is no file, if its mode is not 600,
+    if the refresh token is too old (about 6 months), or if GitHub refuses the refresh. Each message says: run `just msb github-login`.
+    """
     if not GITHUB_TOKEN_FILE.is_file():
         die("there is no GitHub login. Run: just msb github-login")
     if GITHUB_TOKEN_FILE.stat().st_mode & 0o077:
@@ -205,17 +221,35 @@ def github_token() -> str:
     return github_save(reply)
 
 
-def preflight() -> None:
-    if not shutil.which("msb"):
-        die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
-    if not shutil.which("bws"):
-        die("bws is not on the PATH. Run: mise install")
-    if not GITHUB_TOKEN_FILE.is_file():
-        die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
-    image_id()
+def host_values() -> dict[str, str]:
+    """Return the host values that sandbox.yaml names as ${NAME}: the git directory, the branch, and the git name and email.
+
+    They come from git on the host. The VM clones the git directory and starts on the branch, and the commits in the VM have this author.
+    """
+    return {
+        "SANDBOX_GIT_DIR": out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
+        "SANDBOX_BRANCH": out("git", "branch", "--show-current"),
+        "GIT_AUTHOR_NAME": out("git", "config", "user.name", default="agent"),
+        "GIT_AUTHOR_EMAIL": out("git", "config", "user.email", default="agent@localhost"),
+    }
+
+
+def host_port_rules() -> list[str]:
+    """Return the `--net-rule` arguments of `msb run` that let the VM reach the ports of HOST_PORTS on the host.
+
+    sandbox.yaml cannot express a rule for a port, so msb.py adds these rules when it makes the VM.
+    """
+    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
 
 
 def ensure_vm() -> None:
+    """Make the VM, or check that the VM that exists is current. The recipe runs this step under `bws run`.
+
+    The fingerprint is a hash of sandbox.yaml, the image and the host values. msb keeps it in the label `config-sha` of the VM.
+    1. No VM exists: make it. msb reads the secrets of sandbox.yaml from the environment: the Bitwarden keys and GH_TOKEN.
+    2. A VM exists, but it does not run or it has another fingerprint: stop. Removing it deletes its clone, so you decide.
+    3. A VM exists, runs and is current: give it the current GitHub token with `msb modify --secret`. It does not restart.
+    """
     name = setting("MSB_NAME")
     values = host_values()
     token = github_token()
@@ -268,6 +302,11 @@ def ensure_vm() -> None:
 
 
 def wait_boot() -> None:
+    """Wait until sandbox-boot writes /run/sandbox-ready, for at most BOOT_TIMEOUT seconds.
+
+    sandbox-boot clones the repo, installs the hook and starts Headroom. If a step fails, it exits and the VM stops, so the wait ends.
+    Then print the end of the boot log on stderr and exit with 1.
+    """
     name = setting("MSB_NAME")
     # sandbox-boot clones the repo, installs the hook and starts Headroom. Then it writes /run/sandbox-ready.
     # If a step fails, sandbox-boot exits with an error and the VM stops. The wait then ends, and the boot log shows the reason.
@@ -283,6 +322,10 @@ def wait_boot() -> None:
 
 
 def ssh_key() -> None:
+    """Print the path of your SSH public key. `setup` gives it to `msb ssh authorize`.
+
+    The default is ~/.ssh/id_ed25519.pub. The variable SANDBOX_SSH_PUBKEY changes it. Stop if the file does not exist.
+    """
     key = Path(os.environ.get("SANDBOX_SSH_PUBKEY", Path.home() / ".ssh" / "id_ed25519.pub"))
     if not key.is_file():
         die(f"there is no SSH public key at {key}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY.")
@@ -290,6 +333,10 @@ def ssh_key() -> None:
 
 
 def vscode_settings() -> None:
+    """Merge VSCODE_SETTINGS into the user settings of VS Code (~/.config/Code/User/settings.json).
+
+    It writes the file only if a value differs, and then it says so. New VS Code windows use the new values.
+    """
     path = Path.home() / ".config" / "Code" / "User" / "settings.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     current = json.loads(path.read_text()) if path.is_file() else {}
@@ -299,20 +346,41 @@ def vscode_settings() -> None:
 
 
 def check_host(host: str) -> None:
+    """Stop if HOST is not a valid host name: an optional `*.`, then letters, digits, dots and hyphens. `allow-host` calls this before it writes the name to sandbox.yaml."""
     if not re.fullmatch(r"(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?", host):
         die(f"{host} is not a host name.")
 
 
+def image_tags() -> None:
+    """Print the tags of the published image, one for each line. `image-publish` calls this.
+
+    The tags are the commit, `latest` (only on main) and the git tag of the commit (if it has one).
+    Stop if dev-tools/ differs from the commit, because the tag is the commit.
+    """
+    if out("git", "status", "--porcelain", "--", "dev-tools"):
+        die("dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first.")
+    tags = [out("git", "rev-parse", "HEAD")]
+    if out("git", "branch", "--show-current") == "main":
+        tags.append("latest")
+    if git_tag := out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
+        tags.append(git_tag)
+    print("\n".join(tags))
+
+
 def main() -> None:
+    """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings", "image-tags", "github-login"):
+    for step in ("preflight", "github-login", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings"):
         steps.add_parser(step)
     steps.add_parser("check-host").add_argument("host")
+    steps.add_parser("image-tags")
     args = parser.parse_args()
     match args.step:
         case "preflight":
             preflight()
+        case "github-login":
+            github_login()
         case "ensure-vm":
             ensure_vm()
         case "wait-boot":
@@ -325,8 +393,6 @@ def main() -> None:
             check_host(args.host)
         case "image-tags":
             image_tags()
-        case "github-login":
-            github_login()
 
 
 if __name__ == "__main__":
