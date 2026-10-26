@@ -3,7 +3,7 @@
 # The root mise.toml is for the host only (kind, msb, bws). The image does not read it.
 # If both sides use a tool (kubectl, helm, kustomize), both files list it.
 # The file is not named mise.toml, because the mise of the host would load it from this folder and ask you to trust it.
-# node and python are not in this file yet. The sbx shell kit supplied them.
+# node (npm is part of it) and python are here because the sbx shell kit supplied them. python is 3.13, as in the repo scripts and tools.
 # uv is here because the mise pypi backend needs it at build time for headroom-ai. The build image has no uv or pipx.
 
 # The mise shims in the sandbox set these values.
@@ -26,6 +26,8 @@ PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
 [tools]
+node = "24.22"  # the LTS release. npm comes with it
+python = "3.13"
 just = "1.59"
 yq = "4.54"
 jq = "1.8"

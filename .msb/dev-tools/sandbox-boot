@@ -14,8 +14,8 @@ fail() { echo "sandbox-boot: $*" >&2; exit 1; }
 as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
 
 rm -f "$ready"
-mkdir -p "$(dirname "$ws")" "$home/.claude"
-chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" || fail "chown of the workspace folders failed"
+mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.cache/terraform-providers"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" "$home/.cache/terraform-providers" || fail "chown of the workspace folders failed"
 
 # The clone is private. The VM cannot write to /run/sandbox/source, which is the .git directory of the host repo.
 # The clone starts on the branch of the host checkout. Push goes to GitHub, to a feature branch.

@@ -6,7 +6,7 @@
 #   just msb setup        once for each host: authorize your SSH key and connect VS Code
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
 #   just msb allow-host   allow one more host for the VM
-#   just msb image-build  build the image after you change image/tools.toml or image/Dockerfile
+#   just msb image-build  build the image after you change dev-tools/tools.toml or dev-tools/Dockerfile
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -19,7 +19,7 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
-volume := 'claude-home'
+volumes := 'claude-home terraform-providers'
 
 # List the recipes (the default)
 [default]
@@ -36,7 +36,7 @@ setup: _host-only
     {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
 
-# Build the image from image/ and load it into msb. Needs Docker. The first build takes several minutes
+# Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
 image-build: _host-only
     docker build -t $MSB_IMAGE {{ msb_dir }}/image
     docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
@@ -59,7 +59,7 @@ allow-host host: _host-only && run
 shell: _host-only
     msb exec -t -u agent $MSB_NAME -- bash -l
 
-# Remove the VM. `--volumes` also removes the Claude login and settings
+# Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache
 rm *args: _host-only
     msb rm -f $MSB_NAME || true
-    if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volume }} || true; fi
+    if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi

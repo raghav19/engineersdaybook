@@ -13,7 +13,7 @@ cpus: 4
 memory: "4G"
 shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code terminals use bash. The login shell adds the mise shims to the PATH.
 
-# sandbox-boot runs as root. It prepares the agent user, clones the repo and starts Headroom. Then it waits. See image/sandbox-boot.
+# sandbox-boot runs as root. It prepares the agent user, clones the repo and starts Headroom. Then it waits. See dev-tools/sandbox-boot.
 cmd: ["/usr/local/bin/sandbox-boot"]
 
 env:
@@ -37,6 +37,11 @@ mounts:
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude
+    create: ensure-exists
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/tools.toml). It stays when you remove the VM, so a new VM does not download the providers again.
+  # `just msb rm --volumes` removes it. sandbox-boot gives the folder to the agent user.
+  - named: terraform-providers
+    target: /home/agent/.cache/terraform-providers
     create: ensure-exists
 
 # The GitHub token does not enter the VM. The VM has a placeholder. The host replaces it with the token, for these hosts only.
