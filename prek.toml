@@ -29,7 +29,7 @@ language = "system"
 entry = "yamlfmt"
 types = ["yaml"]
 
-# ruff finds its settings per file: the nearest pyproject.toml with [tool.ruff] (tools/ sets line-length 140), else its defaults.
+# ruff reads ruff.toml in the repo root (line length 140, ANN).
 [[repos.hooks]]
 id = "ruff-check"
 name = "ruff check"
