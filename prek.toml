@@ -45,10 +45,12 @@ entry = "ruff format"
 types = ["python"]
 
 # ty reads ty.toml in the repo root. The build functions in tools/ are checked by their build recipe, with their own dependencies (types-pyyaml).
+# The scripts of .msb/ import each other from their own folder. ty reads a file with a PEP 723 block as a script and takes the config paths
+# relative to it, so ty.toml cannot name that folder: the flag does.
 [[repos.hooks]]
 id = "ty-check"
 name = "ty check"
 language = "system"
-entry = "ty check"
+entry = "ty check --extra-search-path .msb"
 types = ["python"]
 exclude = '/tools/'
