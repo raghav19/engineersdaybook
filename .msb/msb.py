@@ -8,9 +8,11 @@
 The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
 The justfile exports MSB_NAME, MSB_IMAGE and MSB_WORKSPACE. Run msb.py through `just msb <recipe>`.
 
-preflight        check that msb, the gh login and the image exist
+preflight        check that msb, the GitHub login and the image exist
+github-login     log in to GitHub with the GitHub App (a browser approval), and save the tokens in a file with mode 600
+refresh          refresh the GitHub token if it expires soon, and push it and the Bitwarden secrets into the running VM
 ensure-vm        make the VM from sandbox.yaml if none exists. Stop if a VM exists and is not current
-                 (the secrets of sandbox.yaml, except GITHUB_TOKEN, come from the Bitwarden project)
+                 (GITHUB_TOKEN is the token of the GitHub App. The other secrets of sandbox.yaml come from the Bitwarden project)
 wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
 ssh-key          print the path of your SSH public key
 vscode-settings  set the VS Code settings for Remote-SSH
@@ -20,21 +22,38 @@ image-tags       print the tags of the published image, one for each line. Stop 
 """
 
 import argparse
+import fcntl
 import getpass
 import hashlib
+import http.server
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
+import time
+import urllib.parse
+import urllib.request
+import webbrowser
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
 BOOT_TIMEOUT = 90  # seconds that `wait-boot` waits for sandbox-boot
 VAULT_TIMEOUT = 30  # seconds that the call to Bitwarden can take
+# The GitHub App of this repository. The client ID is public (.sbx/agent/agent.just has it too). The client secret is in Bitwarden.
+# The app has the permissions contents, issues and pull requests, on this repository only. So the token cannot do more.
+GITHUB_APP_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
+GITHUB_APP_SECRET = "GITHUB_APP_CLIENT_SECRET"  # the Bitwarden key
+GITHUB_CALLBACK_PORT = 8765  # the callback URL of the app is http://127.0.0.1:8765/callback
+# The access token lasts 8 hours. The refresh token lasts about 6 months, and each refresh gives a new one. Bitwarden is read-only for the
+# machine account, so the tokens go in a file on the host (mode 600).
+GITHUB_TOKEN_FILE = Path(os.environ.get("MSB_GITHUB_TOKEN_FILE", Path.home() / ".config" / "msb" / "github-app.json"))
+REFRESH_MARGIN = 1800  # seconds. A token that expires in less time is refreshed
+LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for the browser approval
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port, so msb.py
 # passes one `--net-rule allow@host:tcp:<port>` to msb for each. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -95,7 +114,7 @@ def image_id() -> str:
 def host_values() -> dict[str, str]:
     """The host values that sandbox.yaml names as ${NAME}."""
     return {
-        "GITHUB_TOKEN": out("gh", "auth", "token", default=""),
+        "GITHUB_TOKEN": github_token(),
         "SANDBOX_GIT_DIR": out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
         "SANDBOX_BRANCH": out("git", "branch", "--show-current"),
         "GIT_AUTHOR_NAME": out("git", "config", "user.name", default="agent"),
@@ -169,11 +188,125 @@ def image_tags() -> None:
     print("\n".join(tags))
 
 
+def github_post(data: dict[str, str]) -> dict[str, Any]:
+    """A request to the token endpoint of GitHub. GitHub answers 200 with an `error` key when it refuses."""
+    body = urllib.parse.urlencode({"client_id": GITHUB_APP_CLIENT_ID, **data}).encode()
+    request = urllib.request.Request("https://github.com/login/oauth/access_token", data=body, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def save_github_tokens(reply: dict[str, Any]) -> dict[str, Any]:
+    """Write the tokens of a reply to the token file. The file has mode 600 from the first byte, and it is replaced in one step."""
+    if "refresh_token" not in reply:
+        die("GitHub gave a token that does not expire. Turn on 'Expire user authorization tokens' in the settings of the app.")
+    now = time.time()
+    saved = {
+        "access_token": reply["access_token"],
+        "refresh_token": reply["refresh_token"],
+        "expires_at": now + reply["expires_in"],
+        "refresh_expires_at": now + reply["refresh_token_expires_in"],
+    }
+    GITHUB_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    temp = GITHUB_TOKEN_FILE.with_suffix(".tmp")
+    temp.unlink(missing_ok=True)
+    with os.fdopen(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as file:
+        json.dump(saved, file)
+    os.replace(temp, GITHUB_TOKEN_FILE)
+    return saved
+
+
+def github_login() -> None:
+    """The web flow of a GitHub App: the browser goes back to a port of this host with a code, and the code becomes the tokens."""
+    client_secret = vault_secrets([GITHUB_APP_SECRET])[GITHUB_APP_SECRET]
+    state = secrets.token_urlsafe(16)
+    redirect = f"http://127.0.0.1:{GITHUB_CALLBACK_PORT}/callback"
+    got: dict[str, str] = {}
+
+    class Callback(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if query.get("state") == [state] and "code" in query:
+                got["code"] = query["code"][0]
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Approved. You can close this tab." if "code" in got else b"No approval.")
+
+        def log_message(self, format: str, *args: object) -> None:  # no line of a log: the URL has the code
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", GITHUB_CALLBACK_PORT), Callback)
+    server.timeout = 5
+    query = urllib.parse.urlencode({"client_id": GITHUB_APP_CLIENT_ID, "redirect_uri": redirect, "state": state})
+    url = f"https://github.com/login/oauth/authorize?{query}"
+    print(f"Approve the app in your browser. If it does not open, open this URL:\n{url}")
+    webbrowser.open(url)
+    deadline = time.time() + LOGIN_TIMEOUT
+    while "code" not in got and time.time() < deadline:
+        server.handle_request()
+    server.server_close()
+    if "code" not in got:
+        die("there was no approval in time. Run: just msb github-login")
+    reply = github_post({"client_secret": client_secret, "code": got["code"], "redirect_uri": redirect})
+    if "access_token" not in reply:
+        die(f"GitHub refused the code: {reply.get('error_description', reply.get('error'))}")
+    save_github_tokens(reply)
+    print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
+
+
+def github_token() -> str:
+    """The access token. If it expires in less than REFRESH_MARGIN seconds, refresh it first. The lock stops two refreshes at the same time:
+    each refresh makes the old refresh token useless, so the second one would fail."""
+    GITHUB_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(GITHUB_TOKEN_FILE.with_suffix(".lock"), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not GITHUB_TOKEN_FILE.is_file():
+            die("there is no GitHub login. Run: just msb github-login")
+        if GITHUB_TOKEN_FILE.stat().st_mode & 0o077:
+            die(f"{GITHUB_TOKEN_FILE} must have mode 600.")
+        saved = json.loads(GITHUB_TOKEN_FILE.read_text())
+        if saved["expires_at"] - time.time() > REFRESH_MARGIN:
+            return saved["access_token"]
+        if saved["refresh_expires_at"] <= time.time():
+            die("the GitHub login is too old to refresh. Run: just msb github-login")
+        client_secret = vault_secrets([GITHUB_APP_SECRET])[GITHUB_APP_SECRET]
+        reply = github_post({"client_secret": client_secret, "grant_type": "refresh_token", "refresh_token": saved["refresh_token"]})
+        if "access_token" not in reply:
+            die(f"GitHub refused the refresh ({reply.get('error')}). Run: just msb github-login")
+        return save_github_tokens(reply)["access_token"]
+
+
+def push_secret(name: str, value: str) -> None:
+    """Give a running VM a new value for a secret. The placeholder in the VM stays the same, and the VM does not restart."""
+    hosts = out("yq", "-r", f'.secrets.{name}.allow | join(",")', str(CONFIG))
+    done = subprocess.run(
+        ["msb", "modify", setting("MSB_NAME"), "--secret", f"{name}@{hosts}"],
+        env=os.environ | {name: value},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if done.returncode != 0:
+        die(f"msb could not change the secret {name}: {done.stderr.strip()[:300]}")
+
+
+def refresh() -> None:
+    token = github_token()  # refreshes the token file, with or without a VM
+    info = out("msb", "inspect", setting("MSB_NAME"), "--format", "json", default="")
+    if not info or json.loads(info)["status"].lower() != "running":
+        print("There is no running VM. The token file is current.")
+        return
+    push_secret("GITHUB_TOKEN", token)
+    for name, value in vault_secrets(vault_names()).items():
+        push_secret(name, value)
+    print("The running VM has the current secrets.")
+
+
 def preflight() -> None:
     if not shutil.which("msb"):
         die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
-    if not out("gh", "auth", "token", default=""):
-        die("gh has no login, so git push in the VM fails. Run: gh auth login")
+    if not GITHUB_TOKEN_FILE.is_file():
+        die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
     image_id()
 
 
@@ -212,6 +345,8 @@ def ensure_vm() -> None:
             file=sys.stderr,
         )
         die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
+    # The VM runs and is current. Its GitHub token can be older than the file: `run` gives it the current one.
+    push_secret("GITHUB_TOKEN", values["GITHUB_TOKEN"])
 
 
 def wait_boot() -> None:
@@ -253,7 +388,7 @@ def check_host(host: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings", "image-tags"):
+    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings", "image-tags", "github-login", "refresh"):
         steps.add_parser(step)
     steps.add_parser("check-host").add_argument("host")
     steps.add_parser("vault-secret").add_argument("key")
@@ -275,6 +410,10 @@ def main() -> None:
             vault_secret(args.key)
         case "image-tags":
             image_tags()
+        case "github-login":
+            github_login()
+        case "refresh":
+            refresh()
 
 
 if __name__ == "__main__":

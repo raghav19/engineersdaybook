@@ -6,6 +6,8 @@
 #   just msb setup        once for each host: authorize your SSH key and connect VS Code
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
 #   just msb allow-host   allow one more host for the VM
+#   just msb github-login log in to GitHub (once, and when it asks for it)
+#   just msb refresh      refresh the tokens and push them into the running VM
 #   just msb image-build  build the image after you change dev-tools/mise.toml or dev-tools/Dockerfile
 #   just msb image-login  log in to ghcr.io (once, before image-publish)
 #   just msb image-publish  push the image to ghcr.io
@@ -39,6 +41,14 @@ setup: _host-only
     code --install-extension ms-vscode-remote.remote-ssh
     {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
+
+# Log in to GitHub with the GitHub App: one browser approval. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them
+github-login: _host-only
+    {{ step }} github-login
+
+# Refresh the GitHub token if it expires soon, and push it and the Bitwarden secrets into the running VM. `run` does the GitHub part. A timer can call this
+refresh: _host-only
+    {{ step }} refresh
 
 # Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
 image-build: _host-only

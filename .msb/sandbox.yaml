@@ -49,13 +49,16 @@ mounts:
     target: /home/agent/.cache/terraform-providers
     create: ensure-exists
 
-# The GitHub token does not enter the VM. The VM has a placeholder. The host replaces it with the token, for these hosts only.
-# The host replaces it in Basic auth (git over HTTPS) and in Bearer auth (REST API and GitHub MCP). The token is the host value GITHUB_TOKEN.
+# No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
+# GITHUB_TOKEN is the user token of the GitHub App (`just msb github-login`). The host replaces it in Basic auth (git over HTTPS) and in Bearer auth
+# (REST API and GitHub MCP). CLAUDE_CODE_OAUTH_TOKEN is the one-year token of `claude setup-token`, from the Bitwarden key with the same name.
 # To add a secret, list it below with the hosts that can receive it. msb.py reads its value from the Bitwarden key with the same name.
 # The VM gets a placeholder. It never gets the value or the Bitwarden access token.
 secrets:
   GITHUB_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
+  CLAUDE_CODE_OAUTH_TOKEN:
+    allow: [api.anthropic.com]
 
 # The egress allow list. If `allow` has entries, the VM denies all other hosts. To add a host, run `just msb allow-host <host>`.
 # The pattern *.example.com matches the subdomains at any depth (*.istio.io matches istio-release.r2.istio.io), and not the bare domain.
