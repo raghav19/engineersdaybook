@@ -1,7 +1,0 @@
-# ruff settings for msb.py: line length 140, as in tools/. Python 3.13.
-line-length = 140
-target-version = "py313"
-
-[lint]
-# ANN: every parameter and return value needs a type hint. ty checks that the hints are correct.
-extend-select = ["ANN"]
