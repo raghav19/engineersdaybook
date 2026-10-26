@@ -9,7 +9,7 @@ pull_policy: never
 
 cpus: 4
 memory: "4G"
-shell: "/bin/bash" # the shell of ssh sessions and of `msb exec`, so VS Code terminals load ~/.bashrc (mise, starship)
+shell: "/bin/bash" # the shell of ssh sessions and of `msb exec`, so VS Code terminals run bash (the login shell puts the mise shims on the PATH)
 
 # sandbox-boot runs as root: it prepares the agent user, clones the repo and starts Headroom (image/sandbox-boot). Then it waits.
 cmd: ["/usr/local/bin/sandbox-boot"]
@@ -18,11 +18,13 @@ env:
   SANDBOX_WORKSPACE: ${SANDBOX_WORKSPACE} # the repo path, the same as on the host
   SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch that is checked out on the host: the clone starts on it
   REPO_URL: ${REPO_URL} # the GitHub URL of origin (https)
-  GIT_USER_NAME: ${GIT_USER_NAME}
-  GIT_USER_EMAIL: ${GIT_USER_EMAIL}
+  GIT_AUTHOR_NAME: ${GIT_USER_NAME} # git takes the identity from these four variables, so the VM needs no git config for it
+  GIT_COMMITTER_NAME: ${GIT_USER_NAME}
+  GIT_AUTHOR_EMAIL: ${GIT_USER_EMAIL}
+  GIT_COMMITTER_EMAIL: ${GIT_USER_EMAIL}
   MISE_TRUSTED_CONFIG_PATHS: ${SANDBOX_WORKSPACE} # the clone's nested mise.toml files
   MISE_IGNORED_CONFIG_PATHS: ${SANDBOX_MISE_IGNORED} # the clone's root mise.toml lists host-only tools
-  CLAUDE_CONFIG_DIR: /home/agent/.claude # login, settings and MCP servers live on the claude-home volume
+  CLAUDE_CONFIG_DIR: /home/agent/.claude # login and settings live on the claude-home volume
   DISABLE_UPDATES: "1" # the mise-installed claude does not update itself
 
 mounts:

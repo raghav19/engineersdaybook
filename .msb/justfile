@@ -17,6 +17,17 @@ name := 'sandbox-dev'
 image := 'engineersdaybook-sandbox:local'
 volume := 'claude-home'
 
+# The host values that sandbox.yaml names (${NAME}). `run` puts them in its environment, with the [env] lines above it.
+# (A variable that you mark with `export` is evaluated for every recipe, even with `set lazy`. These are only evaluated by `run`.)
+workspace := shell('git -C "$1" rev-parse --show-toplevel', repo)
+git_dir := shell('git -C "$1" rev-parse --path-format=absolute --git-common-dir', repo)
+branch := shell('git -C "$1" branch --show-current', repo)
+repo_url := shell('git -C "$1" remote get-url origin | sed -E "s#^(ssh://)?git@github.com[:/]#https://github.com/#"', repo)
+git_user_name := shell('git -C "$1" config user.name || echo agent', repo)
+git_user_email := shell('git -C "$1" config user.email || echo agent@localhost', repo)
+# The token of the host `gh` login. It is empty without a login, and `run` stops then.
+github_token := shell('gh auth token 2>/dev/null || true')
+
 # List the recipes (the default)
 [default]
 help:
@@ -67,19 +78,19 @@ image-build: _host-only
     echo "image {{ image }} loaded. Run: just msb run (a running VM is made again, if the image changed)"
 
 # Every day. Create or start the VM from sandbox.yaml, then open VS Code on it
+# The token is in the environment of this recipe only, so msb sees it and the VM gets a placeholder.
+[env('GITHUB_TOKEN', github_token)]
+[env('SANDBOX_WORKSPACE', workspace)]
+[env('SANDBOX_MISE_IGNORED', workspace + '/mise.toml')]
+[env('SANDBOX_GIT_DIR', git_dir)]
+[env('SANDBOX_BRANCH', branch)]
+[env('REPO_URL', repo_url)]
+[env('GIT_USER_NAME', git_user_name)]
+[env('GIT_USER_EMAIL', git_user_email)]
 [script]
 run: _host-only
     command -v msb >/dev/null || { echo "msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
-    token=$(gh auth token 2>/dev/null) && [ -n "$token" ] || { echo "gh has no login, so git push in the VM would fail. Run: gh auth login" >&2; exit 1; }
-    # sandbox.yaml names these host variables (${NAME}). The token goes in the environment of msb only: the VM gets a placeholder.
-    export GITHUB_TOKEN="$token"
-    export SANDBOX_WORKSPACE=$(git -C {{ repo }} rev-parse --show-toplevel)
-    export SANDBOX_MISE_IGNORED="$SANDBOX_WORKSPACE/mise.toml"
-    export SANDBOX_GIT_DIR=$(git -C {{ repo }} rev-parse --path-format=absolute --git-common-dir)
-    export SANDBOX_BRANCH=$(git -C {{ repo }} branch --show-current)
-    export REPO_URL=$(git -C {{ repo }} remote get-url origin | sed -E 's#^(ssh://)?git@github.com[:/]#https://github.com/#')
-    export GIT_USER_NAME=$(git -C {{ repo }} config user.name || echo agent)
-    export GIT_USER_EMAIL=$(git -C {{ repo }} config user.email || echo agent@localhost)
+    [ -n "$GITHUB_TOKEN" ] || { echo "gh has no login, so git push in the VM would fail. Run: gh auth login" >&2; exit 1; }
 
     # The VM is current when its config-sha label equals the hash of sandbox.yaml, the image and the host variables.
     image_id=$(docker image inspect {{ image }} 2>/dev/null | jq -r '.[0].Id') && [ -n "$image_id" ] \

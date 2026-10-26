@@ -12,7 +12,8 @@ This branch is a trial. `.sbx/` stays as it is, and both run side by side (`just
 | Allowed hosts | policy kit + `sbx policy allow` + kit rebuild | `network.allow` in `sandbox.yaml` |
 | VS Code | `sbx setup ssh` | `ProxyCommand msb ssh serve` in `ssh_config`, no sshd in the VM |
 | GitHub token | proxy swap, plus the MCP gateway holds the OAuth token | proxy swap only (the VM holds a placeholder) |
-| Tool filter for GitHub MCP | the gateway removes the tools | a deny list in Claude Code only (a soft limit) |
+| MCP servers | registered on the gateway (`sbx mcp add`) | `.mcp.json` in the repo root |
+| Tool filter for GitHub MCP | the gateway removes the tools | the `X-MCP-Exclude-Tools` header in `.mcp.json` and a deny list in `.claude/settings.json`, which the client enforces (a soft limit) |
 | Claude login | injected by the sbx proxy | you sign in with your subscription. The login is on the `claude-home` volume |
 | Licence | proprietary | Apache-2.0, beta (v0.7) |
 
@@ -59,6 +60,9 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - **The token.** The VM has only a placeholder in `GITHUB_TOKEN`. The host swaps it for your token on requests to `github.com`, `api.github.com` and `api.githubcopilot.com`. It is swapped for Bearer and Basic auth, so `git push` works. The token is blocked toward every other host.
 - **Allowed hosts.** The VM can reach only the hosts in `network.allow`. HTTPS rules need TLS interception, which `sandbox.yaml` turns on. A blocked host fails at DNS. To add one: `just msb allow-host example.org`. This edits `sandbox.yaml` and makes the VM again. Commit the change.
 - **Tools.** `image/tools.toml` lists the tools and their exact versions. The Dockerfile installs them with mise. Claude Code is one of them. After you edit the file, run `just msb image-build`, then `just msb run`.
+- **MCP servers.** `.mcp.json` declares draw.io, the Flux schema catalog and GitHub. The GitHub entry sends `Bearer ${GITHUB_TOKEN}`, which is the placeholder, and the host swaps it. `enabledMcpjsonServers` in `.claude/settings.json` approves the three servers, so Claude Code does not ask. It applies only in a folder that you trust, so you answer the trust prompt once. In sbx the same `.mcp.json` loads next to the gateway servers.
+- **The shell.** A plain bash with the mise shims on the `PATH` (`/etc/profile.d`), `EDITOR` set, and completions for the tools. There is no prompt theme and no fzf.
+- **Git identity.** `sandbox.yaml` sets `GIT_AUTHOR_*` and `GIT_COMMITTER_*` from your host git config. The image holds the token helper and `safe.directory` in its system git config.
 - **VS Code.** microsandbox has no sshd in the VM. The `msb` command on the host is the SSH server, and `ssh_config` starts it as a `ProxyCommand`. The VM must run before VS Code connects, and `run` makes sure of it.
 
 ## When something fails

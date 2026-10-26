@@ -8,7 +8,7 @@ ARG MISE_VERSION=v2026.10.0
 ENV MISE_DATA_DIR=/opt/mise \
     MISE_CACHE_DIR=/tmp/mise-cache \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
-    COMPLETIONS_DIR=/opt/sandbox/completions
+    COMPLETIONS_DIR=/home/agent/.local/share/bash-completion/completions
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -18,8 +18,8 @@ RUN apt-get update \
 
 # The agent user: uid 1000, as in the sbx shell kit. mise installs as agent, so the shims and new tools belong to it.
 RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
- && mkdir -p /opt/mise /opt/sandbox /home/agent/.cache/terraform-providers \
- && chown -R agent:agent /opt/mise /opt/sandbox /home/agent
+ && mkdir -p /opt/mise /home/agent/.cache/terraform-providers \
+ && chown -R agent:agent /opt/mise /home/agent
 
 # mise, then exactly the tools in tools.toml, which is copied in as it is: it is the system config of mise.
 RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
@@ -30,19 +30,19 @@ RUN mise install --yes
 # Remove spire-server: the VM runs only the agent.
 RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
-# The bash completions come from a task in tools.toml.
+# The bash completions come from a task in tools.toml. bash loads a file of ~/.local/share/bash-completion/completions when you first complete its command, so no rc file is needed.
 RUN mise run sandbox:completions
 
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
-COPY shellrc /home/agent/.dev-tools-shellrc
 COPY sandbox-boot /usr/local/bin/sandbox-boot
+# Git for every user: any directory is safe (the clone belongs to agent, the mount to root), and GitHub over HTTPS takes the token from GITHUB_TOKEN,
+# which holds only a placeholder. The host swaps it for the real token on the wire.
+RUN git config --system --add safe.directory '*' \
+ && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
 # Debian's /etc/profile resets PATH for login shells (bash -l, the VS Code terminal, ssh), which drops the shims from the ENV below.
-RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' > /etc/profile.d/mise-shims.sh \
- && chmod 0755 /usr/local/bin/sandbox-boot \
- && chown agent:agent /home/agent/.dev-tools-shellrc \
- && echo '. /home/agent/.dev-tools-shellrc' >> /home/agent/.bashrc \
- && chown agent:agent /home/agent/.bashrc
+RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR="code --wait"' > /etc/profile.d/mise-shims.sh \
+ && chmod 0755 /usr/local/bin/sandbox-boot
 
 # The tools are the mise shims. The workspace paths for mise (MISE_TRUSTED_CONFIG_PATHS, MISE_IGNORED_CONFIG_PATHS) come from sandbox.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
