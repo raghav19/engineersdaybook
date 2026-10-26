@@ -78,8 +78,8 @@ image-build: _host-only
     echo "image {{ image }} loaded. Run: just msb run (a running VM is made again, if the image changed)"
 
 # The token is in the environment of this recipe only, so msb sees it and the VM gets a placeholder.
-# Run `run` as often as you like: it never makes a second VM, and it makes the VM again only when sandbox.yaml, the image or a host value changed.
-# Every day. Create or start the VM from sandbox.yaml, then open VS Code on it
+# Run `run` as often as you like: a VM that runs and is current is left alone, and any other VM is made again (after a check for unpushed work).
+# Every day. Make the VM from sandbox.yaml unless a current one is running, then open VS Code on it
 [env('GITHUB_TOKEN', github_token)]
 [env('SANDBOX_WORKSPACE', workspace)]
 [env('SANDBOX_MISE_IGNORED', workspace + '/mise.toml')]
@@ -95,52 +95,42 @@ run: _host-only
     image_id=$(docker image inspect {{ image }} 2>/dev/null | jq -r '.[0].Id') && [ -n "$image_id" ] \
       || { echo "The image {{ image }} does not exist. Run: just msb image-build" >&2; exit 1; }
 
-    # running, stopped (or crashed), or missing
-    vm_state() { msb inspect {{ name }} --format json 2>/dev/null | jq -r '.status | ascii_downcase' || echo missing; }
-    # the fingerprint that the VM was made from: msb keeps it as the label config-sha
-    vm_made_from() { msb inspect {{ name }} --format json | jq -r '.config.labels["config-sha"] // ""'; }
-    # unpushed work in the clone, which removing the VM would delete
-    unpushed_work() { msb exec {{ name }} -u agent -- sh -c "cd '$SANDBOX_WORKSPACE' 2>/dev/null && { git status --porcelain; git log --branches --not --remotes --oneline; }" || true; }
-
     # The fingerprint of what we would make now: sandbox.yaml, the image, and the host values (another repo path is another mount). The token is not one of them.
     wanted=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
-    state=$(vm_state)
 
-    # 1. A VM that was made from an older fingerprint is removed, unless its clone holds unpushed work. The {{ volume }} volume stays.
-    if [ "$state" != missing ] && [ "$(vm_made_from)" != "$wanted" ]; then
-      echo "msb: sandbox.yaml, the image or a host value changed, so the VM is made again (the {{ volume }} volume stays)"
-      [ "$state" = running ] || msb start {{ name }} >/dev/null
-      dirty=$(unpushed_work)
+    # The VM that exists, if any. msb keeps the fingerprint that made it as its label config-sha.
+    info=$(msb inspect {{ name }} --format json 2>/dev/null || true)
+    made_from=$(jq -r '.config.labels["config-sha"] // empty' <<<"$info")
+    status=$(jq -r '.status | ascii_downcase' <<<"$info")
+
+    # Keep the VM only if it runs and was made from this fingerprint. Any other VM is made again: when msb starts a stopped VM it does not run sandbox-boot.
+    # Its clone is checked first, because removing the VM deletes unpushed work. The {{ volume }} volume stays.
+    if [ -n "$made_from" ] && { [ "$made_from" != "$wanted" ] || [ "$status" != running ]; }; then
+      echo "msb: the VM is not running, or sandbox.yaml, the image or a host value changed, so the VM is made again (the {{ volume }} volume stays)"
+      [ "$status" = running ] || msb start {{ name }} >/dev/null
+      dirty=$(msb exec {{ name }} -u agent -- sh -c "cd '$SANDBOX_WORKSPACE' 2>/dev/null && { git status --porcelain; git log --branches --not --remotes --oneline; }" || true)
       if [ -n "$dirty" ] && [ -z "${SANDBOX_FORCE:-}" ]; then
         echo "msb: the clone in the VM has work that is not pushed (below). Push it, or run again with SANDBOX_FORCE=1 to drop it." >&2
         echo "$dirty" >&2
+        [ "$status" = running ] || msb stop {{ name }} >/dev/null  # it was stopped: leave it stopped, so the next run checks again
         exit 1
       fi
       msb rm -f {{ name }} >/dev/null
-      state=missing
+      made_from=""
     fi
 
-    # 2. Make the VM, or start it, or leave it as it is.
-    case $state in
-      missing)
-        # A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb ls` does not list it: remove it.
-        rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"
-        msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$wanted" ;;
-      running) ;;
-      *) msb start {{ name }} ;;
-    esac
+    # No VM now: make it. (A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb ls` does not list it: remove it.)
+    if [ -z "$made_from" ]; then
+      rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"
+      msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$wanted"
+    fi
 
-    # 3. Wait for the boot. sandbox-boot clones the repo, installs the hook and starts Headroom, then writes /run/sandbox-ready.
-    # If a step fails, sandbox-boot exits with an error and that stops the VM: the loop ends, and the boot log shows the reason.
-    for _ in $(seq 120); do
-      [ "$(vm_state)" = running ] || break
-      msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null && break
-      sleep 1
-    done
-    msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null \
+    # Wait until sandbox-boot has cloned the repo, installed the hook and started Headroom: it then writes /run/sandbox-ready.
+    # If a step fails, sandbox-boot exits with an error and that stops the VM: the wait ends, and the boot log shows the reason.
+    timeout 90 msb exec {{ name }} -- sh -c 'until [ -f /run/sandbox-ready ]; do sleep 1; done' \
       || { echo "msb: the sandbox did not finish its boot. Its log (msb logs {{ name }}):" >&2; msb logs {{ name }} 2>&1 | tail -n 15 >&2; exit 1; }
 
-    # 4. Open VS Code on the clone.
+
     code --folder-uri "vscode-remote://ssh-remote+{{ name }}.msb$SANDBOX_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then make the VM again

@@ -47,7 +47,7 @@ just msb run           # 3. every day
 |---|---|---|
 | 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Sets the VS Code user settings, including `remote.SSH.configFile`, which points to `ssh_config`. |
 | 2 | `image-build` | Builds `image/` with Docker (Debian, mise, the tools of `image/tools.toml`) and loads it into msb. The first build takes several minutes. |
-| 3 | `run` | Creates the VM from `sandbox.yaml`, or starts it, or leaves it as it is. Makes it again if `sandbox.yaml`, the image or a host value changed. Waits for the boot. Opens VS Code on it. You can run it as often as you like. |
+| 3 | `run` | Leaves a VM alone if it runs and is current. Otherwise it makes the VM from `sandbox.yaml`, after a check for unpushed work. Waits for the boot. Opens VS Code on it. You can run it as often as you like. |
 
 In VS Code, open a terminal and run `claude`. Sign in with your subscription the first time. The VM keeps the login on the `claude-home` volume.
 
@@ -55,7 +55,7 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 
 ## How it works
 
-- **One file.** `sandbox.yaml` declares the image, size, mounts, secrets and the egress allow list. `run` stores a hash of the file, the image and the host values (repo path, git directory, origin URL, git identity) in the label `config-sha` when it makes the VM. At the next `run`, a different hash means the VM is made again, because msb fixes the config of a VM when it makes it. The `claude-home` volume stays. `run` refuses first if the clone in the VM has work that is not pushed (set `SANDBOX_FORCE=1` to drop it).
+- **One file.** `sandbox.yaml` declares the image, size, mounts, secrets and the egress allow list. `run` stores a hash of the file, the image and the host values (repo path, git directory, origin URL, git identity) in the label `config-sha` when it makes the VM. At the next `run`, a different hash means the VM is made again, because msb fixes the config of a VM when it makes it. A VM that is not running is made again too: when msb starts a stopped VM it does not run `sandbox-boot`, so the clone step and Headroom would be missing. So stopping the VM throws its disk away, and the `claude-home` volume stays. `run` refuses first if the clone in the VM has work that is not pushed (set `SANDBOX_FORCE=1` to drop it).
 - **The clone.** Only the `.git` directory of the host repo is mounted, read-only, at `/run/sandbox/source`. The VM cannot read your working tree: no untracked file, no `.env`. `image/sandbox-boot` clones it to the same path as on the host, on the branch that is checked out on the host, and sets `origin` to the GitHub URL. If the clone, the pre-commit hook or Headroom fails, `sandbox-boot` exits with an error, which stops the VM. `run` then prints the boot log. Commit on the host before `run`: uncommitted changes are not in the clone. Push a feature branch from the VM and open the pull request on GitHub. This works for a git worktree too.
 - **The token.** The VM has only a placeholder in `GITHUB_TOKEN`. The host swaps it for your token on requests to `github.com`, `api.github.com` and `api.githubcopilot.com`. It is swapped for Bearer and Basic auth, so `git push` works. The token is blocked toward every other host.
 - **Allowed hosts.** The VM can reach only the hosts in `network.allow`. HTTPS rules need TLS interception, which `sandbox.yaml` turns on. A blocked host fails at DNS. To add one: `just msb allow-host example.org`. This edits `sandbox.yaml` and makes the VM again. Commit the change.
@@ -73,7 +73,7 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 | `run` says the image does not exist | `just msb image-build` |
 | `msb doctor` shows a red line | Read the line. For `/dev/kvm`: `sudo usermod -aG kvm "$USER"`, then log in again. |
 | `run` says the sandbox did not finish its boot | It prints the end of the boot log (`sandbox-boot: ...`): the clone, the hook or Headroom failed. `msb logs sandbox-dev` shows all of it. |
-| `msb ls` shows `crashed` or `stopped` | `just msb run` starts it. |
+| `msb ls` shows `crashed` or `stopped` | `just msb run` makes the VM again, after the check for unpushed work. |
 | `run` refuses to make the VM again | The clone has work that is not pushed. Push it, or run `SANDBOX_FORCE=1 just msb run`. |
 | A site fails in the VM | It is not in `network.allow`. `just msb allow-host <host>`. |
 | VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window and open it again from `run`. |
