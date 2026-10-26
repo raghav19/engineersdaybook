@@ -126,13 +126,15 @@ run: _host-only
       *) msb start {{ name }} ;;
     esac
 
-    # sandbox-boot clones the repo on the first start. VS Code needs the clone before it opens the folder.
+    # sandbox-boot clones the repo, installs the hook and starts Headroom, then writes /run/sandbox-ready. VS Code needs all of it.
+    # If a step fails, sandbox-boot exits with an error and that stops the VM: the loop ends, and the boot log shows the reason.
     for _ in $(seq 120); do
-      msb exec {{ name }} -- test -d "$SANDBOX_WORKSPACE/.git" 2>/dev/null && break
+      [ "$(msb inspect {{ name }} --format json | jq -r '.status | ascii_downcase')" = running ] || break
+      msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null && break
       sleep 1
-    done || true
-    msb exec {{ name }} -- test -d "$SANDBOX_WORKSPACE/.git" 2>/dev/null \
-      || { echo "msb: the clone is not ready. Read the log: msb logs {{ name }}" >&2; exit 1; }
+    done
+    msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null \
+      || { echo "msb: the sandbox did not finish its boot. Its log (msb logs {{ name }}):" >&2; msb logs {{ name }} 2>&1 | tail -n 15 >&2; exit 1; }
     code --folder-uri "vscode-remote://ssh-remote+{{ name }}.msb$SANDBOX_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then make the VM again

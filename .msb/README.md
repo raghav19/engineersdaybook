@@ -13,7 +13,7 @@ This branch is a trial. `.sbx/` stays as it is, and both run side by side (`just
 | VS Code | `sbx setup ssh` | `ProxyCommand msb ssh serve` in `ssh_config`, no sshd in the VM |
 | GitHub token | proxy swap, plus the MCP gateway holds the OAuth token | proxy swap only (the VM holds a placeholder) |
 | MCP servers | registered on the gateway (`sbx mcp add`) | `.mcp.json` in the repo root |
-| Tool filter for GitHub MCP | the gateway removes the tools | the `X-MCP-Exclude-Tools` header in `.mcp.json` and a deny list in `.claude/settings.json`, which the client enforces (a soft limit) |
+| Tool filter for GitHub MCP | the gateway removes the tools | a deny list in `.claude/settings.json`, which the client enforces (a soft limit) |
 | Claude login | injected by the sbx proxy | you sign in with your subscription. The login is on the `claude-home` volume |
 | Licence | proprietary | Apache-2.0, beta (v0.7) |
 
