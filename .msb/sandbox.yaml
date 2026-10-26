@@ -1,4 +1,4 @@
-# The msb sandbox, declared. This file is the single source of truth: `just msb run` makes the VM from it, and makes it again when the file changes.
+# The msb sandbox, declared. This file is the single source of truth: `just msb run` makes the VM from it. After a change, `just msb rm && just msb run` makes it again.
 # Schema: https://docs.microsandbox.dev/cli/configuration.md. ${NAME} is a host variable that `just msb run` exports.
 # Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig, the Flux Operator UI.
 

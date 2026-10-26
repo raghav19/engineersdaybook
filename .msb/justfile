@@ -1,8 +1,8 @@
 # The msb sandbox: a microsandbox microVM for Claude Code and VS Code. Loaded by ../justfile as `mod msb`: `just msb <recipe>`.
-# Every recipe runs on the host. sandbox.yaml declares the whole VM; `run` makes the VM from it, and makes it again when the file changes.
+# Every recipe runs on the host. sandbox.yaml declares the whole VM; `run` makes the VM from it, and asks you to remove the VM when the file changes.
 #
 #   just msb setup        once per machine: authorize your SSH key, connect VS Code
-#   just msb run          every day: create or start the VM and open VS Code on it
+#   just msb run          every day: make the VM if there is none, and open VS Code on it
 #   just msb allow-host   allow one more host for the VM
 #   just msb image-build  build the image after you change image/tools.toml or image/Dockerfile
 
@@ -75,11 +75,11 @@ setup: _host-only
 image-build: _host-only
     docker build -t {{ image }} {{ msb_dir }}/image
     docker save {{ image }} | msb load --tag {{ image }}
-    echo "image {{ image }} loaded. Run: just msb run (a running VM is made again, if the image changed)"
+    echo "image {{ image }} loaded. A VM that exists keeps the old image: just msb rm && just msb run"
 
 # The token is in the environment of this recipe only, so msb sees it and the VM gets a placeholder.
-# Run `run` as often as you like: a VM that runs and is current is left alone, and any other VM is made again (after a check for unpushed work).
-# Every day. Make the VM from sandbox.yaml unless a current one is running, then open VS Code on it
+# Run `run` as often as you like: a VM that runs and is current is left alone. Any other VM is yours to remove (`just msb rm`), because that deletes its clone.
+# Every day. Make the VM from sandbox.yaml if there is none, then open VS Code on it
 [env('GITHUB_TOKEN', github_token)]
 [env('SANDBOX_WORKSPACE', workspace)]
 [env('SANDBOX_MISE_IGNORED', workspace + '/mise.toml')]
@@ -103,26 +103,16 @@ run: _host-only
     made_from=$(jq -r '.config.labels["config-sha"] // empty' <<<"$info")
     status=$(jq -r '.status | ascii_downcase' <<<"$info")
 
-    # Keep the VM only if it runs and was made from this fingerprint. Any other VM is made again: when msb starts a stopped VM it does not run sandbox-boot.
-    # Its clone is checked first, because removing the VM deletes unpushed work. The {{ volume }} volume stays.
-    if [ -n "$made_from" ] && { [ "$made_from" != "$wanted" ] || [ "$status" != running ]; }; then
-      echo "msb: the VM is not running, or sandbox.yaml, the image or a host value changed, so the VM is made again (the {{ volume }} volume stays)"
-      [ "$status" = running ] || msb start {{ name }} >/dev/null
-      dirty=$(msb exec {{ name }} -u agent -- sh -c "cd '$SANDBOX_WORKSPACE' 2>/dev/null && { git status --porcelain; git log --branches --not --remotes --oneline; }" || true)
-      if [ -n "$dirty" ] && [ -z "${SANDBOX_FORCE:-}" ]; then
-        echo "msb: the clone in the VM has work that is not pushed (below). Push it, or run again with SANDBOX_FORCE=1 to drop it." >&2
-        echo "$dirty" >&2
-        [ "$status" = running ] || msb stop {{ name }} >/dev/null  # it was stopped: leave it stopped, so the next run checks again
-        exit 1
-      fi
-      msb rm -f {{ name }} >/dev/null
-      made_from=""
-    fi
-
-    # No VM now: make it. (A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb ls` does not list it: remove it.)
-    if [ -z "$made_from" ]; then
+    if [ -z "$info" ]; then
+      # No VM: make it. (A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb inspect` does not see it: remove it.)
       rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"
       msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$wanted"
+    elif [ "$made_from" != "$wanted" ] || [ "$status" != running ]; then
+      # Keep the VM only if it runs and was made from this fingerprint. msb fixes the config of a VM when it makes it, and it does not run sandbox-boot when it starts a stopped VM.
+      # Removing the VM deletes its clone, so you decide: push what you want to keep first. The {{ volume }} volume stays.
+      echo "msb: {{ name }} is $status, and it is not current (sandbox.yaml, the image or a host value changed, or the VM stopped)." >&2
+      echo "     Push the work in its clone (just msb shell, after msb start {{ name }} if it is stopped), then remove it and run again:  just msb rm && just msb run" >&2
+      exit 1
     fi
 
     # Wait until sandbox-boot has cloned the repo, installed the hook and started Headroom: it then writes /run/sandbox-ready.
@@ -133,7 +123,7 @@ run: _host-only
 
     code --folder-uri "vscode-remote://ssh-remote+{{ name }}.msb$SANDBOX_WORKSPACE"
 
-# Allow one more host for the VM: add it to network.allow in sandbox.yaml, then make the VM again
+# Allow one more host for the VM: add it to network.allow in sandbox.yaml, then run (which asks you to remove the VM first, if one exists)
 allow-host host: _host-only && run
     [[ '{{ host }}' =~ ^(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || { echo "Not a host name: {{ host }}" >&2; exit 1; }
     HOST='{{ host }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
