@@ -36,6 +36,12 @@ RUN mise run sandbox:completions
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
+# The policy of Claude Code, owned by root: the agent cannot edit it, and project and user settings cannot override it. It has the MCP servers
+# and the deny list for the GitHub tools. $MSB_GITHUB_TOKEN is the placeholder that msb puts in GITHUB_TOKEN. The host swaps it for the token on
+# the wire, so the file holds no secret. (The deny list stops mistakes. The agent can still call the GitHub API with the placeholder, so the
+# scope of the token is the real limit.)
+RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
+COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 # Git for every user: any directory is safe (the clone belongs to agent, the mount to root), and GitHub over HTTPS takes the token from GITHUB_TOKEN,
 # which holds only a placeholder. The host swaps it for the real token on the wire.
 RUN git config --system --add safe.directory '*' \

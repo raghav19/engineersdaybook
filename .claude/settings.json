@@ -5,15 +5,5 @@
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
     "ENABLE_TOOL_SEARCH": "true"
-  },
-  "enabledMcpjsonServers": ["drawio", "flux-schema-catalog", "github"],
-  "permissions": {
-    "deny": [
-      "mcp__github__merge_pull_request",
-      "mcp__github__delete_file",
-      "mcp__github__delete_repository",
-      "mcp__github__create_repository",
-      "mcp__github__fork_repository"
-    ]
   }
 }
