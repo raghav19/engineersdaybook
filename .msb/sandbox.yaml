@@ -3,31 +3,33 @@
 # Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig, the Flux Operator UI.
 
 image:
-  oci: engineersdaybook-sandbox:local   # built and loaded by `just msb image-build`
+  oci: engineersdaybook-sandbox:local # built and loaded by `just msb image-build`
   upper_size: "20G"
 pull_policy: never
 
 cpus: 4
 memory: "4G"
-shell: "/bin/bash"   # the shell of ssh sessions and of `msb exec`, so VS Code terminals load ~/.bashrc (mise, starship)
+shell: "/bin/bash" # the shell of ssh sessions and of `msb exec`, so VS Code terminals load ~/.bashrc (mise, starship)
 
 # sandbox-boot runs as root: it prepares the agent user, clones the repo and starts Headroom (image/sandbox-boot). Then it waits.
 cmd: ["/usr/local/bin/sandbox-boot"]
 
 env:
-  SANDBOX_WORKSPACE: ${SANDBOX_WORKSPACE}               # the repo path, the same as on the host
-  REPO_URL: ${REPO_URL}                                 # the GitHub URL of origin (https)
+  SANDBOX_WORKSPACE: ${SANDBOX_WORKSPACE} # the repo path, the same as on the host
+  SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch that is checked out on the host: the clone starts on it
+  REPO_URL: ${REPO_URL} # the GitHub URL of origin (https)
   GIT_USER_NAME: ${GIT_USER_NAME}
   GIT_USER_EMAIL: ${GIT_USER_EMAIL}
-  MISE_TRUSTED_CONFIG_PATHS: ${SANDBOX_WORKSPACE}       # the clone's nested mise.toml files
-  MISE_IGNORED_CONFIG_PATHS: ${SANDBOX_MISE_IGNORED}    # the clone's root mise.toml lists host-only tools
-  CLAUDE_CONFIG_DIR: /home/agent/.claude                # login, settings and MCP servers live on the claude-home volume
-  DISABLE_UPDATES: "1"                                  # the mise-installed claude does not update itself
+  MISE_TRUSTED_CONFIG_PATHS: ${SANDBOX_WORKSPACE} # the clone's nested mise.toml files
+  MISE_IGNORED_CONFIG_PATHS: ${SANDBOX_MISE_IGNORED} # the clone's root mise.toml lists host-only tools
+  CLAUDE_CONFIG_DIR: /home/agent/.claude # login, settings and MCP servers live on the claude-home volume
+  DISABLE_UPDATES: "1" # the mise-installed claude does not update itself
 
 mounts:
-  # The host repo, read-only. The VM works on a private clone of it (made by sandbox-boot), so uncommitted host files stay invisible.
-  # (a relative path to the parent folder is refused by msb 0.7.10, so the path comes from the host variable)
-  - "${SANDBOX_WORKSPACE}:/run/sandbox/source:ro"
+  # The git directory of the host repo, read-only: the VM can read the committed history and nothing else of your working tree
+  # (no untracked file, no .env). sandbox-boot clones it, so the VM works on a private clone. This also works when the host
+  # checkout is a git worktree. (A relative path to the parent folder is refused by msb 0.7.10, so the path comes from the host variable.)
+  - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
   # Claude Code login and settings. `just msb rm --volumes` deletes it.
   - named: claude-home
     target: /home/agent/.claude
@@ -43,7 +45,7 @@ secrets:
 # A pattern *.example.com matches the sub-domains only, so the bare domain is listed too where a site needs it.
 network:
   tls:
-    enabled: true   # the host sees HTTPS requests, which the host rules and the token swap need
+    enabled: true # the host sees HTTPS requests, which the host rules and the token swap need
   allow:
     # Claude Code
     - api.anthropic.com

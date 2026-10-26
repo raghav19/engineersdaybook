@@ -1,7 +1,7 @@
 #!/bin/bash
 # The command of the msb sandbox (cmd in sandbox.yaml). It runs as root at every start, prepares the agent user, then waits.
 # Every step may fail without stopping the boot: a failed step prints its reason to the log (msb logs <name>).
-# Env from sandbox.yaml: SANDBOX_WORKSPACE (repo path, same as on the host), REPO_URL, GIT_USER_NAME, GIT_USER_EMAIL.
+# Env from sandbox.yaml: SANDBOX_WORKSPACE (repo path, same as on the host), SANDBOX_BRANCH, REPO_URL, GIT_USER_NAME, GIT_USER_EMAIL.
 set -u
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
@@ -19,9 +19,10 @@ as_agent git config --global --add safe.directory '*'
 as_agent git config --global credential.https://github.com.helper \
   '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
 
-# The private clone. The host repo is mounted read-only at /run/sandbox/source and is never written. Push goes to GitHub, to a feature branch.
+# The private clone. The .git directory of the host repo is mounted read-only at /run/sandbox/source and is never written. Push goes to GitHub, to a feature branch.
 if [ ! -d "$ws/.git" ]; then
-  as_agent git clone /run/sandbox/source "$ws" || log "clone failed"
+  # /run/sandbox/source is the .git directory of the host repo (read-only). --branch starts the clone on the host branch.
+  as_agent git clone --no-hardlinks ${SANDBOX_BRANCH:+--branch "$SANDBOX_BRANCH"} /run/sandbox/source "$ws" || log "clone failed"
   [ -n "${REPO_URL:-}" ] && as_agent git -C "$ws" remote set-url origin "$REPO_URL"
 fi
 [ -d "$ws/.git" ] && as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || log "prek hook not installed"

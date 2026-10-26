@@ -75,6 +75,8 @@ run: _host-only
     export GITHUB_TOKEN="$token"
     export SANDBOX_WORKSPACE=$(git -C {{ repo }} rev-parse --show-toplevel)
     export SANDBOX_MISE_IGNORED="$SANDBOX_WORKSPACE/mise.toml"
+    export SANDBOX_GIT_DIR=$(git -C {{ repo }} rev-parse --path-format=absolute --git-common-dir)
+    export SANDBOX_BRANCH=$(git -C {{ repo }} branch --show-current)
     export REPO_URL=$(git -C {{ repo }} remote get-url origin | sed -E 's#^(ssh://)?git@github.com[:/]#https://github.com/#')
     export GIT_USER_NAME=$(git -C {{ repo }} config user.name || echo agent)
     export GIT_USER_EMAIL=$(git -C {{ repo }} config user.email || echo agent@localhost)
@@ -83,7 +85,7 @@ run: _host-only
     image_id=$(docker image inspect {{ image }} 2>/dev/null | jq -r '.[0].Id') && [ -n "$image_id" ] \
       || { echo "The image {{ image }} does not exist. Run: just msb image-build" >&2; exit 1; }
     # (the values of the host variables count too: another repo path is another mount. The token is not one of them.)
-    sha=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
+    sha=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
 
     state=missing; old=""
     if info=$(msb inspect {{ name }} --format json 2>/dev/null); then
