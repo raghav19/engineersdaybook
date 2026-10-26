@@ -17,7 +17,7 @@ shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code termin
 cmd: ["/usr/local/bin/sandbox-boot"]
 
 env:
-  SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile has the same value.
+  SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile (MSB_WORKSPACE) has the same value.
   SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch of the host checkout. The clone starts on it.
   REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone
   GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git reads the identity from these four variables, so the VM needs no git config for it

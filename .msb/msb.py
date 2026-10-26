@@ -1,0 +1,191 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13.*"
+# dependencies = []
+# ///
+"""The steps of the msb sandbox recipes: msb.py <step>
+
+The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
+The justfile exports MSB_NAME, MSB_IMAGE and MSB_WORKSPACE. Run msb.py through `just msb <recipe>`.
+
+preflight        check that msb, the gh login and the image exist
+ensure-vm        make the VM from sandbox.yaml if none exists. Stop if a VM exists and is not current
+wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
+ssh-key          print the path of your SSH public key
+vscode-settings  set the VS Code settings for Remote-SSH
+check-host HOST  stop if HOST is not a host name
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import NoReturn
+
+MSB_DIR = Path(__file__).resolve().parent
+CONFIG = MSB_DIR / "sandbox.yaml"
+BOOT_TIMEOUT = 90  # seconds that `wait-boot` waits for sandbox-boot
+VSCODE_SETTINGS = {
+    "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
+    "remote.SSH.defaultExtensions": [
+        "astral-sh.ty",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "kennylong.kubernetes-yaml-formatter",
+        "yzhang.markdown-all-in-one",
+        "skellock.just",
+        "isontheline.vscode-sysmon",
+    ],
+    "remote.SSH.useExecServer": False,
+    "remote.SSH.enableDynamicForwarding": False,
+    "remote.SSH.enableAgentForwarding": False,
+    "remote.SSH.connectTimeout": 30,
+    "remote.SSH.showLoginTerminal": False,
+    "remote.SSH.localServerDownload": "always",
+    "update.mode": "none",
+    "extensions.autoUpdate": "off",
+    "extensions.autoCheckUpdates": False,
+}
+
+
+def die(message: str) -> NoReturn:
+    print(f"msb: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def setting(name: str) -> str:
+    """A value that the justfile exports."""
+    return os.environ.get(name) or die(f"{name} is not set. Run this through `just msb <recipe>`.")
+
+
+def out(*cmd: str, default: str | None = None) -> str:
+    """Run a command in .msb/ (inside the repo) and return its output. If it fails, return `default`, or stop when there is no default."""
+    done = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=MSB_DIR)
+    if done.returncode == 0:
+        return done.stdout.strip()
+    if default is None:
+        die(f"`{' '.join(cmd)}` failed: {done.stderr.strip()}")
+    return default
+
+
+def image_id() -> str:
+    image = setting("MSB_IMAGE")
+    return out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or die(
+        f"the image {image} does not exist. Run: just msb image-build"
+    )
+
+
+def host_values() -> dict[str, str]:
+    """The host values that sandbox.yaml names as ${NAME}."""
+    return {
+        "GITHUB_TOKEN": out("gh", "auth", "token", default=""),
+        "SANDBOX_GIT_DIR": out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
+        "SANDBOX_BRANCH": out("git", "branch", "--show-current"),
+        "GIT_AUTHOR_NAME": out("git", "config", "user.name", default="agent"),
+        "GIT_AUTHOR_EMAIL": out("git", "config", "user.email", default="agent@localhost"),
+    }
+
+
+def preflight() -> None:
+    if not shutil.which("msb"):
+        die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
+    if not out("gh", "auth", "token", default=""):
+        die("gh has no login, so git push in the VM fails. Run: gh auth login")
+    image_id()
+
+
+def ensure_vm() -> None:
+    name = setting("MSB_NAME")
+    values = host_values()
+    # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token and the branch are not in it.
+    parts = [CONFIG.read_text(), image_id(), values["SANDBOX_GIT_DIR"], values["GIT_AUTHOR_NAME"], values["GIT_AUTHOR_EMAIL"]]
+    wanted = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+
+    # msb keeps the fingerprint of the VM in the label config-sha.
+    info = out("msb", "inspect", name, "--format", "json", default="")
+    if not info:
+        # A failed boot leaves a stale folder. Then msb says "already exists" (microsandbox issue 1908). `msb inspect` does not show it.
+        shutil.rmtree(Path(os.environ.get("MSB_HOME", Path.home() / ".microsandbox")) / "sandboxes" / name, ignore_errors=True)
+        subprocess.run(
+            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}"],
+            env=os.environ | values,  # msb reads the host values from its environment
+            check=True,
+        )
+        return
+    vm = json.loads(info)
+    status = vm["status"].lower()
+    if vm["config"]["labels"].get("config-sha") != wanted or status != "running":
+        # msb fixes the config of a VM when it makes the VM. It does not run sandbox-boot when it starts a stopped VM.
+        # If you remove the VM, you remove its clone, so you decide.
+        print(
+            f"msb: {name} is {status}. It is not current: sandbox.yaml, the image or a host value changed, or the VM stopped.",
+            file=sys.stderr,
+        )
+        die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
+
+
+def wait_boot() -> None:
+    name = setting("MSB_NAME")
+    # sandbox-boot clones the repo, installs the hook and starts Headroom. Then it writes /run/sandbox-ready.
+    # If a step fails, sandbox-boot exits with an error and the VM stops. The wait then ends, and the boot log shows the reason.
+    wait = ["msb", "exec", name, "--", "sh", "-c", "until [ -f /run/sandbox-ready ]; do sleep 1; done"]
+    try:
+        ready = subprocess.run(wait, timeout=BOOT_TIMEOUT, check=False).returncode == 0
+    except subprocess.TimeoutExpired:
+        ready = False
+    if not ready:
+        log = out("msb", "logs", name, default="").splitlines()[-15:]
+        print(f"msb: the VM did not finish its boot. This is the end of its log (msb logs {name}):\n" + "\n".join(log), file=sys.stderr)
+        sys.exit(1)
+
+
+def ssh_key() -> None:
+    key = Path(os.environ.get("SANDBOX_SSH_PUBKEY", Path.home() / ".ssh" / "id_ed25519.pub"))
+    if not key.is_file():
+        die(f"there is no SSH public key at {key}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY.")
+    print(key)
+
+
+def vscode_settings() -> None:
+    path = Path.home() / ".config" / "Code" / "User" / "settings.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    current = json.loads(path.read_text()) if path.is_file() else {}
+    if current | VSCODE_SETTINGS != current:
+        path.write_text(json.dumps(current | VSCODE_SETTINGS, indent=2) + "\n")
+        print(f"VS Code settings changed in {path}. New VS Code windows use them.")
+
+
+def check_host(host: str) -> None:
+    if not re.fullmatch(r"(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?", host):
+        die(f"{host} is not a host name.")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    steps = parser.add_subparsers(dest="step", required=True)
+    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings"):
+        steps.add_parser(step)
+    steps.add_parser("check-host").add_argument("host")
+    args = parser.parse_args()
+    match args.step:
+        case "preflight":
+            preflight()
+        case "ensure-vm":
+            ensure_vm()
+        case "wait-boot":
+            wait_boot()
+        case "ssh-key":
+            ssh_key()
+        case "vscode-settings":
+            vscode_settings()
+        case "check-host":
+            check_host(args.host)
+
+
+if __name__ == "__main__":
+    main()

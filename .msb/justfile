@@ -1,6 +1,7 @@
 # The msb sandbox: a microsandbox VM for Claude Code and VS Code. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
 # Every recipe runs on the host. sandbox.yaml declares the VM. The recipe `run` makes the VM from it.
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
+# The recipes list the steps in order. msb.py has the logic of the steps that need logic.
 #
 #   just msb setup        once for each host: authorize your SSH key and connect VS Code
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
@@ -8,16 +9,17 @@
 #   just msb image-build  build the image after you change image/tools.toml or image/Dockerfile
 
 set quiet
-set lazy
 set shell := ['bash', '-euo', 'pipefail', '-c']
-set script-interpreter := ['bash', '-euo', 'pipefail']
+
+# msb.py reads these three values.
+export MSB_NAME := 'sandbox-dev'
+export MSB_IMAGE := 'engineersdaybook-sandbox:local'
+# The path of the clone in the VM. SANDBOX_WORKSPACE in sandbox.yaml has the same value.
+export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
 msb_dir := source_directory()
-name := 'sandbox-dev'
-image := 'engineersdaybook-sandbox:local'
+step := msb_dir / 'msb.py'
 volume := 'claude-home'
-# The path of the clone in the VM. SANDBOX_WORKSPACE in sandbox.yaml has the same value.
-workspace := '/home/agent/engineersdaybook'
 
 # List the recipes (the default)
 [default]
@@ -28,104 +30,36 @@ _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
-[script]
 setup: _host-only
-    key="${SANDBOX_SSH_PUBKEY:-$HOME/.ssh/id_ed25519.pub}"
-    [ -r "$key" ] || { echo "There is no SSH public key at $key. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY. ssh_config uses ~/.ssh/id_ed25519." >&2; exit 1; }
-    msb ssh authorize --file "$key"
+    key=$({{ step }} ssh-key) && msb ssh authorize --file "$key"
     code --install-extension ms-vscode-remote.remote-ssh
-    f="$HOME/.config/Code/User/settings.json"
-    mkdir -p "$(dirname "$f")"
-    [ -f "$f" ] || echo '{}' > "$f"
-    merged=$(jq --arg cfg "{{ msb_dir }}/ssh_config" '. * {
-      "remote.SSH.configFile": $cfg,
-      "remote.SSH.defaultExtensions": [
-        "astral-sh.ty",
-        "charliermarsh.ruff",
-        "tamasfe.even-better-toml",
-        "kennylong.kubernetes-yaml-formatter",
-        "yzhang.markdown-all-in-one",
-        "skellock.just",
-        "isontheline.vscode-sysmon"
-      ],
-      "remote.SSH.useExecServer": false,
-      "remote.SSH.enableDynamicForwarding": false,
-      "remote.SSH.enableAgentForwarding": false,
-      "remote.SSH.connectTimeout": 30,
-      "remote.SSH.showLoginTerminal": false,
-      "remote.SSH.localServerDownload": "always",
-      "update.mode": "none",
-      "extensions.autoUpdate": "off",
-      "extensions.autoCheckUpdates": false
-    }' "$f")
-    if [ "$merged" != "$(cat "$f")" ]; then echo "$merged" > "$f"; echo "VS Code settings changed in $f. New VS Code windows use them."; fi
+    {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
 
 # Build the image from image/ and load it into msb. Needs Docker. The first build takes several minutes
-[script]
 image-build: _host-only
-    docker build -t {{ image }} {{ msb_dir }}/image
-    docker save {{ image }} | msb load --tag {{ image }}
-    echo "The image {{ image }} is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
+    docker build -t $MSB_IMAGE {{ msb_dir }}/image
+    docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
+    echo "The image $MSB_IMAGE is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
 
-# Each [env] line sets one host value that sandbox.yaml names as ${NAME}. msb reads the values from the environment of this recipe.
-# The commands run in .msb/, which is inside the repo. They run for `run` only. A variable with `export` runs for every recipe.
-# GITHUB_TOKEN is the token of your `gh` login. The VM gets a placeholder, not the token. Without a login the token is empty and `run` stops.
-# A VM that runs and is current stays as it is. You remove any other VM with `just msb rm`, because that removes its clone.
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
-[env('GITHUB_TOKEN', shell('gh auth token 2>/dev/null || true'))]
-[env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
-[env('SANDBOX_BRANCH', shell('git branch --show-current'))]
-[env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
-[env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
-[script]
 run: _host-only
-    command -v msb >/dev/null || { echo "msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
-    [ -n "$GITHUB_TOKEN" ] || { echo "gh has no login, so git push in the VM fails. Run: gh auth login" >&2; exit 1; }
-    image_id=$(docker image inspect {{ image }} 2>/dev/null | jq -r '.[0].Id') && [ -n "$image_id" ] \
-      || { echo "The image {{ image }} does not exist. Run: just msb image-build" >&2; exit 1; }
-
-    # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token is not in it.
-    wanted=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_GIT_DIR" "$GIT_AUTHOR_NAME" "$GIT_AUTHOR_EMAIL") | sha256sum | cut -c1-16)
-
-    # msb keeps the fingerprint of the VM in the label config-sha.
-    info=$(msb inspect {{ name }} --format json 2>/dev/null || true)
-    made_from=$(jq -r '.config.labels["config-sha"] // empty' <<<"$info")
-    status=$(jq -r '.status | ascii_downcase' <<<"$info")
-
-    if [ -z "$info" ]; then
-      # No VM exists, so make it. A failed boot leaves a stale folder. Then msb says "already exists" (microsandbox issue 1908).
-      # `msb inspect` does not show the stale folder, so remove it.
-      rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"
-      msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$wanted"
-    elif [ "$made_from" != "$wanted" ] || [ "$status" != running ]; then
-      # A VM is current if it runs and has the fingerprint. msb fixes the config of a VM when it makes the VM.
-      # msb does not run sandbox-boot when it starts a stopped VM. If you remove the VM, you remove its clone, so you decide.
-      # The volume {{ volume }} stays.
-      echo "msb: {{ name }} is $status. It is not current: sandbox.yaml, the image or a host value changed, or the VM stopped." >&2
-      echo "     Push any work in it (just msb shell). Then run: just msb rm && just msb run" >&2
-      exit 1
-    fi
-
-    # sandbox-boot clones the repo, installs the hook and starts Headroom. Then it writes /run/sandbox-ready.
-    # If a step fails, sandbox-boot exits with an error and the VM stops. The wait then ends, and the boot log shows the reason.
-    timeout 90 msb exec {{ name }} -- sh -c 'until [ -f /run/sandbox-ready ]; do sleep 1; done' \
-      || { echo "msb: the VM did not finish its boot. This is the end of its log (msb logs {{ name }}):" >&2; msb logs {{ name }} 2>&1 | tail -n 15 >&2; exit 1; }
-
-    code --folder-uri "vscode-remote://ssh-remote+{{ name }}.msb{{ workspace }}"
+    {{ step }} preflight
+    {{ step }} ensure-vm
+    {{ step }} wait-boot
+    code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host host: _host-only && run
-    [[ '{{ host }}' =~ ^(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || { echo "{{ host }} is not a host name." >&2; exit 1; }
+    {{ step }} check-host '{{ host }}'
     HOST='{{ host }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
     echo "{{ host }} is now in network.allow."
 
 # A bash prompt in the VM, as the agent user
 shell: _host-only
-    msb exec -t -u agent {{ name }} -- bash -l
+    msb exec -t -u agent $MSB_NAME -- bash -l
 
 # Remove the VM. `--volumes` also removes the Claude login and settings
-[script]
 rm *args: _host-only
-    msb rm -f {{ name }} || true
+    msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volume }} || true; fi
