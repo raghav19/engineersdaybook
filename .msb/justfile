@@ -7,6 +7,8 @@
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
 #   just msb allow-host   allow one more host for the VM
 #   just msb image-build  build the image after you change dev-tools/mise.toml or dev-tools/Dockerfile
+#   just msb image-login  log in to ghcr.io (once, before image-publish)
+#   just msb image-publish  push the image to ghcr.io
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -20,6 +22,8 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers'
+registry := 'ghcr.io/raghav19/engineersdaybook/dev-sbx'
+registry_user := 'raghav19'
 
 # List the recipes (the default)
 [default]
@@ -41,6 +45,29 @@ image-build: _host-only
     docker build -t $MSB_IMAGE {{ msb_dir }}/image
     docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
     echo "The image $MSB_IMAGE is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
+
+# Log docker in to ghcr.io with the Bitwarden secret GITHUB_TOKEN. The token needs the scope write:packages. The secret goes through a pipe, so no screen or log shows it
+image-login: _host-only
+    {{ step }} vault-secret GITHUB_TOKEN | docker login ghcr.io -u {{ registry_user }} --password-stdin
+
+# The tags are the commit, `latest` on main and the git tag of the commit. The timestamps of the files are the date of the last commit of dev-tools/.
+# The build adds no provenance and no SBOM. So the same files give the same digest.
+
+# Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits)
+[script]
+image-publish: _host-only
+    tags=$({{ step }} image-tags)
+    args=()
+    for tag in $tags; do args+=(-t "{{ registry }}:$tag"); done
+    epoch=$(git -C {{ msb_dir }} log -1 --format=%ct -- dev-tools)
+    meta=$(mktemp)
+    docker buildx build {{ msb_dir }}/dev-tools "${args[@]}" \
+      --provenance=false --sbom=false \
+      --build-arg SOURCE_DATE_EPOCH="${epoch:-0}" \
+      --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true \
+      --metadata-file "$meta"
+    digest=$(jq -r '."containerimage.digest"' "$meta")
+    echo "published {{ registry }}@$digest with the tags: $tags"
 
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
 run: _host-only

@@ -15,6 +15,8 @@ wait-boot        wait until sandbox-boot is ready. If it fails, print the end of
 ssh-key          print the path of your SSH public key
 vscode-settings  set the VS Code settings for Remote-SSH
 check-host HOST  stop if HOST is not a host name
+vault-secret KEY print one Bitwarden secret for a pipe. It refuses to print to a terminal
+image-tags       print the tags of the published image, one for each line. Stop if dev-tools/ has uncommitted changes
 """
 
 import argparse
@@ -149,6 +151,24 @@ def host_port_rules() -> list[str]:
     return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
 
 
+def vault_secret(key: str) -> None:
+    if sys.stdout.isatty():
+        die("this prints a secret. Pipe it to a command, for example: ... | docker login --password-stdin")
+    print(vault_secrets([key])[key], end="")
+
+
+def image_tags() -> None:
+    """The commit that the image is built from, `latest` on main, and the git tag of the commit if it has one."""
+    if out("git", "status", "--porcelain", "--", "dev-tools"):
+        die("dev-tools/ has uncommitted changes. The tag of the image is the commit, so commit them first.")
+    tags = [out("git", "rev-parse", "HEAD")]
+    if out("git", "branch", "--show-current") == "main":
+        tags.append("latest")
+    if git_tag := out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
+        tags.append(git_tag)
+    print("\n".join(tags))
+
+
 def preflight() -> None:
     if not shutil.which("msb"):
         die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
@@ -233,9 +253,10 @@ def check_host(host: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings"):
+    for step in ("preflight", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings", "image-tags"):
         steps.add_parser(step)
     steps.add_parser("check-host").add_argument("host")
+    steps.add_parser("vault-secret").add_argument("key")
     args = parser.parse_args()
     match args.step:
         case "preflight":
@@ -250,6 +271,10 @@ def main() -> None:
             vscode_settings()
         case "check-host":
             check_host(args.host)
+        case "vault-secret":
+            vault_secret(args.key)
+        case "image-tags":
+            image_tags()
 
 
 if __name__ == "__main__":

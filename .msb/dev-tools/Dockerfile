@@ -26,7 +26,8 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
 RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
 COPY mise.toml /etc/mise/conf.d/sandbox.toml
 USER agent
-RUN mise install --yes
+# The uv cache (about 880 MiB) is a download cache of the install. The tools do not read it, so the same step removes it from the layer.
+RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
 # Remove spire-server. The VM runs only the agent.
 RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
