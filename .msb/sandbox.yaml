@@ -46,16 +46,16 @@ mounts:
 
 # The GitHub token does not enter the VM. The VM has a placeholder. The host replaces it with the token, for these hosts only.
 # The host replaces it in Basic auth (git over HTTPS) and in Bearer auth (REST API and GitHub MCP). The token is the host value GITHUB_TOKEN.
+# To add a secret, list it below with the hosts that can receive it. msb.py reads its value from the Bitwarden key with the same name.
+# The VM gets a placeholder. It never gets the value or the Bitwarden access token.
 secrets:
   GITHUB_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
-  # The ghcr.io push token. msb.py reads it from the Bitwarden project, from the key GITHUB_TOKEN (VAULT_KEYS in msb.py).
-  # It needs the Bitwarden access token of a machine account on the host. The VM never gets the Bitwarden token or the value.
-  GHCR_TOKEN:
-    allow: [ghcr.io]
 
 # The egress allow list. If `allow` has entries, the VM denies all other hosts. To add a host, run `just msb allow-host <host>`.
-# The pattern *.example.com matches the subdomains only. If a site needs the bare domain, the list has it too.
+# The pattern *.example.com matches the subdomains at any depth (*.istio.io matches istio-release.r2.istio.io), and not the bare domain.
+# If a site needs the bare domain, the list has it too. msb rejects the pattern **.example.com and an entry with a port.
+# msb.py adds the rules for the ports of the host (HOST_PORTS in msb.py), because this file cannot express them.
 network:
   tls:
     enabled: true # the host reads HTTPS requests. The host rules and the token replacement need this.
@@ -66,14 +66,13 @@ network:
     - console.anthropic.com
     - platform.claude.com
     - code.claude.com
-    # GitHub: git, API, release downloads, the GitHub MCP server and the container registry
+    # GitHub: git, API, release downloads and the GitHub MCP server
     - github.com
     - api.github.com
     - api.githubcopilot.com
     - "*.githubusercontent.com"
     - github.githubassets.com
     - www.githubstatus.com
-    - ghcr.io
     # MCP servers
     - mcp.draw.io
     - schemas.fluxoperator.dev
@@ -89,7 +88,6 @@ network:
     # Chart and OCI registries that the cluster uses (blob.istio.io redirects to istio-release.r2.istio.io)
     - istio.io
     - "*.istio.io"
-    - istio-release.r2.istio.io
     - istio-release.storage.googleapis.com
     - cr.agentgateway.dev
     - quay.io

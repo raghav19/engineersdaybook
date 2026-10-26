@@ -33,9 +33,13 @@ MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
 BOOT_TIMEOUT = 90  # seconds that `wait-boot` waits for sandbox-boot
 VAULT_TIMEOUT = 30  # seconds that the call to Bitwarden can take
-# The Bitwarden project has the secrets. A secret of sandbox.yaml gets its value from the Bitwarden key with the same name.
-# These names are the exceptions: the key of the Bitwarden project is not the name of the secret in the VM.
-VAULT_KEYS = {"GHCR_TOKEN": "GITHUB_TOKEN"}
+# The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port, so msb.py
+# passes one `--net-rule allow@host:tcp:<port>` to msb for each. The services are in the kind cluster (the SPIRE agent and kubectl need them).
+HOST_PORTS = {
+    6444: "kind API server",
+    18081: "SPIRE server",
+    19090: "Flux Operator web UI",
+}
 VSCODE_SETTINGS = {
     "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
     "remote.SSH.defaultExtensions": [
@@ -128,10 +132,9 @@ def vault_secrets(names: list[str]) -> dict[str, str]:
     items = json.loads(done.stdout)
     values = {}
     for name in names:
-        key = VAULT_KEYS.get(name, name)
-        found = [item["value"] for item in items if item["key"] == key]
+        found = [item["value"] for item in items if item["key"] == name]
         if len(found) != 1:
-            die(f"expected one Bitwarden secret named {key} (for the secret {name}), found {len(found)}.")
+            die(f"expected one Bitwarden secret named {name}, found {len(found)}.")
         values[name] = found[0]
     return values
 
@@ -140,6 +143,10 @@ def vault_names() -> list[str]:
     """The secrets of sandbox.yaml that come from Bitwarden. GITHUB_TOKEN comes from your gh login."""
     names = out("yq", "-r", ".secrets // {} | keys | .[]", str(CONFIG)).split()
     return [name for name in names if name != "GITHUB_TOKEN"]
+
+
+def host_port_rules() -> list[str]:
+    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
 
 
 def preflight() -> None:
@@ -154,7 +161,14 @@ def ensure_vm() -> None:
     name = setting("MSB_NAME")
     values = host_values()
     # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token and the branch are not in it.
-    parts = [CONFIG.read_text(), image_id(), values["SANDBOX_GIT_DIR"], values["GIT_AUTHOR_NAME"], values["GIT_AUTHOR_EMAIL"]]
+    parts = [
+        CONFIG.read_text(),
+        image_id(),
+        values["SANDBOX_GIT_DIR"],
+        values["GIT_AUTHOR_NAME"],
+        values["GIT_AUTHOR_EMAIL"],
+        str(HOST_PORTS),
+    ]
     wanted = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
     # msb keeps the fingerprint of the VM in the label config-sha.
@@ -163,7 +177,7 @@ def ensure_vm() -> None:
         # A failed boot leaves a stale folder. Then msb says "already exists" (microsandbox issue 1908). `msb inspect` does not show it.
         shutil.rmtree(Path(os.environ.get("MSB_HOME", Path.home() / ".microsandbox")) / "sandboxes" / name, ignore_errors=True)
         subprocess.run(
-            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}"],
+            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *host_port_rules()],
             env=os.environ | values | vault_secrets(vault_names()),  # msb reads the host values and the secrets from its environment
             check=True,
         )
