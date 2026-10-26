@@ -50,12 +50,13 @@ mounts:
     create: ensure-exists
 
 # No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
-# GITHUB_TOKEN is the user token of the GitHub App (`just msb github-login`). The host replaces it in Basic auth (git over HTTPS) and in Bearer auth
-# (REST API and GitHub MCP). CLAUDE_CODE_OAUTH_TOKEN is the one-year token of `claude setup-token`, from the Bitwarden key with the same name.
-# To add a secret, list it below with the hosts that can receive it. msb.py reads its value from the Bitwarden key with the same name.
-# The VM gets a placeholder. It never gets the value or the Bitwarden access token.
+# msb reads the value of each secret from the environment of the host. `just msb run` starts msb.py under `bws run`, so each key of the
+# Bitwarden project is a variable there. A secret needs a Bitwarden key with the same name. The exception is GH_TOKEN, which msb.py sets.
+# GH_TOKEN is the user token of the GitHub App (`just msb github-login`). The host replaces it in Basic auth (git over HTTPS) and in Bearer
+# auth (REST API and GitHub MCP). It is not named GITHUB_TOKEN, because the Bitwarden key GITHUB_TOKEN is another token (for ghcr.io).
+# CLAUDE_CODE_OAUTH_TOKEN is the one-year token of `claude setup-token`.
 secrets:
-  GITHUB_TOKEN:
+  GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
   CLAUDE_CODE_OAUTH_TOKEN:
     allow: [api.anthropic.com]

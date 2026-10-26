@@ -44,15 +44,15 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
 RUN touch /etc/containers/nodocker
 # The policy of Claude Code. Root owns the file. The agent cannot change it, and project settings and user settings cannot override it.
-# It has the MCP servers and the deny list for the GitHub tools. $MSB_GITHUB_TOKEN is the placeholder that msb puts in GITHUB_TOKEN.
+# It has the MCP servers and the deny list for the GitHub tools. $MSB_GH_TOKEN is the placeholder that msb puts in GH_TOKEN.
 # The host replaces the placeholder with the token on the network, so the file has no secret.
 # The deny list stops mistakes. The agent can still call the GitHub API with the placeholder. The scope of the token is the real limit.
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 # Git settings for every user. Git treats each directory as safe, because agent owns the clone and root owns the mount.
-# GitHub over HTTPS takes the token from GITHUB_TOKEN. GITHUB_TOKEN holds only a placeholder. The host replaces it with the token on the network.
+# GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
- && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
+ && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
 # The /etc/profile of Debian resets PATH for login shells (bash -l, the VS Code terminal and ssh). This removes the shims that the ENV below adds.
 RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR="code --wait"' > /etc/profile.d/mise-shims.sh \
  && chmod 0755 /usr/local/bin/sandbox-boot
