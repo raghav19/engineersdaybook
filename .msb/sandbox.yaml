@@ -38,7 +38,7 @@ mounts:
   - named: claude-home
     target: /home/agent/.claude
     create: ensure-exists
-  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/tools.toml). It stays when you remove the VM, so a new VM does not download the providers again.
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/mise.toml). It stays when you remove the VM, so a new VM does not download the providers again.
   # `just msb rm --volumes` removes it. sandbox-boot gives the folder to the agent user.
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers

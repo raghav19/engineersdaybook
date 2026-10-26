@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# The image of the msb sandbox. It has Debian, mise and exactly the tools in tools.toml. The VM boots from this image,
+# The image of the msb sandbox. It has Debian, mise and exactly the tools in mise.toml. The VM boots from this image,
 # so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
 # VS Code Remote-SSH needs an image with glibc (not Alpine), tar and libstdc++.
 FROM debian:trixie-slim
@@ -22,16 +22,16 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
  && mkdir -p /opt/mise /home/agent/.cache/terraform-providers \
  && chown -R agent:agent /opt/mise /home/agent
 
-# Install mise, then exactly the tools in tools.toml. The Dockerfile copies tools.toml without change. It is the system config of mise.
+# Install mise, then exactly the tools in mise.toml. The Dockerfile copies mise.toml without change. It is the system config of mise.
 RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
-COPY tools.toml /etc/mise/conf.d/sandbox.toml
+COPY mise.toml /etc/mise/conf.d/sandbox.toml
 USER agent
 RUN mise install --yes
 
 # Remove spire-server. The VM runs only the agent.
 RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
-# A task in tools.toml makes the bash completions. Bash loads a file from ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
+# A task in mise.toml makes the bash completions. Bash loads a file from ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
 RUN mise run sandbox:completions
 
 USER root
