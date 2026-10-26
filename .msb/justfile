@@ -100,7 +100,7 @@ run: _host-only
       # Keep the VM only if it runs and was made from this fingerprint. msb fixes the config of a VM when it makes it, and it does not run sandbox-boot when it starts a stopped VM.
       # Removing the VM deletes its clone, so you decide: push what you want to keep first. The {{ volume }} volume stays.
       echo "msb: {{ name }} is $status, and it is not current (sandbox.yaml, the image or a host value changed, or the VM stopped)." >&2
-      echo "     Push the work in its clone (just msb shell, after msb start {{ name }} if it is stopped), then remove it and run again:  just msb rm && just msb run" >&2
+      echo "     Push any work in it (just msb shell), then: just msb rm && just msb run" >&2
       exit 1
     fi
 
