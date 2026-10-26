@@ -37,4 +37,4 @@ The repo already follows these rules for the four build functions in `tools/`. O
 
 - The first run of `spire.py` on the host can download Python 3.13 if uv has none. A host without network access fails there.
 - `ext-mcp` is a container service. AGENTS.md leaves it out of the script and tool rules.
-- The `ty` pin in `mise.toml` and `tools.toml` is `0.0.85`, as in `tools/`. Change all three together.
+- The `ty` pin in `mise.toml` and `tools.toml` is `0.0.91`, as in `tools/`. Change all three together.
