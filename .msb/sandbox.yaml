@@ -1,53 +1,55 @@
-# The msb sandbox, declared. This file is the single source of truth: `just msb run` makes the VM from it. After a change, `just msb rm && just msb run` makes it again.
-# Schema: https://docs.microsandbox.dev/cli/configuration.md. ${NAME} is a host variable that `just msb run` exports.
-# Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig, the Flux Operator UI.
+# This file declares the whole VM of the msb sandbox. `just msb run` makes the VM from it.
+# After you change the file, run `just msb rm && just msb run` to make the VM again.
+# Schema: https://docs.microsandbox.dev/cli/configuration.md
+# ${NAME} is a host value. `just msb run` puts the host values in its environment.
+# Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig and the Flux Operator UI.
 
 image:
-  oci: engineersdaybook-sandbox:local # built and loaded by `just msb image-build`
+  oci: engineersdaybook-sandbox:local # `just msb image-build` builds and loads it
   upper_size: "20G"
 pull_policy: never
 
 cpus: 4
 memory: "4G"
-shell: "/bin/bash" # the shell of ssh sessions and of `msb exec`, so VS Code terminals run bash (the login shell puts the mise shims on the PATH)
+shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code terminals use bash. The login shell adds the mise shims to the PATH.
 
-# sandbox-boot runs as root: it prepares the agent user, clones the repo and starts Headroom (image/sandbox-boot). Then it waits.
+# sandbox-boot runs as root. It prepares the agent user, clones the repo and starts Headroom. Then it waits. See image/sandbox-boot.
 cmd: ["/usr/local/bin/sandbox-boot"]
 
 env:
-  SANDBOX_WORKSPACE: ${SANDBOX_WORKSPACE} # the repo path, the same as on the host
-  SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch that is checked out on the host: the clone starts on it
-  REPO_URL: ${REPO_URL} # the GitHub URL of origin (https)
-  GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git takes the identity from these four variables, so the VM needs no git config for it
+  SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile has the same value.
+  SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch of the host checkout. The clone starts on it.
+  REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone
+  GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git reads the identity from these four variables, so the VM needs no git config for it
   GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME}
   GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL}
   GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL}
-  MISE_TRUSTED_CONFIG_PATHS: ${SANDBOX_WORKSPACE} # the clone's nested mise.toml files
-  MISE_IGNORED_CONFIG_PATHS: ${SANDBOX_WORKSPACE}/mise.toml # the clone's root mise.toml lists host-only tools
-  CLAUDE_CONFIG_DIR: /home/agent/.claude # login and settings live on the claude-home volume
-  DISABLE_UPDATES: "1" # the mise-installed claude does not update itself
+  MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook # mise trusts the mise.toml files in the clone
+  MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # mise ignores the root mise.toml of the clone, because it lists host tools
+  CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the login and the settings
+  DISABLE_UPDATES: "1" # the claude that mise installs does not update itself
 
 mounts:
-  # The git directory of the host repo, read-only: the VM can read the committed history and nothing else of your working tree
-  # (no untracked file, no .env). sandbox-boot clones it, so the VM works on a private clone. This also works when the host
-  # checkout is a git worktree. (A relative path to the parent folder is refused by msb 0.7.10, so the path comes from the host variable.)
+  # The git directory of the host repo, read-only. The VM can read the committed history. It cannot read the rest of your working tree,
+  # so it cannot read untracked files or .env. sandbox-boot clones the directory, so the VM works on a private clone.
+  # This also works if the host checkout is a git worktree. msb 0.7.10 refuses a relative path to a parent folder, so the path is a host value.
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
-  # Claude Code login and settings. `just msb rm --volumes` deletes it.
+  # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude
     create: ensure-exists
 
-# The GitHub token never enters the VM: the VM sees a placeholder and the host swaps it, on these hosts only.
-# Basic auth (git over HTTPS) and Bearer (REST API, GitHub MCP) are both swapped. The value is the host variable GITHUB_TOKEN.
+# The GitHub token does not enter the VM. The VM has a placeholder. The host replaces it with the token, for these hosts only.
+# The host replaces it in Basic auth (git over HTTPS) and in Bearer auth (REST API and GitHub MCP). The token is the host value GITHUB_TOKEN.
 secrets:
   GITHUB_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
 
-# The egress allow list. A non-empty `allow` means deny by default. Add a host with `just msb allow-host <host>`.
-# A pattern *.example.com matches the sub-domains only, so the bare domain is listed too where a site needs it.
+# The egress allow list. If `allow` has entries, the VM denies all other hosts. To add a host, run `just msb allow-host <host>`.
+# The pattern *.example.com matches the subdomains only. If a site needs the bare domain, the list has it too.
 network:
   tls:
-    enabled: true # the host sees HTTPS requests, which the host rules and the token swap need
+    enabled: true # the host reads HTTPS requests. The host rules and the token replacement need this.
   allow:
     # Claude Code
     - api.anthropic.com
@@ -55,7 +57,7 @@ network:
     - console.anthropic.com
     - platform.claude.com
     - code.claude.com
-    # GitHub: git, API, release downloads, the GitHub MCP server
+    # GitHub: git, API, release downloads and the GitHub MCP server
     - github.com
     - api.github.com
     - api.githubcopilot.com
@@ -74,7 +76,7 @@ network:
     - pypi.org
     - files.pythonhosted.org
     - registry.npmjs.org
-    # Chart and OCI registries the cluster pulls from (blob.istio.io redirects to istio-release.r2.istio.io)
+    # Chart and OCI registries that the cluster uses (blob.istio.io redirects to istio-release.r2.istio.io)
     - istio.io
     - "*.istio.io"
     - istio-release.storage.googleapis.com
@@ -84,7 +86,7 @@ network:
     - charts.dexidp.io
     # Schemas
     - www.schemastore.org
-    # Docs and project sites, for research
+    # Documentation and project sites, for research
     - kind.sigs.k8s.io
     - just.systems
     - fluxcd.io

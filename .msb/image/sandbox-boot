@@ -1,9 +1,9 @@
 #!/bin/bash
-# The command of the msb sandbox (cmd in sandbox.yaml). It runs as root at every start, prepares the workspace, then waits.
-# A failed step stops the boot: it prints the reason and exits with 1, which stops the sandbox. `msb ls` then shows it as not running,
-# and `msb logs <name>` shows the reason. The marker /run/sandbox-ready exists only while a boot has finished well (`just msb run` waits for it).
-# Env from sandbox.yaml: SANDBOX_WORKSPACE (repo path, same as on the host), SANDBOX_BRANCH, REPO_URL.
-# The git identity (GIT_AUTHOR_*, GIT_COMMITTER_*) and the GitHub token helper are not set here: sandbox.yaml sets the first, the image the second.
+# The command of the msb sandbox (cmd in sandbox.yaml). It runs as root at each start. It prepares the workspace, then it waits.
+# If a step fails, the script prints the reason and exits with 1. This stops the VM. `msb ls` then shows the VM as not running,
+# and `msb logs <name>` shows the reason. The file /run/sandbox-ready exists only after a good boot. `just msb run` waits for it.
+# Values from sandbox.yaml: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
+# This script does not set the git identity (sandbox.yaml sets it) or the GitHub token helper (the image sets it).
 set -eu
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
@@ -17,23 +17,22 @@ rm -f "$ready"
 mkdir -p "$(dirname "$ws")" "$home/.claude"
 chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" || fail "chown of the workspace folders failed"
 
-# The private clone. The .git directory of the host repo is mounted read-only at /run/sandbox/source and is never written. Push goes to GitHub, to a feature branch.
+# The clone is private. The VM cannot write to /run/sandbox/source, which is the .git directory of the host repo.
+# The clone starts on the branch of the host checkout. Push goes to GitHub, to a feature branch.
 if [ ! -d "$ws/.git" ]; then
-  # /run/sandbox/source is the .git directory of the host repo (read-only). --branch starts the clone on the host branch.
   as_agent git clone --no-hardlinks ${SANDBOX_BRANCH:+--branch "$SANDBOX_BRANCH"} /run/sandbox/source "$ws" || fail "git clone failed (branch: ${SANDBOX_BRANCH:-the default})"
-  if [ -n "${REPO_URL:-}" ]; then
-    as_agent git -C "$ws" remote set-url origin "$REPO_URL" || fail "could not set origin to $REPO_URL"
-  fi
+  as_agent git -C "$ws" remote set-url origin "$REPO_URL" || fail "could not set origin to $REPO_URL"
 fi
 as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
 
-# Headroom proxy for Claude Code (127.0.0.1:8787, ANTHROPIC_BASE_URL in .claude/settings.json), as in the sbx kit. Wait until it answers.
+# The Headroom proxy for Claude Code listens on 127.0.0.1:8787. ANTHROPIC_BASE_URL in .claude/settings.json points to it.
+# Wait until it answers.
 as_agent sh -c "setsid nohup headroom proxy --port 8787 >$headroom_log 2>&1 &"
 for _ in $(seq 60); do
   curl -sf -o /dev/null http://127.0.0.1:8787/health && break
   sleep 1
 done
-curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 within 60 seconds"; }
+curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
 
 touch "$ready"
 echo "sandbox-boot: ready"

@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
-# The image of the msb sandbox: Debian, mise, and exactly the tools in tools.toml. The VM boots from this image, so it is a full
-# root file system (the sbx kit was a layer on top of the sbx shell kit). VS Code Remote-SSH needs a glibc image (not Alpine) with tar and libstdc++.
+# The image of the msb sandbox. It has Debian, mise and exactly the tools in tools.toml. The VM boots from this image,
+# so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
+# VS Code Remote-SSH needs an image with glibc (not Alpine), tar and libstdc++.
 FROM debian:trixie-slim
 ARG MISE_VERSION=v2026.10.0
 
-# Set once, read by mise and its tasks. mise sits in /usr/local/bin because the shims it makes link to that path.
+# The ENV lines set these values one time. mise and its tasks read them. mise is in /usr/local/bin, because the shims that it makes link to that path.
 ENV MISE_DATA_DIR=/opt/mise \
     MISE_CACHE_DIR=/tmp/mise-cache \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
@@ -16,40 +17,40 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && ldconfig
 
-# The agent user: uid 1000, as in the sbx shell kit. mise installs as agent, so the shims and new tools belong to it.
+# The agent user has uid 1000, as in the sbx shell kit. mise installs as agent, so agent owns the shims and the new tools.
 RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
  && mkdir -p /opt/mise /home/agent/.cache/terraform-providers \
  && chown -R agent:agent /opt/mise /home/agent
 
-# mise, then exactly the tools in tools.toml, which is copied in as it is: it is the system config of mise.
+# Install mise, then exactly the tools in tools.toml. The Dockerfile copies tools.toml without change. It is the system config of mise.
 RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
 COPY tools.toml /etc/mise/conf.d/sandbox.toml
 USER agent
 RUN mise install --yes
 
-# Remove spire-server: the VM runs only the agent.
+# Remove spire-server. The VM runs only the agent.
 RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
-# The bash completions come from a task in tools.toml. bash loads a file of ~/.local/share/bash-completion/completions when you first complete its command, so no rc file is needed.
+# A task in tools.toml makes the bash completions. Bash loads a file from ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
 RUN mise run sandbox:completions
 
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
-# The policy of Claude Code, owned by root: the agent cannot edit it, and project and user settings cannot override it. It has the MCP servers
-# and the deny list for the GitHub tools. $MSB_GITHUB_TOKEN is the placeholder that msb puts in GITHUB_TOKEN. The host swaps it for the token on
-# the wire, so the file holds no secret. (The deny list stops mistakes. The agent can still call the GitHub API with the placeholder, so the
-# scope of the token is the real limit.)
+# The policy of Claude Code. Root owns the file. The agent cannot change it, and project settings and user settings cannot override it.
+# It has the MCP servers and the deny list for the GitHub tools. $MSB_GITHUB_TOKEN is the placeholder that msb puts in GITHUB_TOKEN.
+# The host replaces the placeholder with the token on the network, so the file has no secret.
+# The deny list stops mistakes. The agent can still call the GitHub API with the placeholder. The scope of the token is the real limit.
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
-# Git for every user: any directory is safe (the clone belongs to agent, the mount to root), and GitHub over HTTPS takes the token from GITHUB_TOKEN,
-# which holds only a placeholder. The host swaps it for the real token on the wire.
+# Git settings for every user. Git treats each directory as safe, because agent owns the clone and root owns the mount.
+# GitHub over HTTPS takes the token from GITHUB_TOKEN. GITHUB_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
  && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GITHUB_TOKEN"; }; f'
-# Debian's /etc/profile resets PATH for login shells (bash -l, the VS Code terminal, ssh), which drops the shims from the ENV below.
+# The /etc/profile of Debian resets PATH for login shells (bash -l, the VS Code terminal and ssh). This removes the shims that the ENV below adds.
 RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR="code --wait"' > /etc/profile.d/mise-shims.sh \
  && chmod 0755 /usr/local/bin/sandbox-boot
 
-# The tools are the mise shims. The workspace paths for mise (MISE_TRUSTED_CONFIG_PATHS, MISE_IGNORED_CONFIG_PATHS) come from sandbox.yaml.
+# The tools are the mise shims. sandbox.yaml sets the workspace paths for mise (MISE_TRUSTED_CONFIG_PATHS and MISE_IGNORED_CONFIG_PATHS).
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8
