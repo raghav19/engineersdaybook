@@ -2,9 +2,28 @@
 
 These skills are copies of upstream skills, committed here so that every environment (the host, sbx and msb) has the same skills at the same version. Nobody edits them here. Claude Code reads them through the link `.claude/skills` to `.agents/skills`.
 
-An upstream change reaches this repository only in a pull request, so you read the diff. To update a skill, copy the new files from the upstream path, change the commit in the table, and open a pull request. The licence of each upstream repository is in `licenses/`.
+An upstream change reaches this repository only in a pull request, so you read the diff. The licence of each upstream repository is in `licenses/`.
 
 The prek hooks skip `.agents/skills/`: they must not rewrite the copies.
+
+## Update a skill
+
+`<upstream>`, `<path>` and `<skill>` are the values in the table below. Do this on a new branch.
+
+```shell
+# 1. Get the upstream. To pin an older version, run `git -C /tmp/upstream checkout <commit>` after the clone.
+git clone https://github.com/<upstream> /tmp/upstream
+
+# 2. Replace the copy. --delete removes the files that upstream removed.
+rsync -a --delete --exclude=.git /tmp/upstream/<path>/ .agents/skills/<skill>/
+
+# 3. Put the new commit in the table (git -C /tmp/upstream rev-parse --short=12 HEAD), read the diff, commit, open a pull request.
+```
+
+- The upstream is not trusted. Read the diff before you commit. Do not run its scripts.
+- `asd-ste100` is the root of its upstream (path `.`). Add `--exclude=README.md --exclude=LICENSE --exclude=.claude-plugin` to the `rsync` command.
+- A new skill: copy it the same way and add a row. A removed skill: delete its folder and its row. For `mattpocock/skills`, the `skills` list in its `.claude-plugin/plugin.json` shows which skills are published.
+- If the licence file of the upstream changed, copy it to `licenses/` too.
 
 | Skill | Upstream | Path in upstream | Commit |
 |---|---|---|---|
