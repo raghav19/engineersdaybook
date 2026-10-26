@@ -6,6 +6,9 @@
 
 set quiet
 
+# The agent skills in .agents/skills: `just skills add`, `just skills update`. See .agents/README.md
+mod skills '.agents'
+
 mod sandbox '.sbx'
 
 # list the recipes, modules included (the default)

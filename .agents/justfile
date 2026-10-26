@@ -1,0 +1,45 @@
+# The agent skills in .agents/skills. The `skills` CLI (vercel-labs/skills) installs them and records them in skills-lock.json. Loaded by ../justfile as `mod skills`: `just skills <recipe>`.
+# Every recipe runs in the repo root, on any machine with Node (npx) and network access. The files are committed, so a fresh clone needs no recipe.
+#
+#   just skills add     install skills from a GitHub repository
+#   just skills update  move the installed skills to the newest upstream version, then read the diff
+
+set quiet
+set shell := ['bash', '-euo', 'pipefail', '-c']
+set script-interpreter := ['bash', '-euo', 'pipefail']
+set working-directory := '..'
+
+# The CLI is third-party code from npm, so the version is pinned. Change it here.
+cli := 'skills@1.7.4'
+# codex makes .agents/skills the real folder. claude-code gets a link to each skill in .claude/skills.
+agents := '-a codex -a claude-code'
+
+export DISABLE_TELEMETRY := '1'
+export DO_NOT_TRACK := '1'
+
+# List the recipes (the default)
+[default]
+help:
+    just --list
+
+_need-node:
+    command -v npx >/dev/null || { echo "npx is not on the PATH. Install Node: mise use -g node@24" >&2; exit 1; }
+
+# List the installed skills and where each one comes from
+list: _need-node
+    npx -y {{ cli }} list
+
+# Install skills from a GitHub repository: `just skills add fluxcd/agent-skills gitops-knowledge`. Pin a commit with `owner/repo#<sha>` (update then keeps it)
+[script]
+add repo +skills: _need-node
+    args=()
+    for s in {{ skills }}; do args+=(--skill "$s"); done
+    npx -y {{ cli }} add '{{ repo }}' "${args[@]}" {{ agents }} -y
+
+# Move the installed skills to the newest upstream version. Read the diff before you commit: a skill changes how the agent works. Skills pinned with #<sha> stay. `skills check` also applies updates
+update *skills: _need-node
+    npx -y {{ cli }} update -p -y {{ skills }}
+
+# Remove skills, and their links in .claude/skills
+remove +skills: _need-node
+    npx -y {{ cli }} remove {{ skills }} -y
