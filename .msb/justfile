@@ -7,7 +7,7 @@
 #   just msb run          every day: make the VM if none exists, then open VS Code on it
 #   just msb allow-host   allow one more host for the VM
 #   just msb github-login log in to GitHub (once, and when it asks for it)
-#   just msb image-build  build the image after you change dev-tools/mise.toml or dev-tools/Dockerfile
+#   just msb image-build  build the image after you change a file of dev-tools/
 #   just msb image-login  log in to ghcr.io (once, before image-publish)
 #   just msb image-publish  push the image to ghcr.io
 
@@ -25,6 +25,8 @@ step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
 registry := 'ghcr.io/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
+# The timestamp of every file of the published image (a fixed date in 2023). Do not change it: a new value gives every layer a new digest.
+image_epoch := '1700000000'
 
 # List the recipes (the default)
 [default]
@@ -59,20 +61,25 @@ _vault:
 image-login: _host-only _vault
     bws run -- 'printf %s "$GITHUB_TOKEN" | docker login ghcr.io -u {{ registry_user }} --password-stdin'
 
-# The tags are the commit, `latest` on main and the git tag of the commit. The timestamps of the files are the date of the last commit of dev-tools/.
-# The build adds no provenance and no SBOM. So the same files give the same digest.
+# The tags are the commit, `latest` on main and the git tag of the commit. All files get the same fixed timestamp (image_epoch), and the build adds no
+# provenance and no SBOM. So the same files give the same digest. The date of the last commit would not work: a new commit would change the timestamp of
+# every file, so every layer would get a new digest and no layer could be reused.
+# The layers of every stage go to the registry as a cache (the tag `cache`). A new version of one tool rebuilds one stage, and any machine gets the other stages from the cache.
+# The cache needs a builder with the docker-container driver. The default builder cannot export it, so the recipe makes the builder `msb-builder` once.
 
 # Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits)
 [script]
 image-publish: _host-only
     tags=$({{ step }} image-tags)
+    docker buildx inspect msb-builder >/dev/null 2>&1 || docker buildx create --name msb-builder --driver docker-container >/dev/null
     args=()
     for tag in $tags; do args+=(-t "{{ registry }}:$tag"); done
-    epoch=$(git -C {{ msb_dir }} log -1 --format=%ct -- dev-tools)
     meta=$(mktemp)
-    docker buildx build {{ msb_dir }}/dev-tools "${args[@]}" \
+    docker buildx build --builder msb-builder {{ msb_dir }}/dev-tools "${args[@]}" \
       --provenance=false --sbom=false \
-      --build-arg SOURCE_DATE_EPOCH="${epoch:-0}" \
+      --cache-from type=registry,ref={{ registry }}:cache \
+      --cache-to type=registry,ref={{ registry }}:cache,mode=max \
+      --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true \
       --metadata-file "$meta"
     digest=$(jq -r '."containerimage.digest"' "$meta")

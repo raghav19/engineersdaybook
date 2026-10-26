@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-# The image of the msb sandbox. It has Debian, mise and exactly the tools in mise.toml. The VM boots from this image,
+# The image of the msb sandbox. It has Debian, mise and exactly the tools in tools/. The VM boots from this image,
 # so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
 # VS Code Remote-SSH needs an image with glibc (not Alpine), tar and libstdc++.
-FROM debian:trixie-slim
+FROM debian:trixie-slim AS base
 ARG MISE_VERSION=v2026.10.0
 
 # The ENV lines set these values one time. mise and its tasks read them. mise is in /usr/local/bin, because the shims that it makes link to that path.
@@ -23,18 +23,46 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
  && mkdir -p /opt/mise /home/agent/.cache/terraform-providers \
  && chown -R agent:agent /opt/mise /home/agent
 
-# Install mise, then exactly the tools in mise.toml. The Dockerfile copies mise.toml without change. It is the system config of mise.
+# Install mise. mise.toml (the settings) is the system config of mise in every stage below.
 RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
-COPY mise.toml /etc/mise/conf.d/sandbox.toml
+COPY mise.toml /etc/mise/conf.d/mise.toml
 USER agent
+
+# One stage for each file of tools/. BuildKit builds the stages at the same time. A new version in one file rebuilds only its stage,
+# so the other stages come from the cache. The last stage puts the results together.
+FROM base AS runtimes
+COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
+RUN mise install --yes
+
+FROM base AS headroom
+COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
 # The uv cache (about 880 MiB) is a download cache of the install. The tools do not read it, so the same step removes it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
-# Remove spire-server. The VM runs only the agent.
-RUN rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
+FROM base AS infra
+COPY tools/infra.toml /etc/mise/conf.d/infra.toml
+# The same step removes spire-server. The VM runs only the agent.
+RUN mise install --yes && rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
-# A task in mise.toml makes the bash completions. Bash loads a file from ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
-RUN mise run sandbox:completions
+FROM base AS dev
+COPY tools/dev.toml /etc/mise/conf.d/dev.toml
+RUN mise install --yes
+
+FROM base AS claude
+COPY tools/claude.toml /etc/mise/conf.d/claude.toml
+RUN mise install --yes
+
+FROM base AS final
+COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
+COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY tools/ /etc/mise/conf.d/
+# mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
+# ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
+RUN mise reshim && mise run sandbox:completions
 
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf

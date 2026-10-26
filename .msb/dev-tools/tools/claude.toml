@@ -1,0 +1,4 @@
+# Claude Code. It changes the most often, so it has its own file.
+# The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
+[tools]
+claude = "2.1.309"  # Claude Code, from the aqua registry with a SHA256 check. DISABLE_UPDATES=1 in sandbox.yaml: change the version here and rebuild

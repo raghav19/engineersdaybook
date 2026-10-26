@@ -1,10 +1,9 @@
-# This file lists the tools of the sandbox, the Terraform cache settings and the bash completions.
-# The Dockerfile puts these exact versions in the image, as /etc/mise/conf.d/sandbox.toml.
+# The system config of mise in the image: the settings of the tools and the bash completions. The tools are in tools/, one file for each group.
+# The Dockerfile puts these exact versions in the image. mise reads this file and the files of tools/ from /etc/mise/conf.d/.
 # The root mise.toml is for the host only (kind, msb, bws). The image does not read it.
 # If both sides use a tool (kubectl, helm, kustomize), both files list it.
-# The file is in dev-tools/, not in .msb/. No recipe runs in dev-tools/, so the mise of the host does not load it.
-# node (npm is part of it) and python are here because the sbx shell kit supplied them. python is 3.13, as in the repo scripts and tools.
-# uv is here because the mise pypi backend needs it at build time for headroom-ai. The build image has no uv or pipx.
+# This folder is in dev-tools/, not in .msb/. No recipe runs here, so the mise of the host does not load these files.
+# node (npm is part of it) and python are in tools/runtimes.toml because the sbx shell kit supplied them. python is 3.13, as in the repo scripts and tools.
 
 # The mise shims in the sandbox set these values.
 [env]
@@ -24,31 +23,6 @@ UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build time, the Python of th
 # Ponytail (dev-tools.yaml installs the plugin at boot) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
-
-[tools]
-node = "24.22"  # the LTS release. npm comes with it
-python = "3.13"
-just = "1.59"
-yq = "4.54"
-jq = "1.8"
-fd = "10.5"
-kubectl = "1.37"
-helm = "4.3"
-kustomize = "5.8"
-terragrunt = "1.1"
-terraform = "1.16"
-flux2 = "2.9"
-"github:home-operations/flate" = "0.6"
-"github:fluxcd/flux-schema" = "0.15"
-prek = "0.5"
-claude = "2.1.309"  # Claude Code, from the aqua registry with a SHA256 check. DISABLE_UPDATES=1 in sandbox.yaml: change the version here and rebuild
-ruff = "0.17"
-gitleaks = "8.30"
-yamlfmt = "0.21"
-uv = "0.13"
-ty = "0.0.91"
-"pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox", install_env = { UV_PYTHON = "3.13" } }  # Claude Code token proxy. The sandbox extra has no torch. See docs/research/headroom.md. install_env: the build image has no Python, so uv gets the newest version (3.15), and onnxruntime has no cp315 wheel
-"github:spiffe/spire" = { version = "1.15.3", asset_pattern = "spire-{{ version }}-linux-amd64-musl.tar.gz", filter_bins = "spire-agent" }  # SPIRE agent for the node identity of the VM. It has the same version as the SPIRE server
 
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
 # If you run the task in the VM, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
