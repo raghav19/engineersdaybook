@@ -77,8 +77,9 @@ image-build: _host-only
     docker save {{ image }} | msb load --tag {{ image }}
     echo "image {{ image }} loaded. Run: just msb run (a running VM is made again, if the image changed)"
 
-# Every day. Create or start the VM from sandbox.yaml, then open VS Code on it
 # The token is in the environment of this recipe only, so msb sees it and the VM gets a placeholder.
+# Run `run` as often as you like: it never makes a second VM, and it makes the VM again only when sandbox.yaml, the image or a host value changed.
+# Every day. Create or start the VM from sandbox.yaml, then open VS Code on it
 [env('GITHUB_TOKEN', github_token)]
 [env('SANDBOX_WORKSPACE', workspace)]
 [env('SANDBOX_MISE_IGNORED', workspace + '/mise.toml')]
@@ -91,23 +92,25 @@ image-build: _host-only
 run: _host-only
     command -v msb >/dev/null || { echo "msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
     [ -n "$GITHUB_TOKEN" ] || { echo "gh has no login, so git push in the VM would fail. Run: gh auth login" >&2; exit 1; }
-
-    # The VM is current when its config-sha label equals the hash of sandbox.yaml, the image and the host variables.
     image_id=$(docker image inspect {{ image }} 2>/dev/null | jq -r '.[0].Id') && [ -n "$image_id" ] \
       || { echo "The image {{ image }} does not exist. Run: just msb image-build" >&2; exit 1; }
-    # (the values of the host variables count too: another repo path is another mount. The token is not one of them.)
-    sha=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
 
-    state=missing; old=""
-    if info=$(msb inspect {{ name }} --format json 2>/dev/null); then
-      state=$(jq -r '.status | ascii_downcase' <<<"$info")
-      old=$(jq -r '.config.labels["config-sha"] // ""' <<<"$info")
-    fi
+    # running, stopped (or crashed), or missing
+    vm_state() { msb inspect {{ name }} --format json 2>/dev/null | jq -r '.status | ascii_downcase' || echo missing; }
+    # the fingerprint that the VM was made from: msb keeps it as the label config-sha
+    vm_made_from() { msb inspect {{ name }} --format json | jq -r '.config.labels["config-sha"] // ""'; }
+    # unpushed work in the clone, which removing the VM would delete
+    unpushed_work() { msb exec {{ name }} -u agent -- sh -c "cd '$SANDBOX_WORKSPACE' 2>/dev/null && { git status --porcelain; git log --branches --not --remotes --oneline; }" || true; }
 
-    if [ "$state" != missing ] && [ "$old" != "$sha" ]; then
-      echo "msb: sandbox.yaml or the image changed, so the VM is made again (the {{ volume }} volume stays)"
+    # The fingerprint of what we would make now: sandbox.yaml, the image, and the host values (another repo path is another mount). The token is not one of them.
+    wanted=$(cat {{ msb_dir }}/sandbox.yaml <(echo "$image_id" "$SANDBOX_WORKSPACE" "$SANDBOX_GIT_DIR" "$SANDBOX_MISE_IGNORED" "$REPO_URL" "$GIT_USER_NAME" "$GIT_USER_EMAIL") | sha256sum | cut -c1-16)
+    state=$(vm_state)
+
+    # 1. A VM that was made from an older fingerprint is removed, unless its clone holds unpushed work. The {{ volume }} volume stays.
+    if [ "$state" != missing ] && [ "$(vm_made_from)" != "$wanted" ]; then
+      echo "msb: sandbox.yaml, the image or a host value changed, so the VM is made again (the {{ volume }} volume stays)"
       [ "$state" = running ] || msb start {{ name }} >/dev/null
-      dirty=$(msb exec {{ name }} -u agent -- sh -c "cd '$SANDBOX_WORKSPACE' 2>/dev/null && { git status --porcelain; git log --branches --not --remotes --oneline; }" || true)
+      dirty=$(unpushed_work)
       if [ -n "$dirty" ] && [ -z "${SANDBOX_FORCE:-}" ]; then
         echo "msb: the clone in the VM has work that is not pushed (below). Push it, or run again with SANDBOX_FORCE=1 to drop it." >&2
         echo "$dirty" >&2
@@ -117,24 +120,27 @@ run: _host-only
       state=missing
     fi
 
-    # A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb ls` does not list it: remove it.
-    if [ "$state" = missing ]; then rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"; fi
-
+    # 2. Make the VM, or start it, or leave it as it is.
     case $state in
-      missing) msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$sha" ;;
+      missing)
+        # A boot that failed leaves a stale folder, and msb then says "already exists" (microsandbox issue 1908). `msb ls` does not list it: remove it.
+        rm -rf "${MSB_HOME:-$HOME/.microsandbox}/sandboxes/{{ name }}"
+        msb run -d --name {{ name }} --conf {{ msb_dir }}/sandbox.yaml --label "config-sha=$wanted" ;;
       running) ;;
       *) msb start {{ name }} ;;
     esac
 
-    # sandbox-boot clones the repo, installs the hook and starts Headroom, then writes /run/sandbox-ready. VS Code needs all of it.
+    # 3. Wait for the boot. sandbox-boot clones the repo, installs the hook and starts Headroom, then writes /run/sandbox-ready.
     # If a step fails, sandbox-boot exits with an error and that stops the VM: the loop ends, and the boot log shows the reason.
     for _ in $(seq 120); do
-      [ "$(msb inspect {{ name }} --format json | jq -r '.status | ascii_downcase')" = running ] || break
+      [ "$(vm_state)" = running ] || break
       msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null && break
       sleep 1
     done
     msb exec {{ name }} -- test -f /run/sandbox-ready 2>/dev/null \
       || { echo "msb: the sandbox did not finish its boot. Its log (msb logs {{ name }}):" >&2; msb logs {{ name }} 2>&1 | tail -n 15 >&2; exit 1; }
+
+    # 4. Open VS Code on the clone.
     code --folder-uri "vscode-remote://ssh-remote+{{ name }}.msb$SANDBOX_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then make the VM again
