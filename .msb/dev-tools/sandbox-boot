@@ -34,6 +34,11 @@ for _ in $(seq 60); do
 done
 curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
 
+# Ponytail is a plugin for Claude Code. The version is a release tag. The plugin goes to the claude-home volume, so a new VM finds it there.
+# A failure prints a warning and does not stop the boot, as in sbx.
+as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; claude plugin install ponytail@ponytail" \
+  || echo "sandbox-boot: warning: the ponytail plugin is not installed" >&2
+
 touch "$ready"
 echo "sandbox-boot: ready"
 exec sleep infinity

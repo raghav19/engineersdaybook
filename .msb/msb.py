@@ -10,6 +10,7 @@ The justfile exports MSB_NAME, MSB_IMAGE and MSB_WORKSPACE. Run msb.py through `
 
 preflight        check that msb, the gh login and the image exist
 ensure-vm        make the VM from sandbox.yaml if none exists. Stop if a VM exists and is not current
+                 (the secrets of sandbox.yaml, except GITHUB_TOKEN, come from the Bitwarden project)
 wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
 ssh-key          print the path of your SSH public key
 vscode-settings  set the VS Code settings for Remote-SSH
@@ -17,6 +18,7 @@ check-host HOST  stop if HOST is not a host name
 """
 
 import argparse
+import getpass
 import hashlib
 import json
 import os
@@ -30,6 +32,10 @@ from typing import NoReturn
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
 BOOT_TIMEOUT = 90  # seconds that `wait-boot` waits for sandbox-boot
+VAULT_TIMEOUT = 30  # seconds that the call to Bitwarden can take
+# The Bitwarden project has the secrets. A secret of sandbox.yaml gets its value from the Bitwarden key with the same name.
+# These names are the exceptions: the key of the Bitwarden project is not the name of the secret in the VM.
+VAULT_KEYS = {"GHCR_TOKEN": "GITHUB_TOKEN"}
 VSCODE_SETTINGS = {
     "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
     "remote.SSH.defaultExtensions": [
@@ -91,6 +97,51 @@ def host_values() -> dict[str, str]:
     }
 
 
+def vault_token() -> str:
+    """The access token of the Bitwarden machine account: BWS_ACCESS_TOKEN, then the token file, then a prompt that does not echo."""
+    if token := os.environ.get("BWS_ACCESS_TOKEN"):
+        return token
+    path = Path(os.environ.get("BWS_ACCESS_TOKEN_FILE", Path.home() / ".config" / "bws" / "access-token"))
+    if path.is_file():
+        if path.stat().st_mode & 0o777 not in (0o400, 0o600):
+            die(f"{path} must have mode 600 or 400.")
+        return path.read_text().strip()
+    try:
+        token = getpass.getpass("Bitwarden access token (machine account): ").strip()
+    except (EOFError, OSError):
+        die(f"set BWS_ACCESS_TOKEN, or save the token in {path}. There is no terminal to ask on.")
+    return token or die("the access token is empty.")
+
+
+def vault_secrets(names: list[str]) -> dict[str, str]:
+    """The values of the secrets `names` from the Bitwarden project. The values go to the environment of msb and nowhere else."""
+    if not names:
+        return {}  # no call to Bitwarden, and no token needed
+    if not shutil.which("bws"):
+        die('bws is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
+    env = os.environ | {"BWS_ACCESS_TOKEN": vault_token()}
+    done = subprocess.run(
+        ["bws", "secret", "list", "--output", "json"], capture_output=True, text=True, timeout=VAULT_TIMEOUT, env=env, check=False
+    )
+    if done.returncode != 0:
+        die(f"bws failed: {done.stderr.strip()[:300]}")
+    items = json.loads(done.stdout)
+    values = {}
+    for name in names:
+        key = VAULT_KEYS.get(name, name)
+        found = [item["value"] for item in items if item["key"] == key]
+        if len(found) != 1:
+            die(f"expected one Bitwarden secret named {key} (for the secret {name}), found {len(found)}.")
+        values[name] = found[0]
+    return values
+
+
+def vault_names() -> list[str]:
+    """The secrets of sandbox.yaml that come from Bitwarden. GITHUB_TOKEN comes from your gh login."""
+    names = out("yq", "-r", ".secrets // {} | keys | .[]", str(CONFIG)).split()
+    return [name for name in names if name != "GITHUB_TOKEN"]
+
+
 def preflight() -> None:
     if not shutil.which("msb"):
         die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
@@ -113,7 +164,7 @@ def ensure_vm() -> None:
         shutil.rmtree(Path(os.environ.get("MSB_HOME", Path.home() / ".microsandbox")) / "sandboxes" / name, ignore_errors=True)
         subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}"],
-            env=os.environ | values,  # msb reads the host values from its environment
+            env=os.environ | values | vault_secrets(vault_names()),  # msb reads the host values and the secrets from its environment
             check=True,
         )
         return

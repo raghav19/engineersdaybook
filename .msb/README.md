@@ -12,12 +12,18 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 | Allowed hosts | policy kit, `sbx policy allow` and a kit rebuild | `network.allow` in `sandbox.yaml` |
 | VS Code | `sbx setup ssh` | `ProxyCommand msb ssh serve` in `ssh_config`. The VM has no sshd |
 | GitHub token | proxy replacement. The MCP gateway holds the OAuth token | proxy replacement only. The VM has a placeholder |
+| Other secrets (Bitwarden) | `bws-secret.sh` and `secrets-sync` make an sbx custom secret | `msb.py` reads the Bitwarden project and gives msb the value. The VM has a placeholder |
 | MCP servers | registered on the gateway (`sbx mcp add`) | `managedMcpServers` in a root-owned file of the image |
 | Tool filter for GitHub MCP | the gateway removes the tools | a deny list in the same file. The client enforces it. It is a soft limit (see the token below) |
 | Claude login | the sbx proxy supplies it | you sign in with your subscription. The `claude-home` volume keeps the login |
 | Licence | proprietary | Apache-2.0, beta (v0.7) |
 
-**Not ported yet:** the SPIRE agent, the kind kubeconfig and the Flux Operator UI. The skills are in `.claude/skills` of the repository.
+**Not ported yet:** the SPIRE agent (and Envoy), the kind kubeconfig and the Flux Operator UI. The skills are in `.claude/skills` of the repository.
+
+**Not ported, on purpose:**
+- The egress rule on `api.github.com/repos/**` that blocks one HTTP method (the one that removes a repository). msb has rules for hosts only, not for methods or paths. The scope of the token is the limit (see below).
+- The policy kit, the MCP gateway and the git token sync. `network.allow`, the managed settings and the token placeholder do their work.
+- `policy-context.md`. It told the agent to use the sbx gateway tools. That text is wrong for msb. The agent instructions are in `AGENTS.md`.
 
 ## Prerequisites
 
@@ -34,6 +40,8 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 3. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it.
 
 4. **Commit your work.** The VM clones the committed files only.
+
+5. **Bitwarden (only for the secrets that come from it).** `sandbox.yaml` has one: `GHCR_TOKEN`, the push token of ghcr.io. `run` needs the access token of a Bitwarden machine account for it. Use one of these: set `BWS_ACCESS_TOKEN`, save the token in `~/.config/bws/access-token` (mode 600 or 400), or type it at the prompt. The prompt does not echo. For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
 
 ## Getting started
 
@@ -64,6 +72,8 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - **Volumes.** The VM has two named volumes. `claude-home` keeps the Claude login and settings. `terraform-providers` is the Terraform provider cache (`TF_PLUGIN_CACHE_DIR`). Both stay when you remove the VM, so a new VM keeps your login and does not download the providers again. `just msb rm --volumes` removes them. `sandbox-boot` gives the cache folder to the agent user.
 - **Tools.** `dev-tools/mise.toml` lists the tools and their exact versions. The Dockerfile installs them with mise. Claude Code is one of them. After you change the file, run `just msb image-build`, then `just msb rm && just msb run`.
 - **MCP servers and the deny list.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns the file. The agent can read it and cannot change it. Project settings and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub (`managedMcpServers`). It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). The GitHub header has the placeholder `$MSB_GITHUB_TOKEN`. The host replaces it, so the file has no secret. Claude Code loads these servers without a prompt. `claude mcp remove` refuses to remove them. To change the file, run `just msb image-build`.
+- **Secrets from Bitwarden.** `sandbox.yaml` lists a secret under `secrets:` with the hosts that can receive it. When `run` makes a VM, `msb.py` reads the Bitwarden project once and puts each value in the environment of `msb run`. The key in the project has the name of the secret. `VAULT_KEYS` in `msb.py` lists the exceptions: `GHCR_TOKEN` uses the key `GITHUB_TOKEN`, as sbx did. The VM has a placeholder (`$MSB_GHCR_TOKEN`), and the host swaps in the value for `ghcr.io` only. The VM never has the value or the Bitwarden token. A key that is missing or not unique stops `run`. `GITHUB_TOKEN` (for `github.com`) comes from your `gh` login, not from Bitwarden. A `run` that leaves a running VM as it is does not call Bitwarden. To add a secret, add it under `secrets:` with its hosts, add the hosts to `network.allow`, and add the key to the Bitwarden project.
+- **Ponytail.** `sandbox-boot` installs the plugin ponytail 5.3.2 for Claude Code, as in sbx. The plugin is on the `claude-home` volume, so a new VM finds it. A failed install prints a warning and does not stop the boot.
 - **The limit of the deny list.** The agent can still call the GitHub API with the placeholder token. The host then uses your token. The deny list stops mistakes. The **scope of the token** sets what the agent can do on GitHub. Use a fine-grained token for this repository (prerequisite 2).
 - **The shell.** The shell is plain bash. `/etc/profile.d` puts the mise shims on the `PATH` and sets `EDITOR`. Completions for the tools are available. There is no prompt theme and no fzf.
 - **Git identity.** `sandbox.yaml` sets `GIT_AUTHOR_*` and `GIT_COMMITTER_*` from your host git config. The image has the token helper and `safe.directory` in its system git config.
