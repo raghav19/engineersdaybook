@@ -21,7 +21,7 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
-volumes := 'claude-home terraform-providers'
+volumes := 'claude-home terraform-providers podman-storage'
 registry := 'ghcr.io/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
 
@@ -86,7 +86,7 @@ allow-host host: _host-only && run
 shell: _host-only
     msb exec -t -u agent $MSB_NAME -- bash -l
 
-# Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache
+# Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
     msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi

@@ -38,6 +38,11 @@ mounts:
   - named: claude-home
     target: /home/agent/.claude
     create: ensure-exists
+  # The images that podman pulls and builds in the VM. They stay when you remove the VM, so a new VM does not pull them again.
+  # `just msb rm --volumes` removes them. sandbox-boot gives the folder to the agent user.
+  - named: podman-storage
+    target: /home/agent/.local/share/containers
+    create: ensure-exists
   # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/mise.toml). It stays when you remove the VM, so a new VM does not download the providers again.
   # `just msb rm --volumes` removes it. sandbox-boot gives the folder to the agent user.
   - named: terraform-providers
@@ -76,6 +81,10 @@ network:
     # MCP servers
     - mcp.draw.io
     - schemas.fluxoperator.dev
+    # Container images (podman). Docker Hub needs the registry, the token service and a CDN for the blobs. The CDN host changes (cloudflare, cloudfront), so *.docker.com covers it
+    - registry-1.docker.io
+    - auth.docker.io
+    - "*.docker.com"
     # Tool downloads
     - releases.hashicorp.com
     - registry.terraform.io

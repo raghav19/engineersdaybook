@@ -14,8 +14,14 @@ fail() { echo "sandbox-boot: $*" >&2; exit 1; }
 as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
 
 rm -f "$ready"
-mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.cache/terraform-providers"
-chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" "$home/.cache/terraform-providers" || fail "chown of the workspace folders failed"
+mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.cache/terraform-providers" "$home/.local/share/containers"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
+
+# Podman, rootless as agent. The VM kernel makes /dev/fuse and /dev/net/tun for root only. These are devices of the VM, not of the host.
+# fuse-overlayfs needs /dev/fuse, and the network of a container (pasta) needs /dev/net/tun. The agent group can use them, and no other user.
+# `/` must be a shared mount, or podman prints a warning and can miss mounts.
+chgrp agent /dev/fuse /dev/net/tun && chmod 660 /dev/fuse /dev/net/tun || fail "could not open /dev/fuse and /dev/net/tun for podman"
+mount --make-rshared / || fail "could not make / a shared mount for podman"
 
 # The clone is private. The VM cannot write to /run/sandbox/source, which is the .git directory of the host repo.
 # The clone starts on the branch of the host checkout. Push goes to GitHub, to a feature branch.

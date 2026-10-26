@@ -14,6 +14,7 @@ ENV MISE_DATA_DIR=/opt/mise \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client \
+      podman podman-docker uidmap passt fuse-overlayfs \
  && rm -rf /var/lib/apt/lists/* \
  && ldconfig
 
@@ -38,6 +39,10 @@ RUN mise run sandbox:completions
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
+# Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
+# containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
+COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
+RUN touch /etc/containers/nodocker
 # The policy of Claude Code. Root owns the file. The agent cannot change it, and project settings and user settings cannot override it.
 # It has the MCP servers and the deny list for the GitHub tools. $MSB_GITHUB_TOKEN is the placeholder that msb puts in GITHUB_TOKEN.
 # The host replaces the placeholder with the token on the network, so the file has no secret.
