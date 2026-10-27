@@ -5,9 +5,15 @@
 # Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig and the Flux Operator UI.
 
 image:
-  oci: engineersdaybook-sandbox:local # `just msb image-build` builds and loads it
+  # `just msb build` pushes the image and pins its digest here (@sha256:...)
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx
   upper_size: "20G"
-pull_policy: never
+
+# msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
+# `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.
+registry:
+  username: raghav19
+  password_env: GITHUB_TOKEN
 
 cpus: 4
 memory: "4G"

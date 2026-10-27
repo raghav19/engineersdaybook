@@ -6,12 +6,13 @@
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the steps that need Python. Exit 1 means a wrong setup or a failed step.
-The justfile exports MSB_NAME and MSB_IMAGE. It also puts the git values that sandbox.yaml names in the environment.
+The justfile exports MSB_NAME and MSB_WORKSPACE. It also puts the git values that sandbox.yaml names in the environment.
 Run msb.py with `just msb <recipe>`. The justfile does the small checks (the tools on the PATH, the SSH key).
 
 vscode-settings  merge the settings that Remote-SSH needs into the VS Code user settings file. Your other settings stay.
 github-login     log in to GitHub with the GitHub App (web flow). The tokens go to a file with mode 600.
                  The recipe runs this step under `bws run`, which gives it the client secret.
+pin-image        set the image in sandbox.yaml to the registry and the digest that `just msb build` pushed. The comments of the file stay.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
@@ -99,26 +100,14 @@ def _out(*cmd: str, default: str | None = None) -> str:
     return default
 
 
-def _image_id() -> str:
-    """Return the id of the local Docker image MSB_IMAGE. Stop with a hint if the image does not exist.
-
-    The id is part of the fingerprint of the VM. So a new image gives the VM another fingerprint.
-    """
-    image = os.environ["MSB_IMAGE"]
-    return _out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or _die(
-        f"the image {image} does not exist. Run: just msb image-build"
-    )
-
-
 def _fingerprint() -> str:
-    """Return the fingerprint of the VM: a hash of sandbox.yaml, the image, the host values and the host ports. `ensure-vm` calls this.
+    """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values and the host ports. `ensure-vm` calls this.
 
     The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
     The tokens and the branch are not in the fingerprint.
     """
     parts = [
         CONFIG.read_text(),
-        _image_id(),
         os.environ["SANDBOX_GIT_DIR"],
         os.environ["GIT_AUTHOR_NAME"],
         os.environ["GIT_AUTHOR_EMAIL"],
@@ -261,6 +250,23 @@ def github_login() -> None:
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
 
 
+def pin_image(registry: str, metadata: Path) -> None:
+    """Set image.oci in sandbox.yaml to `<registry>@<digest>`. `just msb build` runs this after it pushes the image.
+
+    The digest is in `metadata`, the file that `docker buildx build --metadata-file` writes. The comments, the quotes and the order of the file stay.
+    A new digest changes the fingerprint of the VM, so the next `run` tells you to make the VM again.
+    """
+    digest = json.loads(metadata.read_text())["containerimage.digest"]
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.width = 4096  # the value is long. Do not wrap it onto the next line.
+    config = yaml.load(CONFIG)
+    config["image"]["oci"] = f"{registry}@{digest}"
+    yaml.dump(config, CONFIG)
+    print(f"sandbox.yaml pins {registry}@{digest}. Commit it. Then run: just msb rm && just msb run")
+
+
 def ensure_vm() -> None:
     """Make the VM, or start the VM that exists. Then run sandbox-boot in it. The recipe runs this step under `bws run`.
 
@@ -284,7 +290,7 @@ def ensure_vm() -> None:
     vm = json.loads(found.stdout) if found.returncode == 0 else None
     if vm and vm["config"]["labels"].get("config-sha") != wanted:
         # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
-        print(f"msb: {name} does not match the configuration now. sandbox.yaml, the image or a host value changed.", file=sys.stderr)
+        print(f"msb: {name} does not match the configuration now. sandbox.yaml or a host value changed.", file=sys.stderr)
         _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
@@ -313,7 +319,7 @@ def ensure_vm() -> None:
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
         _die(
-            "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml, the image or a host value, make a new VM: just msb rm && just msb run"
+            "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
 
 
@@ -344,8 +350,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
-    for step in ("github-login", "ensure-vm"):
-        steps.add_parser(step)
+    steps.add_parser("github-login")
+    pin = steps.add_parser("pin-image")
+    pin.add_argument("registry")
+    pin.add_argument("metadata", type=Path)
+    steps.add_parser("ensure-vm")
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
@@ -353,6 +362,8 @@ def main() -> None:
             vscode_settings(args.file)
         case "github-login":
             github_login()
+        case "pin-image":
+            pin_image(args.registry, args.metadata)
         case "ensure-vm":
             ensure_vm()
         case "allow-host":

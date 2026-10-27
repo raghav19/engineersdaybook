@@ -53,23 +53,23 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 
 5. **Log in to Claude on the host.** Run `claude` and sign in with your subscription. The VM uses this login, so you do not log in again in the VM. `run` stops with a message if the login is missing or its access token lasts less than 30 minutes. Then start `claude` on the host. It refreshes the token.
 
-6. **Set up Bitwarden.** `run`, `github-login` and `image-publish` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
+6. **Set up Bitwarden.** `run`, `github-login` and `build` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
    - Set `BWS_ACCESS_TOKEN` in your shell, for example `export BWS_ACCESS_TOKEN=$(cat ~/.config/bws/access-token)`. If it is missing, `bws` stops the recipe with `Missing access token`.
-   - The project needs two keys. `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. Only `image-publish` uses it.
+   - The project needs two keys. `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. `build` pushes the image with it, and `run` pulls the private image with it (`registry` in `sandbox.yaml`).
    - For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
 
 ## Getting started
 
 ```shell
 just msb setup         # 1. one time for each host
-just msb image-build   # 2. one time, and after you change dev-tools/
+just msb build         # 2. one time, and after you change dev-tools/
 just msb run           # 3. every day
 ```
 
 | Step | Command | What it does |
 |---|---|---|
 | 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Writes the VS Code user settings, including `remote.SSH.configFile`, which points to `ssh_config`. |
-| 2 | `image-build` | Builds `dev-tools/` with Docker (Debian, mise and the tools of `dev-tools/tools/`). Loads the image into msb. The first build takes several minutes. |
+| 2 | `build` | Builds `dev-tools/` with Docker (Debian, mise and the tools of `dev-tools/tools/`). Pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
 | 3 | `run` | Makes the VM, or starts it, and gives it the new tokens. Runs `sandbox-boot` in it. Opens VS Code on it. You can run it as often as you want. |
 
 In VS Code, open a terminal and run `claude`. It starts with the login of the host, so it does not ask you to sign in.
@@ -83,14 +83,14 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - The justfile lists the steps of each recipe in order. Bash does the small jobs.
 - Each recipe starts with the private recipe `_need`. It stops with a message if a tool of the recipe is not on the `PATH`.
 - The top of the justfile has variables for the SSH key, the VS Code settings file, the VM user and the registry.
-- `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `ensure-vm` and `allow-host`. It is a `uv` script. Its one dependency is `ruamel.yaml`, and `uv` installs it on the first run.
-- You can run a step alone, for example `.msb/msb.py ensure-vm`, if the environment has `MSB_NAME`, `MSB_IMAGE` and `MSB_WORKSPACE`.
+- `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `pin-image`, `ensure-vm` and `allow-host`. It is a `uv` script. Its one dependency is `ruamel.yaml`, and `uv` installs it on the first run.
+- You can run a step alone, for example `.msb/msb.py ensure-vm`, if the environment has `MSB_NAME` and `MSB_WORKSPACE`.
 - Every function has a docstring. The helpers start with `_` and stand at the top of the file. The steps follow, in the order of the cases in `main()`.
 
 ### The VM and its fingerprint
 
 - `sandbox.yaml` declares the image, the size, the mounts, the secrets and the egress allow list.
-- When `run` makes the VM, it stores a hash in the label `config-sha`. The hash covers the file, the image and the host values (the git directory and the git identity).
+- When `run` makes the VM, it stores a hash in the label `config-sha`. The hash covers the file (it pins the image by digest) and the host values (the git directory and the git identity).
 - msb fixes the configuration of a VM when it makes the VM. If the hash is different at the next `run`, `run` stops with a message. It does not remove the VM, because that removes the clone in it.
 - Then push your work and run `just msb rm && just msb run`. The volumes `claude-home`, `terraform-providers` and `podman-storage` stay.
 - The VM has no command of its own. At each `run`, `ensure-vm` runs `dev-tools/sandbox-boot` in the VM with `msb exec`. This is the same for a new VM and for an old VM.
@@ -171,13 +171,16 @@ To give the VM another secret, do three things:
 - The files of `dev-tools/tools/` list the tools and their exact versions, in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`.
 - `dev-tools/mise.toml` has the settings of the tools and the completions task.
 - The Dockerfile installs each group with mise in its own build stage. A new version in one file rebuilds only its stage.
-- After you change a file, run `just msb image-build`, then `just msb rm && just msb run`.
+- After you change a file, run `just msb build`. Commit the new digest in `sandbox.yaml`. Then run `just msb rm && just msb run`.
 - The image is 3.5 GiB. The step that installs the tools removes the uv cache (about 880 MiB), because no tool reads it.
 - The largest parts are `headroom-ai` (842 MiB), Claude Code (280 MiB), node (204 MiB), Terraform (116 MiB) and Python (108 MiB).
 
-### Publishing the image (maintainer)
+### Building and publishing the image
 
-- Run `just msb image-publish`. It pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`. The tag is the commit.
+- Run `just msb build`. It pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`. The tag is the commit.
+- Then it writes the digest of the pushed image in `sandbox.yaml` (`image.oci: ...@sha256:...`). The digest is the pin. The tag is only a label.
+- A new digest gives the VM another fingerprint. The next `run` tells you to run `just msb rm && just msb run`.
+- The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`. `run` runs msb under `bws run`, so msb reads the token from the environment when it pulls the image. There is no login step. (`msb registry login` does not work in this msb build: it has no keyring.)
 - The token is the Bitwarden key `GITHUB_TOKEN` only. `bws run` pipes it to `docker login`, so no variable holds it. `docker logout` removes the login at the end.
 - If the build fails, the login stays in `~/.docker/config.json` until the next run of the recipe ends.
 - The layers use zstd at level 9, as the sbx kits do. zstd unpacks about 9 times faster than gzip. It also makes the large layer 10% smaller.
@@ -185,7 +188,6 @@ To give the VM another secret, do three things:
 - The layers of each stage go to the registry (the tag `cache`). A new machine or a CI run then rebuilds only the stage that changed.
 - The first run prints the error `failed to configure registry cache importer ... not found`. The cache tag does not exist yet, and the build goes on.
 - The recipe does not check `dev-tools/` for changes that you did not commit. Commit them first, because the tag is the commit.
-- `sandbox.yaml` still uses the image that `just msb image-build` makes on your host.
 
 ### Containers (podman)
 
@@ -209,7 +211,7 @@ Risks:
 - The file declares draw.io, the Flux schema catalog and GitHub (`managedMcpServers`). It denies five GitHub tools (`merge_pull_request`, `delete_file` and others).
 - The GitHub header has the placeholder `$MSB_GITHUB_TOKEN`. The host replaces it, so the file has no secret.
 - Claude Code loads these servers without a prompt. `claude mcp remove` refuses to remove them.
-- To change the file, run `just msb image-build`.
+- To change the file, run `just msb build`.
 
 ### The limit of the deny list
 
@@ -227,11 +229,11 @@ Risks:
 
 | You see | Do this |
 |---|---|
-| `run` says the image does not exist | Run `just msb image-build`. |
+| `run` cannot pull the image (`not found` or `unauthorized`) | `not found`: `sandbox.yaml` does not pin an image that exists. Run `just msb build`. `unauthorized`: the Bitwarden key `GITHUB_TOKEN` needs the scope `read:packages` (it has `write:packages` for `build`). |
 | `msb doctor` shows a red line | Read the line. For `/dev/kvm`, run `sudo usermod -aG kvm "$USER"`, then log in again. |
 | `run` says that `sandbox-boot` failed | `run` prints the reason (`sandbox-boot: ...`). The clone, the hook or Headroom failed. Run `just msb run` again. This fixes a cause outside the VM, such as the network. If the cause is in `sandbox.yaml`, the image or a host value (for example the branch that the VM stores), run `just msb rm && just msb run`. |
 | `msb ls` shows `crashed` or `stopped` | Run `just msb run`. It starts the VM and runs `sandbox-boot` again. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
-| `run` says that the VM does not match the configuration | `sandbox.yaml`, the image or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
+| `run` says that the VM does not match the configuration | `sandbox.yaml` (it pins the image) or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
 | VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
 | `claude` asks for a login | The login of the host ended. Start `claude` on the host to refresh it. Then run `just msb run`. |
