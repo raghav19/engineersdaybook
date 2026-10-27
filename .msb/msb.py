@@ -22,12 +22,12 @@ image-tags       print the tags of the published image, one for each line. Stop 
 
 import argparse
 import hashlib
-import http.server
 import json
 import os
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -145,6 +145,36 @@ def _github_exchange(**data: str) -> str:
     return saved["access_token"]
 
 
+def _github_callback() -> dict[str, list[str]]:
+    """Wait for GitHub to send the browser to the callback address of the app, and return the query of that request.
+
+    The address is http://127.0.0.1:GITHUB_CALLBACK_PORT/callback?code=...&state=... A plain socket is enough: read the first line of the
+    request, answer "200" and close. Ignore a request without a code (the icon of the page, or a connection that sends nothing).
+    Return an empty dict if no request with a code comes in LOGIN_TIMEOUT seconds.
+    """
+    body = b"You can close this tab."
+    answer = b"HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: %d\r\n\r\n%s" % (len(body), body)
+    deadline = time.time() + LOGIN_TIMEOUT
+    with socket.create_server(("127.0.0.1", GITHUB_CALLBACK_PORT)) as server:
+        while (left := deadline - time.time()) > 0:
+            server.settimeout(left)
+            try:
+                connection, _ = server.accept()
+            except TimeoutError:
+                break
+            with connection:
+                connection.settimeout(5)
+                try:
+                    target = connection.recv(4096).split(b" ")[1].decode()
+                except (TimeoutError, IndexError):
+                    continue
+                connection.sendall(answer)
+            query = urllib.parse.parse_qs(urllib.parse.urlparse(target).query)
+            if "code" in query:
+                return query
+    return {}
+
+
 def _github_token() -> str:
     """Return the GitHub access token from the token file. `ensure-vm` calls this.
 
@@ -229,33 +259,16 @@ def github_login() -> None:
 
     1. Print the address of the approval page and open it in the browser. You approve the app.
     2. GitHub sends the browser to a port of this host (the callback address of the app) with a one-time code.
-       A small server on that port waits for the code. The random `state` value must come back the same, or the answer is not from GitHub.
-    3. Send the code and the client secret to GitHub, and save the tokens (github_exchange).
+       _github_callback waits for it. The random `state` value must come back the same, or the answer is not from GitHub.
+    3. Send the code and the client secret to GitHub, and save the tokens (_github_exchange).
     """
     state = secrets.token_urlsafe(16)
     redirect = f"http://127.0.0.1:{GITHUB_CALLBACK_PORT}/callback"
-    got: dict[str, list[str]] = {}
-
-    class Callback(http.server.BaseHTTPRequestHandler):
-        def do_GET(self) -> None:
-            got.update(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query))
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(b"You can close this tab.")
-
-        def log_message(self, format: str, *args: object) -> None:  # no log line: the address has the code
-            pass
-
-    server = http.server.HTTPServer(("127.0.0.1", GITHUB_CALLBACK_PORT), Callback)
-    server.timeout = 5
     query = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, "redirect_uri": redirect, "state": state})
     print(f"Approve the app in your browser. If it does not open, open this address:\nhttps://github.com/login/oauth/authorize?{query}")
     webbrowser.open(f"https://github.com/login/oauth/authorize?{query}")
-    deadline = time.time() + LOGIN_TIMEOUT
-    while "code" not in got and time.time() < deadline:
-        server.handle_request()
-    server.server_close()
-    if got.get("state") != [state] or "code" not in got:
+    got = _github_callback()
+    if got.get("state") != [state]:
         _die("there was no valid approval in time. Run: just msb github-login")
     _github_exchange(code=got["code"][0], redirect_uri=redirect)
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
