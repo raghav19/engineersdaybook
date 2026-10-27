@@ -110,6 +110,23 @@ def _image_id() -> str:
     )
 
 
+def _fingerprint() -> str:
+    """Return the fingerprint of the VM: a hash of sandbox.yaml, the image, the host values and the host ports. `ensure-vm` calls this.
+
+    The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
+    The tokens and the branch are not in the fingerprint.
+    """
+    parts = [
+        CONFIG.read_text(),
+        _image_id(),
+        os.environ["SANDBOX_GIT_DIR"],
+        os.environ["GIT_AUTHOR_NAME"],
+        os.environ["GIT_AUTHOR_EMAIL"],
+        str(HOST_PORTS),
+    ]
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+
+
 def _github_exchange(**data: str) -> str:
     """Send `data` and the client credentials of the GitHub App to GitHub. Save the tokens that come back. Return the access token.
 
@@ -245,70 +262,52 @@ def github_login() -> None:
 
 
 def ensure_vm() -> None:
-    """Make the VM, or check and start the VM that exists. Then run sandbox-boot in it. The recipe runs this step under `bws run`.
+    """Make the VM, or start the VM that exists. Then run sandbox-boot in it. The recipe runs this step under `bws run`.
 
-    The fingerprint is a hash of sandbox.yaml, the image and the host values. msb keeps it in the label `config-sha` of the VM.
-    1. No VM exists: make it. msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the Bitwarden keys).
+    msb keeps the fingerprint (_fingerprint) in the label `config-sha` of the VM.
+    1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
+    2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
+       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the Bitwarden keys).
        GH_TOKEN is the GitHub App token. CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host.
-    2. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
-    3. A VM exists with this fingerprint. If it stopped, start it (msb reads the secrets from the environment).
-       If it runs, give it the current tokens with `msb modify --secret`. It does not restart.
+    3. Give the VM the current tokens with `msb modify --secret`. It does not restart.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
     tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
-    # The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
-    # The tokens and the branch are not in the fingerprint.
-    parts = [
-        CONFIG.read_text(),
-        _image_id(),
-        os.environ["SANDBOX_GIT_DIR"],
-        os.environ["GIT_AUTHOR_NAME"],
-        os.environ["GIT_AUTHOR_EMAIL"],
-        str(HOST_PORTS),
-    ]
-    wanted = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+    wanted = _fingerprint()
 
     found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
     # Only "sandbox not found" means that no VM exists. Stop on any other error.
     if found.returncode != 0 and "sandbox not found" not in found.stderr:
         _die(f"`msb inspect {name}` failed: {found.stderr.strip()[:300]}")
-    if found.returncode != 0:
+    vm = json.loads(found.stdout) if found.returncode == 0 else None
+    if vm and vm["config"]["labels"].get("config-sha") != wanted:
+        # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
+        print(f"msb: {name} does not match the configuration now. sandbox.yaml, the image or a host value changed.", file=sys.stderr)
+        _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
+    if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
-        # msb reads each secret of sandbox.yaml from its environment: the two tokens, and the Bitwarden keys (from `bws run`).
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
             env=os.environ | tokens,
             check=False,
         )
         if done.returncode != 0:
-            _die("msb could not make the VM (its message is above).")
-    else:
-        vm = json.loads(found.stdout)
-        if vm["config"]["labels"].get("config-sha") != wanted:
-            # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
-            print(f"msb: {name} does not match the configuration now. sandbox.yaml, the image or a host value changed.", file=sys.stderr)
-            _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
-        if vm["status"].lower() != "running":
-            # msb reads the secrets of sandbox.yaml from the environment when it starts a VM.
-            done = subprocess.run(["msb", "start", name], env=os.environ | tokens, check=False)
-            if done.returncode != 0:
-                _die("msb could not start the VM (its message is above).")
-        else:
-            # The VM runs. Give it the current tokens. The placeholders in the VM stay, and the VM does not restart.
-            secrets_config = YAML().load(CONFIG)["secrets"]
-            for secret, value in tokens.items():
-                hosts = ",".join(secrets_config[secret]["allow"])
-                done = subprocess.run(
-                    ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
-                    env=os.environ | {secret: value},
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
-                if done.returncode != 0:
-                    _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
+            _die("msb could not make or start the VM (its message is above).")
+    # Give the VM the current tokens. The placeholders in the VM stay, and the VM does not restart.
+    secrets_config = YAML().load(CONFIG)["secrets"]
+    for secret, value in tokens.items():
+        hosts = ",".join(secrets_config[secret]["allow"])
+        done = subprocess.run(
+            ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
+            env=os.environ | {secret: value},
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if done.returncode != 0:
+            _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)

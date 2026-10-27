@@ -128,7 +128,7 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - Each refresh makes the old refresh token useless.
 - `_claude_token()` only reads the access token of the login on the host. It never refreshes it. `claude` on the host refreshes it and rotates the refresh token. A second refresh from here would make the refresh token of `claude` useless.
 - If the Claude token lasts less than 30 minutes, `run` stops and tells you to start `claude` on the host.
-- If the VM runs, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders do not change, and the VM does not restart.
+- At each run, after the VM is made or started, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders do not change, and the VM does not restart.
 - There is no timer. After about 8 hours without `just msb run`, GitHub and Claude answer 401 to requests from the VM. Run `just msb run` again to fix this.
 
 ### Secrets from Bitwarden
