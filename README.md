@@ -7,7 +7,7 @@ This repo holds my engineering projects and write-ups. Each project is independe
 
 | Project | What it achieves |
 |---|---|
-| [agent-sandbox](code/agent-sandbox/README.md) | Runs Claude Code in an `sbx` microVM with no real credential. A fooled agent can do only what the sandbox allows. |
+| [agent-sandbox](code/agent-sandbox/README.md) | Runs Claude Code in a microsandbox VM with no real token. A fooled agent can do only what the sandbox allows. |
 | [mcp-sandbox, part 1](code/mcp-sandbox/part-1-lethal-trifecta/README.md) | Tests the "lethal trifecta" against real GitHub infrastructure. The agent recognized the injected instruction twice and refused. |
 | [mcp-sandbox, part 2](code/mcp-sandbox/part-2-sandboxing-local-mcp/README.md) | Seals a local MCP server in rootless Docker. An egress proxy logs each outbound attempt. |
 | [mcp-sandbox, part 3](code/mcp-sandbox/part-3-mcp-guardrails/README.md) | Puts one gateway in front of three MCP servers. It checks identity, arguments and results against the OWASP MCP Top 10. |

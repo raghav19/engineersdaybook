@@ -1,5 +1,5 @@
-# Pre-commit checks, run by prek on every commit. The sandbox installs the hook at start (.sbx/kits/dev-tools/dev-tools.yaml).
-# The builtin hooks need no network. gitleaks, yamlfmt and ruff come from mise, from the sandbox image (.sbx/kits/dev-tools/tools.toml).
+# Pre-commit checks, run by prek on every commit. The sandbox installs the hook at start (.msb/dev-tools/sandbox-boot).
+# The builtin hooks need no network. gitleaks, yamlfmt and ruff come from mise, from the sandbox image (.msb/dev-tools/tools/dev.toml).
 
 exclude = '^(_archive/|\.claude/skills/)'  # the old Jekyll site, with vendored minified files; the vendored agent skills (see docs/agents/skills.md)
 

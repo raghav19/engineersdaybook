@@ -20,7 +20,7 @@ nodes:
     extraPortMappings:
       # The gateway: host 127.0.0.1:8080 -> NodePort 30080 (platform/routes/parameters.yaml). A fixed host port above 1024 and below 32768, because rootless
       # Docker (pasta) drops ports in 32768-60999 and cannot bind below 1024. cloud-provider-kind is not used: its proxy container gets an ephemeral host
-      # port, and on this host sbx holds ports in that range too (127.0.0.1:32769), so its readiness check never reaches the proxy.
+      # port, and the sbx sandbox held ports in that range too on the author's host (127.0.0.1:32769), so its readiness check never reaches the proxy.
       # ref: https://kind.sigs.k8s.io/docs/user/rootless/
       - containerPort: 30080
         hostPort: 8080

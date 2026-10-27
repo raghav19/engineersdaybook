@@ -4,361 +4,43 @@
 
 A coding agent you can run without handing it your machine.
 
-- **The agent:** Claude Code, inside an `sbx` microVM, working on a private clone of the repo and holding no real credential.
-- **The MCP servers:** GitHub (OAuth, tool filter), draw.io and the Flux schema catalog. The agent reaches them only through a gateway on the host.
-- **The guardrails:** an egress allow list for the VM, and a gateway that holds the GitHub token and filters its tools.
+- **The agent:** Claude Code, inside a [microsandbox](https://docs.microsandbox.dev) VM (open source, Apache-2.0), working on a private clone of the repo and holding no real token.
+- **The MCP servers:** GitHub, draw.io and the Flux schema catalog. The VM loads them from a root-owned settings file that the agent cannot change.
+- **The guardrails:** an egress allow list for the VM, token placeholders that the host replaces, and a deny list for the riskiest GitHub tools.
 
-What we take as given, so the sandbox's value shows on its own:
+The setup needs a Linux host with `/dev/kvm`, one GitHub App on one repository, and secrets in Bitwarden Secrets Manager. There is no daemon: `msb` starts the VM as a child process, and one file, `.msb/sandbox.yaml`, declares it.
 
-- a Linux host with KVM, rootless Docker, systemd user services and `sbx` installed ([Prerequisites](#prerequisites));
-- one GitHub App on one repository, with `main` protected (a pull request and one approval);
-- secrets in Bitwarden Secrets Manager, read on the host with the `bws` CLI
-- review before merge with pull requests
+What it shows: a fooled agent is capped to what the sandbox allows. The VM holds no real credential, egress is an allow list, and the damage stays in one repo.
 
+This follows Anthropic's [How we contain Claude across products](https://www.anthropic.com/engineering/how-we-contain-claude): enforce hard limits in the environment instead of relying on the model.
 
-What it shows: a fooled agent is capped to what the sandbox allows. Credentials stay out of the VM, egress is an allow list, destructive tools are filtered, and the damage stays in one repo.
-
-This follows Anthropic's [How we contain Claude across products](https://www.anthropic.com/engineering/how-we-contain-claude) (May 25, 2026): enforce hard limits in the environment instead of relying on the model. Its three principles, and what this setup does with each (the quotes and the layer-by-layer mapping are in the [notes](docs/research/readme-notes.md)):
-
-- **Limit what the agent is *able* to do, not what it does.** "Rather than supervising what the agent does, we supervise what it's able to do." The VM reaches only the repo clone and allow-listed hosts: a repo `DELETE` is 403 at the egress proxy, and the gateway removes `merge_pull_request`, `delete_file`, `delete_repository`, `create_repository` and `fork_repository` from the tool list (a call gets `unknown tool`). Still able: write to the one repo the App covers. Demo section 1.
-- **Keep credentials out of the sandbox.** "If credentials never enter the sandbox, they can't be exfiltrated." The VM holds placeholders (`GH_TOKEN` gets 401 from GitHub). The egress proxy adds the model token and the sbx MCP gateway adds the GitHub token, both on the host, after the request has left the VM. Exception: a kit with OAuth `passthrough: true` sends the real token in; this kit does not use it. Demo section 2.
-- **An allowed domain is a capability grant.** "Every function reachable through any domain on an allowlist is now an attack surface." There is one allow list, for the agent (egress proxy), and the tool filter narrows what the GitHub host can do. Demo section 3; the evidence is in the [threat table](#threats-and-what-stops-them).
-
-
-## Demo: the sandbox in 45 seconds
-
-[![the sandbox demo: click to watch it on asciinema, where you can pause](docs/writeup/assets/sandbox-demo.gif)](https://asciinema.org/a/rGA78COFnm6hs3SF)
-
-One section per principle:
-
-| About | Section | What you see |
-|---|---|---|
-| 0:00 | 1. Limit what the agent is able to do | two different kernels; `github.com` 200, `example.com` 403, a repo `DELETE` 403; the 52 tools the agent sees, with merge and delete absent and `issue_write` present; `merge_pull_request` returns `unknown tool`; the proxy's log line for the refused `DELETE` |
-| 0:15 | 2. Credentials never enter the sandbox | `ls ~/.ssh ~/.aws` fails and the user is `agent`; the token variable names; `GH_TOKEN` against `api.github.com/user` returns 401; a direct call to the MCP host is 403; `list_branches` through the gateway works with no token in the VM |
-| 0:29 | 3. An allowed domain is a capability grant | a dummy string is delivered to `registry.terraform.io` and to an S3 bucket nobody owns; an untracked host file is readable at `/run/sandbox/source`; the GitHub write tools are still open |
-
-## The problem
-
-A coding agent that runs on your machine runs as you: it can read what you can read and use what you can use. Anyone who can put text in front
-of it can try to steer it, through a GitHub issue, a web page or a tool result, and the agent cannot reliably tell their text from yours.
+- **Limit what the agent is *able* to do, not what it does.** The VM reaches only the repo clone and the hosts in `network.allow`. A blocked host fails at DNS. A deny list removes five GitHub tools (`merge_pull_request`, `delete_file` and others).
+- **Keep credentials out of the sandbox.** The VM holds the placeholders `GH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`. The host swaps in the real value in requests to the hosts of that secret only, and blocks each token for every other host.
+- **An allowed domain is a capability grant.** Anything in the VM can use every host on the allow list, a container included. Keep `network.allow` to what the work needs. Add a host with `just msb allow-host <host>`.
 
 Earlier parts: [Part 1](../mcp-sandbox/part-1-lethal-trifecta/README.md) shows the attack and [Part 2](../mcp-sandbox/part-2-sandboxing-local-mcp/README.md) contains the MCP server. This part moves the agent itself into a sandbox.
 
-## The solution
+## How it works
 
-Claude Code runs inside an `sbx` microVM, on a private clone of the repo, and holds no real credential. The MCP servers (GitHub, draw.io, the Flux schema catalog) are registered on the host's sbx MCP gateway, so the agent
-reaches them only through it. The gateway holds GitHub's OAuth token and sets the tool filter headers where the agent cannot change them.
-Every other outbound request goes through an egress allow list, with a deny list on top (both in `.sbx/kits/policy/policy.yaml`).
-The sbx daemon runs on the host, outside the VM, and makes the MCP calls and kit pulls itself. systemd keeps it running (`.sbx/host/`).
-
-
-
-### How it is laid out
-
-```mermaid
-flowchart LR
-    you["You<br/>VS Code Remote-SSH"]
-    subgraph vm["microVM (one per sandbox, own kernel)"]
-        agent["Claude Code, the model's agent loop<br/>no real credential<br/>private clone, host repo read-only"]
-    end
-    subgraph host["your machine"]
-        egress["sbx egress proxy<br/>AGENT POLICY<br/>.sbx/kits/policy/policy.yaml"]
-        subgraph daemon["sbx daemon (systemd)"]
-            gw["MCP gateway<br/>OAuth token, tool filter, tool-call log"]
-        end
-    end
-    model["api.anthropic.com<br/>and the kit allow list"]
-    mcp["GitHub MCP, draw.io, Flux catalog,<br/>image registries"]
-    you --> agent
-    agent -- "model API and VM network calls" --> egress --> model
-    agent -- "MCP tool calls (its only MCP endpoint)" --> gw
-    gw -- "MCP servers, kit pulls, Docker sign-in" --> mcp
-```
-
-| Who controls what | Applies to | Where to change it |
+| Guardrail | What it limits | Where |
 |---|---|---|
-| Agent policy: the kit's egress allow and deny lists | what the VM itself connects to | `.sbx/kits/policy/policy.yaml` |
-| MCP gateway: OAuth token, tool filter, tool-call log | every MCP call from the agent | `.sbx/agent/agent.just` (vars), `just sandbox agent mcp-register` |
+| Egress allow list | every host the VM connects to | `network.allow` in `.msb/sandbox.yaml` |
+| Token placeholders | GitHub and Claude tokens: the VM never sees them | `secrets:` in `.msb/sandbox.yaml`, `.msb/msb.py` |
+| GitHub App scope | what the GitHub token can do: one repository, contents, issues and pull requests, no administration | the app installation (see `.msb/README.md`, prerequisite 2) |
+| Managed MCP settings and deny list | which MCP servers load and which GitHub tools are removed | `.msb/dev-tools/managed-settings.json` |
+| Clone, not the working tree | which host files the VM can read | the VM mounts the `.git` directory read-only and clones from it |
 
-### Where the microVM sits on your machine
+Run it with `just msb setup`, `just msb build` and `just msb run`. The prerequisites, every step and the fixes for common failures are in [`.msb/README.md`](../../.msb/README.md).
 
-The host side around the VM, drawn as in the [one-pager](docs/writeup/executive-one-pager.html): the VM, the egress proxy, the gateway, and where each route leaves the machine. Measured on this machine with `ps`, `ss`, `sbx secret ls` and `sbx exec` (sbx 0.46.0, 2026-10-09).
-The earlier box-drawing version, with the secret store, VM runner and systemd units, is in the git history of this file (commit `671673a`).
+## What stays open
 
-![The microVM, the sbx egress proxy, the sbx MCP gateway inside the host](docs/diagrams/architecture.svg)
+- **The deny list is a soft limit.** The client enforces it. The agent can still call the GitHub API with the placeholder token, and the host then uses the token of the GitHub App. The scope of that token sets what the agent can do on GitHub.
+- **No rule for a method or a path.** `network.allow` matches hosts only, so nothing at the proxy blocks one HTTP method on `api.github.com`. The App has no Administration permission, which stops a change to the repository settings. Branch protection on `main` (a pull request and one approval) is the control for merges.
+- **Tokens last about 8 hours.** After that GitHub and Claude answer 401 to requests from the VM, until you run `just msb run` again.
+- **The agent's writes can leave.** Writes reach the one repository the App covers. If it is public, what the agent writes there is public.
+- **Prompt injection is not a sandbox control.** The sandbox limits the blast radius. It does not stop the model from following planted instructions.
+- **SPIRE and kind are not ported yet.** Node attestation (the SPIRE agent and Envoy in the VM) and the kind kubeconfig come in a separate change. See [`.msb/README.md`](../../.msb/README.md).
 
-### How it works
+## The Docker sbx version
 
-One agent turn, with the model, the sandbox and the two control points. Direct routes from the VM to the MCP hosts are denied by the egress proxy.
-
-```mermaid
-sequenceDiagram
-    actor You
-    participant C as Claude Code (in the microVM)
-    participant E as sbx egress proxy (agent policy)
-    participant M as Anthropic model API
-    participant G as MCP gateway (sbx daemon)
-    participant H as GitHub MCP server
-
-    You->>C: "open an issue about X"
-    C->>E: model request (the VM holds only a placeholder)
-    E->>M: injects the Anthropic token held on the host
-    M-->>C: wants the tool issue_write
-    C->>G: tool call to the only MCP endpoint
-    Note over G: logs "invokeTool server=github target=issue_write"<br/>adds the GitHub OAuth token and the X-MCP-* headers
-    alt tool is allowed
-        G->>H: the daemon's own call
-        H-->>G: result (public, if it is a write)
-        G-->>C: result
-    else tool is excluded, e.g. merge_pull_request
-        G-->>C: unknown tool "merge_pull_request" (GitHub never listed it, and nothing is logged)
-    end
-    C-->>You: answer
-    Note over C,E: a direct call from the VM to api.githubcopilot.com gets 403 from the egress proxy
-```
-
-### How secrets get in
-
-The same turn from the microVM's side, for credentials only. The VM holds a sentinel; the real value is added on the host after the request has left the VM. Putting the secrets in the host store (Bitwarden, `sbx secret set`) is in [Prerequisites](#prerequisites).
-
-```mermaid
-sequenceDiagram
-    participant C as Claude Code (in the microVM)
-    participant E as sbx egress proxy (host)
-    participant K as sbx secret store (host)
-    participant G as MCP gateway (host)
-    participant X as Anthropic API / GitHub MCP
-
-    Note over C: sandbox start: the VM gets sentinels only<br/>(GH_TOKEN, MCP_SENTINEL_TOKEN_NAME, "proxy-managed")
-    C->>E: model request, auth header = sentinel
-    E->>K: look up the credential for this host
-    K-->>E: real Anthropic token
-    E->>X: same request, auth header overwritten with the real token
-    Note over E: the swap happens after the request left the VM
-    C->>G: MCP tool call, no token at all
-    G->>K: look up the GitHub OAuth token
-    K-->>G: real token (refreshed by sbx)
-    G->>X: tool call with the token and the X-MCP-* headers
-    X-->>C: response, via proxy or gateway
-    Note over C,X: the sentinel used directly is useless: api.github.com/user returns 401,<br/>a direct call to api.githubcopilot.com is 403 from the egress proxy
-```
-
-One exception in sbx: a kit with OAuth `passthrough: true` sends the real token into the VM. This kit does not use it.
-
-#### Secrets the host reads: Bitwarden
-
-The VM has no Bitwarden access token and no `bws`. The host recipes read two secrets of the Bitwarden project `ai-infra` with [`.sbx/agent/bws-secret.sh`](../../.sbx/agent/bws-secret.sh). The script asks for the access token of the machine account `vault-dev`, or reads `BWS_ACCESS_TOKEN` when you export it.
-
-- `GITHUB_TOKEN`: the ghcr.io token, read by `just sandbox host login`.
-- `GITHUB_APP_CLIENT_SECRET`: the client secret of the GitHub App, read by `just sandbox agent mcp-register`.
-
-Neither secret is injected into the VM.
-
-One more entry reaches the VM as a placeholder: `just sandbox agent secrets-sync` (`agent setup` does it) registers `placeholder-ghcr.io` for `ghcr.io` with `sbx secret set-custom`. The sbx proxy swaps in the Bitwarden secret `GITHUB_TOKEN` on requests to `ghcr.io` only. Part 3 uses it as the registry push password. The token needs `write:packages` to push. The sbx daemon runs the command with no terminal, so the access token must be in the file `~/.config/bws/access-token` (mode 600, `BWS_ACCESS_TOKEN_FILE` changes the path). `bws-secret.sh` reads that file when `BWS_ACCESS_TOKEN` is empty.
-
-## Prerequisites
-
-Have these in place before the first command in [Getting started](#getting-started).
-
-1. **Host tools.** 
-   - [mise](https://mise.jdx.dev)
-   - VSCode
-
-2. **sbx.** Installed by `mise install` in the first step below; the daemon's unit runs it from the mise install dir.
-
-3. **Linger, and rootless Docker.** Linger lets the daemon's user service start at boot. Docker builds and pushes the kits and logs in to ghcr.io.
-   See [`code/rootless-docker`](../rootless-docker). Check:
-
-   ```shell
-   loginctl show-user "$USER" -p Linger           # Linger=yes
-   systemctl --user is-enabled docker.service     # enabled
-   ```
-
-4. **A GitHub App**, set up once in GitHub. The agent's GitHub access is this App's OAuth token, held by the gateway
-   - Install it on only the repository the agent needs, with only the permissions it needs (today: contents, issues, pull requests: write; no administration).
-   - Add the callback URL `http://127.0.0.1:8765/callback`, turn on **Expire user authorization tokens**, and generate a client secret.
-   - Its client id is in `.sbx/agent/agent.just`.
-   
-5. **Secrets.** Two live in the Bitwarden project `ai-infra`. Create them in the web vault, and create the read-only machine account `vault-dev` with an access token.
-
-   | Secret | Stored in | Used by |
-   |---|---|---|
-   | `GITHUB_TOKEN`, a token for the ghcr.io kit image | Bitwarden, project `ai-infra` | `just sandbox host login`, once |
-   | `GITHUB_APP_CLIENT_SECRET`, the App's client secret | Bitwarden, project `ai-infra` | `just sandbox agent mcp-register`, piped into sbx's secret store, never printed |
-   | GitHub's OAuth token | sbx's host credential store, created by the browser consent | the gateway; never inside the VM |
-   | the access token of `vault-dev` | the Bitwarden web vault. You enter it at a prompt, or export `BWS_ACCESS_TOKEN` | `bws-secret.sh` |
-
-## Getting started
-
-Run these in order, from the repo root. Steps 1 to 4 are the prerequisites. Steps 5 and 6 run once per machine, and step 7 once per kind cluster. Step 8 is what you run every day. Each `just` command is safe to run again.
-
-1. Install the host tools (this includes `sbx`), and activate mise in your shell so `just` is on the PATH (add the `eval` line to your shell rc to keep it; a new shell needs it too):
-
-   ```shell
-   mise trust && mise install
-   eval "$(mise activate bash)"
-   just sandbox
-   ```
-
-2. Save the Bitwarden access token in a file that only you can read. The sbx daemon runs `bws-secret.sh` with no terminal, so it reads the token from this file:
-
-   ```shell
-   mkdir -p ~/.config/bws && (umask 077; cat > ~/.config/bws/access-token)   # paste the token, then Ctrl-D
-   ```
-
-3. Connect VS Code:
-
-   ```shell
-   sbx setup ssh
-   code --install-extension ms-vscode-remote.remote-ssh
-   ```
-
-4. Commit your work. Only committed files are in the sandbox's clone.
-
-5. Set up the host. This sets the sbx settings, logs in to ghcr.io, installs the daemon's systemd unit, and starts the daemon. The short guide: [`.sbx/README.md`](../../.sbx/README.md).
-
-   ```shell
-   just sandbox host setup
-   ```
-
-6. Set up the agent. This installs the skills, registers the `ghcr.io` secret and registers the MCP servers.
-
-   ```shell
-   just sandbox agent setup
-   ```
-
-7. Optional, once per kind cluster. Give the sandbox an identity on the cluster that your kubectl context points to (a `kind-*` context). It can read every namespace and the kinds in `.sbx/agent/sandbox-operator.yaml`, and no Secret. It can also reconcile Flux objects, restart a workload and delete a pod (the `sandbox-writer` role in the same file). The API denies Secrets, but a change to a Flux object or a workload makes Flux or the kubelet act with their own rights, so treat the identity as able to change the cluster. The roles apply in every namespace, so do not use a shared cluster. Run it again after you edit the file:
-
-   ```shell
-   just sandbox agent kube
-   ```
-
-   `just sandbox run` then writes `.sbx/kubeconfig` (gitignored, one per developer) at every start, with a new token that lives 30 days (`SANDBOX_KUBE_TOKEN_DURATION`, default `720h`). The sbx proxy passes TLS to the cluster through, so it cannot swap a placeholder for a token: the VM needs the real token in that file.
-
-   An older install may have left RoleBindings with the label `app.kubernetes.io/managed-by=sandbox-operator`. They are redundant. List them with `kubectl get rolebinding -A -l app.kubernetes.io/managed-by=sandbox-operator` and delete them if you want.
-
-8. Start the sandbox:
-
-   ```shell
-   just sandbox run
-   ```
-
-   The first time, sbx shows its plan and asks you to approve it, and a browser opens once for GitHub's consent. Run Claude Code in the VS Code terminal: it runs inside the sandbox.
-
-### What `just sandbox run` does, in order
-
-1. **Checks**, as dependencies, before anything starts: the daemon is running (`_check-daemon`).
-2. **`kube.sh write`** writes the kubeconfig for the current kubectl context, when that context is a kind cluster (`kind-*`). For another context it prints an error and `run` goes on, unless you name the context with `SANDBOX_KUBE_CONTEXT`. It changes nothing in the cluster. A cluster without the identity prints an error that names the command that creates it (step 7).
-3. **`sbx env run`** creates the sandbox from `.sbx/sbxenv.yaml`, or starts it if it exists, detached.
-4. **`agent mcp-load`** attaches the registered MCP servers to the sandbox.
-5. **`host vscode-setup`** writes the Remote-SSH settings into your host VS Code user settings.
-6. **VS Code** opens on the sandbox.
-
-Every recipe runs on the host machine and stops with a message if you run it in the sandbox. The path says what a recipe changes: `just sandbox host ...` is the services on the host, `just sandbox agent ...` is what the VM receives. `just sandbox` lists them.
-
-Day to day: run `just sandbox run` again to reopen the window. `just sandbox agent kit-build` (maintainer) rebuilds and pushes the kits (`dev-tools` and `policy`), `just sandbox agent skills-update` refreshes the skills. Egress rules for the VM live in the policy kit (`.sbx/kits/policy/`), so after changing them run `just sandbox agent kit-build policy` and create a new sandbox. The tools image is not rebuilt for that.
-
-## Reference
-
-### Directory structure
-
-```text
-.sbx/                               everything that spawns the sandbox (the secrets are in Bitwarden, read with `agent/bws-secret.sh`)
-├── justfile                        `run` (the ordered start) and `help`; mounts the two modules below. The repo root justfile mounts it as `just sandbox`
-├── lib/
-│   └── common.just                 variables and checks that the three justfiles share (`_host-only`, `_check-daemon`)
-├── sbxenv.yaml                     the sandbox: kits (with digests), size, clone workspace
-├── agent/                          `just sandbox agent ...`: what the VM receives
-│   ├── agent.just                  setup, skills-install, skills-update, secrets-sync, mcp-register, mcp-load, kube, allow-hosts, kit-build
-│   ├── kube.sh                     the sandbox identity on a kind cluster: `install` applies the RBAC, `write` writes .sbx/kubeconfig
-│   ├── sandbox-operator.yaml       the RBAC that `kube.sh install` applies: the ServiceAccount, its roles and bindings (view and `sandbox-writer`, in all namespaces)
-│   └── bws-secret.sh               prints one secret of the Bitwarden project by name, or the access token: the host recipes use it
-├── kits/                           one folder per Docker kit v3; the folder is the build context of the kit
-│   ├── dev-tools/                  the tools
-│   │   ├── dev-tools.yaml          the descriptor: args, the Terraform cache volume, the shell setup
-│   │   ├── dev-tools.dockerfile    the recipe: mise, the tools of tools.toml, the completions
-│   │   └── tools.toml              the sandbox's tools at exact versions, Terraform cache settings, the completions task
-│   └── policy/                     declaration only (no recipe)
-│       ├── policy.yaml             the egress allow and deny lists
-│       └── policy-context.md       the note for the agent about the GitHub gateway
-└── host/                           `just sandbox host ...`: the sbx daemon and its MCP gateway
-    ├── README.md                   what is set up on the host and how (read first: it is a prerequisite for the recipes)
-    ├── host.just                   setup, login, daemon-install, daemon-start, daemon-stop, daemon-restart, vscode-setup
-    └── systemd/                    the user unit of the sbx daemon (installed by daemon-install)
-```
-
-### Threats and what stops them
-
-✅ stopped · ⚠️ partly (gap in brackets) · ❌ not stopped. ✅ assumes the givens in [What we are building](#what-we-are-building) (protected `main`, review before merge). Rows are grouped by the layers in Anthropic's
-[How we contain Claude](https://www.anthropic.com/engineering/how-we-contain-claude): environment, model, external content, plus monitoring. Egress is enforced here with allow and deny rules and proxies, not CEL or Cedar policies; the model side is left for a later exercise.
-
-| Layer | Threat | Agent sandbox (microVM) |
-|---|---|---|
-| Environment | Agent escapes to the host | ✅ own kernel per sandbox, where a container shares the host's |
-| Environment | Compromised MCP server code | ⚠️ (gap: none runs locally, but the hosted servers are trusted) |
-| Environment | Data leaving: allowed hosts | ⚠️ (gap: sbx's default baseline for agent work (package managers, code hosts, AI services, OS packages, certificate checks) is right for research in the sandbox, but a few multi-tenant wildcards such as `**.amazonaws.com` also match other people's buckets; `registry.terraform.io` and an S3 bucket accepted a body in testing) |
-| Environment | Data leaving: MCP writes | ⚠️ (gap: the agent writes to the one repo by design; if it is public, a host-only file reached a public issue in testing) |
-| Environment | Credentials stolen or misused | ✅ the VM holds placeholders (`GH_TOKEN` returns 401); the real token stays in the gateway and the direct route is 403 |
-| Environment | Destructive tools (delete, merge, push to `main`) | ✅ delete, merge, create-repo and fork are excluded at the gateway (a deny list, so new upstream tools are allowed); a direct `DELETE` to the GitHub API is 403 at the proxy; `main` needs a PR and one approval (a GitHub setting; the App's direct push was not tried) |
-| Environment | Files that run on your host (merged `.sbx/`, justfiles) | ✅ the agent edits only its clone; a change reaches the host through a merge you review |
-| Environment | Host files the agent can read | ⚠️ (gap: untracked and ignored files in the repo dir are readable, and `.gitignore` lacks `.env`, `*.pem`, `*.tfstate`; the rest of your home is not visible) |
-| Environment | Tampered images or scripts | ⚠️ (the kit image pinned by digest, not signed: `kit.requireSignature` is off) |
-| Model, external content | Injected instructions (issue text, tool results, pages) | ❌ not a sandbox control (Part 1's two refusals were the model) |
-| External content | Planted instructions that persist (`AGENTS.md`, memory, session history) | ✅ contained: the next session in the sandbox obeys them at once, but only within the egress, gateway and branch-protection limits; they reach `main` only through review and end at `sbx rm` |
-| Monitoring | Record of what the agent did | ⚠️ (gap: rejected tool calls and arguments are not recorded) |
-
-Out of scope: a vulnerability in the VMM itself, tool descriptions that lie, a compromised GitHub or model
-provider.
-
-#### The lethal trifecta: what the sandbox contains
-
-The trifecta is private data, untrusted content and a way to send data out, all in one agent.
-
-| Leg | What the sandbox does | What remains |
-|---|---|---|
-| Private data | Your home, `~/.ssh`, `~/.aws` and every real credential are out of reach. Clone mode keeps the agent on the repo, which it needs. | The repo directory, including untracked and ignored files, is readable (accepted by design: keep plaintext secrets out of it). |
-| Untrusted content | Nothing. | Issues, tool results and pages reach the agent as before; the model side is Part 3. |
-| A way out | Direct routes to the MCP servers and the GitHub API are blocked (403/401). | MCP writes reach the one repo the App covers. If it is public, what the agent writes there is public: in testing it published an untracked file to a public issue (the worst case). |
-
-So the sandbox limits the **blast radius** and is a necessary piece to solve the puzzle. 
-
-## What is left ahead
-
-- **A gateway with rules:**
-  - per-tool rules: sbx's own (Cedar) need a paid Docker org subscription; a gateway of your own can limit tools by name, repo and user;
-  - arguments: look at them and log every call, including rejected ones (today: allowed calls by name only);
-  - per-repo write limits and an allow-list or read-only GitHub for sessions that only need to read.
-
-- **Model side:** scan instruction files and memory (`AGENTS.md`, `~/.claude/CLAUDE.md`) when a session starts, since a planted instruction is reloaded each time; Anthropic's post suggests classifiers at session startup.
-
-- **Smaller gaps from the threat table:** `.env`, `*.pem` and `*.tfstate` in `.gitignore`; signed kits (`kit.requireSignature`); a tighter baseline for S3.
-
-
-## Key learnings
-
-- **Work in a clone, in its own kernel.**
-  - The microVM has its own kernel, and the agent commits to a private clone of a read-only host repo.
-  - Never keep plaintext secrets in the repo directory: untracked and ignored files stay readable at `/run/sandbox/source`. This means when working with agents, always work within the sandbox and pull changes onto the host via branches committed by the agent.
-
-- **Inject secrets through the host, never into the VM.**
-  - The VM holds sentinels (`GH_TOKEN` gets a 401). The egress proxy adds the model token and the gateway adds the GitHub token ([How secrets get in](#how-secrets-get-in)).
-  - The GitHub token carries only the App's permissions: contents, issues and pull requests (write), no administration, one repository.
-
-- **Treat every allowed host as a grant.**
-  - Anything in the VM can use every host on an allow list. Keep the list (agent: egress proxy) to what the work needs.
-  - sbx's baseline includes shared-hosting wildcards (`**.amazonaws.com`, `**.googleapis.com`, `**.blob.core.windows.net`). Trim them.
-
-- **Send every MCP call through the gateway.**
-  - It is the VM's only MCP endpoint (a direct call gets a 403). It adds the token and applies the `X-MCP-*` filter, which the agent cannot change; excluded tools return `unknown tool`.
-  - Registrations are host-wide and the agent can attach any registered server. Register only what any sandbox may use (`sbx mcp ls`).
-
-- **Merge only through a pull request you approve.**
-  - The agent can branch, commit and open pull requests. `merge_pull_request` is excluded and `main` requires one approval.
-  - Review its commits at `sandbox-<name>` on 127.0.0.1 (read-only) before you push.
-
-- **Assume what the agent writes can leave.**
-  - Writes reach the one repo the App covers. If it is public, the agent can post a file it can read to a public issue, so keep nothing sensitive untracked in the repo directory.
-
-- **Read the logs, and know the gap.**
-  - Hosts: `sbx policy log`. Allowed tool calls by name: `sandboxd/mcp/mcp.log`.
-  - Rejected tool calls and their arguments are not logged.
+This project first ran on Docker sandboxes (`sbx`), with an MCP gateway and a policy kit. That version, with its write-up, demo, diagrams and threat table, is kept in the git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx/code/agent-sandbox). To work on it, run `git switch -c sbx-maintenance docker-sbx`. The differences between the two are in the table in [`.msb/README.md`](../../.msb/README.md#what-is-different-from-sbx).

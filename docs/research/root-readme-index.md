@@ -47,7 +47,7 @@ Rejected options:
 |---|---|
 | The root `README.md` has two lines: a title and "my dabbling with tech and perspectives". | [repo] `README.md` |
 | Each folder under `code/` is an independent project with no shared domain. The index must not imply one. | [repo] `docs/agents/domain.md` |
-| `code/agent-sandbox` runs Claude Code in an `sbx` microVM. The sandbox caps what a fooled agent can do. | [repo] `code/agent-sandbox/README.md` |
+| `code/agent-sandbox` runs Claude Code in a microsandbox VM. The sandbox caps what a fooled agent can do. | [repo] `code/agent-sandbox/README.md` |
 | `code/mcp-sandbox` has no README of its own. It holds three parts, each with a README. | [repo] `code/mcp-sandbox/` |
 | Part 1 is a proof of concept against real GitHub infrastructure. The agent recognized the injected instruction twice and refused. | [repo] `code/mcp-sandbox/part-1-lethal-trifecta/README.md` |
 | Part 2 seals one local MCP server in rootless Docker. The only route out is an egress proxy that logs each outbound attempt. | [repo] `code/mcp-sandbox/part-2-sandboxing-local-mcp/README.md` |
@@ -57,7 +57,7 @@ Rejected options:
 | `code/configuration-heirarchies` is a sample of the configuration-hierarchy pattern. `ansible-inventory` shows how variables inherit from `DEV` to `dev01` to `user1`. | [repo] `code/configuration-heirarchies/README.md` |
 | `code/env-config-management` applies the same pattern to local tools and env vars with `mise`. | [repo] `code/env-config-management/README.md` |
 | `blog/spec-driven-workflow/post.md` describes the order `grill-me`, `to-spec`, `to-tickets`. | [repo] `blog/spec-driven-workflow/post.md` |
-| `.sbx/README.md` describes the dev sandbox. `just sandbox` runs its recipes. | [repo] `.sbx/README.md`, `justfile` |
+| `.msb/README.md` describes the dev sandbox. `just msb` runs its recipes. | [repo] `.msb/README.md`, `justfile` |
 | The folder name `configuration-heirarchies` has a spelling error. Links must use the real name. | [repo] `code/configuration-heirarchies/` |
 | The repo has no hook or recipe that lists projects. `prek.toml` runs secret, YAML, file-size and Python checks only. | [repo] `prek.toml`, `justfile` |
 | The `_archive` and `docs/research` folders are out of the index. This is a decision of the owner. | [repo] owner decision, 2026-10-19 |

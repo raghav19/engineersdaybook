@@ -10,7 +10,7 @@ flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
 # ghcr
 ghcr_user := env('GHCR_USER', 'raghav19')
 # prints one secret of the Bitwarden project by name, or the access token of the machine account (it asks for the token when BWS_ACCESS_TOKEN is empty)
-bws_secret := justfile_directory() / '../../../../../.sbx/agent/bws-secret.sh'
+bws_secret := justfile_directory() / '../../lib/bws-secret.sh'
 
 # misc
 name := `yq .name kind-config.yaml`

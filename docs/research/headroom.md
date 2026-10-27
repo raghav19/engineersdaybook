@@ -48,14 +48,14 @@ What the trial did not test: a long interactive session. The 15% gate is not met
 
 | Claim | Source |
 |---|---|
-| The dev-tools kit bakes exact tool versions from `tools.toml` at build time. The build runs on the host. | [repo] `.sbx/kits/dev-tools/dev-tools.dockerfile`, `.sbx/kits/dev-tools/tools.toml` |
-| A kit change needs a version bump, `kit-build`, a new digest in `sbxenv.yaml` and a new sandbox. | [repo] `.sbx/agent/agent.just` (`kit-build`), `.sbx/README.md` |
-| The VM has Python 3.14.7 and `uv` 0.12. The shell kit ships them. | [repo] VM check, `.sbx/kits/dev-tools/tools.toml:5` |
+| The dev-tools kit bakes exact tool versions from `tools.toml` at build time. The build runs on the host. | [repo] [`.sbx/kits/dev-tools/dev-tools.dockerfile`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/dev-tools.dockerfile), [`.sbx/kits/dev-tools/tools.toml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/tools.toml) |
+| A kit change needs a version bump, `kit-build`, a new digest in `sbxenv.yaml` and a new sandbox. | [repo] [`.sbx/agent/agent.just`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/agent.just) (`kit-build`), [`.sbx/README.md`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/README.md) |
+| The VM has Python 3.14.7 and `uv` 0.12. The shell kit ships them. | [repo] VM check, [`.sbx/kits/dev-tools/tools.toml:5`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/tools.toml) |
 | The VM sets `HTTPS_PROXY=http://gateway.docker.internal:3128`. `NO_PROXY` lists `localhost`, `127.0.0.1` and `::1`. | [repo] VM environment |
 | `pypi.org`, `files.pythonhosted.org`, `github.com` and `api.anthropic.com` answer from the VM. | [repo] VM check, 2026-10-19 |
 | `huggingface.co` and `cdn.pyke.io` return HTTP 403 from the VM. | [repo] VM check, 2026-10-19 |
-| The egress policy is an allow list. It lists no Headroom host. | [repo] `.sbx/kits/policy/policy.yaml` |
-| The agent uses deferred MCP tools from the host gateway. Tool search must stay on. | [repo] `.sbx/kits/policy/policy-context.md`, `AGENTS.md` |
+| The egress policy is an allow list. It lists no Headroom host. | [repo] [`.sbx/kits/policy/policy.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/policy/policy.yaml) |
+| The agent uses deferred MCP tools from the host gateway. Tool search must stay on. | [repo] [`.sbx/kits/policy/policy-context.md`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/policy/policy-context.md), `AGENTS.md` |
 | The VM sets `SBX_CRED_ANTHROPIC_MODE=none`. The meaning is not documented. | [repo] VM environment |
 
 ## Findings: Headroom

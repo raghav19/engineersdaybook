@@ -5,7 +5,6 @@ Include ~/.ssh/config
 # The VM has no sshd. The msb command on the host is the SSH server, and it talks to the VM.
 # ssh runs ProxyCommand through your shell, so $HOME expands. ProxyCommand does not allow %d.
 # `latest` is the symlink that mise keeps on the installed msb. A VS Code that your shell did not start finds msb with it, without a PATH or a shim.
-# The sbx daemon unit uses the same method.
 # The VM must run. If `msb ssh serve` started a VM, it stops that VM when the session ends. `just msb run` starts the VM first.
 # The connection is a local pipe, not a network, so host key checks add no safety. They fail for each new VM.
 Host sandbox-dev.msb

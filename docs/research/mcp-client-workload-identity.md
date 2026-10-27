@@ -26,7 +26,7 @@ Evidence tags: **[mcp]** is the MCP authorization spec, `modelcontextprotocol/mo
 | The Envoy credential injector puts a Basic or Bearer credential in the `Authorization` header, from an SDS secret. It is "intended to be used for workload authentication". "this filter does not handle end user authentication". It has an `overwrite` option. | [envoy] `api/envoy/extensions/filters/http/credential_injector/v3/credential_injector.proto` |
 | With RFC 8705, the token holds `cnf` with `x5t#S256`, the hash of the client certificate. The resource server compares it with the certificate of the mTLS connection and rejects a mismatch. Only the holder of the private key can use the token. | [search] RFC 8705 section 3, https://www.rfc-editor.org/rfc/rfc8705.html |
 | Today the client reaches the ingress at L4, with a JWT and no SVID. The JWT and the MCP config stay on the host. The agent in the microVM does not hold the token. | [repo] `docs/arch.md` sections 3 and 5 |
-| The alias of the node holds the GitHub id: `spiffe://mcp.local/microvm/<github id>`. The `tool-rbac` rule uses the GitHub id of the JWT. | [repo] `.sbx/agent/spire.py`, `docs/arch.md` |
+| The alias of the node holds the GitHub id: `spiffe://mcp.local/microvm/<github id>`. The `tool-rbac` rule uses the GitHub id of the JWT. | [repo] [`.sbx/agent/spire.py`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/spire.py), `docs/arch.md` |
 
 ## 2. Options for the JWT
 

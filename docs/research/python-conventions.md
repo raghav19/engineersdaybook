@@ -25,7 +25,7 @@ The repo already follows these rules for the four build functions in `tools/`. O
 | ty was not installed in the sandbox. mise has the backend `aqua:astral-sh/ty`, and 0.0.85 is available. | [repo] `mise registry`, `mise ls-remote ty` |
 | ty finds a wrong return hint (`invalid-return-type`) and passes `spire.py` and `ext-mcp/`. | [repo] measured with ty 0.0.85 |
 | `tools/` ignore the root `ty.toml`, because their build runs ty with `--project` and their own `pyproject.toml`. They need `types-pyyaml`, which the hook does not have. The hook excludes `/tools/`. | [repo] `tools/*/pyproject.toml`, `prek.toml` |
-| `uv run --script` reads the PEP 723 block, and `#!/usr/bin/env -S uv run --script` makes the file executable. `just spire-enroll` and `sbxenv.yaml` call the file by path and need no change. | [repo] `.sbx/agent/agent.just`, `.sbx/sbxenv.yaml`, [primary] uv documentation, "Running scripts" |
+| `uv run --script` reads the PEP 723 block, and `#!/usr/bin/env -S uv run --script` makes the file executable. `just spire-enroll` and `sbxenv.yaml` call the file by path and need no change. | [repo] [`.sbx/agent/agent.just`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/agent.just), [`.sbx/sbxenv.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/sbxenv.yaml), [primary] uv documentation, "Running scripts" |
 | `spire.py` ran through `uv run --script` in the sandbox and stopped at the `SANDBOX_GITHUB_ID` check. | [repo] measured |
 
 ## Not added
