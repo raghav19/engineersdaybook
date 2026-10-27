@@ -14,6 +14,7 @@ memory: "4G"
 shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code terminals use bash. The login shell adds the mise shims to the PATH.
 
 # sandbox-boot runs as root. It prepares the agent user, clones the repo and starts Headroom. Then it waits. See dev-tools/sandbox-boot.
+# `just msb run` runs `sandbox-boot prepare` in an existing VM (the same steps, and then it exits), because msb does not run this command again when it starts a VM.
 cmd: ["/usr/local/bin/sandbox-boot"]
 
 env:

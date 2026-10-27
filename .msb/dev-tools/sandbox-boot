@@ -1,7 +1,9 @@
 #!/bin/bash
-# The command of the msb sandbox (cmd in sandbox.yaml). It runs as root at each start. It prepares the workspace, then it waits.
-# If a step fails, the script prints the reason and exits with 1. This stops the VM. `msb ls` then shows the VM as not running,
-# and `msb logs <name>` shows the reason. The file /run/sandbox-ready exists only after a good boot. `just msb run` waits for it.
+# The command of the msb sandbox (cmd in sandbox.yaml). It runs as root. It prepares the workspace, then it waits.
+# You can run it again at any time, and `just msb run` does so each time: every step does nothing if its work is done already.
+# `sandbox-boot prepare` does the steps and then exits. Without the word, the script waits after the steps, and that keeps the VM up.
+# If a step fails, the script prints the reason and exits with 1. As the command of a new VM, this stops the VM: `msb logs <name>` shows the reason.
+# The file /run/sandbox-ready exists only after a good run. `just msb run` waits for it.
 # Values from sandbox.yaml: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
 # This script does not set the git identity (sandbox.yaml sets it) or the GitHub token helper (the image sets it).
 set -eu
@@ -10,6 +12,9 @@ ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
 home=/home/agent
 ready=/run/sandbox-ready
 headroom_log=/tmp/headroom.log
+mode=${1:-wait}
+# In `msb exec`, msb sets NODE_EXTRA_CA_CERTS to a file that does not exist, and node prints a warning for each call. Drop the variable then.
+[ -e "${NODE_EXTRA_CA_CERTS:-}" ] || unset NODE_EXTRA_CA_CERTS
 fail() { echo "sandbox-boot: $*" >&2; exit 1; }
 as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
 
@@ -33,7 +38,8 @@ as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek i
 
 # The Headroom proxy for Claude Code listens on 127.0.0.1:8787. ANTHROPIC_BASE_URL in .claude/settings.json points to it.
 # Wait until it answers.
-as_agent sh -c "setsid nohup headroom proxy --port 8787 >$headroom_log 2>&1 &"
+# A run of this script when Headroom runs already starts no second one.
+curl -sf -o /dev/null http://127.0.0.1:8787/health || as_agent sh -c "setsid nohup headroom proxy --port 8787 >$headroom_log 2>&1 &"
 for _ in $(seq 60); do
   curl -sf -o /dev/null http://127.0.0.1:8787/health && break
   sleep 1
@@ -47,4 +53,4 @@ as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; cl
 
 touch "$ready"
 echo "sandbox-boot: ready"
-exec sleep infinity
+[ "$mode" = prepare ] || exec sleep infinity
