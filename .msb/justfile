@@ -42,9 +42,9 @@ setup: _host-only
     {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
 
-# Log in to GitHub with the GitHub App: you type a code in the browser. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them
-github-login: _host-only
-    {{ step }} github-login
+# Log in to GitHub with the GitHub App: you approve it in the browser. The client secret comes from Bitwarden. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them
+github-login: _host-only _vault
+    bws run -- '{{ step }} github-login'
 
 # Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
 image-build: _host-only

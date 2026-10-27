@@ -9,7 +9,8 @@ The justfile has the recipes and the order of the steps. This file has the logic
 The justfile exports MSB_NAME, MSB_IMAGE and MSB_WORKSPACE. Run msb.py through `just msb <recipe>`.
 
 preflight        check that msb, bws, the GitHub login, the Claude login of the host and the image exist
-github-login     log in to GitHub with the GitHub App: you type a code in the browser. The tokens go to a file with mode 600
+github-login     log in to GitHub with the GitHub App (web flow, with the client secret from Bitwarden). The tokens go to a file with mode 600
+                 The recipe runs this step under `bws run`
 ensure-vm        make the VM from sandbox.yaml if none exists. If a VM exists and is current, give it the current GitHub and Claude tokens.
                  Else stop. The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment
 wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
@@ -21,28 +22,32 @@ image-tags       print the tags of the published image, one for each line. Stop 
 
 import argparse
 import hashlib
+import http.server
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.parse
 import urllib.request
+import webbrowser
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import NoReturn
 
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
 BOOT_TIMEOUT = 90  # seconds that `wait-boot` waits for sandbox-boot
 REFRESH_MARGIN = 1800  # seconds. A token that expires in less time is refreshed (GitHub) or refused (Claude)
-# The GitHub App of this repository. The client ID is public. You installed the app on this repository only, with the permissions contents,
-# issues and pull requests. So the token cannot do more. The access token lasts 8 hours. The refresh token lasts about 6 months, and each
-# refresh gives a new one. So the tokens go in a file on the host (mode 600).
+# The GitHub App of this repository. The client ID is public. The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET. You installed the app on
+# this repository only, with the permissions contents, issues and pull requests. So the token cannot do more. The access token lasts 8 hours. The refresh
+# token lasts about 6 months, and each refresh gives a new one. So the tokens go in a file on the host (mode 600): the Bitwarden machine account cannot write.
 GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
+GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
+LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
 CLAUDE_CREDENTIALS = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")) / ".credentials.json"
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port, so msb.py
 # passes one `--net-rule allow@host:tcp:<port>` to msb for each. The services are in the kind cluster (the SPIRE agent and kubectl need them).
@@ -125,103 +130,81 @@ def image_id() -> str:
     )
 
 
-def github_post(path: str, **data: str) -> dict[str, Any]:
-    """Send a request to https://github.com/login/<path> and return the JSON reply.
+def github_exchange(**data: str) -> str:
+    """Send `data` and the client credentials of the GitHub App to GitHub, save the tokens that come back, and return the access token.
 
-    GitHub answers an error with a JSON body and an HTTP error code, or with code 200 and an `error` key. Both come back as a dict.
+    The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET, which `bws run` puts in the environment.
+    The token file has mode 600. It keeps the access token, the refresh token and the time when the access token ends.
     """
-    body = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, **data}).encode()
-    request = urllib.request.Request(f"https://github.com/login/{path}", data=body, headers={"Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return json.load(response)
-    except urllib.error.HTTPError as error:
-        return json.load(error)
-
-
-def github_save(reply: dict[str, Any]) -> str:
-    """Write the tokens of a GitHub reply to the token file, and return the access token.
-
-    The file has mode 600 from the first byte. A new file replaces the old one in one step, so a crash never leaves a half-written file.
-    Stop if the reply has no refresh token: the app does not expire its tokens, and then nothing can refresh them.
-    """
-    if "refresh_token" not in reply:
-        die("GitHub gave a token that does not expire. Turn on 'Expire user authorization tokens' in the settings of the app.")
-    now = time.time()
+    secret = os.environ.get("GITHUB_APP_CLIENT_SECRET") or die("GITHUB_APP_CLIENT_SECRET is not set. Run this through `just msb <recipe>`.")
+    body = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, "client_secret": secret, **data}).encode()
+    request = urllib.request.Request("https://github.com/login/oauth/access_token", data=body, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        reply = json.load(response)
+    if "access_token" not in reply:
+        die(f"GitHub refused the request ({reply.get('error')}). Run: just msb github-login")
     saved = {
         "access_token": reply["access_token"],
-        "refresh_token": reply["refresh_token"],
-        "expires_at": now + reply["expires_in"],
-        "refresh_expires_at": now + reply["refresh_token_expires_in"],
+        "refresh_token": reply.get("refresh_token"),
+        "expires_at": time.time() + reply.get("expires_in", 10**9),
     }
     GITHUB_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    temp = GITHUB_TOKEN_FILE.with_suffix(".tmp")
-    temp.unlink(missing_ok=True)
-    with os.fdopen(os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as file:
+    fd = os.open(GITHUB_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w") as file:
         json.dump(saved, file)
-    os.replace(temp, GITHUB_TOKEN_FILE)
     return saved["access_token"]
 
 
 def github_login() -> None:
-    """Log in to GitHub with the device flow of the GitHub App (`just msb github-login`). It writes the token file.
+    """Log in to GitHub with the web flow of the GitHub App (`just msb github-login`). It writes the token file.
 
-    1. Ask GitHub for a code. If GitHub refuses, the device flow is off in the app: stop with a hint.
-    2. Print the address and the code. You type the code in the browser and approve.
-    3. Ask GitHub every few seconds if you approved, until you do or the code expires.
-    4. Save the access token and the refresh token with github_save.
-
-    It needs no client secret and no local server. It runs without `bws run`.
+    1. Print the address of the approval page and open it in the browser. You approve the app.
+    2. GitHub sends the browser to a port of this host (the callback address of the app) with a one-time code.
+       A small server on that port waits for the code. The random `state` value must come back the same, or the answer is not from GitHub.
+    3. Send the code and the client secret to GitHub, and save the tokens (github_exchange).
     """
-    code = github_post("device/code")
-    if "device_code" not in code:
-        die(
-            f"GitHub refused the login: {code.get('error_description', code.get('error'))}. Turn on 'Enable Device Flow' in the app settings."
-        )
-    print(f"Open {code['verification_uri']} and type this code: {code['user_code']}")
-    interval = code["interval"]
-    deadline = time.time() + code["expires_in"]
-    while time.time() < deadline:
-        time.sleep(interval)
-        reply = github_post(
-            "oauth/access_token", device_code=code["device_code"], grant_type="urn:ietf:params:oauth:grant-type:device_code"
-        )
-        match reply.get("error"):
-            case None:
-                github_save(reply)
-                print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
-                return
-            case "authorization_pending":
-                pass
-            case "slow_down":
-                interval += 5
-            case error:
-                die(f"GitHub refused the login ({error}). Run: just msb github-login")
-    die("the code expired. Run: just msb github-login")
+    state = secrets.token_urlsafe(16)
+    redirect = f"http://127.0.0.1:{GITHUB_CALLBACK_PORT}/callback"
+    got: dict[str, list[str]] = {}
+
+    class Callback(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            got.update(urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"You can close this tab.")
+
+        def log_message(self, format: str, *args: object) -> None:  # no log line: the address has the code
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", GITHUB_CALLBACK_PORT), Callback)
+    server.timeout = 5
+    query = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, "redirect_uri": redirect, "state": state})
+    print(f"Approve the app in your browser. If it does not open, open this address:\nhttps://github.com/login/oauth/authorize?{query}")
+    webbrowser.open(f"https://github.com/login/oauth/authorize?{query}")
+    deadline = time.time() + LOGIN_TIMEOUT
+    while "code" not in got and time.time() < deadline:
+        server.handle_request()
+    server.server_close()
+    if got.get("state") != [state] or "code" not in got:
+        die("there was no valid approval in time. Run: just msb github-login")
+    github_exchange(code=got["code"][0], redirect_uri=redirect)
+    print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
 
 
 def github_token() -> str:
-    """Return a valid GitHub access token from the token file. `ensure-vm` calls this.
+    """Return the GitHub access token from the token file. `ensure-vm` calls this.
 
-    If the access token expires in less than REFRESH_MARGIN seconds, send the refresh token to GitHub and save the two new tokens.
-    Each refresh makes the old refresh token useless. Stop with a message if there is no file, if its mode is not 600,
-    if the refresh token is too old (about 6 months), or if GitHub refuses the refresh. Each message says: run `just msb github-login`.
+    If the token ends in less than REFRESH_MARGIN seconds, ask GitHub for a new one with the refresh token and save it first.
+    Each refresh gives a new refresh token. Stop if there is no file. If GitHub refuses the refresh, the message says to log in again.
     """
     if not GITHUB_TOKEN_FILE.is_file():
         die("there is no GitHub login. Run: just msb github-login")
-    if GITHUB_TOKEN_FILE.stat().st_mode & 0o077:
-        die(f"{GITHUB_TOKEN_FILE} must have mode 600.")
     saved = json.loads(GITHUB_TOKEN_FILE.read_text())
     if saved["expires_at"] - time.time() > REFRESH_MARGIN:
         return saved["access_token"]
-    if saved["refresh_expires_at"] <= time.time():
-        die("the GitHub login is too old to refresh. Run: just msb github-login")
-    # The client secret is in the environment when `bws run` started this step. GitHub may ask for it on a refresh.
-    secret = {"client_secret": value} if (value := os.environ.get("GITHUB_APP_CLIENT_SECRET")) else {}
-    reply = github_post("oauth/access_token", grant_type="refresh_token", refresh_token=saved["refresh_token"], **secret)
-    if "access_token" not in reply:
-        die(f"GitHub refused the refresh ({reply.get('error')}). Run: just msb github-login")
-    return github_save(reply)
+    return github_exchange(grant_type="refresh_token", refresh_token=saved["refresh_token"])
 
 
 def claude_token() -> str:
