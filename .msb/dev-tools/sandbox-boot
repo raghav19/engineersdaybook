@@ -1,0 +1,50 @@
+#!/bin/bash
+# Prepare the workspace of the msb sandbox. It runs as root.
+# `just msb run` runs it at each run, in a new VM and in an old VM. It does not wait. The VM has no command of its own.
+# Each step does nothing if its work exists. So you can run the script as often as you want.
+# If a step fails, the script prints the reason and exits with 1.
+# Values from sandbox.yaml: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
+# The script does not set the git identity (sandbox.yaml does) or the GitHub token helper (the image does).
+set -eu
+
+ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
+home=/home/agent
+headroom_log=/tmp/headroom.log
+fail() { echo "sandbox-boot: $*" >&2; exit 1; }
+as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
+
+# msb sets NODE_EXTRA_CA_CERTS in `msb exec` to a file that does not exist. Node then prints a warning for each call.
+[ -e "${NODE_EXTRA_CA_CERTS:-}" ] || unset NODE_EXTRA_CA_CERTS
+
+mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.cache/terraform-providers" "$home/.local/share/containers"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
+
+# Podman runs as agent, without root. The kernel of the VM makes /dev/fuse and /dev/net/tun for root only.
+# fuse-overlayfs needs /dev/fuse. The network of a container (pasta) needs /dev/net/tun. The group agent can use both.
+# The mount `/` must be shared, or podman prints a warning.
+chgrp agent /dev/fuse /dev/net/tun && chmod 660 /dev/fuse /dev/net/tun || fail "could not open /dev/fuse and /dev/net/tun for podman"
+mount --make-rshared / || fail "could not make / a shared mount for podman"
+
+# The clone is private. The VM cannot write to /run/sandbox/source, the .git directory of the host repo.
+# The clone starts on the branch of the host checkout. A push goes to GitHub, to a feature branch.
+if [ ! -d "$ws/.git" ]; then
+  as_agent git clone --no-hardlinks ${SANDBOX_BRANCH:+--branch "$SANDBOX_BRANCH"} /run/sandbox/source "$ws" || fail "git clone failed (branch: ${SANDBOX_BRANCH:-the default})"
+  as_agent git -C "$ws" remote set-url origin "$REPO_URL" || fail "could not set origin to $REPO_URL"
+fi
+as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
+
+# The Headroom proxy for Claude Code listens on 127.0.0.1:8787. ANTHROPIC_BASE_URL in .claude/settings.json points to it.
+# Start it only if it does not answer. Then wait until it answers.
+curl -sf -o /dev/null http://127.0.0.1:8787/health || as_agent sh -c "setsid nohup headroom proxy --port 8787 >$headroom_log 2>&1 &"
+for _ in $(seq 60); do
+  curl -sf -o /dev/null http://127.0.0.1:8787/health && break
+  sleep 1
+done
+curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
+
+# Ponytail is a plugin for Claude Code. Its version is a release tag. The plugin goes to the claude-home volume, so a new VM finds it.
+# A failure prints a warning and does not stop the script, as in sbx.
+as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; claude plugin install ponytail@ponytail" \
+  || echo "sandbox-boot: warning: the ponytail plugin is not installed" >&2
+
+echo "sandbox-boot: ready"

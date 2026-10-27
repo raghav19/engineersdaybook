@@ -17,3 +17,6 @@ npm-debug.log*
 !.sbx
 .sbx/kubeconfig
 mise.local.toml
+
+# Python bytecode
+__pycache__/

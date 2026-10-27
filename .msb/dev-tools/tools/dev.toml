@@ -1,0 +1,12 @@
+# The tools for development.
+# The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
+[tools]
+just = "1.59"
+yq = "4.54"
+jq = "1.8"
+fd = "10.5"
+prek = "0.5"
+ruff = "0.17"
+gitleaks = "8.30"
+yamlfmt = "0.21"
+ty = "0.0.91"

@@ -1,0 +1,5 @@
+# Headroom and uv. The mise pypi backend needs uv at build time, and the build image has none. This group is the largest.
+# The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
+[tools]
+uv = "0.13"
+"pypi:headroom-ai" = { version = "0.41.0", extras = "sandbox", install_env = { UV_PYTHON = "3.13" } }  # Claude Code token proxy. The sandbox extra has no torch. See docs/research/headroom.md. install_env: the build image has no Python, so uv gets the newest version (3.15), and onnxruntime has no cp315 wheel
