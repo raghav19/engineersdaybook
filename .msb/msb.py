@@ -6,15 +6,14 @@
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
-The justfile exports MSB_NAME and MSB_IMAGE. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb and bws on the PATH,
-the SSH key, the name of a host, the tags of the image) are in the justfile.
+The justfile exports MSB_NAME and MSB_IMAGE. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb on the PATH, the SSH key, the name of a host, the tags of the image) and the
+VS Code settings are in the justfile.
 
 github-login     log in to GitHub with the GitHub App (web flow, with the client secret from Bitwarden). The tokens go to a file with mode 600
                  The recipe runs this step under `bws run`
 ensure-vm        make the VM from sandbox.yaml if none exists. If a VM exists and is current, give it the current GitHub and Claude tokens.
                  Else stop. The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment
 wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
-vscode-settings  set the VS Code settings for Remote-SSH
 """
 
 import argparse
@@ -52,29 +51,6 @@ HOST_PORTS = {
     18081: "SPIRE server",
     19090: "Flux Operator web UI",
 }
-VSCODE_SETTINGS = {
-    "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
-    "remote.SSH.defaultExtensions": [
-        "astral-sh.ty",
-        "charliermarsh.ruff",
-        "tamasfe.even-better-toml",
-        "kennylong.kubernetes-yaml-formatter",
-        "yzhang.markdown-all-in-one",
-        "skellock.just",
-        "isontheline.vscode-sysmon",
-    ],
-    "remote.SSH.useExecServer": False,
-    "remote.SSH.enableDynamicForwarding": False,
-    "remote.SSH.enableAgentForwarding": False,
-    "remote.SSH.connectTimeout": 30,
-    "remote.SSH.showLoginTerminal": False,
-    "remote.SSH.localServerDownload": "always",
-    "update.mode": "none",
-    "extensions.autoUpdate": "off",
-    "extensions.autoCheckUpdates": False,
-}
-
-
 # --- Helpers. They start with _ : only the functions below call them. A helper stands above the code that calls it. ---
 
 
@@ -323,24 +299,11 @@ def wait_boot() -> None:
         sys.exit(1)
 
 
-def vscode_settings() -> None:
-    """Merge VSCODE_SETTINGS into the user settings of VS Code (~/.config/Code/User/settings.json).
-
-    It writes the file only if a value differs, and then it says so. New VS Code windows use the new values.
-    """
-    path = Path.home() / ".config" / "Code" / "User" / "settings.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    current = json.loads(path.read_text()) if path.is_file() else {}
-    if current | VSCODE_SETTINGS != current:
-        path.write_text(json.dumps(current | VSCODE_SETTINGS, indent=2) + "\n")
-        print(f"VS Code settings changed in {path}. New VS Code windows use them.")
-
-
 def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("github-login", "ensure-vm", "wait-boot", "vscode-settings"):
+    for step in ("github-login", "ensure-vm", "wait-boot"):
         steps.add_parser(step)
     args = parser.parse_args()
     match args.step:
@@ -350,8 +313,6 @@ def main() -> None:
             ensure_vm()
         case "wait-boot":
             wait_boot()
-        case "vscode-settings":
-            vscode_settings()
 
 
 if __name__ == "__main__":

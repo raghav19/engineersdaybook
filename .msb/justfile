@@ -26,6 +26,28 @@ volumes := 'claude-home terraform-providers podman-storage'
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
+# The VS Code settings that Remote-SSH needs. `setup` merges them into your user settings: your other settings stay. New VS Code windows use them.
+vscode_settings := '''{
+  "remote.SSH.configFile": "''' + msb_dir + '''/ssh_config",
+  "remote.SSH.defaultExtensions": [
+    "astral-sh.ty",
+    "charliermarsh.ruff",
+    "tamasfe.even-better-toml",
+    "kennylong.kubernetes-yaml-formatter",
+    "yzhang.markdown-all-in-one",
+    "skellock.just",
+    "isontheline.vscode-sysmon"
+  ],
+  "remote.SSH.useExecServer": false,
+  "remote.SSH.enableDynamicForwarding": false,
+  "remote.SSH.enableAgentForwarding": false,
+  "remote.SSH.connectTimeout": 30,
+  "remote.SSH.showLoginTerminal": false,
+  "remote.SSH.localServerDownload": "always",
+  "update.mode": "none",
+  "extensions.autoUpdate": "off",
+  "extensions.autoCheckUpdates": false
+}'''
 # The timestamp of every file of the published image (a fixed date in 2023). Do not change it: a new value gives every layer a new digest.
 image_epoch := '1700000000'
 
@@ -44,11 +66,15 @@ setup: _host-only
     [ -r "$key" ] || { echo "msb: there is no SSH public key at $key. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file "$key"
     code --install-extension ms-vscode-remote.remote-ssh
-    {{ step }} vscode-settings
+    settings="$HOME/.config/Code/User/settings.json"
+    mkdir -p "$(dirname "$settings")"
+    [ -f "$settings" ] || echo '{}' > "$settings"
+    jq --argjson new '{{ vscode_settings }}' '. * $new' "$settings" > "$settings.new" || { rm -f "$settings.new"; echo "msb: could not read $settings (VS Code accepts comments there, but jq does not). Remove the comments, then run setup again." >&2; exit 1; }
+    if cmp -s "$settings" "$settings.new"; then rm "$settings.new"; else mv "$settings.new" "$settings"; echo "VS Code settings changed in $settings. New VS Code windows use them."; fi
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
 
 # Log in to GitHub with the GitHub App: you approve it in the browser. The client secret comes from Bitwarden. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them
-github-login: _host-only _vault
+github-login: _host-only
     bws run -- '{{ step }} github-login'
 
 # Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
@@ -57,18 +83,14 @@ image-build: _host-only
     docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
     echo "The image $MSB_IMAGE is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
 
-# Stop if bws is not on the PATH, or if BWS_ACCESS_TOKEN is not set. `bws run` reads the variable. It is the access token of the Bitwarden machine account
-_vault:
-    command -v bws >/dev/null || { echo "msb: bws is not on the PATH. Run: mise install" >&2; exit 1; }
-    [ -n "${BWS_ACCESS_TOKEN:-}" ] || { echo "msb: BWS_ACCESS_TOKEN is not set. Set it, for example: export BWS_ACCESS_TOKEN=\$(cat ~/.config/bws/access-token)" >&2; exit 1; }
-
 # Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits). The tags are the commit, `latest` on main and the git tag of the commit.
 # image_epoch is one fixed timestamp for all files. With no provenance and no SBOM, the same files give the same digest. So a new commit reuses the old layers.
 # The layers of every stage go to the registry (the tag `cache`), so any machine rebuilds only the stage that changed. That needs the builder msb-builder (docker-container driver).
-# The push token is the Bitwarden key GITHUB_TOKEN (scope write:packages). It goes from `bws run` through a pipe to a login in a temporary Docker config folder, which the recipe removes.
-# No login stays on disk, and no command line or just variable holds the token (`just --evaluate` would print a variable).
+# The push token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` needs BWS_ACCESS_TOKEN, and it stops the recipe with its own message if the token is missing.
+# The token goes through a shell variable to a login in a temporary Docker config folder, which the recipe removes. The variable is not exported, so no command line and no environment has it.
+# No login stays on disk. A just variable would be wrong: `just --evaluate` prints it.
 [script]
-image-publish: _host-only _vault
+image-publish: _host-only
     [ -z "$(git status --porcelain -- dev-tools)" ] || { echo "msb: dev-tools/ differs from the commit. Commit it first: the tag of the image is the commit." >&2; exit 1; }
     tags=(-t "{{ registry }}:$(git rev-parse HEAD)")
     [ "$(git branch --show-current)" != main ] || tags+=(-t "{{ registry }}:latest")
@@ -76,14 +98,16 @@ image-publish: _host-only _vault
     docker buildx inspect msb-builder >/dev/null 2>&1 || docker buildx create --name msb-builder --driver docker-container >/dev/null
     export BUILDX_CONFIG="${BUILDX_CONFIG:-$HOME/.docker/buildx}" DOCKER_CONFIG=$(mktemp -d)
     trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
-    bws run -- 'printf %s "$GITHUB_TOKEN"' | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin
+    token=$(bws run -- 'printf %s "$GITHUB_TOKEN"')
+    printf %s "$token" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin
+    unset token
     docker buildx build --builder msb-builder {{ msb_dir }}/dev-tools "${tags[@]}" \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
       --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true
 
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
-run: _host-only _vault
+run: _host-only
     command -v msb >/dev/null || { echo "msb: msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
     # Only this step runs under `bws run`: the Bitwarden keys are variables in its environment. `code` and the other steps do not get them
     bws run -- '{{ step }} ensure-vm'
