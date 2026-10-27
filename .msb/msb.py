@@ -310,7 +310,8 @@ def ensure_vm() -> None:
                 if done.returncode != 0:
                     _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
-    done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], check=False)
+    # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
+    done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
         _die(
             "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml, the image or a host value, make a new VM: just msb rm && just msb run"
