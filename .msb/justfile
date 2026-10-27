@@ -7,17 +7,15 @@
 #   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
-#   just msb image-build    build the image after you change a file of dev-tools/.
-#   just msb image-publish  push the image to ghcr.io (the token comes from Bitwarden).
+#   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
 
 set quiet
 set lazy
 set shell := ['bash', '-euo', 'pipefail', '-c']
 set script-interpreter := ['bash', '-euo', 'pipefail']
 
-# msb.py reads these three values.
+# msb.py reads these two values.
 export MSB_NAME := 'sandbox-dev'
-export MSB_IMAGE := 'engineersdaybook-sandbox:local'
 # The path of the clone in the VM. SANDBOX_WORKSPACE in sandbox.yaml has the same value.
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
@@ -30,7 +28,7 @@ registry_user := 'raghav19'
 # The user in the VM that `shell` opens. The Dockerfile makes this user.
 vm_user := 'agent'
 # The tools that `run` uses. `allow-host` runs `run` after it, so it checks the same tools first.
-run_tools := 'msb bws uv docker code'
+run_tools := 'msb bws uv code'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
 # The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. VSCODE_SETTINGS in msb.py has the settings.
@@ -41,6 +39,7 @@ commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
 image_epoch := '1700000000'
 # zstd level 9 as the sbx kits. With image_epoch, the same files give the same digest.
+build_metadata := cache_directory() / 'msb-build-metadata.json'
 image_output := 'type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true'
 
 # List the recipes (the default)
@@ -61,30 +60,28 @@ setup: _host-only (_need 'msb code uv')
     msb ssh authorize --file '{{ ssh_pubkey }}'
     code --install-extension {{ remote_ssh_extension }}
     {{ step }} vscode-settings '{{ vscode_settings_file }}'
-    echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
+    echo "Setup is complete. Next, run: just msb build. Then run: just msb run"
 
 # The client secret comes from Bitwarden. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them.
 # Log in to GitHub with the GitHub App. You approve it in the browser
 github-login: _host-only (_need 'bws uv')
     bws run -- '{{ step }} github-login'
 
-# Build the image from dev-tools/ and load it into msb. Needs Docker. The first build takes several minutes
-image-build: _host-only (_need 'docker msb')
-    docker build -t $MSB_IMAGE {{ msb_dir }}/dev-tools
-    docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
-    echo "The image $MSB_IMAGE is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
-
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN. If it is missing, `bws` stops the recipe with its own message.
 # The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
-# Maintainer. Push the image to ghcr.io, tagged with the commit
-image-publish: _host-only (_need 'bws docker')
+# The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
+# Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
+build: _host-only (_need 'bws docker jq yq')
     bws run -- 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
-      --output {{ image_output }}
+      --metadata-file {{ build_metadata }} --output {{ image_output }}
     docker logout {{ registry_host }}
+    digest=$(jq -r '."containerimage.digest"' {{ build_metadata }}) \
+      && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
+      && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.

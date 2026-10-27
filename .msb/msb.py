@@ -6,7 +6,7 @@
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the steps that need Python. Exit 1 means a wrong setup or a failed step.
-The justfile exports MSB_NAME and MSB_IMAGE. It also puts the git values that sandbox.yaml names in the environment.
+The justfile exports MSB_NAME and MSB_WORKSPACE. It also puts the git values that sandbox.yaml names in the environment.
 Run msb.py with `just msb <recipe>`. The justfile does the small checks (the tools on the PATH, the SSH key).
 
 vscode-settings  merge the settings that Remote-SSH needs into the VS Code user settings file. Your other settings stay.
@@ -86,39 +86,14 @@ def _die(message: str) -> NoReturn:
     sys.exit(1)
 
 
-def _out(*cmd: str, default: str | None = None) -> str:
-    """Run a command in .msb/ (inside the repo) and return its output without the final newline.
-
-    If the command fails, return `default`. If there is no default, stop with the message of the command.
-    """
-    done = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=MSB_DIR)
-    if done.returncode == 0:
-        return done.stdout.strip()
-    if default is None:
-        _die(f"`{' '.join(cmd)}` failed: {done.stderr.strip()}")
-    return default
-
-
-def _image_id() -> str:
-    """Return the id of the local Docker image MSB_IMAGE. Stop with a hint if the image does not exist.
-
-    The id is part of the fingerprint of the VM. So a new image gives the VM another fingerprint.
-    """
-    image = os.environ["MSB_IMAGE"]
-    return _out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or _die(
-        f"the image {image} does not exist. Run: just msb image-build"
-    )
-
-
 def _fingerprint() -> str:
-    """Return the fingerprint of the VM: a hash of sandbox.yaml, the image, the host values and the host ports. `ensure-vm` calls this.
+    """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values and the host ports. `ensure-vm` calls this.
 
     The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
     The tokens and the branch are not in the fingerprint.
     """
     parts = [
         CONFIG.read_text(),
-        _image_id(),
         os.environ["SANDBOX_GIT_DIR"],
         os.environ["GIT_AUTHOR_NAME"],
         os.environ["GIT_AUTHOR_EMAIL"],
@@ -284,7 +259,7 @@ def ensure_vm() -> None:
     vm = json.loads(found.stdout) if found.returncode == 0 else None
     if vm and vm["config"]["labels"].get("config-sha") != wanted:
         # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
-        print(f"msb: {name} does not match the configuration now. sandbox.yaml, the image or a host value changed.", file=sys.stderr)
+        print(f"msb: {name} does not match the configuration now. sandbox.yaml or a host value changed.", file=sys.stderr)
         _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
@@ -313,7 +288,7 @@ def ensure_vm() -> None:
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
         _die(
-            "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml, the image or a host value, make a new VM: just msb rm && just msb run"
+            "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
 
 
