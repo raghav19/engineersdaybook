@@ -27,7 +27,7 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 
 ## Prerequisites
 
-1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`. The recipes use `msb`, `uv` and `yq`, which `mise install` provides. They also use `bws` (the Bitwarden Secrets Manager CLI), `docker` and `code`, which you install yourself. A recipe stops with a message if one of its tools is missing.
+1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`. The recipes use `msb`, `uv` and `bws` (the Bitwarden Secrets Manager CLI), which `mise install` provides. They also use `docker` and `code`, which you install yourself. A recipe stops with a message if one of its tools is missing.
 
    ```shell
    mise trust && mise install

@@ -30,7 +30,7 @@ registry_user := 'raghav19'
 # The user in the VM that `shell` opens (the Dockerfile makes it).
 vm_user := 'agent'
 # The tools that `run` uses. `allow-host` runs `run` after it, so it checks the same tools first.
-run_tools := 'msb bws uv docker code yq'
+run_tools := 'msb bws uv docker code'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
 # The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. The settings are VSCODE_SETTINGS in msb.py.

@@ -302,8 +302,9 @@ def ensure_vm() -> None:
             _die("msb could not start the VM (its message is above).")
     else:
         # The VM runs. Give it the current tokens. The placeholders in the VM stay, and the VM does not restart.
+        secrets_config = YAML().load(CONFIG)["secrets"]
         for secret, value in tokens.items():
-            hosts = _out("yq", "-r", f'.secrets.{secret}.allow | join(",")', str(CONFIG))
+            hosts = ",".join(secrets_config[secret]["allow"])
             done = subprocess.run(
                 ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
                 env=os.environ | {secret: value},
