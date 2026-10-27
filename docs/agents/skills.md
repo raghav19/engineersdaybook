@@ -1,6 +1,6 @@
 # Agent skills
 
-The skills in `.claude/skills/` are copies of upstream skills, committed here so that every environment (the host, sbx and msb) has the same skills. `skills-lock.json` in the repo root records the source of each one. Nobody edits them here.
+The skills in `.claude/skills/` are copies of upstream skills, committed here so that every environment (the host and msb) has the same skills. `skills-lock.json` in the repo root records the source of each one. Nobody edits them here.
 
 ```text
 .claude/skills/<name>/         the skill (Claude Code reads this folder)

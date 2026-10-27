@@ -19,9 +19,9 @@ Evidence tags: **[spire]** is a SPIRE document on GitHub. **[spiffe]** is the sp
 |---|---|
 | The server accepts join tokens (`nodeAttestor.joinToken.enabled: true`). | [repo] `platform/addons/spire/spire.yaml` |
 | The server API is on NodePort 30081, host port 18081. The VM reaches it as `host.docker.internal:18081`. | [repo] `platform/addons/spire/service.yaml`, `clusters/kind/kind-config.yaml`, `/etc/spire/agent.conf` |
-| The host script makes a token with a TTL of 600 s and the alias `spiffe://<trust domain>/microvm/<github id>`. It writes the token with mode 600. It skips a new token while a node owns the alias and its SVID has not expired. `SPIRE_ENROLL_FORCE=1` forces a token. | [repo] `.sbx/agent/spire.py` |
-| The sandbox runs `enroll` at `lifecycle.initialize`. Nothing evicts the node when the sandbox ends. The folder `~/.sbx/spire` is a read-only mount. | [repo] `.sbx/sbxenv.yaml` |
-| The agent starts with `-trustBundle` and `-joinTokenFile`. The kit comment says that an agent with a valid SVID ignores the token. | [repo] `.sbx/kits/dev-tools/dev-tools.yaml` |
+| The host script makes a token with a TTL of 600 s and the alias `spiffe://<trust domain>/microvm/<github id>`. It writes the token with mode 600. It skips a new token while a node owns the alias and its SVID has not expired. `SPIRE_ENROLL_FORCE=1` forces a token. | [repo] [`.sbx/agent/spire.py`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/spire.py) |
+| The sandbox runs `enroll` at `lifecycle.initialize`. Nothing evicts the node when the sandbox ends. The folder `~/.sbx/spire` is a read-only mount. | [repo] [`.sbx/sbxenv.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/sbxenv.yaml) |
+| The agent starts with `-trustBundle` and `-joinTokenFile`. The kit comment says that an agent with a valid SVID ignores the token. | [repo] [`.sbx/kits/dev-tools/dev-tools.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/dev-tools.yaml) |
 | The agent is healthy. It loaded the SVID of `spiffe://mcp.local/spire/agent/join_token/...`. It creates the SVID of the alias and rotates both. | [live] `spire-agent healthcheck`, `~/.spire/agent.log` |
 | The server port is open from the VM. | [live] TCP connect to `host.docker.internal:18081` |
 | No workload receives an SVID: `spire-agent api fetch x509` returns `no identity issued`. | [live] |

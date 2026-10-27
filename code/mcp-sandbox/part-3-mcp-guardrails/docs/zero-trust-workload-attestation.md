@@ -1,5 +1,7 @@
 # Zero trust: workload attestation
 
+> **The enroll flow is not on main.** `spire.py`, the `dev-tools` kit and the Envoy config belong to the Docker sbx sandbox. They are in the git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx). Run the commands below from a checkout of that tag. A later change ports the flow to the msb sandbox (`.msb/`).
+
 ## 1. What workload attestation is
 
 Workload attestation is the second proof in SPIRE. The first proof is [node attestation](zero-trust-node-attestation.md): the microVM proves who it is, and the SPIRE agent gets its SVID. Now a process on that node asks the agent for an SVID, and the agent checks the process.
@@ -47,10 +49,10 @@ sequenceDiagram
 
 | What | Where |
 |---|---|
-| The entry. Parent: the alias. SPIFFE ID: the alias and `/envoy`. Selector: `unix:user:envoy`. `enroll` creates it when it is missing, also when it makes no new token. | `.sbx/agent/spire.py`, `register_workload` |
-| Envoy 1.40.1, a pinned release binary. | `.sbx/kits/dev-tools/tools.toml` |
-| The Envoy config: admin on `127.0.0.1:9901`, a cluster for the agent socket, and a placeholder upstream that takes the SVID (`default`) and the trust bundle (`ROOTCA`) over SDS. | `.sbx/kits/dev-tools/envoy.yaml` |
-| The kit creates the user `envoy` (no home, no login) and starts Envoy as that user, after the agent. The log is `/var/log/envoy.log`. | `.sbx/kits/dev-tools/dev-tools.yaml` |
+| The entry. Parent: the alias. SPIFFE ID: the alias and `/envoy`. Selector: `unix:user:envoy`. `enroll` creates it when it is missing, also when it makes no new token. | [`.sbx/agent/spire.py`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/spire.py), `register_workload` |
+| Envoy 1.40.1, a pinned release binary. | [`.sbx/kits/dev-tools/tools.toml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/tools.toml) |
+| The Envoy config: admin on `127.0.0.1:9901`, a cluster for the agent socket, and a placeholder upstream that takes the SVID (`default`) and the trust bundle (`ROOTCA`) over SDS. | [`.sbx/kits/dev-tools/envoy.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/envoy.yaml) |
+| The kit creates the user `envoy` (no home, no login) and starts Envoy as that user, after the agent. The log is `/var/log/envoy.log`. | [`.sbx/kits/dev-tools/dev-tools.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/dev-tools.yaml) |
 
 The SDS name `default` is the one SVID of the workload. No GitHub id is in the image.
 

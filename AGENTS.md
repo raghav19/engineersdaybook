@@ -76,7 +76,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Issues and specs live as GitHub issues on `raghav19/engineersdaybook`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-You are inside the dev-agent-sandbox microVM (started by `just sandbox run`) when `$SANDBOX_NAME` is set. There, every read or write on GitHub (issues, PRs, comments, labels, file contents) goes through the GitHub tools on the sbx MCP gateway (`mcp__mcp-gateway__*`), never through `gh` or direct API calls such as `curl`. That includes a quick read like `gh pr view`. The gateway tools are deferred: load their schemas with ToolSearch first, then call them directly. `docs/agents/issue-tracker.md` maps each `gh` command to its tool. Plain `git` (commit, push, fetch) stays in Bash. Outside the sandbox (`$SANDBOX_NAME` unset), use `gh` as described.
+In the msb sandbox (`.msb/README.md`), `GH_TOKEN` is a placeholder that the host replaces, so `gh` and `git push` work there as on the host.
 
 ### Triage labels
 

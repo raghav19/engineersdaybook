@@ -1,12 +1,10 @@
 # The dev sandbox on microsandbox
 
-This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0). It does the work of `.sbx/` and has no daemon. One file, `sandbox.yaml`, declares the whole VM.
-
-This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the same time. `just sandbox ...` uses sbx. `just msb ...` uses this sandbox.
+This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0). It replaced the Docker sbx sandbox and has no daemon. One file, `sandbox.yaml`, declares the whole VM.
 
 ## What is different from sbx
 
-| | sbx (`.sbx/`) | microsandbox (`.msb/`) |
+| | sbx (tag `docker-sbx`) | microsandbox (`.msb/`) |
 |---|---|---|
 | Host service | sbx daemon (systemd unit) | none. `msb` starts the VM as a child process |
 | Allowed hosts | policy kit, `sbx policy allow` and a kit rebuild | `network.allow` in `sandbox.yaml` |
@@ -23,7 +21,7 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 **Not ported, on purpose:**
 - The egress rule on `api.github.com/repos/**` that blocks one HTTP method (the one that removes a repository). msb has rules for hosts only, not for methods or paths. The scope of the token is the limit.
 - The policy kit, the MCP gateway and the git token sync. `network.allow`, the managed settings and the token placeholder do their work.
-- `policy-context.md`. It told the agent to use the sbx gateway tools. That text is wrong for msb. The agent instructions are in `AGENTS.md`.
+- `policy-context.md` (in the tag `docker-sbx`). It told the agent to use the sbx gateway tools. That text is wrong for msb. The agent instructions are in `AGENTS.md`.
 
 ## Prerequisites
 

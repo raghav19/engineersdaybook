@@ -19,7 +19,7 @@ tools := root / 'out' / 'tools'
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 ghcr_user := env('GHCR_USER', 'raghav19')
-# placeholder-ghcr.io is replaced by the sbx proxy
+# placeholder-ghcr.io was replaced by the sbx proxy (git tag docker-sbx). The msb sandbox has no ghcr.io secret yet
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component

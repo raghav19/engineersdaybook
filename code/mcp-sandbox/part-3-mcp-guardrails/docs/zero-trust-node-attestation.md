@@ -1,5 +1,7 @@
 # Zero trust: node attestation
 
+> **The enroll flow is not on main.** `spire.py`, the `dev-tools` kit and the Envoy config belong to the Docker sbx sandbox. They are in the git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx). Run the commands below from a checkout of that tag. A later change ports the flow to the msb sandbox (`.msb/`).
+
 ## 1. What node attestation is
 
 Node attestation is the first proof in SPIRE. A node proves who it is to the SPIRE server. The server then issues an SVID to the SPIRE agent of that node.

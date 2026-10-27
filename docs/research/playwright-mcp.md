@@ -30,9 +30,9 @@ If that happens, use this order:
 | The dashboards in `devk8s-kind-wsl2` are third-party charts and operators. | [repo] `code/devk8s-kind-wsl2/README.md:21-23,84-115` |
 | The Jekyll site is archived. `prek` excludes it. | [repo] `prek.toml:4` |
 | The repo has no CI and no browser or e2e test. The checks are `prek` hooks. | [repo] `prek.toml:6-45` (`.github/` does not exist) |
-| The sandbox VM has Node and `npx`. It has no Chromium and no Playwright. | [repo] `.sbx/kits/dev-tools/tools.toml:5,16-35` |
-| The egress policy is an allow list. It lists no Playwright download host. | [repo] `.sbx/kits/policy/policy.yaml:17-71` |
-| MCP servers register on the host gateway. The repo has no `.mcp.json`. | [repo] `.sbx/agent/agent.just:87-102` |
+| The sandbox VM has Node and `npx`. It has no Chromium and no Playwright. | [repo] [`.sbx/kits/dev-tools/tools.toml:5,16-35`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/tools.toml) |
+| The egress policy is an allow list. It lists no Playwright download host. | [repo] [`.sbx/kits/policy/policy.yaml:17-71`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/policy/policy.yaml) |
+| MCP servers register on the host gateway. The repo has no `.mcp.json`. | [repo] [`.sbx/agent/agent.just:87-102`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/agent.just) |
 | A web page is an untrusted-content channel. The sandbox has no control for it. | [repo] `code/agent-sandbox/README.md:43,313-321` |
 | An allowed domain is a capability grant. | [repo] `code/agent-sandbox/README.md:25,344-346` |
 | The sbx baseline allows shared-hosting wildcards such as `**.amazonaws.com`. | [repo] `code/agent-sandbox/README.md:296` |
@@ -79,8 +79,8 @@ If that happens, use this order:
 
 ## If the team adopts it later
 
-- Add Chromium and `install-deps` to the dev-tools image (`.sbx/kits/dev-tools/`).
-- Add the two Playwright download hosts to `.sbx/kits/policy/policy.yaml` for the build step only.
+- Add Chromium and `install-deps` to the dev-tools image ([`.sbx/kits/dev-tools/`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx/.sbx/kits/dev-tools/)).
+- Add the two Playwright download hosts to [`.sbx/kits/policy/policy.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/policy/policy.yaml) for the build step only.
 - Pin the `@playwright/mcp` version. Do not use `@latest`.
 - Run it with `--headless --isolated`. Enforce the browsing allow list at the network level, not with `--allowed-origins`.
 - Register it on the gateway only after a threat review against `code/agent-sandbox/README.md`.

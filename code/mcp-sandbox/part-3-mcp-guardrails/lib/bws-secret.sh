@@ -4,10 +4,8 @@
 # The machine account (read-only, one project) sees only that project, so the key name is unique when the project holds one secret of that name.
 # The access token comes from, in this order:
 #   1. BWS_ACCESS_TOKEN
-#   2. the file BWS_ACCESS_TOKEN_FILE (default ~/.config/bws/access-token), when it exists. Its mode must be 600 or 400. The sbx daemon runs this script
-#      on demand with no terminal (the secret ghcr.io, `secrets-sync` in agent.just), so it can read the token only from a file.
+#   2. the file BWS_ACCESS_TOKEN_FILE (default ~/.config/bws/access-token), when it exists. Its mode must be 600 or 400.
 #   3. a prompt on the terminal, without an echo. BWS_NO_PROMPT=1 turns the prompt off: the script fails at once when 1 and 2 give no token.
-#      The command of `secrets-sync` sets it, because sbx may run that command while a terminal is attached, and a hidden prompt looks like a hang.
 # The call to Bitwarden stops after 30 seconds.
 # Run it on the host only. The microVM holds no access token. For the EU cloud set BWS_SERVER_URL=https://vault.bitwarden.eu.
 set -eu

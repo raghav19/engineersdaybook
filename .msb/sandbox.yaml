@@ -2,7 +2,7 @@
 # If you change the file, run `just msb rm && just msb run`. This makes the VM again.
 # Schema: https://docs.microsandbox.dev/cli/configuration.md
 # ${NAME} is a host value. `just msb run` puts the host values in its environment.
-# Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig and the Flux Operator UI.
+# Not ported from the sbx sandbox (tag docker-sbx) yet: the SPIRE agent, the kind kubeconfig and the Flux Operator UI.
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
