@@ -20,7 +20,7 @@ HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
 HF_HUB_OFFLINE = "1"
 UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build time, the Python of the headroom-ai venv. The image copies /opt/mise with the venv. Without this value, uv uses ~/.local/share/uv.
-# Ponytail (dev-tools.yaml installs the plugin at boot) puts no codebase map in the session context. This saves input tokens.
+# Ponytail (sandbox-boot installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 

@@ -1,6 +1,6 @@
 # The dev sandbox on microsandbox
 
-This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0). It does the work of `.sbx/`. It has no daemon. One file declares the whole VM: `sandbox.yaml`.
+This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0). It does the work of `.sbx/` and has no daemon. One file, `sandbox.yaml`, declares the whole VM.
 
 This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the same time. `just sandbox ...` uses sbx. `just msb ...` uses this sandbox.
 
@@ -12,22 +12,25 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
 | Allowed hosts | policy kit, `sbx policy allow` and a kit rebuild | `network.allow` in `sandbox.yaml` |
 | VS Code | `sbx setup ssh` | `ProxyCommand msb ssh serve` in `ssh_config`. The VM has no sshd |
 | GitHub token | proxy replacement. The MCP gateway holds the OAuth token | proxy replacement only. The VM has a placeholder |
-| Other secrets (Bitwarden) | `bws-secret.sh` and `secrets-sync` make an sbx custom secret | `bws run` puts the Bitwarden keys in the environment of one command, and msb gives the VM a placeholder |
+| Other secrets (Bitwarden) | `bws-secret.sh` and `secrets-sync` make an sbx custom secret | `bws run` puts the Bitwarden keys in the environment of one command. msb gives the VM a placeholder |
 | MCP servers | registered on the gateway (`sbx mcp add`) | `managedMcpServers` in a root-owned file of the image |
-| Tool filter for GitHub MCP | the gateway removes the tools | a deny list in the same file. The client enforces it. It is a soft limit (see the token below) |
-| Claude login | the sbx proxy holds your login and adds it to requests | `msb.py` reads the access token of the login that `claude` keeps on the host. msb gives the VM a placeholder and replaces it on the network. You do not log in to Claude in the VM |
+| Tool filter for GitHub MCP | the gateway removes the tools | a deny list in the same file. The client enforces it. It is a soft limit (see "The limit of the deny list") |
+| Claude login | the sbx proxy holds your login and adds it to requests | `msb.py` reads the access token of the login that `claude` keeps on the host. msb gives the VM a placeholder. You do not log in to Claude in the VM |
 | Licence | proprietary | Apache-2.0, beta (v0.7) |
 
 **Not ported yet:** the SPIRE agent (and Envoy) and the kind kubeconfig. The VM can already reach their ports on the host, and the Flux Operator web UI (host port 19090). The skills are in `.claude/skills` of the repository.
 
 **Not ported, on purpose:**
-- The egress rule on `api.github.com/repos/**` that blocks one HTTP method (the one that removes a repository). msb has rules for hosts only, not for methods or paths. The scope of the token is the limit (see below).
+- The egress rule on `api.github.com/repos/**` that blocks one HTTP method (the one that removes a repository). msb has rules for hosts only, not for methods or paths. The scope of the token is the limit.
 - The policy kit, the MCP gateway and the git token sync. `network.allow`, the managed settings and the token placeholder do their work.
 - `policy-context.md`. It told the agent to use the sbx gateway tools. That text is wrong for msb. The agent instructions are in `AGENTS.md`.
 
 ## Prerequisites
 
-1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`. The recipes use `msb`, `uv` and `bws` (the Bitwarden Secrets Manager CLI), which `mise install` provides. They also use `docker` and `code`, which you install yourself. A recipe stops with a message if one of its tools is missing.
+1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
+   - `mise install` provides `msb`, `uv` and `bws` (the Bitwarden Secrets Manager CLI).
+   - You install `docker` and `code` yourself.
+   - A recipe stops with a message if one of its tools is missing.
 
    ```shell
    mise trust && mise install
@@ -35,15 +38,25 @@ This branch is a trial. `.sbx/` does not change. Both sandboxes can run at the s
    msb doctor        # each line must have a check mark
    ```
 
-2. **Log in to GitHub with the GitHub App** (`just msb github-login`). This is the web flow of the app, with its client ID and client secret. The step opens GitHub in your browser, and you click Authorize. GitHub then sends the browser to a small server on port 8765 of this host (the callback address of the app, `http://127.0.0.1:8765/callback`). The step waits 5 minutes for you. The client secret is the Bitwarden key `GITHUB_APP_CLIENT_SECRET` (prerequisite 5). You installed the app on this repository only, and it has the permissions contents, issues and pull requests. It has no Administration permission, so GitHub refuses a change to the settings of the repository, whatever the agent sends. The tokens go to `~/.config/msb/github-app.json` (mode 600). The access token lasts 8 hours, and `run` refreshes it. If the refresh token is lost or too old (about 6 months), `run` tells you to log in again. There is no fallback to `gh`, because that token is broader.
+2. **Log in to GitHub with the GitHub App.** Run `just msb github-login`. This is the web flow of the app.
+   - The step opens GitHub in your browser. You click Authorize.
+   - GitHub sends the browser to port 8765 of this host (`http://127.0.0.1:8765/callback`). The step waits 5 minutes for you.
+   - The client secret is the Bitwarden key `GITHUB_APP_CLIENT_SECRET` (prerequisite 6).
+   - You installed the app on this repository only. It has the permissions contents, issues and pull requests. It has no Administration permission, so GitHub refuses a change to the settings of the repository.
+   - The tokens go to `~/.config/msb/github-app.json` (mode 600). The access token lasts 8 hours, and `run` refreshes it.
+   - If the refresh token is lost or older than about 6 months, `run` tells you to log in again.
+   - There is no fallback to `gh`, because that token is broader.
 
 3. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it.
 
 4. **Commit your work.** The VM clones the committed files only.
 
-6. **Log in to Claude on the host** (run `claude` and sign in with your subscription). The VM takes this login: you do not log in again in the VM. `run` stops with a message if the login is missing, or if its access token lasts less than 30 minutes. Then start `claude` on the host, which refreshes it.
+5. **Log in to Claude on the host.** Run `claude` and sign in with your subscription. The VM uses this login, so you do not log in again in the VM. `run` stops with a message if the login is missing or its access token lasts less than 30 minutes. Then start `claude` on the host. It refreshes the token.
 
-5. **Bitwarden.** `run` and `image-publish` use `bws run`, which puts each key of the Bitwarden project in the environment of one command. `bws` reads the access token of the machine account from `BWS_ACCESS_TOKEN`, so set it in your shell, for example `export BWS_ACCESS_TOKEN=$(cat ~/.config/bws/access-token)`. If the token is missing, `bws` stops the recipe with `Missing access token`. If `bws` is not installed, the shell says `command not found`. The project needs two keys. `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App: the login and the refresh of the GitHub token use it. `GITHUB_TOKEN` is a classic token with the scope `write:packages`, and only `image-publish` uses it. For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
+6. **Set up Bitwarden.** `run`, `github-login` and `image-publish` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
+   - Set `BWS_ACCESS_TOKEN` in your shell, for example `export BWS_ACCESS_TOKEN=$(cat ~/.config/bws/access-token)`. If it is missing, `bws` stops the recipe with `Missing access token`.
+   - The project needs two keys. `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. Only `image-publish` uses it.
+   - For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
 
 ## Getting started
 
@@ -55,42 +68,160 @@ just msb run           # 3. every day
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Changes the VS Code user settings. This includes `remote.SSH.configFile`, which points to `ssh_config`. |
+| 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Writes the VS Code user settings, including `remote.SSH.configFile`, which points to `ssh_config`. |
 | 2 | `image-build` | Builds `dev-tools/` with Docker (Debian, mise and the tools of `dev-tools/tools/`). Loads the image into msb. The first build takes several minutes. |
-| 3 | `run` | Makes the VM from `sandbox.yaml` if none exists. If the VM exists and is current, `run` starts it if it stopped, gives it the new tokens, and runs the steps of `sandbox-boot` again. Stops with a message if the VM is not current. Then you remove it with `just msb rm`. Waits for the boot. Opens VS Code on the VM. You can run it as often as you want. |
+| 3 | `run` | Makes the VM, or starts it, and gives it the new tokens. Runs `sandbox-boot` in it. Opens VS Code on it. You can run it as often as you want. |
 
 In VS Code, open a terminal and run `claude`. It starts with the login of the host, so it does not ask you to sign in.
 
-Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host <host>` and `just msb rm` (`--volumes` also removes the Claude settings, the Terraform provider cache and the podman images).
+Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host <host>` and `just msb rm`. `just msb rm --volumes` also removes the Claude settings, the Terraform provider cache and the podman images.
 
 ## How it works
 
-- **The recipes and the steps.** The justfile lists the steps of each recipe in order. Bash does the small jobs in the justfile. Each recipe starts with the private recipe `_need`, which stops with a message if a tool that the recipe uses is not on the `PATH`. Bash also checks the SSH key. The recipes use variables at the top of the justfile. They hold the SSH key, the file of the VS Code settings, the user of the VM and the registry. `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `ensure-vm`, `wait-boot` and `allow-host`. `vscode-settings` is the step of `setup`. It merges the settings that Remote-SSH needs (the dict `VSCODE_SETTINGS`) into your VS Code user settings. Your other settings stay, and the values of `VSCODE_SETTINGS` win. If the file has comments, the step stops with a message and leaves the file as it is. `msb.py` is a `uv` script with one dependency, `ruamel.yaml`. `uv` installs it on the first run. `allow-host` needs it, because it edits `sandbox.yaml` and keeps the comments and the layout of the file. `just msb run` runs it for you. You can also run a step alone, for example `.msb/msb.py wait-boot`, if the environment has `MSB_NAME`, `MSB_IMAGE` and `MSB_WORKSPACE`. Every function has a docstring. The helpers start with `_` and stand at the top of the file. The steps follow, in the order of the cases in `main()`.
-- **One file.** `sandbox.yaml` declares the image, the size, the mounts, the secrets and the egress allow list. When `run` makes the VM, it stores a hash in the label `config-sha`. The hash covers the file, the image and the host values (the git directory and the git identity). If the hash is different at the next `run`, the VM is not current. msb fixes the config of a VM when it makes the VM. A VM that stopped is current: `run` starts it. msb does not run `sandbox-boot` when it starts a VM. So `run` runs `sandbox-boot prepare` in the VM at each `run`. Each step of the script does nothing if the work exists already. It clones only if there is no clone. It starts Headroom only if Headroom does not answer. So the next `run` fixes a VM whose boot failed, a VM that you stopped, and a Headroom that stopped. The clone stays. `run` does not remove a VM that is not current, because that removes the clone in it. `run` tells you to push your work and run `just msb rm && just msb run`. The volumes `claude-home`, `terraform-providers` and `podman-storage` stay.
-- **The host values.** `sandbox.yaml` names four host values as `${NAME}`: `SANDBOX_GIT_DIR`, `SANDBOX_BRANCH`, `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`. The recipe `run` reads them from git with four `[env]` lines. These lines run for `run` only. `msb run` reads all four from the environment. `ensure-vm` puts three of them in the fingerprint of the VM (not the branch), so a new author name makes a running VM not current. These values change with the host. `sandbox.yaml` fixes the other settings: the path of the clone (`/home/agent/engineersdaybook`) and the URL of origin.
-- **The clone.** The VM mounts only the `.git` directory of the host repo, at `/run/sandbox/source`. The VM cannot write to the mount. The VM cannot read your working tree, so it cannot read untracked files or `.env`. `dev-tools/sandbox-boot` clones the directory to `/home/agent/engineersdaybook`, on the branch of the host checkout. It sets `origin` to the GitHub URL. If the clone, the pre-commit hook or Headroom fails, `sandbox-boot` exits with an error. This stops the VM. Then `run` prints the boot log. Commit on the host before you run `run`, because the clone lacks uncommitted changes. Push a feature branch from the VM and open the pull request on GitHub. This also works for a git worktree.
-- **The tokens.** The VM has only placeholders: `GH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`. The host replaces `GH_TOKEN` in requests to `github.com`, `api.github.com` and `api.githubcopilot.com`, in Bearer auth and in Basic auth, so `git push` works. It replaces `CLAUDE_CODE_OAUTH_TOKEN` in requests to `api.anthropic.com`. The host blocks each token for every other host. `GH_TOKEN` is the token of the GitHub App (`_github_token()`). `CLAUDE_CODE_OAUTH_TOKEN` is the access token of your Claude login on the host (`_claude_token()`). The VM has no Claude login file, because the environment token comes before a stored login. The secret is `GH_TOKEN`, not `GITHUB_TOKEN`, because the Bitwarden key `GITHUB_TOKEN` is another token (for `ghcr.io`). With that name, `bws run` would give the wrong token to msb.
-- **Allowed hosts.** The VM can reach only the hosts in `network.allow`. `just msb allow-host <host>` adds one. It accepts a name or a wildcard such as `*.example.com`, and it refuses anything else before it changes the file. HTTPS rules need TLS interception, and `sandbox.yaml` turns it on. A blocked host fails at DNS. `*.example.com` matches subdomains at any depth. msb rejects `**.example.com` and an entry with a port. To add a host, run `just msb allow-host example.org`. This command changes `sandbox.yaml`. Then run `just msb rm && just msb run` to make the VM again. Commit the change.
-- **Volumes.** The VM has three named volumes. `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login). `terraform-providers` is the Terraform provider cache (`TF_PLUGIN_CACHE_DIR`). `podman-storage` has the images that podman pulls and builds. All three stay when you remove the VM, so a new VM keeps its settings and does not download the providers or the images again. `just msb rm --volumes` removes them. `sandbox-boot` gives the cache folder to the agent user.
-- **Tools.** The files of `dev-tools/tools/` list the tools and their exact versions, in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`. `dev-tools/mise.toml` has the settings of the tools and the completions task. The Dockerfile installs each group with mise in its own build stage. Claude Code is one of them. After you change a file, run `just msb image-build`, then `just msb rm && just msb run`. A new version in one file rebuilds only its stage. `image-publish` keeps the layers of each stage in the registry (the tag `cache`), so a new machine or a CI run rebuilds only the stage that changed.
-- **The size of the image.** The image is 3.5 GiB. The step that installs the tools removes the uv cache (about 880 MiB), because no tool reads it. The largest parts are `headroom-ai` (842 MiB), Claude Code (280 MiB), node (204 MiB), Terraform (116 MiB) and Python (108 MiB).
-- **Publishing the image (maintainer).** Run `just msb image-publish`. The token comes from the Bitwarden key `GITHUB_TOKEN` only: `bws run` pipes it to `docker login`, and it is in no variable. `docker logout` removes the login at the end. If the build fails, the login stays in `~/.docker/config.json` until the next run of the recipe ends. The recipe pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`. The tag is the commit. The layers use zstd at level 9, as the sbx kits do. zstd unpacks about 9 times faster than gzip. It also makes the large layer 10% smaller. All files get one fixed timestamp, and the build adds no provenance and no SBOM. So the same files give the same digest. A timestamp from the last commit would give every layer a new digest after each commit, and no layer could be reused. The recipe does not check `dev-tools/` for changes that you did not commit. Commit them first, because the tag is the commit. The first run prints the error `failed to configure registry cache importer ... not found`. The cache tag does not exist yet, and the build goes on. `sandbox.yaml` still uses the image that `just msb image-build` makes on your host.
-- **Containers (podman).** The VM has rootless podman, for container builds and pushes. `docker` is an alias of podman (the `podman-docker` package), so `docker build`, `docker run` and `docker push` work. A container runs as the agent user: root in a container is uid 1000 of the VM. The image adds 242 MiB. Four settings make it work:
-  - `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun` (mode 660). These are device nodes of the VM, which its own kernel creates for root only. They are not devices of the host. fuse-overlayfs needs `/dev/fuse`, because the root file system of the VM is already an overlay file system. The network of a container needs `/dev/net/tun`. A container does not see these devices, unless you start it with `--device`.
-  - `sandbox-boot` makes `/` a shared mount, which podman needs for mounts in rootless containers.
-  - `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` (read-only) in each container. msb intercepts HTTPS and puts its CA in the trust store of the VM. Without this mount, a download over HTTPS in a container or a `RUN` step fails with "connection reset".
-  - `sandbox.yaml` allows the Docker Hub hosts. The policy of the VM applies to a container too: a container cannot reach a host that is not in `network.allow`, with or without `--network=host`.
+### The recipes and the steps
 
-  Risks: the agent user can open the two devices. That exposes the FUSE and TUN code of the VM kernel to the agent, and `fusermount3` is setuid root. The VM boundary limits what a bug there can do. Podman has no `ghcr.io` login: pushing there needs a secret (see the section on Bitwarden). To push to a registry on the host, allow its port in `HOST_PORTS`.
-- **MCP servers and the deny list.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns the file. The agent can read it and cannot change it. Project settings and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub (`managedMcpServers`). It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). The GitHub header has the placeholder `$MSB_GITHUB_TOKEN`. The host replaces it, so the file has no secret. Claude Code loads these servers without a prompt. `claude mcp remove` refuses to remove them. To change the file, run `just msb image-build`.
-- **Secrets from Bitwarden.** To give the VM another secret, do three things. Add it under `secrets:` in `sandbox.yaml` with the hosts that can receive it. Add the hosts to `network.allow`. Add a key with the same name to the Bitwarden project. The recipe `run` starts only the step `ensure-vm` under `bws run`, so `code` and the other steps do not get the keys. msb reads the value of each secret from its environment, and it stops with a message when a variable is missing. The VM has a placeholder, and the host swaps in the value for those hosts only. The VM has no `bws`, no `msb` and no key. The `msb` process on the host holds all the keys of the project while the VM runs. A change to a Bitwarden secret reaches the VM when you make the VM again: `just msb rm && just msb run`.
-- **Token refresh.** `ensure-vm` calls `_github_token()` and `_claude_token()`. `_github_token()` returns the saved access token if it has more than 30 minutes left. Otherwise it sends the refresh token and the client credentials to GitHub. It saves the new access token and the new refresh token. Each refresh makes the old refresh token useless. `_claude_token()` only reads the access token of the login on the host. It never refreshes it. `claude` on the host does that and rotates the refresh token. A second refresh from here would make the refresh token of `claude` useless. If the Claude token lasts less than 30 minutes, `run` stops and tells you to start `claude` on the host. If the VM runs and is current, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders in the VM do not change, and the VM does not restart. There is no timer. After about 8 hours without `just msb run`, GitHub and Claude answer 401 to requests from the VM. Run `just msb run` again to fix this.
-- **Ports of the host.** The VM can reach three ports of the host at `host.microsandbox.internal:<port>`. They are 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `sandbox.yaml` cannot express a rule for a port, so `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). The services are in the kind cluster. Nothing in the VM uses them yet, because the kubeconfig and the SPIRE agent are not ported.
-- **Ponytail.** `sandbox-boot` installs the plugin ponytail 5.3.2 for Claude Code, as in sbx. The plugin is on the `claude-home` volume, so a new VM finds it. A failed install prints a warning and does not stop the boot.
-- **The limit of the deny list.** The agent can still call the GitHub API with the placeholder token. The host then uses your token. The deny list stops mistakes. The **scope of the token** sets what the agent can do on GitHub. Use a fine-grained token for this repository (prerequisite 2).
+- The justfile lists the steps of each recipe in order. Bash does the small jobs.
+- Each recipe starts with the private recipe `_need`. It stops with a message if a tool of the recipe is not on the `PATH`.
+- The top of the justfile has variables for the SSH key, the VS Code settings file, the VM user and the registry.
+- `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `ensure-vm` and `allow-host`. It is a `uv` script. Its one dependency is `ruamel.yaml`, and `uv` installs it on the first run.
+- You can run a step alone, for example `.msb/msb.py ensure-vm`, if the environment has `MSB_NAME`, `MSB_IMAGE` and `MSB_WORKSPACE`.
+- Every function has a docstring. The helpers start with `_` and stand at the top of the file. The steps follow, in the order of the cases in `main()`.
+
+### The VM and its fingerprint
+
+- `sandbox.yaml` declares the image, the size, the mounts, the secrets and the egress allow list.
+- When `run` makes the VM, it stores a hash in the label `config-sha`. The hash covers the file, the image and the host values (the git directory and the git identity).
+- msb fixes the configuration of a VM when it makes the VM. If the hash is different at the next `run`, `run` stops with a message. It does not remove the VM, because that removes the clone in it.
+- Then push your work and run `just msb rm && just msb run`. The volumes `claude-home`, `terraform-providers` and `podman-storage` stay.
+- The VM has no command of its own. At each `run`, `ensure-vm` runs `dev-tools/sandbox-boot` in the VM with `msb exec`. This is the same for a new VM and for an old VM.
+- Each step of the script does nothing if its work exists. It clones only if there is no clone. It starts Headroom only if Headroom does not answer.
+- So the next `run` fixes a VM that you stopped, a boot that failed and a Headroom that stopped. The clone stays.
+- If a step fails, the script prints the reason and `run` exits with 1. The VM keeps running.
+
+### The host values
+
+- `sandbox.yaml` names four host values as `${NAME}`: `SANDBOX_GIT_DIR`, `SANDBOX_BRANCH`, `GIT_AUTHOR_NAME` and `GIT_AUTHOR_EMAIL`.
+- The recipe `run` reads them from git with four `[env]` lines. These lines apply to `run` only.
+- `ensure-vm` puts three of them in the fingerprint (not the branch). A new author name gives the VM another fingerprint.
+- `sandbox.yaml` fixes the other settings: the path of the clone (`/home/agent/engineersdaybook`) and the URL of origin.
+
+### The clone
+
+- The VM mounts only the `.git` directory of the host repo, at `/run/sandbox/source`. The VM cannot write to the mount.
+- The VM cannot read your working tree, so it cannot read untracked files or `.env`.
+- `sandbox-boot` clones the directory to `/home/agent/engineersdaybook`, on the branch of the host checkout. It sets `origin` to the GitHub URL.
+- The clone lacks uncommitted changes, so commit on the host before you run `run`.
+- Push a feature branch from the VM and open the pull request on GitHub. A git worktree works too.
+
+### The tokens
+
+- The VM has only placeholders: `GH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`.
+- The host replaces `GH_TOKEN` in requests to `github.com`, `api.github.com` and `api.githubcopilot.com`. It does this in Bearer auth and in Basic auth, so `git push` works.
+- The host replaces `CLAUDE_CODE_OAUTH_TOKEN` in requests to `api.anthropic.com`. The host blocks each token for every other host.
+- `GH_TOKEN` is the token of the GitHub App (`_github_token()`). `CLAUDE_CODE_OAUTH_TOKEN` is the access token of your Claude login on the host (`_claude_token()`).
+- The VM has no Claude login file, because the environment token comes before a stored login.
+- The secret is `GH_TOKEN`, not `GITHUB_TOKEN`, because the Bitwarden key `GITHUB_TOKEN` is another token (for `ghcr.io`). With that name, `bws run` would give the wrong token to msb.
+
+### Token refresh
+
+- `_github_token()` returns the saved access token if it has more than 30 minutes left. Otherwise it sends the refresh token and the client credentials to GitHub. It saves the new access token and the new refresh token.
+- Each refresh makes the old refresh token useless.
+- `_claude_token()` only reads the access token of the login on the host. It never refreshes it. `claude` on the host refreshes it and rotates the refresh token. A second refresh from here would make the refresh token of `claude` useless.
+- If the Claude token lasts less than 30 minutes, `run` stops and tells you to start `claude` on the host.
+- If the VM runs, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders do not change, and the VM does not restart.
+- There is no timer. After about 8 hours without `just msb run`, GitHub and Claude answer 401 to requests from the VM. Run `just msb run` again to fix this.
+
+### Secrets from Bitwarden
+
+To give the VM another secret, do three things:
+1. Add it under `secrets:` in `sandbox.yaml` with the hosts that can receive it.
+2. Add the hosts to `network.allow`.
+3. Add a key with the same name to the Bitwarden project.
+
+- `run` starts only the step `ensure-vm` under `bws run`, so `code` and the other steps do not get the keys.
+- msb reads the value of each secret from its environment. It stops with a message when a variable is missing.
+- The VM has a placeholder. The host swaps in the value for the hosts of that secret only.
+- The VM has no `bws`, no `msb` and no key. The `msb` process on the host holds all the keys of the project while the VM runs.
+- A running VM does not read a changed secret. Make the VM again (`just msb rm && just msb run`). A VM that you stopped reads the secrets again when `run` starts it.
+
+### Allowed hosts
+
+- The VM can reach only the hosts in `network.allow`. A blocked host fails at DNS.
+- HTTPS rules need TLS interception, and `sandbox.yaml` turns it on.
+- `*.example.com` matches subdomains at any depth. msb rejects `**.example.com` and an entry with a port.
+- To add a host, run `just msb allow-host example.org`. It accepts a name or a wildcard and refuses anything else before it changes `sandbox.yaml`.
+- Then run `just msb rm && just msb run`, because the VM keeps its old configuration. Commit the change.
+
+### Ports of the host
+
+- The VM can reach three ports of the host at `host.microsandbox.internal:<port>`. They are 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI).
+- `sandbox.yaml` cannot express a rule for a port, so `msb.py` passes one `--net-rule` for each (`HOST_PORTS`).
+- The services are in the kind cluster. Nothing in the VM uses them yet, because the kubeconfig and the SPIRE agent are not ported.
+
+### Volumes
+
+- `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login).
+- `terraform-providers` is the Terraform provider cache (`TF_PLUGIN_CACHE_DIR`).
+- `podman-storage` has the images that podman pulls and builds.
+- All three stay when you remove the VM. A new VM keeps its settings and does not download the providers or the images again.
+- `just msb rm --volumes` removes them. `sandbox-boot` gives the folders to the agent user.
+
+### Tools and the image
+
+- The files of `dev-tools/tools/` list the tools and their exact versions, in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`.
+- `dev-tools/mise.toml` has the settings of the tools and the completions task.
+- The Dockerfile installs each group with mise in its own build stage. A new version in one file rebuilds only its stage.
+- After you change a file, run `just msb image-build`, then `just msb rm && just msb run`.
+- The image is 3.5 GiB. The step that installs the tools removes the uv cache (about 880 MiB), because no tool reads it.
+- The largest parts are `headroom-ai` (842 MiB), Claude Code (280 MiB), node (204 MiB), Terraform (116 MiB) and Python (108 MiB).
+
+### Publishing the image (maintainer)
+
+- Run `just msb image-publish`. It pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`. The tag is the commit.
+- The token is the Bitwarden key `GITHUB_TOKEN` only. `bws run` pipes it to `docker login`, so no variable holds it. `docker logout` removes the login at the end.
+- If the build fails, the login stays in `~/.docker/config.json` until the next run of the recipe ends.
+- The layers use zstd at level 9, as the sbx kits do. zstd unpacks about 9 times faster than gzip. It also makes the large layer 10% smaller.
+- All files get one fixed timestamp, and the build adds no provenance and no SBOM. So the same files give the same digest. A timestamp from the last commit would give every layer a new digest after each commit.
+- The layers of each stage go to the registry (the tag `cache`). A new machine or a CI run then rebuilds only the stage that changed.
+- The first run prints the error `failed to configure registry cache importer ... not found`. The cache tag does not exist yet, and the build goes on.
+- The recipe does not check `dev-tools/` for changes that you did not commit. Commit them first, because the tag is the commit.
+- `sandbox.yaml` still uses the image that `just msb image-build` makes on your host.
+
+### Containers (podman)
+
+The VM has rootless podman, for container builds and pushes. `docker` is an alias of podman (the `podman-docker` package), so `docker build`, `docker run` and `docker push` work. A container runs as the agent user. Root in a container is uid 1000 of the VM. The image adds 242 MiB. Four settings make it work:
+- `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun` (mode 660). These are device nodes of the VM. Its own kernel creates them for root only. They are not devices of the host.
+  - fuse-overlayfs needs `/dev/fuse`, because the root file system of the VM is already an overlay file system.
+  - The network of a container needs `/dev/net/tun`.
+  - A container does not see these devices, unless you start it with `--device`.
+- `sandbox-boot` makes `/` a shared mount. Podman needs this for mounts in rootless containers.
+- `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` (read-only) in each container. msb intercepts HTTPS and puts its CA in the trust store of the VM. Without this mount, a download over HTTPS in a container or a `RUN` step fails with "connection reset".
+- `sandbox.yaml` allows the Docker Hub hosts. The policy of the VM applies to a container too. A container cannot reach a host that is not in `network.allow`, with or without `--network=host`.
+
+Risks:
+- The agent user can open the two devices. This exposes the FUSE and TUN code of the VM kernel to the agent, and `fusermount3` is setuid root. The VM boundary limits what a bug there can do.
+- Podman has no `ghcr.io` login. To push there, the VM needs a secret (see "Secrets from Bitwarden").
+- To push to a registry on the host, allow its port in `HOST_PORTS`.
+
+### MCP servers and the deny list
+
+- `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns the file. The agent can read it and cannot change it. Project settings and user settings cannot override it.
+- The file declares draw.io, the Flux schema catalog and GitHub (`managedMcpServers`). It denies five GitHub tools (`merge_pull_request`, `delete_file` and others).
+- The GitHub header has the placeholder `$MSB_GITHUB_TOKEN`. The host replaces it, so the file has no secret.
+- Claude Code loads these servers without a prompt. `claude mcp remove` refuses to remove them.
+- To change the file, run `just msb image-build`.
+
+### The limit of the deny list
+
+- The agent can still call the GitHub API with the placeholder token. The host then uses the token of the GitHub App.
+- The deny list stops mistakes. The **scope of the token** sets what the agent can do on GitHub. The app has access to this repository only (prerequisite 2).
+
+### Small items
+
+- **Ponytail.** `sandbox-boot` installs the plugin ponytail 5.3.2 for Claude Code, as in sbx. The plugin is on the `claude-home` volume, so a new VM finds it. A failed install prints a warning and does not stop the script.
 - **The shell.** The shell is plain bash. `/etc/profile.d` puts the mise shims on the `PATH` and sets `EDITOR`. Completions for the tools are available. There is no prompt theme and no fzf.
 - **Git identity.** `sandbox.yaml` sets `GIT_AUTHOR_*` and `GIT_COMMITTER_*` from your host git config. The image has the token helper and `safe.directory` in its system git config.
-- **VS Code.** microsandbox has no sshd in the VM. The `msb` command on the host is the SSH server. `ssh_config` starts it as a `ProxyCommand`. The VM must run before VS Code connects. `run` makes sure of this.
+- **VS Code.** The VM has no sshd. The `msb` command on the host is the SSH server, and `ssh_config` starts it as a `ProxyCommand`. The VM must run before VS Code connects. `run` makes sure of this.
 
 ## When something fails
 
@@ -98,12 +229,12 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 |---|---|
 | `run` says the image does not exist | Run `just msb image-build`. |
 | `msb doctor` shows a red line | Read the line. For `/dev/kvm`, run `sudo usermod -aG kvm "$USER"`, then log in again. |
-| `run` says the VM did not finish its boot, or that `sandbox-boot` failed | `run` prints the reason (`sandbox-boot: ...`). The clone, the hook or Headroom failed. `msb logs sandbox-dev` shows the log of the first boot. Run `just msb run` again: this fixes a cause outside the VM, such as the network. If the cause is in `sandbox.yaml`, the image or a host value (for example the branch that the VM stores), run `just msb rm && just msb run`. |
-| `msb ls` shows `crashed` or `stopped` | Run `just msb run`. It starts the VM and prepares it again, and the clone stays. If `run` still fails, and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
-| `run` says that another configuration made the VM | `sandbox.yaml`, the image or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
+| `run` says that `sandbox-boot` failed | `run` prints the reason (`sandbox-boot: ...`). The clone, the hook or Headroom failed. Run `just msb run` again. This fixes a cause outside the VM, such as the network. If the cause is in `sandbox.yaml`, the image or a host value (for example the branch that the VM stores), run `just msb rm && just msb run`. |
+| `msb ls` shows `crashed` or `stopped` | Run `just msb run`. It starts the VM and runs `sandbox-boot` again. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
+| `run` says that the VM does not match the configuration | `sandbox.yaml`, the image or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
-| VS Code cannot connect | Run `just msb setup` again. Make sure that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
-| `claude` asks for a login again | Run `just msb rm` without `--volumes`. The volume keeps the login. |
+| VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
+| `claude` asks for a login | The login of the host ended. Start `claude` on the host to refresh it. Then run `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
 
 More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-dev` (the settings and the `config-sha` label) and `msb <command> --help`.

@@ -1,5 +1,5 @@
 # This file declares the whole VM of the msb sandbox. `just msb run` makes the VM from it.
-# After you change the file, run `just msb rm && just msb run` to make the VM again.
+# If you change the file, run `just msb rm && just msb run`. This makes the VM again.
 # Schema: https://docs.microsandbox.dev/cli/configuration.md
 # ${NAME} is a host value. `just msb run` puts the host values in its environment.
 # Not ported from .sbx yet: the SPIRE agent, the kind kubeconfig and the Flux Operator UI.
@@ -13,27 +13,26 @@ cpus: 4
 memory: "4G"
 shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code terminals use bash. The login shell adds the mise shims to the PATH.
 
-# sandbox-boot runs as root. It prepares the agent user, clones the repo and starts Headroom. Then it waits. See dev-tools/sandbox-boot.
-# `just msb run` runs `sandbox-boot prepare` in an existing VM (the same steps, and then it exits), because msb does not run this command again when it starts a VM.
-cmd: ["/usr/local/bin/sandbox-boot"]
+# The VM has no command of its own. At each run, `just msb run` runs /usr/local/bin/sandbox-boot in the VM with `msb exec`.
+# The script prepares the agent user, clones the repo and starts Headroom. See dev-tools/sandbox-boot.
 
 env:
   SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile (MSB_WORKSPACE) has the same value.
   SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch of the host checkout. The clone starts on it.
-  REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone
-  GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git reads the identity from these four variables, so the VM needs no git config for it
+  REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone.
+  GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git reads the identity from these four variables. So the VM needs no git config for it.
   GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME}
   GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL}
   GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL}
-  MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook # mise trusts the mise.toml files in the clone
-  MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # mise ignores the root mise.toml of the clone, because it lists host tools
-  CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the login and the settings
-  DISABLE_UPDATES: "1" # the claude that mise installs does not update itself
+  MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook # mise trusts the mise.toml files in the clone.
+  MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # mise ignores the root mise.toml of the clone, because it lists host tools.
+  CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the settings.
+  DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
 
 mounts:
-  # The git directory of the host repo, read-only. The VM can read the committed history. It cannot read the rest of your working tree,
-  # so it cannot read untracked files or .env. sandbox-boot clones the directory, so the VM works on a private clone.
-  # This also works if the host checkout is a git worktree. msb 0.7.10 refuses a relative path to a parent folder, so the path is a host value.
+  # The git directory of the host repo, read-only. The VM reads the committed history only.
+  # It cannot read untracked files or .env. sandbox-boot clones the directory, so the VM has a private clone.
+  # A git worktree works too. msb 0.7.10 refuses a relative path to a parent folder, so the path is a host value.
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
@@ -44,27 +43,29 @@ mounts:
   - named: podman-storage
     target: /home/agent/.local/share/containers
     create: ensure-exists
-  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/mise.toml). It stays when you remove the VM, so a new VM does not download the providers again.
-  # `just msb rm --volumes` removes it. sandbox-boot gives the folder to the agent user.
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/mise.toml). It stays when you remove the VM.
+  # A new VM does not download the providers again. `just msb rm --volumes` removes the cache. sandbox-boot gives the folder to the agent user.
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers
     create: ensure-exists
 
 # No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
-# msb reads the value of each secret from the environment of the host. `just msb run` starts msb.py under `bws run`, so each key of the Bitwarden
-# project is a variable there. A secret of another kind needs a Bitwarden key with the same name. Two secrets are not from Bitwarden: msb.py sets them.
-# GH_TOKEN is the user token of the GitHub App (`just msb github-login`). The host replaces it in Basic auth (git over HTTPS) and in Bearer
-# auth (REST API and GitHub MCP). It is not named GITHUB_TOKEN, because the Bitwarden key GITHUB_TOKEN is another token (for ghcr.io).
-# CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host (~/.claude/.credentials.json), as in sbx. You do not log in to Claude in the VM.
+# msb reads each value from the environment of the host. `just msb run` starts msb.py under `bws run`, so each Bitwarden key is a variable there.
+# msb.py sets two secrets, and they do not come from Bitwarden.
+# GH_TOKEN is the user token of the GitHub App (`just msb github-login`).
+# The host replaces it in Basic auth (git over HTTPS) and in Bearer auth (REST API and GitHub MCP).
+# The name is not GITHUB_TOKEN, because the Bitwarden key GITHUB_TOKEN is another token (for ghcr.io).
+# CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host (~/.claude/.credentials.json), as in sbx.
+# You do not log in to Claude in the VM.
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
   CLAUDE_CODE_OAUTH_TOKEN:
     allow: [api.anthropic.com]
 
-# The egress allow list. If `allow` has entries, the VM denies all other hosts. To add a host, run `just msb allow-host <host>`.
-# The pattern *.example.com matches the subdomains at any depth (*.istio.io matches istio-release.r2.istio.io), and not the bare domain.
-# If a site needs the bare domain, the list has it too. msb rejects the pattern **.example.com and an entry with a port.
+# The egress allow list. If `allow` has entries, the VM blocks all other hosts. To add a host, run `just msb allow-host <host>`.
+# *.example.com matches subdomains at any depth (*.istio.io matches istio-release.r2.istio.io). It does not match the bare domain.
+# If a site needs the bare domain, add it too. msb rejects **.example.com and an entry with a port.
 # msb.py adds the rules for the ports of the host (HOST_PORTS in msb.py), because this file cannot express them.
 network:
   tls:
@@ -86,7 +87,8 @@ network:
     # MCP servers
     - mcp.draw.io
     - schemas.fluxoperator.dev
-    # Container images (podman). Docker Hub needs the registry, the token service and a CDN for the blobs. The CDN host changes (cloudflare, cloudfront), so *.docker.com covers it
+    # Container images (podman). Docker Hub needs the registry, the token service and a CDN for the blobs.
+    # The CDN host changes (cloudflare, cloudfront), so *.docker.com covers it.
     - registry-1.docker.io
     - auth.docker.io
     - "*.docker.com"
