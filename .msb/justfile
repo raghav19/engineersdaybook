@@ -12,6 +12,7 @@
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
+set script-interpreter := ['bash', '-euo', 'pipefail']
 
 # msb.py reads these three values.
 export MSB_NAME := 'sandbox-dev'
@@ -36,8 +37,11 @@ _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
+[script]
 setup: _host-only
-    key=$({{ step }} ssh-key) && msb ssh authorize --file "$key"
+    key="${SANDBOX_SSH_PUBKEY:-$HOME/.ssh/id_ed25519.pub}"
+    [ -r "$key" ] || { echo "msb: there is no SSH public key at $key. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
+    msb ssh authorize --file "$key"
     code --install-extension ms-vscode-remote.remote-ssh
     {{ step }} vscode-settings
     echo "Setup is complete. Next, run: just msb image-build. Then run: just msb run"
@@ -52,11 +56,12 @@ image-build: _host-only
     docker save $MSB_IMAGE | msb load --tag $MSB_IMAGE
     echo "The image $MSB_IMAGE is in msb now. A VM that exists keeps the old image. To use the new image, run: just msb rm && just msb run"
 
-# Stop if BWS_ACCESS_TOKEN is not set. `bws run` reads it. It is the access token of the Bitwarden machine account
+# Stop if bws is not on the PATH, or if BWS_ACCESS_TOKEN is not set. `bws run` reads the variable. It is the access token of the Bitwarden machine account
 _vault:
+    command -v bws >/dev/null || { echo "msb: bws is not on the PATH. Run: mise install" >&2; exit 1; }
     [ -n "${BWS_ACCESS_TOKEN:-}" ] || { echo "msb: BWS_ACCESS_TOKEN is not set. Set it, for example: export BWS_ACCESS_TOKEN=\$(cat ~/.config/bws/access-token)" >&2; exit 1; }
 
-# The tags are the commit, `latest` on main and the git tag of the commit. All files get the same fixed timestamp (image_epoch), and the build adds no
+# The tags are the commit, `latest` on main and the git tag of the commit (the recipe stops if dev-tools/ differs from the commit). All files get the same fixed timestamp (image_epoch), and the build adds no
 # provenance and no SBOM. So the same files give the same digest. The date of the last commit would not work: a new commit would change the timestamp of
 # every file, so every layer would get a new digest and no layer could be reused.
 # The layers of every stage go to the registry as a cache (the tag `cache`). A new version of one tool rebuilds one stage, and any machine gets the other stages from the cache.
@@ -67,7 +72,11 @@ _vault:
 # Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits)
 [script]
 image-publish: _host-only _vault
-    tags=$({{ step }} image-tags)
+    [ -z "$(git status --porcelain -- dev-tools)" ] || { echo "msb: dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first." >&2; exit 1; }
+    tags=$(git rev-parse HEAD)
+    [ "$(git branch --show-current)" != main ] || tags="$tags latest"
+    git_tag=$(git describe --exact-match --tags HEAD 2>/dev/null || true)
+    [ -z "$git_tag" ] || tags="$tags $git_tag"
     docker buildx inspect msb-builder >/dev/null 2>&1 || docker buildx create --name msb-builder --driver docker-container >/dev/null
     args=()
     for tag in $tags; do args+=(-t "{{ registry }}:$tag"); done
@@ -90,7 +99,7 @@ image-publish: _host-only _vault
 
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
 run: _host-only _vault
-    {{ step }} preflight
+    command -v msb >/dev/null || { echo "msb: msb is not on the PATH. Run: mise install && eval \"\$(mise activate bash)\"" >&2; exit 1; }
     # Only this step runs under `bws run`: the Bitwarden keys are variables in its environment. `code` and the other steps do not get them
     bws run -- '{{ step }} ensure-vm'
     {{ step }} wait-boot
@@ -98,7 +107,7 @@ run: _host-only _vault
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host host: _host-only && run
-    {{ step }} check-host '{{ host }}'
+    [[ '{{ host }}' =~ ^(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || { echo "msb: {{ host }} is not a host name." >&2; exit 1; }
     HOST='{{ host }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
     echo "{{ host }} is now in network.allow."
 

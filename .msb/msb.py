@@ -6,25 +6,21 @@
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
-The justfile exports MSB_NAME, MSB_IMAGE and MSB_WORKSPACE. Run msb.py through `just msb <recipe>`.
+The justfile exports MSB_NAME and MSB_IMAGE. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb and bws on the PATH,
+the SSH key, the name of a host, the tags of the image) are in the justfile.
 
-preflight        check that msb, bws, the GitHub login, the Claude login of the host and the image exist
 github-login     log in to GitHub with the GitHub App (web flow, with the client secret from Bitwarden). The tokens go to a file with mode 600
                  The recipe runs this step under `bws run`
 ensure-vm        make the VM from sandbox.yaml if none exists. If a VM exists and is current, give it the current GitHub and Claude tokens.
                  Else stop. The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment
 wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
-ssh-key          print the path of your SSH public key
 vscode-settings  set the VS Code settings for Remote-SSH
-check-host HOST  stop if HOST is not a host name
-image-tags       print the tags of the published image, one for each line. Stop if dev-tools/ differs from the commit
 """
 
 import argparse
 import hashlib
 import json
 import os
-import re
 import secrets
 import shutil
 import socket
@@ -88,11 +84,6 @@ def _die(message: str) -> NoReturn:
     sys.exit(1)
 
 
-def _setting(name: str) -> str:
-    """Return a value that the justfile exports (MSB_NAME, MSB_IMAGE, MSB_WORKSPACE). Stop if it is not set, which happens when you run msb.py by hand."""
-    return os.environ.get(name) or _die(f"{name} is not set. Run this through `just msb <recipe>`.")
-
-
 def _out(*cmd: str, default: str | None = None) -> str:
     """Run a command in .msb/ (inside the repo) and return its output without the final newline.
 
@@ -111,7 +102,7 @@ def _image_id() -> str:
 
     The id is part of the fingerprint of the VM, so a new image makes the VM not current.
     """
-    image = _setting("MSB_IMAGE")
+    image = os.environ["MSB_IMAGE"]
     return _out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or _die(
         f"the image {image} does not exist. Run: just msb image-build"
     )
@@ -227,31 +218,7 @@ def _host_values() -> dict[str, str]:
     }
 
 
-def _host_port_rules() -> list[str]:
-    """Return the `--net-rule` arguments of `msb run` that let the VM reach the ports of HOST_PORTS on the host.
-
-    sandbox.yaml cannot express a rule for a port, so msb.py adds these rules when it makes the VM.
-    """
-    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
-
-
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
-
-
-def preflight() -> None:
-    """Check what `run` needs, before it starts anything. It stops at the first problem and prints nothing if all is well.
-
-    It checks four things. msb and bws are on the PATH. The GitHub token file and the Claude login of the host exist. The local image exists.
-    """
-    if not shutil.which("msb"):
-        _die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
-    if not shutil.which("bws"):
-        _die("bws is not on the PATH. Run: mise install")
-    if not GITHUB_TOKEN_FILE.is_file():
-        _die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
-    if not CLAUDE_CREDENTIALS.is_file():
-        _die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
-    _image_id()
 
 
 def github_login() -> None:
@@ -283,7 +250,7 @@ def ensure_vm() -> None:
     2. A VM exists, but it does not run or it has another fingerprint: stop. If you remove it, its clone goes too, so you decide.
     3. A VM exists, runs and is current: give it the current two tokens with `msb modify --secret`. It does not restart.
     """
-    name = _setting("MSB_NAME")
+    name = os.environ["MSB_NAME"]
     values = _host_values()
     tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
     # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token and the branch are not in it.
@@ -302,9 +269,10 @@ def ensure_vm() -> None:
     if not info:
         # A failed boot leaves a stale folder. Then msb says "already exists" (microsandbox issue 1908). `msb inspect` does not show it.
         shutil.rmtree(Path(os.environ.get("MSB_HOME", Path.home() / ".microsandbox")) / "sandboxes" / name, ignore_errors=True)
+        port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
         # msb reads the value of each secret of sandbox.yaml from its environment: the two tokens, and the Bitwarden keys (from `bws run`).
         done = subprocess.run(
-            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *_host_port_rules()],
+            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
             env=os.environ | values | tokens,
             check=False,
         )
@@ -341,7 +309,7 @@ def wait_boot() -> None:
     sandbox-boot clones the repo, installs the hook and starts Headroom. If a step fails, it exits and the VM stops, so the wait ends.
     Then print the end of the boot log on stderr and exit with 1.
     """
-    name = _setting("MSB_NAME")
+    name = os.environ["MSB_NAME"]
     # sandbox-boot clones the repo, installs the hook and starts Headroom. Then it writes /run/sandbox-ready.
     # If a step fails, sandbox-boot exits with an error and the VM stops. The wait then ends, and the boot log shows the reason.
     wait = ["msb", "exec", name, "--", "sh", "-c", "until [ -f /run/sandbox-ready ]; do sleep 1; done"]
@@ -353,17 +321,6 @@ def wait_boot() -> None:
         log = _out("msb", "logs", name, default="").splitlines()[-15:]
         print(f"msb: the VM did not finish its boot. This is the end of its log (msb logs {name}):\n" + "\n".join(log), file=sys.stderr)
         sys.exit(1)
-
-
-def ssh_key() -> None:
-    """Print the path of your SSH public key. `setup` gives it to `msb ssh authorize`.
-
-    The default is ~/.ssh/id_ed25519.pub. The variable SANDBOX_SSH_PUBKEY changes it. Stop if the file does not exist.
-    """
-    key = Path(os.environ.get("SANDBOX_SSH_PUBKEY", Path.home() / ".ssh" / "id_ed25519.pub"))
-    if not key.is_file():
-        _die(f"there is no SSH public key at {key}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY.")
-    print(key)
 
 
 def vscode_settings() -> None:
@@ -379,53 +336,22 @@ def vscode_settings() -> None:
         print(f"VS Code settings changed in {path}. New VS Code windows use them.")
 
 
-def check_host(host: str) -> None:
-    """Stop if HOST is not a valid host name: an optional `*.`, then letters, digits, dots and hyphens. `allow-host` calls this before it writes the name to sandbox.yaml."""
-    if not re.fullmatch(r"(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?", host):
-        _die(f"{host} is not a host name.")
-
-
-def image_tags() -> None:
-    """Print the tags of the published image, one for each line. `image-publish` calls this.
-
-    The tags are the commit, `latest` (only on main) and the git tag of the commit (if it has one).
-    Stop if dev-tools/ differs from the commit, because the tag is the commit.
-    """
-    if _out("git", "status", "--porcelain", "--", "dev-tools"):
-        _die("dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first.")
-    tags = [_out("git", "rev-parse", "HEAD")]
-    if _out("git", "branch", "--show-current") == "main":
-        tags.append("latest")
-    if git_tag := _out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
-        tags.append(git_tag)
-    print("\n".join(tags))
-
-
 def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("preflight", "github-login", "ensure-vm", "wait-boot", "ssh-key", "vscode-settings", "image-tags"):
+    for step in ("github-login", "ensure-vm", "wait-boot", "vscode-settings"):
         steps.add_parser(step)
-    steps.add_parser("check-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
-        case "preflight":
-            preflight()
         case "github-login":
             github_login()
         case "ensure-vm":
             ensure_vm()
         case "wait-boot":
             wait_boot()
-        case "ssh-key":
-            ssh_key()
         case "vscode-settings":
             vscode_settings()
-        case "check-host":
-            check_host(args.host)
-        case "image-tags":
-            image_tags()
 
 
 if __name__ == "__main__":
