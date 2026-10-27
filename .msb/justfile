@@ -70,16 +70,18 @@ github-login: _host-only (_need 'bws uv')
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN. If it is missing, `bws` stops the recipe with its own message.
 # The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
-# The digest comes from the metadata file of buildx. `pin-image` writes it in sandbox.yaml.
+# The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
-build: _host-only (_need 'bws docker uv')
+build: _host-only (_need 'bws docker jq yq')
     bws run -- 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
       --metadata-file {{ build_metadata }} --output {{ image_output }}
     docker logout {{ registry_host }}
-    {{ step }} pin-image '{{ registry }}' '{{ build_metadata }}'
+    digest=$(jq -r '."containerimage.digest"' {{ build_metadata }}) \
+      && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
+      && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.

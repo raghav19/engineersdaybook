@@ -12,7 +12,6 @@ Run msb.py with `just msb <recipe>`. The justfile does the small checks (the too
 vscode-settings  merge the settings that Remote-SSH needs into the VS Code user settings file. Your other settings stay.
 github-login     log in to GitHub with the GitHub App (web flow). The tokens go to a file with mode 600.
                  The recipe runs this step under `bws run`, which gives it the client secret.
-pin-image        set the image in sandbox.yaml to the registry and the digest that `just msb build` pushed. The comments of the file stay.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
@@ -85,19 +84,6 @@ def _die(message: str) -> NoReturn:
     """Print `msb: <message>` on stderr and exit with 1. Every failed step ends here."""
     print(f"msb: {message}", file=sys.stderr)
     sys.exit(1)
-
-
-def _out(*cmd: str, default: str | None = None) -> str:
-    """Run a command in .msb/ (inside the repo) and return its output without the final newline.
-
-    If the command fails, return `default`. If there is no default, stop with the message of the command.
-    """
-    done = subprocess.run(cmd, capture_output=True, text=True, check=False, cwd=MSB_DIR)
-    if done.returncode == 0:
-        return done.stdout.strip()
-    if default is None:
-        _die(f"`{' '.join(cmd)}` failed: {done.stderr.strip()}")
-    return default
 
 
 def _fingerprint() -> str:
@@ -250,23 +236,6 @@ def github_login() -> None:
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
 
 
-def pin_image(registry: str, metadata: Path) -> None:
-    """Set image.oci in sandbox.yaml to `<registry>@<digest>`. `just msb build` runs this after it pushes the image.
-
-    The digest is in `metadata`, the file that `docker buildx build --metadata-file` writes. The comments, the quotes and the order of the file stay.
-    A new digest changes the fingerprint of the VM, so the next `run` tells you to make the VM again.
-    """
-    digest = json.loads(metadata.read_text())["containerimage.digest"]
-    yaml = YAML()
-    yaml.preserve_quotes = True
-    yaml.indent(mapping=2, sequence=4, offset=2)
-    yaml.width = 4096  # the value is long. Do not wrap it onto the next line.
-    config = yaml.load(CONFIG)
-    config["image"]["oci"] = f"{registry}@{digest}"
-    yaml.dump(config, CONFIG)
-    print(f"sandbox.yaml pins {registry}@{digest}. Commit it. Then run: just msb rm && just msb run")
-
-
 def ensure_vm() -> None:
     """Make the VM, or start the VM that exists. Then run sandbox-boot in it. The recipe runs this step under `bws run`.
 
@@ -350,11 +319,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
-    steps.add_parser("github-login")
-    pin = steps.add_parser("pin-image")
-    pin.add_argument("registry")
-    pin.add_argument("metadata", type=Path)
-    steps.add_parser("ensure-vm")
+    for step in ("github-login", "ensure-vm"):
+        steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
@@ -362,8 +328,6 @@ def main() -> None:
             vscode_settings(args.file)
         case "github-login":
             github_login()
-        case "pin-image":
-            pin_image(args.registry, args.metadata)
         case "ensure-vm":
             ensure_vm()
         case "allow-host":

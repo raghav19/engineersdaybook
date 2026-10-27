@@ -83,7 +83,7 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - The justfile lists the steps of each recipe in order. Bash does the small jobs.
 - Each recipe starts with the private recipe `_need`. It stops with a message if a tool of the recipe is not on the `PATH`.
 - The top of the justfile has variables for the SSH key, the VS Code settings file, the VM user and the registry.
-- `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `pin-image`, `ensure-vm` and `allow-host`. It is a `uv` script. Its one dependency is `ruamel.yaml`, and `uv` installs it on the first run.
+- `msb.py` has only what needs Python: `vscode-settings`, `github-login`, `ensure-vm` and `allow-host`. It is a `uv` script. Its one dependency is `ruamel.yaml`, and `uv` installs it on the first run.
 - You can run a step alone, for example `.msb/msb.py ensure-vm`, if the environment has `MSB_NAME` and `MSB_WORKSPACE`.
 - Every function has a docstring. The helpers start with `_` and stand at the top of the file. The steps follow, in the order of the cases in `main()`.
 
