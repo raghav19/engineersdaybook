@@ -6,7 +6,7 @@
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
-The justfile exports MSB_NAME and MSB_IMAGE. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb on the PATH, the SSH key, the name of a host, the tags of the image) and the
+The justfile exports MSB_NAME and MSB_IMAGE, and puts the git values that sandbox.yaml names in the environment. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb on the PATH, the SSH key, the name of a host, the tags of the image) and the
 VS Code settings are in the justfile.
 
 github-login     log in to GitHub with the GitHub App (web flow, with the client secret from Bitwarden). The tokens go to a file with mode 600
@@ -181,19 +181,6 @@ def _claude_token() -> str:
     return login["accessToken"]
 
 
-def _host_values() -> dict[str, str]:
-    """Return the host values that sandbox.yaml names as ${NAME}: the git directory, the branch, and the git name and email.
-
-    They come from git on the host. The VM clones the git directory and starts on the branch, and the commits in the VM have this author.
-    """
-    return {
-        "SANDBOX_GIT_DIR": _out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
-        "SANDBOX_BRANCH": _out("git", "branch", "--show-current"),
-        "GIT_AUTHOR_NAME": _out("git", "config", "user.name", default="agent"),
-        "GIT_AUTHOR_EMAIL": _out("git", "config", "user.email", default="agent@localhost"),
-    }
-
-
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -227,15 +214,15 @@ def ensure_vm() -> None:
     3. A VM exists, runs and is current: give it the current two tokens with `msb modify --secret`. It does not restart.
     """
     name = os.environ["MSB_NAME"]
-    values = _host_values()
     tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
     # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token and the branch are not in it.
+    # The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL), where msb reads them.
     parts = [
         CONFIG.read_text(),
         _image_id(),
-        values["SANDBOX_GIT_DIR"],
-        values["GIT_AUTHOR_NAME"],
-        values["GIT_AUTHOR_EMAIL"],
+        os.environ["SANDBOX_GIT_DIR"],
+        os.environ["GIT_AUTHOR_NAME"],
+        os.environ["GIT_AUTHOR_EMAIL"],
         str(HOST_PORTS),
     ]
     wanted = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
@@ -249,7 +236,7 @@ def ensure_vm() -> None:
         # msb reads the value of each secret of sandbox.yaml from its environment: the two tokens, and the Bitwarden keys (from `bws run`).
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
-            env=os.environ | values | tokens,
+            env=os.environ | tokens,
             check=False,
         )
         if done.returncode != 0:
