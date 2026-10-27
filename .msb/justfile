@@ -23,7 +23,8 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
-registry := 'ghcr.io/raghav19/engineersdaybook/dev-sbx'
+registry_host := 'ghcr.io'
+registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
 # The timestamp of every file of the published image (a fixed date in 2023). Do not change it: a new value gives every layer a new digest.
 image_epoch := '1700000000'
@@ -61,41 +62,25 @@ _vault:
     command -v bws >/dev/null || { echo "msb: bws is not on the PATH. Run: mise install" >&2; exit 1; }
     [ -n "${BWS_ACCESS_TOKEN:-}" ] || { echo "msb: BWS_ACCESS_TOKEN is not set. Set it, for example: export BWS_ACCESS_TOKEN=\$(cat ~/.config/bws/access-token)" >&2; exit 1; }
 
-# The tags are the commit, `latest` on main and the git tag of the commit (the recipe stops if dev-tools/ differs from the commit). All files get the same fixed timestamp (image_epoch), and the build adds no
-# provenance and no SBOM. So the same files give the same digest. The date of the last commit would not work: a new commit would change the timestamp of
-# every file, so every layer would get a new digest and no layer could be reused.
-# The layers of every stage go to the registry as a cache (the tag `cache`). A new version of one tool rebuilds one stage, and any machine gets the other stages from the cache.
-# The cache needs a builder with the docker-container driver. The default builder cannot export it, so the recipe makes the builder `msb-builder` once.
-# The push token is the Bitwarden key GITHUB_TOKEN (a classic token with the scope write:packages). `bws run` gives it to the login command only. The login goes
-# to a temporary Docker config folder that the recipe removes at the end. So no login stays on disk, and your ~/.docker/config.json is not used or changed.
-
-# Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits)
+# Maintainer. Build the image and push it to ghcr.io with zstd layers (level 9, as the sbx kits). The tags are the commit, `latest` on main and the git tag of the commit.
+# image_epoch is one fixed timestamp for all files. With no provenance and no SBOM, the same files give the same digest. So a new commit reuses the old layers.
+# The layers of every stage go to the registry (the tag `cache`), so any machine rebuilds only the stage that changed. That needs the builder msb-builder (docker-container driver).
+# The push token is the Bitwarden key GITHUB_TOKEN (scope write:packages). It goes from `bws run` through a pipe to a login in a temporary Docker config folder, which the recipe removes.
+# No login stays on disk, and no command line or just variable holds the token (`just --evaluate` would print a variable).
 [script]
 image-publish: _host-only _vault
-    [ -z "$(git status --porcelain -- dev-tools)" ] || { echo "msb: dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first." >&2; exit 1; }
-    tags=$(git rev-parse HEAD)
-    [ "$(git branch --show-current)" != main ] || tags="$tags latest"
-    git_tag=$(git describe --exact-match --tags HEAD 2>/dev/null || true)
-    [ -z "$git_tag" ] || tags="$tags $git_tag"
+    [ -z "$(git status --porcelain -- dev-tools)" ] || { echo "msb: dev-tools/ differs from the commit. Commit it first: the tag of the image is the commit." >&2; exit 1; }
+    tags=(-t "{{ registry }}:$(git rev-parse HEAD)")
+    [ "$(git branch --show-current)" != main ] || tags+=(-t "{{ registry }}:latest")
+    git describe --exact-match --tags HEAD >/dev/null 2>&1 && tags+=(-t "{{ registry }}:$(git describe --exact-match --tags HEAD)")
     docker buildx inspect msb-builder >/dev/null 2>&1 || docker buildx create --name msb-builder --driver docker-container >/dev/null
-    args=()
-    for tag in $tags; do args+=(-t "{{ registry }}:$tag"); done
-    meta=$(mktemp)
-    login=$(mktemp -d)
-    trap 'rm -rf -- "$login" "$meta"' EXIT
-    reg='{{ registry }}'
-    bws run -- 'printf %s "$GITHUB_TOKEN" | DOCKER_CONFIG='"$login"' docker login '"${reg%%/*}"' -u {{ registry_user }} --password-stdin'
-    # The builder and its state stay where they are. Only the login is in the temporary folder.
-    export DOCKER_CONFIG="$login" BUILDX_CONFIG="${BUILDX_CONFIG:-$HOME/.docker/buildx}"
-    docker buildx build --builder msb-builder {{ msb_dir }}/dev-tools "${args[@]}" \
-      --provenance=false --sbom=false \
-      --cache-from type=registry,ref={{ registry }}:cache \
-      --cache-to type=registry,ref={{ registry }}:cache,mode=max \
-      --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
-      --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true \
-      --metadata-file "$meta"
-    digest=$(jq -r '."containerimage.digest"' "$meta")
-    echo "published {{ registry }}@$digest with the tags: $tags"
+    export BUILDX_CONFIG="${BUILDX_CONFIG:-$HOME/.docker/buildx}" DOCKER_CONFIG=$(mktemp -d)
+    trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
+    bws run -- 'printf %s "$GITHUB_TOKEN"' | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin
+    docker buildx build --builder msb-builder {{ msb_dir }}/dev-tools "${tags[@]}" \
+      --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
+      --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
+      --output type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true
 
 # Every day. Make the VM from sandbox.yaml if none exists, then open VS Code on it
 run: _host-only _vault
