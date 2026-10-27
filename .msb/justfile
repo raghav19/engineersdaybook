@@ -121,10 +121,8 @@ run: _host-only
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Allow one more host for the VM: add it to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
-allow-host host: _host-only && run
-    [[ '{{ host }}' =~ ^(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || { echo "msb: {{ host }} is not a host name." >&2; exit 1; }
-    HOST='{{ host }}' yq -i '.network.allow += [strenv(HOST)] | .network.allow |= unique' {{ msb_dir }}/sandbox.yaml
-    echo "{{ host }} is now in network.allow."
+allow-host $host: _host-only && run
+    {{ step }} allow-host "$host"
 
 # A bash prompt in the VM, as the agent user
 shell: _host-only

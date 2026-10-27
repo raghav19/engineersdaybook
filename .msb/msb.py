@@ -1,25 +1,27 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = "==3.13.*"
-# dependencies = []
+# dependencies = ["ruamel.yaml==0.19.1"]
 # ///
 """The steps of the msb sandbox recipes: msb.py <step>
 
 The justfile has the recipes and the order of the steps. This file has the logic of each step. Exit 1: wrong setup or a failed step.
-The justfile exports MSB_NAME and MSB_IMAGE, and puts the git values that sandbox.yaml names in the environment. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb on the PATH, the SSH key, the name of a host, the tags of the image) and the
+The justfile exports MSB_NAME and MSB_IMAGE, and puts the git values that sandbox.yaml names in the environment. Run msb.py through `just msb <recipe>`. The checks that bash does well (msb on the PATH, the SSH key) and the
 VS Code settings are in the justfile.
 
 github-login     log in to GitHub with the GitHub App (web flow, with the client secret from Bitwarden). The tokens go to a file with mode 600
                  The recipe runs this step under `bws run`
 ensure-vm        make the VM from sandbox.yaml if none exists. If a VM exists and is current, give it the current GitHub and Claude tokens.
                  Else stop. The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment
-wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log
+wait-boot        wait until sandbox-boot is ready. If it fails, print the end of the boot log.
+allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -31,6 +33,9 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 from typing import NoReturn
+
+from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
@@ -286,12 +291,35 @@ def wait_boot() -> None:
         sys.exit(1)
 
 
+def allow_host(host: str) -> None:
+    """Add `host` to network.allow in sandbox.yaml. The comments, the quotes and the order of the file stay as they are.
+
+    A host is a name such as api.example.com, or a wildcard such as *.example.com. If the list has the host already, the file does not change.
+    """
+    if not re.fullmatch(r"(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?", host):
+        _die(f"{host!r} is not a host name.")
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    # Keep the layout of the file: a key is 2 spaces in, and the dash of a list item is 2 spaces further in.
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    config = yaml.load(CONFIG)
+    allow = config["network"]["allow"]
+    if host in allow:
+        print(f"{host} is in network.allow already.")
+        return
+    # The file quotes the wildcards and nothing else.
+    allow.append(DoubleQuotedScalarString(host) if host.startswith("*") else host)
+    yaml.dump(config, CONFIG)
+    print(f"{host} is now in network.allow.")
+
+
 def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
     for step in ("github-login", "ensure-vm", "wait-boot"):
         steps.add_parser(step)
+    steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
         case "github-login":
@@ -300,6 +328,8 @@ def main() -> None:
             ensure_vm()
         case "wait-boot":
             wait_boot()
+        case "allow-host":
+            allow_host(args.host)
 
 
 if __name__ == "__main__":
