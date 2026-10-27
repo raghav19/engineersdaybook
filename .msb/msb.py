@@ -79,18 +79,21 @@ VSCODE_SETTINGS = {
 }
 
 
-def die(message: str) -> NoReturn:
+# --- Helpers. They start with _ : only the functions below call them. A helper stands above the code that calls it. ---
+
+
+def _die(message: str) -> NoReturn:
     """Print `msb: <message>` on stderr and exit with 1. Every failed step ends here."""
     print(f"msb: {message}", file=sys.stderr)
     sys.exit(1)
 
 
-def setting(name: str) -> str:
+def _setting(name: str) -> str:
     """Return a value that the justfile exports (MSB_NAME, MSB_IMAGE, MSB_WORKSPACE). Stop if it is not set, which happens when you run msb.py by hand."""
-    return os.environ.get(name) or die(f"{name} is not set. Run this through `just msb <recipe>`.")
+    return os.environ.get(name) or _die(f"{name} is not set. Run this through `just msb <recipe>`.")
 
 
-def out(*cmd: str, default: str | None = None) -> str:
+def _out(*cmd: str, default: str | None = None) -> str:
     """Run a command in .msb/ (inside the repo) and return its output without the final newline.
 
     If the command fails, return `default`. If there is no default, stop with the message of the command.
@@ -99,50 +102,36 @@ def out(*cmd: str, default: str | None = None) -> str:
     if done.returncode == 0:
         return done.stdout.strip()
     if default is None:
-        die(f"`{' '.join(cmd)}` failed: {done.stderr.strip()}")
+        _die(f"`{' '.join(cmd)}` failed: {done.stderr.strip()}")
     return default
 
 
-def preflight() -> None:
-    """Check what `run` needs, before it starts anything. It stops at the first problem and prints nothing if all is well.
-
-    It checks four things. msb and bws are on the PATH. The GitHub token file and the Claude login of the host exist. The local image exists.
-    """
-    if not shutil.which("msb"):
-        die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
-    if not shutil.which("bws"):
-        die("bws is not on the PATH. Run: mise install")
-    if not GITHUB_TOKEN_FILE.is_file():
-        die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
-    if not CLAUDE_CREDENTIALS.is_file():
-        die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
-    image_id()
-
-
-def image_id() -> str:
+def _image_id() -> str:
     """Return the id of the local Docker image MSB_IMAGE. Stop with a hint if the image does not exist.
 
     The id is part of the fingerprint of the VM, so a new image makes the VM not current.
     """
-    image = setting("MSB_IMAGE")
-    return out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or die(
+    image = _setting("MSB_IMAGE")
+    return _out("docker", "image", "inspect", image, "--format", "{{.Id}}", default="") or _die(
         f"the image {image} does not exist. Run: just msb image-build"
     )
 
 
-def github_exchange(**data: str) -> str:
+def _github_exchange(**data: str) -> str:
     """Send `data` and the client credentials of the GitHub App to GitHub, save the tokens that come back, and return the access token.
 
     The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET, which `bws run` puts in the environment.
     The token file has mode 600. It keeps the access token, the refresh token and the time when the access token ends.
     """
-    secret = os.environ.get("GITHUB_APP_CLIENT_SECRET") or die("GITHUB_APP_CLIENT_SECRET is not set. Run this through `just msb <recipe>`.")
+    secret = os.environ.get("GITHUB_APP_CLIENT_SECRET") or _die(
+        "GITHUB_APP_CLIENT_SECRET is not set. Run this through `just msb <recipe>`."
+    )
     body = urllib.parse.urlencode({"client_id": GITHUB_CLIENT_ID, "client_secret": secret, **data}).encode()
     request = urllib.request.Request("https://github.com/login/oauth/access_token", data=body, headers={"Accept": "application/json"})
     with urllib.request.urlopen(request, timeout=30) as response:
         reply = json.load(response)
     if "access_token" not in reply:
-        die(f"GitHub refused the request ({reply.get('error')}). Run: just msb github-login")
+        _die(f"GitHub refused the request ({reply.get('error')}). Run: just msb github-login")
     saved = {
         "access_token": reply["access_token"],
         "refresh_token": reply.get("refresh_token"),
@@ -154,6 +143,85 @@ def github_exchange(**data: str) -> str:
     with os.fdopen(fd, "w") as file:
         json.dump(saved, file)
     return saved["access_token"]
+
+
+def _github_token() -> str:
+    """Return the GitHub access token from the token file. `ensure-vm` calls this.
+
+    If the token ends in less than REFRESH_MARGIN seconds, ask GitHub for a new one with the refresh token and save it first.
+    Each refresh gives a new refresh token. Stop if there is no file. If GitHub refuses the refresh, the message says to log in again.
+    """
+    if not GITHUB_TOKEN_FILE.is_file():
+        _die("there is no GitHub login. Run: just msb github-login")
+    saved = json.loads(GITHUB_TOKEN_FILE.read_text())
+    if saved["expires_at"] - time.time() > REFRESH_MARGIN:
+        return saved["access_token"]
+    return _github_exchange(grant_type="refresh_token", refresh_token=saved["refresh_token"])
+
+
+def _claude_token() -> str:
+    """Return the access token of the Claude login that `claude` keeps on this host. `ensure-vm` calls this.
+
+    The login is the key `claudeAiOauth` in ~/.claude/.credentials.json (Linux). The VM does not log in: it has a placeholder, as sbx does.
+    This function only reads the file. It never refreshes the token: `claude` on the host does that and rotates the refresh token,
+    and a second refresh from here would make the refresh token of `claude` useless.
+    Stop in four cases:
+    - there is no file, or its mode is not 600
+    - it is not a subscription login
+    - the token lasts less than REFRESH_MARGIN seconds
+    """
+    if not CLAUDE_CREDENTIALS.is_file():
+        _die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
+    if CLAUDE_CREDENTIALS.stat().st_mode & 0o077:
+        _die(f"{CLAUDE_CREDENTIALS} must have mode 600.")
+    login = json.loads(CLAUDE_CREDENTIALS.read_text()).get("claudeAiOauth")
+    if not login or "accessToken" not in login:
+        _die("the Claude login of this host is not a subscription login. Run `claude` and sign in with your subscription.")
+    if login["expiresAt"] / 1000 - time.time() < REFRESH_MARGIN:
+        _die(
+            "the Claude login of this host expires soon or is no longer valid. Start `claude` on the host to refresh it, then run this again."
+        )
+    return login["accessToken"]
+
+
+def _host_values() -> dict[str, str]:
+    """Return the host values that sandbox.yaml names as ${NAME}: the git directory, the branch, and the git name and email.
+
+    They come from git on the host. The VM clones the git directory and starts on the branch, and the commits in the VM have this author.
+    """
+    return {
+        "SANDBOX_GIT_DIR": _out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
+        "SANDBOX_BRANCH": _out("git", "branch", "--show-current"),
+        "GIT_AUTHOR_NAME": _out("git", "config", "user.name", default="agent"),
+        "GIT_AUTHOR_EMAIL": _out("git", "config", "user.email", default="agent@localhost"),
+    }
+
+
+def _host_port_rules() -> list[str]:
+    """Return the `--net-rule` arguments of `msb run` that let the VM reach the ports of HOST_PORTS on the host.
+
+    sandbox.yaml cannot express a rule for a port, so msb.py adds these rules when it makes the VM.
+    """
+    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
+
+
+# --- Steps. One function for each step of main(), in the order of the cases there. ---
+
+
+def preflight() -> None:
+    """Check what `run` needs, before it starts anything. It stops at the first problem and prints nothing if all is well.
+
+    It checks four things. msb and bws are on the PATH. The GitHub token file and the Claude login of the host exist. The local image exists.
+    """
+    if not shutil.which("msb"):
+        _die('msb is not on the PATH. Run: mise install && eval "$(mise activate bash)"')
+    if not shutil.which("bws"):
+        _die("bws is not on the PATH. Run: mise install")
+    if not GITHUB_TOKEN_FILE.is_file():
+        _die("there is no GitHub login, so git push in the VM fails. Run: just msb github-login")
+    if not CLAUDE_CREDENTIALS.is_file():
+        _die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
+    _image_id()
 
 
 def github_login() -> None:
@@ -188,69 +256,9 @@ def github_login() -> None:
         server.handle_request()
     server.server_close()
     if got.get("state") != [state] or "code" not in got:
-        die("there was no valid approval in time. Run: just msb github-login")
-    github_exchange(code=got["code"][0], redirect_uri=redirect)
+        _die("there was no valid approval in time. Run: just msb github-login")
+    _github_exchange(code=got["code"][0], redirect_uri=redirect)
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
-
-
-def github_token() -> str:
-    """Return the GitHub access token from the token file. `ensure-vm` calls this.
-
-    If the token ends in less than REFRESH_MARGIN seconds, ask GitHub for a new one with the refresh token and save it first.
-    Each refresh gives a new refresh token. Stop if there is no file. If GitHub refuses the refresh, the message says to log in again.
-    """
-    if not GITHUB_TOKEN_FILE.is_file():
-        die("there is no GitHub login. Run: just msb github-login")
-    saved = json.loads(GITHUB_TOKEN_FILE.read_text())
-    if saved["expires_at"] - time.time() > REFRESH_MARGIN:
-        return saved["access_token"]
-    return github_exchange(grant_type="refresh_token", refresh_token=saved["refresh_token"])
-
-
-def claude_token() -> str:
-    """Return the access token of the Claude login that `claude` keeps on this host. `ensure-vm` calls this.
-
-    The login is the key `claudeAiOauth` in ~/.claude/.credentials.json (Linux). The VM does not log in: it has a placeholder, as sbx does.
-    This function only reads the file. It never refreshes the token: `claude` on the host does that and rotates the refresh token,
-    and a second refresh from here would make the refresh token of `claude` useless.
-    Stop in four cases:
-    - there is no file, or its mode is not 600
-    - it is not a subscription login
-    - the token lasts less than REFRESH_MARGIN seconds
-    """
-    if not CLAUDE_CREDENTIALS.is_file():
-        die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
-    if CLAUDE_CREDENTIALS.stat().st_mode & 0o077:
-        die(f"{CLAUDE_CREDENTIALS} must have mode 600.")
-    login = json.loads(CLAUDE_CREDENTIALS.read_text()).get("claudeAiOauth")
-    if not login or "accessToken" not in login:
-        die("the Claude login of this host is not a subscription login. Run `claude` and sign in with your subscription.")
-    if login["expiresAt"] / 1000 - time.time() < REFRESH_MARGIN:
-        die(
-            "the Claude login of this host expires soon or is no longer valid. Start `claude` on the host to refresh it, then run this again."
-        )
-    return login["accessToken"]
-
-
-def host_values() -> dict[str, str]:
-    """Return the host values that sandbox.yaml names as ${NAME}: the git directory, the branch, and the git name and email.
-
-    They come from git on the host. The VM clones the git directory and starts on the branch, and the commits in the VM have this author.
-    """
-    return {
-        "SANDBOX_GIT_DIR": out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"),
-        "SANDBOX_BRANCH": out("git", "branch", "--show-current"),
-        "GIT_AUTHOR_NAME": out("git", "config", "user.name", default="agent"),
-        "GIT_AUTHOR_EMAIL": out("git", "config", "user.email", default="agent@localhost"),
-    }
-
-
-def host_port_rules() -> list[str]:
-    """Return the `--net-rule` arguments of `msb run` that let the VM reach the ports of HOST_PORTS on the host.
-
-    sandbox.yaml cannot express a rule for a port, so msb.py adds these rules when it makes the VM.
-    """
-    return [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
 
 
 def ensure_vm() -> None:
@@ -262,13 +270,13 @@ def ensure_vm() -> None:
     2. A VM exists, but it does not run or it has another fingerprint: stop. If you remove it, its clone goes too, so you decide.
     3. A VM exists, runs and is current: give it the current two tokens with `msb modify --secret`. It does not restart.
     """
-    name = setting("MSB_NAME")
-    values = host_values()
-    tokens = {"GH_TOKEN": github_token(), "CLAUDE_CODE_OAUTH_TOKEN": claude_token()}
+    name = _setting("MSB_NAME")
+    values = _host_values()
+    tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
     # The fingerprint is a hash of sandbox.yaml, the image and the host values. The token and the branch are not in it.
     parts = [
         CONFIG.read_text(),
-        image_id(),
+        _image_id(),
         values["SANDBOX_GIT_DIR"],
         values["GIT_AUTHOR_NAME"],
         values["GIT_AUTHOR_EMAIL"],
@@ -277,18 +285,18 @@ def ensure_vm() -> None:
     wanted = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
     # msb keeps the fingerprint of the VM in the label config-sha.
-    info = out("msb", "inspect", name, "--format", "json", default="")
+    info = _out("msb", "inspect", name, "--format", "json", default="")
     if not info:
         # A failed boot leaves a stale folder. Then msb says "already exists" (microsandbox issue 1908). `msb inspect` does not show it.
         shutil.rmtree(Path(os.environ.get("MSB_HOME", Path.home() / ".microsandbox")) / "sandboxes" / name, ignore_errors=True)
         # msb reads the value of each secret of sandbox.yaml from its environment: the two tokens, and the Bitwarden keys (from `bws run`).
         done = subprocess.run(
-            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *host_port_rules()],
+            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *_host_port_rules()],
             env=os.environ | values | tokens,
             check=False,
         )
         if done.returncode != 0:
-            die("msb could not make the VM (its message is above).")
+            _die("msb could not make the VM (its message is above).")
         return
     vm = json.loads(info)
     status = vm["status"].lower()
@@ -299,10 +307,10 @@ def ensure_vm() -> None:
             f"msb: {name} is {status}. It is not current: sandbox.yaml, the image or a host value changed, or the VM stopped.",
             file=sys.stderr,
         )
-        die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
+        _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     # The VM runs and is current. Give it the current tokens. The placeholders in the VM stay, and the VM does not restart.
     for secret, value in tokens.items():
-        hosts = out("yq", "-r", f'.secrets.{secret}.allow | join(",")', str(CONFIG))
+        hosts = _out("yq", "-r", f'.secrets.{secret}.allow | join(",")', str(CONFIG))
         done = subprocess.run(
             ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
             env=os.environ | {secret: value},
@@ -311,7 +319,7 @@ def ensure_vm() -> None:
             check=False,
         )
         if done.returncode != 0:
-            die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
+            _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
 
 
 def wait_boot() -> None:
@@ -320,7 +328,7 @@ def wait_boot() -> None:
     sandbox-boot clones the repo, installs the hook and starts Headroom. If a step fails, it exits and the VM stops, so the wait ends.
     Then print the end of the boot log on stderr and exit with 1.
     """
-    name = setting("MSB_NAME")
+    name = _setting("MSB_NAME")
     # sandbox-boot clones the repo, installs the hook and starts Headroom. Then it writes /run/sandbox-ready.
     # If a step fails, sandbox-boot exits with an error and the VM stops. The wait then ends, and the boot log shows the reason.
     wait = ["msb", "exec", name, "--", "sh", "-c", "until [ -f /run/sandbox-ready ]; do sleep 1; done"]
@@ -329,7 +337,7 @@ def wait_boot() -> None:
     except subprocess.TimeoutExpired:
         ready = False
     if not ready:
-        log = out("msb", "logs", name, default="").splitlines()[-15:]
+        log = _out("msb", "logs", name, default="").splitlines()[-15:]
         print(f"msb: the VM did not finish its boot. This is the end of its log (msb logs {name}):\n" + "\n".join(log), file=sys.stderr)
         sys.exit(1)
 
@@ -341,7 +349,7 @@ def ssh_key() -> None:
     """
     key = Path(os.environ.get("SANDBOX_SSH_PUBKEY", Path.home() / ".ssh" / "id_ed25519.pub"))
     if not key.is_file():
-        die(f"there is no SSH public key at {key}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY.")
+        _die(f"there is no SSH public key at {key}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY.")
     print(key)
 
 
@@ -361,7 +369,7 @@ def vscode_settings() -> None:
 def check_host(host: str) -> None:
     """Stop if HOST is not a valid host name: an optional `*.`, then letters, digits, dots and hyphens. `allow-host` calls this before it writes the name to sandbox.yaml."""
     if not re.fullmatch(r"(\*\.)?[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?", host):
-        die(f"{host} is not a host name.")
+        _die(f"{host} is not a host name.")
 
 
 def image_tags() -> None:
@@ -370,12 +378,12 @@ def image_tags() -> None:
     The tags are the commit, `latest` (only on main) and the git tag of the commit (if it has one).
     Stop if dev-tools/ differs from the commit, because the tag is the commit.
     """
-    if out("git", "status", "--porcelain", "--", "dev-tools"):
-        die("dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first.")
-    tags = [out("git", "rev-parse", "HEAD")]
-    if out("git", "branch", "--show-current") == "main":
+    if _out("git", "status", "--porcelain", "--", "dev-tools"):
+        _die("dev-tools/ differs from the commit. The tag of the image is the commit, so commit the changes first.")
+    tags = [_out("git", "rev-parse", "HEAD")]
+    if _out("git", "branch", "--show-current") == "main":
         tags.append("latest")
-    if git_tag := out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
+    if git_tag := _out("git", "describe", "--exact-match", "--tags", "HEAD", default=""):
         tags.append(git_tag)
     print("\n".join(tags))
 
