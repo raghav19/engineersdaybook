@@ -48,6 +48,7 @@ Rejected options:
 | The root `README.md` has two lines: a title and "my dabbling with tech and perspectives". | [repo] `README.md` |
 | Each folder under `code/` is an independent project with no shared domain. The index must not imply one. | [repo] `docs/agents/domain.md` |
 | `code/agent-sandbox` runs Claude Code in a microsandbox VM. The sandbox caps what a fooled agent can do. | [repo] `code/agent-sandbox/README.md` |
+| The sbx version of the agent sandbox is not on main. The index links to the git tag `docker-sbx`. | [repo] tag `docker-sbx` |
 | `code/mcp-sandbox` has no README of its own. It holds three parts, each with a README. | [repo] `code/mcp-sandbox/` |
 | Part 1 is a proof of concept against real GitHub infrastructure. The agent recognized the injected instruction twice and refused. | [repo] `code/mcp-sandbox/part-1-lethal-trifecta/README.md` |
 | Part 2 seals one local MCP server in rootless Docker. The only route out is an egress proxy that logs each outbound attempt. | [repo] `code/mcp-sandbox/part-2-sandboxing-local-mcp/README.md` |

@@ -40,7 +40,3 @@ Run it with `just msb setup`, `just msb build` and `just msb run`. The prerequis
 - **The agent's writes can leave.** Writes reach the one repository the App covers. If it is public, what the agent writes there is public.
 - **Prompt injection is not a sandbox control.** The sandbox limits the blast radius. It does not stop the model from following planted instructions.
 - **SPIRE and kind are not ported yet.** Node attestation (the SPIRE agent and Envoy in the VM) and the kind kubeconfig come in a separate change. See [`.msb/README.md`](../../.msb/README.md).
-
-## The Docker sbx version
-
-This project first ran on Docker sandboxes (`sbx`), with an MCP gateway and a policy kit. That version, with its write-up, demo, diagrams and threat table, is kept in the git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx/code/agent-sandbox). To work on it, run `git switch -c sbx-maintenance docker-sbx`. The differences between the two are in the table in [`.msb/README.md`](../../.msb/README.md#what-is-different-from-sbx).

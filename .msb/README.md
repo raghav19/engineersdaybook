@@ -2,8 +2,6 @@
 
 This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0). It replaced the Docker sbx sandbox and has no daemon. One file, `sandbox.yaml`, declares the whole VM.
 
-The Docker sbx sandbox (`.sbx/`) is no longer on main. The git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx) holds its last state. To work on it again, run `git switch -c sbx-maintenance docker-sbx`.
-
 ## What is different from sbx
 
 | | sbx (tag `docker-sbx`) | microsandbox (`.msb/`) |
