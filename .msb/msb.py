@@ -14,6 +14,8 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
+sync-token       give the running VM the current Claude token of the host, then restart Headroom. It does nothing if the VM has the token.
+                 `just msb sync` runs this step each time `claude` on the host changes its login.
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
@@ -48,6 +50,17 @@ GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
 CLAUDE_CREDENTIALS = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")) / ".credentials.json"
+CLAUDE_TOKEN_SEEN = Path.home() / ".config" / "msb" / "claude-token.sha256"  # the hash of the token that `sync-token` gave the VM last
+# Run in the VM as root. msb gives a new value of a secret to new connections only, so Headroom must close its old ones.
+# The restart is the same as in dev-tools/sandbox-boot. Headroom starts again as the agent user.
+HEADROOM_RESTART = """
+pkill -u agent -f 'headroom proxy' || true
+for _ in $(seq 50); do pgrep -u agent -f 'headroom proxy' >/dev/null || break; sleep 0.2; done
+runuser -u agent -- env HOME=/home/agent sh -c 'setsid nohup headroom proxy --port 8787 >/tmp/headroom.log 2>&1 &'
+for _ in $(seq 60); do curl -sf -o /dev/null http://127.0.0.1:8787/health && exit 0; sleep 1; done
+tail -n 20 /tmp/headroom.log >&2
+exit 1
+"""
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -197,6 +210,23 @@ def _claude_token() -> str:
     return login["accessToken"]
 
 
+def _rotate_secret(name: str, secret: str, value: str) -> None:
+    """Give the VM `name` the current `value` of `secret` with `msb modify`. The placeholder in the VM stays, and the VM does not restart.
+
+    msb gives the new value to the connections that the VM opens afterwards. A connection that is open keeps the old value.
+    """
+    hosts = ",".join(YAML().load(CONFIG)["secrets"][secret]["allow"])
+    done = subprocess.run(
+        ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
+        env=os.environ | {secret: value},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if done.returncode != 0:
+        _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
+
+
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -271,18 +301,8 @@ def ensure_vm() -> None:
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
     # Give the VM the current tokens. The placeholders in the VM stay, and the VM does not restart.
-    secrets_config = YAML().load(CONFIG)["secrets"]
     for secret, value in tokens.items():
-        hosts = ",".join(secrets_config[secret]["allow"])
-        done = subprocess.run(
-            ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
-            env=os.environ | {secret: value},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if done.returncode != 0:
-            _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
+        _rotate_secret(name, secret, value)
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
@@ -290,6 +310,28 @@ def ensure_vm() -> None:
         _die(
             "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
+
+
+def sync_token() -> None:
+    """Give the running VM the Claude token of the host now, then restart Headroom. Do nothing if the VM has this token already.
+
+    `claude` on the host refreshes its login and the old access token stops working. msb gives a new value to new connections only.
+    Headroom keeps its connections to api.anthropic.com open, so it keeps sending the old token. The restart closes them.
+    The file CLAUDE_TOKEN_SEEN has the hash of the token that this step gave the VM last. The justfile runs this step under `watchexec`.
+    """
+    name = os.environ["MSB_NAME"]
+    token = _claude_token()
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    if CLAUDE_TOKEN_SEEN.is_file() and CLAUDE_TOKEN_SEEN.read_text() == digest:
+        print("sync-token: the VM has this token already.")
+        return
+    _rotate_secret(name, "CLAUDE_CODE_OAUTH_TOKEN", token)
+    done = subprocess.run(["msb", "exec", name, "--", "bash", "-c", HEADROOM_RESTART], stdin=subprocess.DEVNULL, check=False)
+    if done.returncode != 0:
+        _die("Headroom did not restart in the VM (its message is above). Check that the VM runs (msb ls). Run: just msb run")
+    CLAUDE_TOKEN_SEEN.parent.mkdir(parents=True, exist_ok=True)
+    CLAUDE_TOKEN_SEEN.write_text(digest)
+    print("sync-token: the VM has the new token and Headroom restarted.")
 
 
 def allow_host(host: str) -> None:
@@ -319,7 +361,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
-    for step in ("github-login", "ensure-vm"):
+    for step in ("github-login", "ensure-vm", "sync-token"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -330,6 +372,8 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
+        case "sync-token":
+            sync_token()
         case "allow-host":
             allow_host(args.host)
 

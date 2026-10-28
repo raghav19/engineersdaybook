@@ -72,7 +72,7 @@ just msb run           # 3. every day
 
 In VS Code, open a terminal and run `claude`. It starts with the login of the host, so it does not ask you to sign in.
 
-Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host <host>` and `just msb rm`. `just msb rm --volumes` also removes the Claude settings, the Terraform provider cache and the podman images.
+Other recipes: `just msb sync` (keeps the Claude token of the VM current, see "Token refresh"), `just msb shell` (a bash prompt in the VM), `just msb allow-host <host>` and `just msb rm`. `just msb rm --volumes` also removes the Claude settings, the Terraform provider cache and the podman images.
 
 ## How it works
 
@@ -127,7 +127,12 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - `_claude_token()` only reads the access token of the login on the host. It never refreshes it. `claude` on the host refreshes it and rotates the refresh token. A second refresh from here would make the refresh token of `claude` useless.
 - If the Claude token lasts less than 30 minutes, `run` stops and tells you to start `claude` on the host.
 - At each run, after the VM is made or started, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders do not change, and the VM does not restart.
-- There is no timer. After about 8 hours without `just msb run`, GitHub and Claude answer 401 to requests from the VM. Run `just msb run` again to fix this.
+- There is no timer for GitHub. After about 8 hours without `just msb run`, GitHub answers 401 to requests from the VM. Run `just msb run` again to fix this.
+- For Claude, leave `just msb sync` running in a terminal. It uses `watchexec` to watch `~/.claude/.credentials.json`. It runs `msb.py sync-token` once at the start and again each time `claude` on the host changes its login.
+- `sync-token` does three things. It gives the VM the new token with `msb modify --secret`. It restarts Headroom in the VM. It saves the hash of the token in `~/.config/msb/claude-token.sha256`, so it does nothing if the VM has the token already.
+- The restart is needed because msb gives a new value to the connections that the VM opens afterwards. A connection that is open keeps the old value. Headroom keeps its connections to `api.anthropic.com` open, so without the restart it sends the old token and Claude answers 401 (`OAuth access token has been revoked`). The research is in `docs/research/microsandbox-credential-injection.md`.
+- The restart ends a request that Headroom is sending at that moment, and Claude Code sends it again. A `claude` session in the VM stays open.
+- `sync` only passes on a token that `claude` on the host has refreshed. If you do not use `claude` on the host for about 8 hours, the token ends and nothing refreshes it. Start `claude` on the host, and `sync` gives the new token to the VM.
 
 ### Secrets from Bitwarden
 
