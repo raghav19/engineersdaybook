@@ -26,6 +26,7 @@ uv     := require("uv")
 code   := require("code")
 docker := require("docker")
 jq     := require("jq")
+kubectl := require("kubectl")
 yq     := require("yq")
 
 # --- Required environment variables ---

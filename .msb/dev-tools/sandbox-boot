@@ -5,6 +5,7 @@
 # If a step fails, the script prints the reason and exits with 1.
 # Values from sandbox.yaml: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
 # The script does not set the git identity (sandbox.yaml does) or the GitHub token helper (the image does).
+# /run/spire (the join token and the trust bundle) comes from msb.py, which runs before this script.
 set -eu
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
@@ -42,6 +43,24 @@ for _ in $(seq 60); do
   sleep 1
 done
 curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
+
+# The SPIRE agent attests the VM to the SPIRE server of the kind cluster. msb.py (ensure-vm) puts a one-time join token and the trust bundle
+# in /run/spire when the agent is not healthy. An agent with a valid SVID needs no token. Without a token the node stays unattested: warn and go on.
+spire_log=$home/.spire/agent.log
+spire_ok() { as_agent spire-agent healthcheck -socketPath "$home/.spire/agent.sock" >/dev/null 2>&1; }
+if ! spire_ok; then
+  if [ -s /run/spire/join-token ] && [ -s /run/spire/bundle.spiffe ]; then
+    as_agent sh -c "mkdir -p $home/.spire/data && setsid nohup spire-agent run -config /etc/spire/agent.conf -trustBundle /run/spire/bundle.spiffe -joinTokenFile /run/spire/join-token >>$spire_log 2>&1 &"
+    for _ in $(seq 30); do
+      spire_ok && break
+      sleep 1
+    done
+    spire_ok || { tail -n 20 "$spire_log" >&2; fail "the SPIRE agent did not attest in 30 seconds"; }
+  else
+    echo "sandbox-boot: warning: no SPIRE join token, so the node is not attested" >&2
+  fi
+fi
+rm -f /run/spire/join-token # the token works one time, used or not
 
 # Ponytail is a plugin for Claude Code. Its version is a release tag. The plugin goes to the claude-home volume, so a new VM finds it.
 # A failure prints a warning and does not stop the script, as in sbx.
