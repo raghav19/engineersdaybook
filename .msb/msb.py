@@ -53,6 +53,13 @@ HOST_PORTS = {
     18081: "SPIRE server",
     19090: "Flux Operator web UI",
 }
+# The node identity of the VM. The SPIRE server is in the kind cluster, so the host asks it with kubectl (the current context).
+# The agent in the VM shows the one-time join token to the server through host.microsandbox.internal:18081.
+SPIRE_SERVER = ["kubectl", "-n", "spire-system", "exec", "spire-server-0", "-c", "spire-server", "--", "/opt/spire/bin/spire-server"]
+SPIRE_IDENTITY = MSB_DIR.parent / "code/mcp-sandbox/part-3-mcp-guardrails/config/cloud/kind/identity.yaml"
+SPIRE_SOCKET = "/home/agent/.spire/agent.sock"  # socket_path of dev-tools/spire-agent.conf
+SPIRE_DIR = "/run/spire"  # in the VM. This step writes join-token and bundle.spiffe here, and sandbox-boot reads them.
+SPIRE_TOKEN_TTL = "600"  # seconds
 # The VS Code settings that Remote-SSH needs. `vscode-settings` merges them into your user settings. Your other settings stay.
 VSCODE_SETTINGS = {
     "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
@@ -98,6 +105,65 @@ def _fingerprint() -> str:
         str(HOST_PORTS),
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+
+
+def _spire_server(*args: str) -> str:
+    """Run spire-server in the SPIRE server pod and return its output. Raise FileNotFoundError (no kubectl) or CalledProcessError (cluster)."""
+    return subprocess.run([*SPIRE_SERVER, *args], capture_output=True, text=True, check=True).stdout
+
+
+def _spire_enroll(name: str) -> None:
+    """Give the VM a one-time join token and the trust bundle, so its SPIRE agent can attest. `ensure_vm` calls this.
+
+    1. The agent of the VM is healthy: stop. It keeps its SVID by itself, so it needs no token.
+    2. Ask the SPIRE server for a token with the alias spiffe://<trust domain>/microvm/<SANDBOX_GITHUB_ID> (the parent of later workload entries).
+       If the cluster cannot be asked, print a warning and go on without an agent.
+    3. Write the token and the bundle in SPIRE_DIR in the VM (mode 600, owner agent). The token goes through stdin, never through an argument.
+       sandbox-boot starts the agent and removes the token.
+    """
+    healthy = subprocess.run(
+        ["msb", "exec", name, "--", "spire-agent", "healthcheck", "-socketPath", SPIRE_SOCKET],
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=False,
+    )
+    if healthy.returncode == 0:
+        return
+    github_id = os.environ.get("SANDBOX_GITHUB_ID", "")
+    if not github_id.isdigit():
+        _die(
+            "SANDBOX_GITHUB_ID is not a number. Use the numeric id of your GitHub account: export SANDBOX_GITHUB_ID=$(gh api user --jq .id)"
+        )
+    domain = next(
+        (line.partition(":")[2].strip() for line in SPIRE_IDENTITY.read_text().splitlines() if line.startswith("trust_domain:")), ""
+    )
+    if not domain:
+        _die(f"cannot read trust_domain from {SPIRE_IDENTITY}")
+    try:
+        reply = _spire_server(
+            "token", "generate", "-ttl", SPIRE_TOKEN_TTL, "-spiffeID", f"spiffe://{domain}/microvm/{github_id}", "-output", "json"
+        )
+        bundle = _spire_server("bundle", "show", "-format", "spiffe")
+    except FileNotFoundError:
+        print("msb: warning: kubectl is not on the PATH, so the VM has no join token and the SPIRE agent does not start.", file=sys.stderr)
+        return
+    except subprocess.CalledProcessError as error:
+        reason = (error.stderr.strip().splitlines() or [""])[-1]
+        print(
+            f"msb: warning: cannot ask the SPIRE server ({reason}). The VM has no join token and the SPIRE agent does not start.",
+            file=sys.stderr,
+        )
+        return
+    # `read` takes one line and leaves the rest of stdin to `cat`. A pipe would let `head` swallow the bundle.
+    script = (
+        f'umask 077; mkdir -p {SPIRE_DIR} && read -r token && printf %s "$token" > {SPIRE_DIR}/join-token'
+        f" && cat > {SPIRE_DIR}/bundle.spiffe && chown -R agent:agent {SPIRE_DIR}"
+    )
+    done = subprocess.run(
+        ["msb", "exec", name, "--", "bash", "-c", script], input=f"{json.loads(reply)['value']}\n{bundle}", text=True, check=False
+    )
+    if done.returncode != 0:
+        _die("could not write the join token in the VM (its message is above).")
 
 
 def _github_exchange(**data: str) -> str:
@@ -202,6 +268,7 @@ def ensure_vm() -> None:
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
        msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
        A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
+    3. Give the VM a join token if its SPIRE agent is not healthy (_spire_enroll).
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
@@ -225,6 +292,7 @@ def ensure_vm() -> None:
         )
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
+    _spire_enroll(name)
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)

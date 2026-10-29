@@ -4,12 +4,12 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
 
 The VM holds no secrets, only placeholders. The host replaces a placeholder with the real value when the VM calls an allowed host. The "Decision records" at the end explain why the sandbox works this way.
 
-**Not ported yet:** the SPIRE agent, Envoy and the kind kubeconfig.
+**Not ported yet:** Envoy (and the workload entry for it) and the kind kubeconfig.
 
 ## Prerequisites
 
 1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
-   - Run the commands in the root of the repository. `mise install` provides `just`, `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI), `age`, `jq` and `yq`.
+   - Run the commands in the root of the repository. `mise install` provides `just`, `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI), `age`, `jq`, `yq` and `kubectl`.
    - You install `docker` and `code` yourself.
    - Every recipe stops with a message if a tool is missing.
 
@@ -91,7 +91,8 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **The boot.** At each `run`, `ensure-vm` runs `dev-tools/sandbox-boot` in the VM. A step of the script does nothing if its work exists. So `run` also repairs a stopped VM, a failed boot and a stopped Headroom. If a step fails, `run` prints the reason and exits with 1. The VM keeps running.
 - **The tokens.** The VM has the placeholders `GH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`. The host replaces `GH_TOKEN` in requests to `github.com`, `api.github.com` and `api.githubcopilot.com` (Bearer and Basic auth, so `git push` works). It replaces `CLAUDE_CODE_OAUTH_TOKEN` in requests to `api.anthropic.com`. It blocks each token for every other host. `bws run` puts both in the environment of `ensure-vm`, and msb reads them when it starts the VM. A running VM does not read a changed secret.
 - **Allowed hosts.** The VM reaches only the hosts in `network.allow`. A blocked host fails at DNS. `*.example.com` matches subdomains at any depth. msb rejects `**.example.com` and an entry with a port.
-- **Ports of the host.** The VM reaches three ports of the host at `host.microsandbox.internal:<port>`: 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). Nothing in the VM uses them yet.
+- **Ports of the host.** The VM reaches three ports of the host at `host.microsandbox.internal:<port>`: 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). Only the SPIRE agent uses one of them (18081) so far.
+- **Node identity (SPIRE).** The SPIRE agent in the VM proves to the SPIRE server of the kind cluster that an operator approved this VM. It needs the numeric id of your GitHub account in `SANDBOX_GITHUB_ID` (`gh api user --jq .id` prints it), a current `kubectl` context for the kind cluster, and a cluster made with the 18081 port mapping. At each `run`, `ensure-vm` asks the VM if its agent is healthy. If it is, nothing happens: the agent renews its SVID by itself. If it is not, the host runs `spire-server token generate` (`kubectl exec`, TTL 10 minutes, alias `spiffe://<trust domain>/microvm/<id>`) and writes the token and the trust bundle to `/run/spire` in the VM through `msb exec` (mode 600, never an argument). `sandbox-boot` starts the agent with them, waits until it is healthy, and removes the token. If the cluster is not reachable, `run` warns and goes on without an agent. The log of the agent is `~/.spire/agent.log` in the VM.
 - **Headroom dashboard.** Open `http://127.0.0.1:8787/dashboard` (`/stats` and `/health` work too). Host port 8787 must be free, or `just msb run` fails. To use another port, change `network.ports` in `sandbox.yaml` (`127.0.0.1:8788:8787`). Headroom has no login, so any user of the host can open it. An existing VM needs `just msb rm && just msb run` once.
 - **Volumes.** `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login). `terraform-providers` is the Terraform provider cache. `podman-storage` has the images that podman pulls and builds. They stay when you remove the VM.
 - **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden. The first `build` prints `failed to configure registry cache importer ... not found`. The build goes on.
@@ -114,6 +115,9 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | `msb ls` shows `crashed` or `stopped` | Run `just msb run`. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
 | `run` says that the VM does not match the configuration | `sandbox.yaml` or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
+| `SANDBOX_GITHUB_ID is not a number` | Run `export SANDBOX_GITHUB_ID=$(gh api user --jq .id)`, or put the id in `mise.local.toml` (`[env]`). `run` needs it only when the agent is not healthy. |
+| `warning: cannot ask the SPIRE server` | The cluster is down, or the `kubectl` context is not the kind cluster. `run` went on without a token. Fix the context, then run `just msb run` again. |
+| `sandbox-boot: the SPIRE agent did not attest` | Read `~/.spire/agent.log` (`just msb shell`). The token is one time and lasts 10 minutes, so run `just msb run` again for a new one. A connection error to `host.microsandbox.internal:18081` means the kind cluster lacks the port mapping: recreate it (`clusters/kind/` in `code/mcp-sandbox/part-3-mcp-guardrails`). |
 | VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
@@ -199,3 +203,9 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 - **Decision.** The top of `.msb/justfile` lists the tools with `require` and the Bitwarden keys with `env`. We do not use `set lazy`.
 - **Why.** just checks every top-level definition at the start and stops with its own message. The recipes need no check of their own, and we wrote no shell loop. The keys exist only inside `bws run`, so `run` starts `_vm` there with `MSB_IN_BWS=1`. The key lines are `if`-expressions that read the variable only when `MSB_IN_BWS` is set.
 - **Cost.** Every recipe needs all the tools, also `shell` and `rm`. just runs `git rev-parse HEAD` for each recipe. It reports one missing item at a time, in the alphabetical order of the variable names. The key names in the justfile must match `sandbox.yaml`.
+
+### 14. Attest the VM with a join token that the host sends through `msb exec`
+
+- **Decision.** The host mints a one-time SPIRE join token with `kubectl exec` and writes it to `/run/spire` in the VM with `msb exec`. `sandbox-boot` starts the agent. The VM is asked if its agent is healthy, and only an unhealthy agent gets a token.
+- **Why.** The token never lands on the host disk, and `sandbox.yaml` needs no mount, so the fingerprint does not change. Asking the VM replaces the check of the sbx script (is an attested node valid on the server?). That check skipped the token for a new VM while the old node was still valid, and the new VM could not join.
+- **Cost.** The host needs `kubectl` and a current context for the kind cluster. After `msb stop`, the agent is not running, so the next `run` mints one more token that the agent ignores (it still has a valid SVID). The VM disk keeps the SVID, so `rm` removes it and the next `run` attests again with a new token. A join token proves that an operator approved the node. It does not prove the state or the image of the VM.
