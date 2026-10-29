@@ -57,7 +57,7 @@ mounts:
 
 # No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
 # msb reads each value from the environment of the host. `just msb run` starts msb.py under `bws run`, so each Bitwarden key is a variable there.
-# Both secrets are Bitwarden keys. Neither token expires, so nothing refreshes them.
+# Both secrets are Bitwarden keys. Neither token refreshes by itself. Rotate both every 90 days (.msb/README.md, "Token lifetime").
 # GH_TOKEN is the user token of the GitHub App (`just msb github-login` makes it, and you copy it to Bitwarden).
 # The host replaces it in Basic auth (git over HTTPS) and in Bearer auth (REST API and GitHub MCP).
 # The name is not GITHUB_TOKEN, because the Bitwarden key GITHUB_TOKEN is another token (for ghcr.io).

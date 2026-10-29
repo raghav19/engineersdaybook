@@ -41,7 +41,7 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
    - GitHub sends the browser to port 8765 of this host (`http://127.0.0.1:8765/callback`). The step waits 5 minutes for you.
    - The client secret is the Bitwarden key `GITHUB_APP_CLIENT_SECRET` (prerequisite 6).
    - You installed the app on this repository only. It has the permissions contents, issues and pull requests. It has no Administration permission, so GitHub refuses a change to the settings of the repository.
-   - In the settings of the app (Optional features), turn off "User-to-server token expiration". The token then does not expire until you revoke it. There is no refresh token and nothing refreshes it.
+   - In the settings of the app (Optional features), turn off "User-to-server token expiration". The token then has no refresh token and does not end by itself. You rotate it every 90 days ("Token lifetime").
    - The step saves the token to `~/.config/msb/github-app.json` (mode 600). Copy the access token to the Bitwarden key `GH_TOKEN` (prerequisite 6). Then delete the file.
    - There is no fallback to `gh`, because that token is broader.
 
@@ -122,10 +122,11 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 
 ### Token lifetime
 
-- Neither token refreshes. The GitHub App does not expire user tokens (prerequisite 2), and `claude setup-token` makes a long-lived token. Nothing runs on the host between two runs of `just msb run`.
-- msb reads a secret from the environment when the VM starts. A running VM does not read a changed secret. A VM that you stopped reads it again.
-- To change a token, change the Bitwarden key. Then run `msb stop sandbox-dev` and `just msb run`. The clone and the volumes stay.
-- A token that does not expire is valid until you revoke it. A leak is worse than with a token that ends in hours. The GitHub token reaches this repository only. To revoke it, remove the app under Settings, Applications, Authorized GitHub Apps. For a second limit, make a new token every 90 days.
+- Neither token refreshes by itself. The GitHub App does not expire user tokens (prerequisite 2), and `claude setup-token` makes a long-lived token. Nothing runs on the host between two runs of `just msb run`.
+- A token that does not expire is a risk: a leak stays valid until you revoke it. So rotate both tokens **every 90 days**.
+- A workflow cannot rotate them. The GitHub App token needs your approval in a browser, and `claude setup-token` is interactive. The workflow `.github/workflows/msb-token-rotation.yaml` opens an issue with the steps on the 1st of January, April, July and October. It has no secret.
+- To rotate: make the new token, change the Bitwarden key, revoke the old token, then run `msb stop sandbox-dev` and `just msb run`. msb reads a secret when the VM starts. A running VM does not read a changed secret. A VM that you stopped reads it again. The clone and the volumes stay.
+- Revoke the old GitHub token alone. If you delete the app under Settings, Applications, Authorized GitHub Apps, GitHub revokes the new token too. Use that only for a leak.
 - Why not a proxy like sbx: msb has no secret that refreshes, and the docs and the code give no hook for one. A new value reaches new connections only. A client that keeps a connection open, such as Headroom, keeps the old value until it restarts. See `docs/research/microsandbox-credential-injection.md`.
 
 ### Secrets from Bitwarden

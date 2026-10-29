@@ -1,0 +1,39 @@
+# Opens an issue every three months: rotate the tokens of the msb sandbox (.msb/README.md, "Token lifetime").
+# A workflow cannot rotate them. The GitHub App token needs your approval in a browser, and `claude setup-token` is interactive.
+# So the workflow only reminds you. It has no secret. It uses the token of the run, with the permission to write issues.
+# A scheduled workflow in a public repository stops after 60 days without activity in the repository. If the issue does not come, start the workflow by hand.
+name: msb-token-rotation
+
+on:
+  schedule:
+    - cron: "0 6 1 */3 *" # the 1st of January, April, July and October: about 90 days
+  workflow_dispatch:
+
+permissions:
+  issues: write # the issue
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TITLE: Rotate the tokens of the msb sandbox
+    steps:
+      # one open issue at a time: if you have not closed the last one, do not open another
+      - name: Open the issue
+        run: |
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label ready-for-human --search "\"$TITLE\" in:title" --json number --jq length)
+          if [ "$open" != "0" ]; then
+            echo "An issue is open already."
+            exit 0
+          fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --label ready-for-human --title "$TITLE" --body-file - <<'BODY'
+          The tokens of the msb sandbox (`.msb/README.md`, "Token lifetime") do not expire, so you rotate them. Do this on the host, not in the sandbox.
+
+          - [ ] **GitHub (`GH_TOKEN`).** Run `just msb github-login`. Copy the access token to the Bitwarden key `GH_TOKEN`. Delete `~/.config/msb/github-app.json`. Revoke the old token alone (REST: "Delete an app token"). Do not delete the app authorization, because that revokes the new token too.
+          - [ ] **Claude (`CLAUDE_CODE_OAUTH_TOKEN`).** Run `claude setup-token`. Copy the token to the Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN`. Remove the old token if your Claude account settings list it.
+          - [ ] **Classic token for ghcr.io (`GITHUB_TOKEN`).** Check its expiry. Make a new one with the scope `write:packages` if it ends soon.
+          - [ ] Run `msb stop sandbox-dev`, then `just msb run`. A running VM does not read a changed secret.
+          - [ ] Close this issue.
+          BODY
