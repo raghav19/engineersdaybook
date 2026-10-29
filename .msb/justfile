@@ -7,7 +7,6 @@
 #   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
-#   just msb encrypt-bws-token  once: encrypt the Bitwarden access token with a passphrase. run, build and github-login ask for it.
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
 
 set quiet
@@ -23,7 +22,7 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
-# The Bitwarden access token, encrypted with a passphrase (`age -p`). `just msb encrypt-bws-token` makes the file.
+# The Bitwarden access token, encrypted with a passphrase (`age -p`). Prerequisite 6 in README.md makes the file.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
@@ -72,10 +71,6 @@ setup: _host-only (_need 'msb code uv')
 # Log in to GitHub with the GitHub App. You approve it in the browser
 github-login: _host-only (_need 'bws age uv')
     {{ bws }} '{{ step }} github-login'
-
-# Encrypt the Bitwarden access token with a passphrase. Run it in your own terminal. It asks for the token and the passphrase
-encrypt-bws-token: _host-only (_need 'age')
-    mkdir -p {{ parent_directory(token_file) }} && read -rsp 'Bitwarden access token: ' token && echo && printf %s "$token" | age -p -o {{ token_file }} && chmod 600 {{ token_file }}
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN (see `bws` at the top of this file).

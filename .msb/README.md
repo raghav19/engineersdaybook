@@ -53,7 +53,13 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
 
 6. **Set up Bitwarden.** `run`, `github-login` and `build` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
    - The Bitwarden access token is the one secret you keep on the host. Keep it encrypted with a passphrase, so that a process of your user cannot read it. The recipes that need Bitwarden (`run`, `build`, `github-login`) start `bws run` with the variable `bws` at the top of `.msb/justfile`. It runs `age -d` on the encrypted token, which asks for your passphrase on the terminal. Nothing stores the passphrase. You enter it once for each recipe.
-   - Set it up once, in your own terminal (not in an agent session): `just msb encrypt-bws-token`. It asks for the token (not shown), then runs `age -p`, which asks for a new passphrase. The file is `~/.config/bws/access-token.age` (mode 600). The token is never in a file or in the history of the shell. Delete any plain copy, such as `~/.config/bws/access-token`.
+   - Encrypt the token once, in your own terminal (not in an agent session). The command asks for the token (not shown), then `age -p` asks for a new passphrase. Run it in a subshell, so that the token does not stay in a variable of your shell:
+     ```shell
+     mkdir -p ~/.config/bws
+     ( read -rsp 'Bitwarden access token: ' token && echo && printf %s "$token" | age -p -o ~/.config/bws/access-token.age )
+     chmod 600 ~/.config/bws/access-token.age
+     ```
+     The token is never in a file or in the history of the shell. Delete any plain copy, such as `~/.config/bws/access-token`. To change the token or the passphrase, run the same commands again. `age` replaces the file.
    - The passphrase is the only protection, because anyone who can read the file can try guesses offline. Use a long one. If you leave the passphrase empty, `age` makes one for you and shows it once. Save it.
    - If `BWS_ACCESS_TOKEN` is set in the environment (for example in CI), the recipes use it and do not ask. If the token cannot be decrypted (a wrong passphrase), `bws` stops with `Missing access token` after the message of `age`.
    - Run these commands from reviewed code. `msb.py` and the justfile run with your token, so check changes to them before you run them.
