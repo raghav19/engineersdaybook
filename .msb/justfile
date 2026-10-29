@@ -28,7 +28,7 @@ token_file := home_directory() / '.config/bws/access-token.age'
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
 bws := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
 # The keys that are not in the environment. msb reads them: the secrets of sandbox.yaml and the registry password (`password_env`).
-# Keep this list the same as sandbox.yaml. `_vm` stops if it is not empty.
+# Keep this list the same as sandbox.yaml. `_need-keys` stops if it is not empty.
 missing := (if env('GH_TOKEN', '') == '' { ' GH_TOKEN' } else { '' }) + (if env('CLAUDE_CODE_OAUTH_TOKEN', '') == '' { ' CLAUDE_CODE_OAUTH_TOKEN' } else { '' }) + (if env('GITHUB_TOKEN', '') == '' { ' GITHUB_TOKEN' } else { '' })
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
@@ -91,9 +91,13 @@ build: _host-only (_need 'bws age docker jq yq')
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
       && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
-# Runs inside `bws run`, where the Bitwarden keys are in the environment. Stops, and names every missing key, before msb starts the VM
-_vm:
+# Like `_need`, for the Bitwarden keys. It stops, and names every missing key, before msb starts the VM.
+# The keys exist only inside `bws run`, so `_vm` runs it there.
+_need-keys:
     {{ assert(missing == '', 'msb: these keys are not in the environment:' + missing + '. bws run gives them from the Bitwarden project. Check that each key exists there with this exact name, and that your machine account can read the project.') }}
+
+# The part of `run` that needs the Bitwarden keys. `run` starts it with `bws run`.
+_vm: _need-keys
     {{ step }} ensure-vm
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
