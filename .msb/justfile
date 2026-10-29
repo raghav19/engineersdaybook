@@ -56,18 +56,11 @@ help:
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
-# A recipe lists the tools that it uses as dependencies. `require` stops with a message if the tool is not on the PATH.
-_need-msb path=require('msb'):
-_need-bws path=require('bws'):
-_need-age path=require('age'):
-_need-uv path=require('uv'):
-_need-code path=require('code'):
-_need-docker path=require('docker'):
-_need-jq path=require('jq'):
-_need-yq path=require('yq'):
+# The tools of the recipes. `require` stops the run with a message at the first tool that is not on the PATH.
+_need-tools msb=require('msb') bws=require('bws') age=require('age') uv=require('uv') code=require('code') docker=require('docker') jq=require('jq') yq=require('yq'):
 
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
-setup: _host-only _need-msb _need-code _need-uv
+setup: _host-only _need-tools
     [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file '{{ ssh_pubkey }}'
     code --install-extension {{ remote_ssh_extension }}
@@ -76,7 +69,7 @@ setup: _host-only _need-msb _need-code _need-uv
 
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
-github-login: _host-only _need-bws _need-age _need-uv
+github-login: _host-only _need-tools
     {{ bws }} '{{ step }} github-login'
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
@@ -84,7 +77,7 @@ github-login: _host-only _need-bws _need-age _need-uv
 # The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
-build: _host-only _need-bws _need-age _need-docker _need-jq _need-yq
+build: _host-only _need-tools
     {{ bws }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
@@ -95,7 +88,7 @@ build: _host-only _need-bws _need-age _need-docker _need-jq _need-yq
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
       && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
-# Like the `_need-<tool>` recipes, for the Bitwarden keys. It stops, and names every missing key, before msb starts the VM.
+# Like `_need-tools`, for the Bitwarden keys. It stops, and names every missing key, before msb starts the VM.
 # The keys exist only inside `bws run`, so `_vm` runs it there.
 _need-keys:
     {{ assert(missing == '', 'msb: these keys are not in the environment:' + missing + '. bws run gives them from the Bitwarden project. Check that each key exists there with this exact name, and that your machine account can read the project.') }}
@@ -111,20 +104,20 @@ _vm: _need-keys
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
-run: _host-only _need-msb _need-bws _need-age _need-uv _need-code
+run: _host-only _need-tools
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
     {{ bws }} 'just --justfile {{ source_file() }} _vm'
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
-allow-host $host: _host-only _need-msb _need-bws _need-age _need-uv _need-code && run
+allow-host $host: _host-only _need-tools && run
     {{ step }} allow-host "$host"
 
 # A bash prompt in the VM, as the agent user
-shell: _host-only _need-msb
+shell: _host-only _need-tools
     msb exec -t -u {{ vm_user }} $MSB_NAME -- bash -l
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
-rm *args: _host-only _need-msb
+rm *args: _host-only _need-tools
     msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi
