@@ -30,7 +30,7 @@ Earlier parts: [Part 1](../mcp-sandbox/part-1-lethal-trifecta/README.md) shows t
 | Managed MCP settings and deny list | which MCP servers load and which GitHub tools are removed | `.msb/dev-tools/managed-settings.json` |
 | Clone, not the working tree | which host files the VM can read | the VM mounts the `.git` directory read-only and clones from it |
 
-Run it with `just msb build` and `just msb run`. The prerequisites, every step and the fixes for common failures are in [`.msb/README.md`](../../.msb/README.md).
+Run it with `just msb setup`, `just msb build` and `just msb run`. The prerequisites, every step and the fixes for common failures are in [`.msb/README.md`](../../.msb/README.md).
 
 ## What stays open
 

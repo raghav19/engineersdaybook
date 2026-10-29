@@ -1,5 +1,6 @@
 {
   "check_for_updates": false,
+  "clipboard": {"use_osc52": true, "use_system_clipboard": false},
   "lsp": {
     "python": [
       {"name": "ty", "command": "ty", "args": ["server"], "auto_start": true, "root_markers": ["pyproject.toml", ".git"]},

@@ -3,6 +3,7 @@
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
 # The recipes list the steps in order. msb.py has the steps that need Python.
 #
+#   just msb setup          once for each host: authorize your SSH key.
 #   just msb run            every day: make or start the VM, prepare it, then open the Fresh editor in it.
 #   just msb edit           open the Fresh editor in the running VM.
 #   just msb allow-host     allow one more host for the VM.
@@ -26,6 +27,7 @@ uv     := require("uv")
 docker := require("docker")
 jq     := require("jq")
 yq     := require("yq")
+ssh    := require("ssh")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')
@@ -44,8 +46,11 @@ bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}"
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
-# The user in the VM that `shell` and `edit` use. The Dockerfile makes this user.
-vm_user := 'agent'
+# `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
+ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
+# `shell` and `edit` connect with ssh and this file. It starts `msb ssh serve` as a ProxyCommand and logs in as the user `agent`.
+# They do not use `msb exec`: in msb 0.7.10 it stops passing output after about 1 MB, with or without a terminal, so a screen editor freezes. ssh does not.
+ssh_config := source_directory() / 'ssh_config'
 # The tag of the image is the commit.
 commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
@@ -61,6 +66,11 @@ help:
 
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
+
+# Once for each host (safe to run again): authorize your SSH key for `msb ssh`
+setup: _host-only
+    [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
+    msb ssh authorize --file '{{ ssh_pubkey }}'
 
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
@@ -101,7 +111,7 @@ run: _host-only
 # Fresh is a terminal editor. It runs in the VM, in this terminal. The first time you open a folder, press T to trust it (language servers then start).
 # Open the Fresh editor on the clone in the running VM. Quit with File > Quit (click the menu bar)
 edit: _host-only
-    msb exec -t -u {{ vm_user }} -w $MSB_WORKSPACE $MSB_NAME -- fresh
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && exec fresh"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
@@ -109,7 +119,7 @@ allow-host $host: _host-only && run
 
 # A bash prompt in the VM, as the agent user
 shell: _host-only
-    msb exec -t -u {{ vm_user }} $MSB_NAME -- bash -l
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only

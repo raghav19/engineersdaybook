@@ -1,0 +1,17 @@
+# The SSH entry of the sandbox for VS Code Remote-SSH. `just msb setup` sets the VS Code setting remote.SSH.configFile to this file.
+# Then ~/.ssh/config does not change. The Include line keeps your other hosts available in VS Code. It must stay above the Host block.
+Include ~/.ssh/config
+
+# The VM has no sshd. The msb command on the host is the SSH server, and it talks to the VM.
+# ssh runs ProxyCommand through your shell, so $HOME expands. ProxyCommand does not allow %d.
+# `latest` is the symlink that mise keeps on the installed msb. A VS Code that your shell did not start finds msb with it, without a PATH or a shim.
+# The VM must run. If `msb ssh serve` started a VM, it stops that VM when the session ends. `just msb run` starts the VM first.
+# The connection is a local pipe, not a network, so host key checks add no safety. They fail for each new VM.
+Host sandbox-dev.msb
+  User agent
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  LogLevel ERROR
+  ProxyCommand $HOME/.local/share/mise/installs/aqua-superradcompany-microsandbox/latest/msb ssh serve sandbox-dev --stdio

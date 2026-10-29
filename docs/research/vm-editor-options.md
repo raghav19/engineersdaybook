@@ -62,15 +62,33 @@ Fresh sends the language id `bash`, `terraform` and so on from its own language 
 | `dockerfile-language-server-nodejs` closes: `Cannot read properties of undefined (reading 'scopeUri')` | The server asks for configuration with an empty list. Fresh answers with one item. | Use `docker-language-server` (Docker, Go) |
 | `marksman` says `Workspace folder is bogus` | The folder had no `.git`. | None. The clone has `.git`. |
 | bash-language-server warns: no `shellcheck` | The tool was not in the image. | Add `shellcheck` to `tools/lsp.toml` |
+| The editor froze after about 14 minutes in the VM. The shell of the VM was alive, the server of Fresh was idle, and 446 bytes of keystrokes waited unread | `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal. Fresh, `less` and plain `cat` all stopped near 1 MB. Fresh sat in a `write()` to its terminal. | `edit` and `shell` use ssh (`msb ssh serve --stdio` as ProxyCommand), as VS Code did. See section 5 |
+| Fresh tried the X11 clipboard at start and logged `X11 server connection timed out` after 47 seconds | The VM has no display server. | `clipboard.use_system_clipboard = false`. Copy uses OSC 52 (the clipboard of the host terminal). We did not prove that this call blocks the editor. |
+| `marksman` crashed 5 times in 35 seconds with `Could not load file or assembly 'FSharpPlus'`, then Fresh stopped trying (cooldown) | Unknown. It started fine later, alone and 6 at once, on the same files. | None yet. Restart the Fresh server (`fresh --cmd daemon kill orchestrator`) if it recurs, and send me the log. |
 
-## 5. Not tested
+## 5. The transport: `msb exec` against ssh
+
+Test: a host pty runs the command, and we count the output that arrives. The VM and the file are the same for all runs (`cat` of a 2.7 MB file, four times).
+
+| Route | Result |
+|---|---|
+| `msb exec -t` | Stops at about 1.0 MB. The command never finishes. |
+| `msb exec` (no terminal) | Stops at about 1.0 MB. |
+| `ssh -t` through `msb ssh serve --stdio` | All output arrives in 0.1 s. |
+| Fresh in `msb exec -t`, key storm (PageDown) | Froze after 560 presses and 0.74 MB. |
+| `less` in `msb exec -t`, same storm | Froze after 440 presses and 0.79 MB. |
+| Fresh in `ssh -t`, same storm, 2400 presses | No freeze. |
+
+We did not find the cause inside msb. The host `msb exec` process was idle (0% CPU) and the guest process waited in `write()`.
+
+## 6. Not tested
 
 - The mouse. We drove Fresh with keys in `tmux`. The docs and the source say the mouse works.
 - `just msb run` and `just msb edit` against a real VM, and the 4 GB memory of the VM. The host runs these.
 - Diagnostics from the Docker server.
 - Whether a person who knows VS Code finds the layout familiar enough.
 
-## 6. Risks
+## 7. Risks
 
 - Fresh is at version 0.5.4. Its config keys can change.
 - The editor is in a terminal. A terminal without mouse support loses the mouse.

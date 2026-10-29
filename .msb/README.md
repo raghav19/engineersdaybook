@@ -19,7 +19,8 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    msb doctor        # each line must have a check mark
    ```
 
-2. **Use a terminal with mouse and 256-color support.** Fresh runs in the terminal where you run `just msb run`. Most modern terminals work. Check the mouse by clicking a menu of Fresh.
+2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it. `edit` and `shell` connect with ssh.
+   - Fresh runs in the terminal where you run `just msb run`. Use a terminal with mouse and 256-color support. Most modern terminals have both.
 
 3. **Commit your work.** The VM clones the committed files only.
 
@@ -57,14 +58,16 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
 ## Getting started
 
 ```shell
-just msb build         # 1. one time, and after you change dev-tools/
-just msb run           # 2. every day
+just msb setup         # 1. one time for each host
+just msb build         # 2. one time, and after you change dev-tools/
+just msb run           # 3. every day
 ```
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
-| 2 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in your terminal. You can run it as often as you want. |
+| 1 | `setup` | Authorizes your SSH key for `msb ssh`. |
+| 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
+| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in your terminal. You can run it as often as you want. |
 
 Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. `Ctrl+P` opens the command palette. To quit, use File > Quit. To open the editor again in a running VM, run `just msb edit`. The first time you open the clone, Fresh asks whether to trust the folder. Press `T`. Then the language servers start.
 
@@ -98,7 +101,7 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **MCP servers.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns it, and project and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub. It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). To change it, run `just msb build`.
 - **Podman.** The VM has rootless podman. `docker` is an alias of podman. `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun`, makes `/` a shared mount, and `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` in each container. The policy of the VM applies to a container too. To push to a registry on the host, allow its port in `HOST_PORTS`.
 - **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
-- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd and needs none: `edit` and `shell` use `msb exec`.
+- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before `edit` or `shell` connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
 
 ## When something fails
 
@@ -114,7 +117,8 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | `msb ls` shows `crashed` or `stopped` | Run `just msb run`. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
 | `run` says that the VM does not match the configuration | `sandbox.yaml` or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
-| `just msb edit` says the sandbox is not running | Run `just msb run`. |
+| `just msb edit` cannot connect | Run `just msb run`, then `just msb setup` again. Check that `msb ls` shows the VM as `running`. |
+| The editor or the shell freezes after some output | You are on `msb exec`. `edit` and `shell` use ssh because of this. See decision 14. |
 | A language server does not start | Look at the LSP indicator in the status bar of Fresh (click it). Fresh starts servers only in a trusted folder: command palette, "Workspace Trust...", then trust. The server logs are in `~/.local/state/fresh/logs/lsp/` in the VM. |
 | No hints in a Dockerfile | The server starts, but I did not see diagnostics from it. See decision 14. |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
@@ -205,5 +209,5 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 ### 14. Fresh is the editor, and it runs in the VM
 
 - **Decision.** The editor is [Fresh](https://github.com/sinelaw/fresh) 0.5.4 (Rust, GPL-3.0). It is a terminal editor with menus, tabs, a file explorer, mouse support and a built-in terminal. It has no modes. It runs in the VM, in the terminal where you run `just msb run`. `dev-tools/fresh-config.json` is the one file that says which language server starts for which language. The Dockerfile copies it to `~/.config/fresh/config.json`. The servers are in `tools/lsp.toml` (and ty and ruff in `tools/dev.toml`).
-- **Why.** VS Code needed an SSH link, a server in the VM and an extension host. Fresh needs a binary and one file. It has no plugin code in this repo and nothing to install or match on the host. Fresh finds the servers in the PATH. The comparison with Zed, Helix, Lapce, micro and Emacs is in `docs/research/vm-editor-options.md`.
-- **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) needs `process_limits.enabled = false` in the config. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim.
+- **Why.** VS Code needed an SSH link, a server in the VM and an extension host. Fresh needs a binary and one file. It has no plugin code in this repo and nothing to install or match on the host. `edit` and `shell` connect with ssh (`ssh_config`, `msb ssh serve --stdio`), not with `msb exec`. Fresh finds the servers in the PATH. The comparison with Zed, Helix, Lapce, micro and Emacs is in `docs/research/vm-editor-options.md`.
+- **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) needs `process_limits.enabled = false` in the config. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim. `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal, and a screen editor then freezes. I measured this: Fresh, `less` and plain `cat` all stopped near 1 MB, and ssh through `msb ssh serve --stdio` passed 6.9 MB at once. So the editor and the shell use ssh. `setup` and the SSH key are needed again. Fresh also tries the X11 clipboard, which does not exist in the VM, so the config turns it off (copy then uses the terminal clipboard, OSC 52).
