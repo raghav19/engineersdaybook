@@ -26,7 +26,7 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
 ## Prerequisites
 
 1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
-   - `mise install` provides `msb`, `uv` and `bws` (the Bitwarden Secrets Manager CLI).
+   - `mise install` provides `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI) and `age`.
    - You install `docker` and `code` yourself.
    - A recipe stops with a message if one of its tools is missing.
 
@@ -52,11 +52,10 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
 5. **Make a Claude token.** Run `claude setup-token` on the host and sign in with your subscription. Copy the token to the Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` (prerequisite 6). The VM uses this token, so you do not log in to Claude in the VM. The login of `claude` on the host is a different token. It can refresh without breaking the VM.
 
 6. **Set up Bitwarden.** `run`, `github-login` and `build` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
-   - The Bitwarden access token is the one secret you keep on the host. Keep it encrypted with a passphrase, so that a process of your user cannot read it. Every recipe that needs Bitwarden (`run`, `build`, `github-login`) calls the step `bws-run` of `msb.py`. It asks for your passphrase on the terminal, decrypts the token and starts `bws run`. Nothing stores the passphrase. You enter it once for each recipe.
-   - Set it up once, in your own terminal (not in an agent session): `just msb encrypt-bws-token`. It asks for the token (not shown) and for a new passphrase twice (at least 12 characters), and writes `~/.config/bws/access-token.age` (mode 600). The token is never in a file or in the history of the shell. Delete any plain copy, such as `~/.config/bws/access-token`.
-   - The file is in the age format, made with `pyrage`. The `age` command reads it too (`age -d ~/.config/bws/access-token.age`). You can also make the file with `age -p -o ~/.config/bws/access-token.age <file>`.
-   - The passphrase is the only protection, because anyone who can read the file can try guesses offline. Use a long one.
-   - If `BWS_ACCESS_TOKEN` is set in the environment (for example in CI), `bws-run` uses it and does not ask. If neither exists, `bws` stops with `Missing access token`.
+   - The Bitwarden access token is the one secret you keep on the host. Keep it encrypted with a passphrase, so that a process of your user cannot read it. The recipes that need Bitwarden (`run`, `build`, `github-login`) start `bws run` with the variable `bws` at the top of `.msb/justfile`. It runs `age -d` on the encrypted token, which asks for your passphrase on the terminal. Nothing stores the passphrase. You enter it once for each recipe.
+   - Set it up once, in your own terminal (not in an agent session): `just msb encrypt-bws-token`. It asks for the token (not shown), then runs `age -p`, which asks for a new passphrase. The file is `~/.config/bws/access-token.age` (mode 600). The token is never in a file or in the history of the shell. Delete any plain copy, such as `~/.config/bws/access-token`.
+   - The passphrase is the only protection, because anyone who can read the file can try guesses offline. Use a long one. If you leave the passphrase empty, `age` makes one for you and shows it once. Save it.
+   - If `BWS_ACCESS_TOKEN` is set in the environment (for example in CI), the recipes use it and do not ask. If the token cannot be decrypted (a wrong passphrase), `bws` stops with `Missing access token` after the message of `age`.
    - Run these commands from reviewed code. `msb.py` and the justfile run with your token, so check changes to them before you run them.
    - The project needs four keys. `GH_TOKEN` is the token of the GitHub App (prerequisite 2). `CLAUDE_CODE_OAUTH_TOKEN` is the Claude token (prerequisite 5). `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App, and `github-login` uses it. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. `build` pushes the image with it, and `run` pulls the private image with it (`registry` in `sandbox.yaml`).
    - For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
