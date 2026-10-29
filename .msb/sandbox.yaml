@@ -17,7 +17,7 @@ registry:
 
 cpus: 4
 memory: "4G"
-shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. VS Code terminals use bash. The login shell adds the mise shims to the PATH.
+shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. The Lapce terminal uses bash. The login shell adds the mise shims to the PATH.
 
 # The VM has no command of its own. At each run, `just msb run` runs /usr/local/bin/sandbox-boot in the VM with `msb exec`.
 # The script prepares the agent user, clones the repo and starts Headroom. See dev-tools/sandbox-boot.
@@ -139,9 +139,5 @@ network:
     - owasp.org
     - fluxcd.control-plane.io
     - docs.microsandbox.dev
-    # VS Code and Copilot
-    - marketplace.visualstudio.com
-    - "*.vsassets.io"
-    - "*.vscode-cdn.net"
     # Other
     - crl.microsoft.com

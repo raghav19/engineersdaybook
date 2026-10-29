@@ -1,6 +1,6 @@
 # The dev sandbox on microsandbox
 
-This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
+This sandbox is a VM for Claude Code and the [Lapce](https://lapce.dev) editor. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
 
 The VM holds no secrets, only placeholders. The host replaces a placeholder with the real value when the VM calls an allowed host. The "Decision records" at the end explain why the sandbox works this way.
 
@@ -8,9 +8,9 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
 
 ## Prerequisites
 
-1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
+1. **Install the tools.** You need [mise](https://mise.jdx.dev), Lapce (`lapce`), Docker (for the image build) and access to `/dev/kvm`.
    - Run the commands in the root of the repository. `mise install` provides `just`, `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI), `age`, `jq` and `yq`.
-   - You install `docker` and `code` yourself.
+   - You install `docker` and `lapce` yourself. The version of Lapce must be the version of the proxy in the image (`LAPCE_VERSION` in `dev-tools/Dockerfile`, now 0.4.6). On Arch Linux: `sudo pacman -S lapce`. Check it with `lapce --version`.
    - Every recipe stops with a message if a tool is missing.
 
    ```shell
@@ -19,7 +19,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    msb doctor        # each line must have a check mark
    ```
 
-2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it.
+2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `setup` authorizes its public key, and `ssh` uses the key to connect.
 
 3. **Commit your work.** The VM clones the committed files only.
 
@@ -64,11 +64,17 @@ just msb run           # 3. every day
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Writes the VS Code user settings, including `remote.SSH.configFile`. Your `settings.json` must have no comments, because the step cannot read them. |
+| 1 | `setup` | Authorizes your SSH key for `msb ssh`. |
 | 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
-| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens VS Code on it. You can run it as often as you want. |
+| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Serves the SSH of the VM on `127.0.0.1:2222` and trusts its host key. Starts Lapce. You can run it as often as you want. |
 
-In a VS Code terminal, run `claude`. It uses the token from Bitwarden and does not ask you to sign in.
+Then connect Lapce to the VM (the first time, and after you restart Lapce):
+
+1. Click the remote icon at the top left of the Lapce window. Choose the SSH host and enter `agent@127.0.0.1:2222`.
+2. Lapce opens a window on the VM. "Open folder" does not work there. In the Lapce terminal, run `lapce /home/agent/engineersdaybook`.
+3. In the Lapce terminal, run `claude`. It uses the token from Bitwarden and does not ask you to sign in.
+
+The language servers start by themselves when you open a file (see decision 14).
 
 ## Daily use
 
@@ -94,11 +100,11 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **Ports of the host.** The VM reaches three ports of the host at `host.microsandbox.internal:<port>`: 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). Nothing in the VM uses them yet.
 - **Headroom dashboard.** Open `http://127.0.0.1:8787/dashboard` (`/stats` and `/health` work too). Host port 8787 must be free, or `just msb run` fails. To use another port, change `network.ports` in `sandbox.yaml` (`127.0.0.1:8788:8787`). Headroom has no login, so any user of the host can open it. An existing VM needs `just msb rm && just msb run` once.
 - **Volumes.** `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login). `terraform-providers` is the Terraform provider cache. `podman-storage` has the images that podman pulls and builds. They stay when you remove the VM.
-- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden. The first `build` prints `failed to configure registry cache importer ... not found`. The build goes on.
+- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in six groups: `runtimes`, `headroom`, `infra`, `dev`, `claude` and `lsp`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden. The first `build` prints `failed to configure registry cache importer ... not found`. The build goes on.
 - **MCP servers.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns it, and project and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub. It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). To change it, run `just msb build`.
 - **Podman.** The VM has rootless podman. `docker` is an alias of podman. `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun`, makes `/` a shared mount, and `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` in each container. The policy of the VM applies to a container too. To push to a registry on the host, allow its port in `HOST_PORTS`.
-- **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`vscode-settings`, `github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
-- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before VS Code connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
+- **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
+- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `run` starts `msb ssh serve` on `127.0.0.1:2222` (log: `~/.cache/msb-ssh-serve.log`), and `rm` stops it. `run` also puts the host key of the VM in `~/.ssh/known_hosts`, because Lapce cannot answer the question about a new key. To use another port, change `ssh_port` in the justfile.
 
 ## When something fails
 
@@ -114,7 +120,8 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | `msb ls` shows `crashed` or `stopped` | Run `just msb run`. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
 | `run` says that the VM does not match the configuration | `sandbox.yaml` or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
-| VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
+| Lapce cannot connect | Run `just msb run` again. Check that `msb ls` shows the VM as `running` and that `ss -ltn` shows port 2222. Read `~/.cache/msb-ssh-serve.log`. Check that `lapce --version` is the version of `LAPCE_VERSION`. If the versions differ, Lapce tries to download and upload the proxy, and this fails. |
+| No hints or errors in a file | The language server did not start. Read the newest file in `~/.local/share/lapce-stable/logs/` on the host and look for `lapce-lsp-launcher`. In the terminal of the VM, run the server by hand (`ty server`, `ruff server`, `terraform-ls serve`). |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
 
@@ -199,3 +206,9 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 - **Decision.** The top of `.msb/justfile` lists the tools with `require` and the Bitwarden keys with `env`. We do not use `set lazy`.
 - **Why.** just checks every top-level definition at the start and stops with its own message. The recipes need no check of their own, and we wrote no shell loop. The keys exist only inside `bws run`, so `run` starts `_vm` there with `MSB_IN_BWS=1`. The key lines are `if`-expressions that read the variable only when `MSB_IN_BWS` is set.
 - **Cost.** Every recipe needs all the tools, also `shell` and `rm`. just runs `git rev-parse HEAD` for each recipe. It reports one missing item at a time, in the alphabetical order of the variable names. The key names in the justfile must match `sandbox.yaml`.
+
+### 14. Lapce replaces VS Code, and one volt starts every language server
+
+- **Decision.** The editor is Lapce 0.4.6. Its window runs on the host. Only `lapce-proxy` runs in the VM, and the image has it already (`~/.local/share/lapce-stable/proxy/lapce`, also the command `lapce`). Lapce has no setting for a language server. A language server starts from a volt (a WASM plugin). So `dev-tools/lapce-lsp/` has one small volt and one `volts/<server>/volt.toml` for each server (ty, ruff, terraform-ls, yaml-language-server, taplo, marksman, bash-language-server, docker-langserver, just-lsp). The `[server]` table of that file names the program, its arguments and the files. The image has the programs (`tools/lsp.toml`, and ty and ruff in `tools/dev.toml`) and the volts (`~/.local/share/lapce-stable/plugins/`).
+- **Why.** Lapce has no volt for ty, bash, Docker or just, and its volts for Terraform, YAML and TOML are archived. Our volt uses the versions that the image pins, and the registry (plugins.lapce.dev) is not on the allow list. Lapce sends no language id for `.tf` files, and terraform-ls then gives no hover, completion or symbols. So the volt of terraform-ls starts the server through `lsp-langid`, which fills in the id. The research is in `docs/research/lapce-sandbox.md`.
+- **Cost.** We own a small Rust crate and a Python script. Lapce has fewer features than VS Code, and its releases are slow. It has no Kubernetes YAML formatter and no Markdown preview. The version of Lapce on the host and the version of the proxy in the image must be equal. `run` writes to `~/.ssh/known_hosts` (one line for `[127.0.0.1]:2222`).

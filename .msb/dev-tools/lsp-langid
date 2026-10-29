@@ -1,0 +1,69 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.13"
+# dependencies = []
+# ///
+"""Run a language server and fill in a missing languageId.
+
+Usage: lsp-langid <languageId> <command> [argument ...]
+
+Lapce has no language id for some file types (Terraform). It then sends textDocument/didOpen with languageId "".
+terraform-ls then answers every request with "no feature found for language". This script changes the empty id to <languageId> in each didOpen on its way to the server.
+The server writes to the same stdout as this script, so its answers do not pass through here.
+"""
+
+import json
+import subprocess
+import sys
+from typing import BinaryIO
+
+
+def read_message(stream: BinaryIO) -> bytes | None:
+    """Return the body of the next LSP message, or None at the end of the stream."""
+    length = 0
+    while line := stream.readline():
+        if line in (b"\r\n", b"\n"):
+            return stream.read(length)
+        name, _, value = line.partition(b":")
+        if name.strip().lower() == b"content-length":
+            length = int(value)
+    return None
+
+
+def fix(body: bytes, language_id: str) -> bytes:
+    """Return the message with the languageId of a didOpen filled in. Any other message stays the same."""
+    message = json.loads(body)
+    if message.get("method") != "textDocument/didOpen":
+        return body
+    document = message["params"]["textDocument"]
+    if document.get("languageId"):
+        return body
+    document["languageId"] = language_id
+    return json.dumps(message, separators=(",", ":")).encode()
+
+
+def main() -> int:
+    """Start the server and forward stdin to it, message by message."""
+    if len(sys.argv) < 3:
+        print("usage: lsp-langid <languageId> <command> [argument ...]", file=sys.stderr)
+        return 2
+    language_id, command = sys.argv[1], sys.argv[2:]
+    server = subprocess.Popen(command, stdin=subprocess.PIPE)
+    assert server.stdin is not None
+    while (body := read_message(sys.stdin.buffer)) is not None:
+        body = fix(body, language_id)
+        try:
+            server.stdin.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+            server.stdin.flush()
+        except BrokenPipeError:
+            break
+    server.stdin.close()
+    try:
+        return server.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,17 @@
+name = "lsp-bash-language-server"
+version = "0.1.0"
+author = "sandbox"
+display-name = "bash-language-server"
+description = "Starts the bash-language-server language server from the image of the sandbox."
+wasm = "lapce-lsp-launcher.wasm"
+
+[activation]
+language = ["shellscript"]
+workspace-contains = ["**/*.sh", "**/*.bash"]
+
+# The launcher reads this table. The program must be in the PATH of the VM.
+[server]
+command = "bash-language-server"
+args = ["start"]
+language = "shellscript"
+patterns = ["**/*.sh", "**/*.bash"]

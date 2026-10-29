@@ -1,0 +1,15 @@
+name = "lsp-just-lsp"
+version = "0.1.0"
+author = "sandbox"
+display-name = "just-lsp"
+description = "Starts the just-lsp language server from the image of the sandbox."
+wasm = "lapce-lsp-launcher.wasm"
+
+[activation]
+workspace-contains = ["**/justfile", "**/Justfile", "**/*.just"]
+
+# The launcher reads this table. The program must be in the PATH of the VM.
+[server]
+command = "just-lsp"
+args = []
+patterns = ["**/justfile", "**/Justfile", "**/*.just"]

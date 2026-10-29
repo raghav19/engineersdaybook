@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The image of the msb sandbox. It has Debian, mise and exactly the tools in tools/. The VM boots from this image,
 # so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
-# VS Code Remote-SSH needs an image with glibc (not Alpine), tar and libstdc++.
+# The Lapce proxy and the mise tools need an image with glibc (not Alpine). The install script of the proxy needs tar, gzip and curl.
 FROM debian:trixie-slim AS base
 ARG MISE_VERSION=v2026.10.0
 
@@ -13,7 +13,7 @@ ENV MISE_DATA_DIR=/opt/mise \
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client \
+      curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client nano \
       podman podman-docker uidmap passt fuse-overlayfs \
  && rm -rf /var/lib/apt/lists/* \
  && ldconfig
@@ -52,6 +52,36 @@ FROM base AS claude
 COPY tools/claude.toml /etc/mise/conf.d/claude.toml
 RUN mise install --yes
 
+FROM base AS lsp
+COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
+RUN mise install --yes
+
+# The proxy of Lapce, the part of the editor that runs in the VM. Lapce on the host runs `~/.local/share/lapce-stable/proxy/lapce --version`.
+# If the answer is not `Lapce-proxy <its own version>`, Lapce downloads and uploads the proxy again at each connection. So this version must be the
+# version of Lapce on the host. LAPCE_VERSION and the checksum change together. The checksum is the digest of the asset in the GitHub release.
+FROM base AS lapce-proxy
+ARG LAPCE_VERSION=v0.4.6
+ARG LAPCE_PROXY_SHA256=90248f443f9434fd4d442435ada1f44002f5c82640509078e78829d9cc85036f
+RUN mkdir -p /home/agent/.local/share/lapce-stable/proxy \
+ && curl -fsSL -o /tmp/lapce-proxy.gz "https://github.com/lapce/lapce/releases/download/${LAPCE_VERSION}/lapce-proxy-linux-x86_64.gz" \
+ && echo "${LAPCE_PROXY_SHA256}  /tmp/lapce-proxy.gz" | sha256sum -c - \
+ && gunzip -c /tmp/lapce-proxy.gz > /home/agent/.local/share/lapce-stable/proxy/lapce \
+ && chmod 0755 /home/agent/.local/share/lapce-stable/proxy/lapce
+
+# The volts (plugins) of Lapce that start the language servers. One wasm module starts every server. lapce-lsp/volts/ has one volt.toml for each server.
+# The wasm module reads the [server] table of its volt.toml. The build is a throwaway stage: the image keeps the wasm files and no Rust.
+FROM rust:1.99-slim-trixie AS lapce-volts
+RUN rustup target add wasm32-wasip1
+WORKDIR /src
+COPY lapce-lsp/ ./
+RUN cargo build --release --locked --target wasm32-wasip1 \
+ && for volt in volts/*/; do \
+      name=$(basename "$volt"); \
+      mkdir -p "/out/$name"; \
+      cp "$volt/volt.toml" "/out/$name/volt.toml"; \
+      cp target/wasm32-wasip1/release/lapce-lsp-launcher.wasm "/out/$name/lapce-lsp-launcher.wasm"; \
+    done
+
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -59,6 +89,9 @@ COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=lapce-proxy --chown=agent:agent /home/agent/.local/share/lapce-stable/proxy /home/agent/.local/share/lapce-stable/proxy
+COPY --from=lapce-volts --chown=agent:agent /out /home/agent/.local/share/lapce-stable/plugins
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
@@ -67,6 +100,10 @@ RUN mise reshim && mise run sandbox:completions
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
+# Lapce sends no language id for Terraform files, and terraform-ls then gives no hover, completion or symbols. The volt of terraform-ls starts the server through this script.
+COPY --chmod=0755 lsp-langid /usr/local/bin/lsp-langid
+# The proxy is also the command `lapce <folder>`. In the terminal of Lapce it opens the folder in the Lapce window that is connected to this VM.
+RUN ln -s /home/agent/.local/share/lapce-stable/proxy/lapce /usr/local/bin/lapce
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
@@ -81,8 +118,8 @@ COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 # GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
  && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
-# The /etc/profile of Debian resets PATH for login shells (bash -l, the VS Code terminal and ssh). This removes the shims that the ENV below adds.
-RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR="code --wait"' > /etc/profile.d/mise-shims.sh \
+# The /etc/profile of Debian resets PATH for login shells (bash -l, the Lapce terminal and ssh). This removes the shims that the ENV below adds.
+RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR=nano' > /etc/profile.d/mise-shims.sh \
  && chmod 0755 /usr/local/bin/sandbox-boot
 
 # The tools are the mise shims. sandbox.yaml sets the workspace paths for mise (MISE_TRUSTED_CONFIG_PATHS and MISE_IGNORED_CONFIG_PATHS).

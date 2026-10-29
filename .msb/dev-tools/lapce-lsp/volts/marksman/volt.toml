@@ -1,0 +1,17 @@
+name = "lsp-marksman"
+version = "0.1.0"
+author = "sandbox"
+display-name = "marksman"
+description = "Starts the marksman language server from the image of the sandbox."
+wasm = "lapce-lsp-launcher.wasm"
+
+[activation]
+language = ["markdown"]
+workspace-contains = ["**/*.md"]
+
+# The launcher reads this table. The program must be in the PATH of the VM.
+[server]
+command = "marksman"
+args = ["server"]
+language = "markdown"
+patterns = ["**/*.md"]

@@ -1,10 +1,10 @@
-# The msb sandbox: a microsandbox VM for Claude Code and VS Code. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
+# The msb sandbox: a microsandbox VM for Claude Code and the Lapce editor. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
 # Every recipe runs on the host. sandbox.yaml declares the VM. The recipe `run` makes the VM from it.
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
 # The recipes list the steps in order. msb.py has the steps that need Python.
 #
-#   just msb setup          once for each host: authorize your SSH key and set up VS Code.
-#   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
+#   just msb setup          once for each host: authorize your SSH key.
+#   just msb run            every day: make or start the VM, prepare it, serve SSH for Lapce, then start Lapce.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
@@ -23,7 +23,9 @@ msb    := require("msb")
 bws    := require("bws")
 age    := require("age")
 uv     := require("uv")
-code   := require("code")
+lapce  := require("lapce")
+ssh_keygen := require("ssh-keygen")
+ssh_keyscan := require("ssh-keyscan")
 docker := require("docker")
 jq     := require("jq")
 yq     := require("yq")
@@ -49,9 +51,10 @@ registry_user := 'raghav19'
 vm_user := 'agent'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
-# The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. VSCODE_SETTINGS in msb.py has the settings.
-remote_ssh_extension := 'ms-vscode-remote.remote-ssh'
-vscode_settings_file := config_directory() / 'Code/User/settings.json'
+# Lapce starts `ssh agent@127.0.0.1 -p <ssh_port>` and reads no SSH config of its own. So `run` serves the SSH of the VM on this port of the host loopback.
+# The version of Lapce on the host must be the version of the proxy in the image (LAPCE_VERSION in dev-tools/Dockerfile).
+ssh_port := '2222'
+ssh_log := cache_directory() / 'msb-ssh-serve.log'
 # The tag of the image is the commit.
 commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
@@ -68,12 +71,10 @@ help:
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
-# Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
+# Once for each host (safe to run again): authorize your SSH key for `msb ssh`
 setup: _host-only
     [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file '{{ ssh_pubkey }}'
-    code --install-extension {{ remote_ssh_extension }}
-    {{ step }} vscode-settings '{{ vscode_settings_file }}'
     echo "Setup is complete. Next, run: just msb build. Then run: just msb run"
 
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
@@ -102,15 +103,30 @@ _vm:
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
-# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open VS Code on it
+# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, serve its SSH, then start Lapce
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 run: _host-only
-    # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
+    # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `lapce` does not get them.
     {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
-    code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
+    just --justfile {{ source_file() }} _ssh-serve
+    setsid lapce >/dev/null 2>&1 < /dev/null &
+    echo "Lapce: click the remote icon at the top left, choose SSH Host, enter agent@127.0.0.1:{{ ssh_port }}. Then in the Lapce terminal run: lapce $MSB_WORKSPACE"
+
+# The VM has no sshd. `msb ssh serve` is the SSH server on the loopback of the host, and it talks to the VM. It runs until `rm` stops it.
+# Each VM has a new host key, and Lapce cannot answer the question about a new key. The connection is a local pipe, so the recipe trusts the key now.
+# The test with /dev/tcp opens the port in a subshell. It succeeds if a server listens.
+_ssh-serve:
+    if ! (exec 3<>/dev/tcp/127.0.0.1/{{ ssh_port }}) 2>/dev/null; then \
+      setsid msb ssh serve $MSB_NAME --host 127.0.0.1 --port {{ ssh_port }} --no-inactivity-timeout >{{ ssh_log }} 2>&1 < /dev/null & \
+      for _ in $(seq 50); do (exec 3<>/dev/tcp/127.0.0.1/{{ ssh_port }}) 2>/dev/null && break; sleep 0.2; done; \
+    fi
+    (exec 3<>/dev/tcp/127.0.0.1/{{ ssh_port }}) 2>/dev/null || { echo "msb: the SSH server does not listen on port {{ ssh_port }}. See {{ ssh_log }}." >&2; exit 1; }
+    mkdir -p ~/.ssh && touch ~/.ssh/known_hosts
+    ssh-keygen -q -R '[127.0.0.1]:{{ ssh_port }}' >/dev/null 2>&1 || true
+    ssh-keyscan -p {{ ssh_port }} 127.0.0.1 2>/dev/null >> ~/.ssh/known_hosts
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
@@ -122,5 +138,7 @@ shell: _host-only
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
+    # The ^ anchors the pattern at the start of the command line, so pkill cannot match the shell that runs this line.
+    pkill -f "^msb ssh serve $MSB_NAME " || true
     msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi

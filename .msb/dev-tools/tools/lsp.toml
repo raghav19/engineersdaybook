@@ -1,0 +1,11 @@
+# The language servers for the editor. Lapce starts them through the volts of lapce-lsp/ (one volt for each server).
+# ty and ruff are in dev.toml. The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
+[tools]
+node = "24.22"  # the npm: tools below need node at build time. It is the same version as in runtimes.toml, so the final image has one copy
+terraform-ls = "0.39.1"
+taplo = "0.10.0"
+marksman = "2026-02-08"
+"github:terror/just-lsp" = "0.10.0"
+"npm:yaml-language-server" = "1.25.0"
+"npm:bash-language-server" = "5.8.1"
+"npm:dockerfile-language-server-nodejs" = "0.15.0"
