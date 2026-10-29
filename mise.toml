@@ -3,6 +3,7 @@ just = "1.59"
 yq = "4.54"
 jq = "1.8"
 bitwarden-secrets-manager = "2.1"
+age = "1.3"  # encrypts and decrypts the Bitwarden access token (.msb/, prerequisite 4)
 kind = "0.33"
 kubectl = "1.37"
 kustomize = "5.8"
