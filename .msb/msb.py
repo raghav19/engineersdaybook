@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = "==3.13.*"
-# dependencies = ["ruamel.yaml==0.19.1", "pyrage==1.4.0"]
+# dependencies = ["ruamel.yaml==0.19.1"]
 # ///
 """The steps of the msb sandbox recipes: msb.py <step>
 
@@ -14,15 +14,10 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-encrypt-bws-token
-                 encrypt the Bitwarden access token with a passphrase. It asks for the token and the passphrase on the terminal.
-bws-run          run a command under `bws run`. The recipes use this step for everything that needs Bitwarden.
-                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase and decrypts the token (see _decrypt_bws_token).
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
-import getpass
 import hashlib
 import json
 import os
@@ -38,7 +33,6 @@ import webbrowser
 from pathlib import Path
 from typing import NoReturn
 
-import pyrage  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 
@@ -52,10 +46,6 @@ GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
 GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
-# The Bitwarden access token, encrypted with a passphrase (age format). The step `encrypt-bws-token` makes the file. `bws-run` decrypts it.
-BWS_TOKEN_FILE = Path.home() / ".config" / "bws" / "access-token.age"
-# Anyone can read the file, so the passphrase is the only protection. Guesses are offline, so use a long one.
-MIN_PASSPHRASE = 12  # characters
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -164,19 +154,6 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
-def _decrypt_bws_token() -> str:
-    """Return the Bitwarden access token. `bws-run` calls this when BWS_ACCESS_TOKEN is not set.
-
-    The token is in BWS_TOKEN_FILE, encrypted with a passphrase (the step `encrypt-bws-token` makes the file). The passphrase comes from the terminal.
-    Nothing keeps it. A wrong passphrase stops the step.
-    """
-    passphrase = getpass.getpass("Passphrase for the Bitwarden token: ")
-    try:
-        return pyrage.passphrase.decrypt(BWS_TOKEN_FILE.read_bytes(), passphrase).decode().strip()
-    except pyrage.DecryptError:
-        _die(f"could not decrypt {BWS_TOKEN_FILE}. Did you enter the right passphrase?")
-
-
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -257,41 +234,6 @@ def ensure_vm() -> None:
         )
 
 
-def encrypt_bws_token() -> None:
-    """Encrypt the Bitwarden access token with a passphrase. Run it on the host, in your own terminal (`just msb encrypt-bws-token`).
-
-    Ask for the token (not shown), then for the passphrase twice. Write BWS_TOKEN_FILE with mode 600. A file that exists is replaced.
-    The token is never in a file, in the environment or in the history of the shell. Stop if the passphrase is short or the two entries differ.
-    """
-    token = getpass.getpass("Bitwarden access token: ").strip()
-    passphrase = getpass.getpass("New passphrase: ")
-    if not token:
-        _die("the token is empty.")
-    if len(passphrase) < MIN_PASSPHRASE:
-        _die(f"the passphrase needs at least {MIN_PASSPHRASE} characters.")
-    if getpass.getpass("Passphrase again: ") != passphrase:
-        _die("the two passphrases are different.")
-    BWS_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(BWS_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    os.fchmod(fd, 0o600)
-    with os.fdopen(fd, "wb") as file:
-        file.write(pyrage.passphrase.encrypt(token.encode(), passphrase))
-    print(f"The token is encrypted in {BWS_TOKEN_FILE} (mode 600). Delete the plain copy, if you have one.")
-
-
-def bws_run(command: str) -> NoReturn:
-    """Run `command` under `bws run`: the Bitwarden keys are variables in its environment. The recipes use this for every command that needs Bitwarden.
-
-    1. BWS_ACCESS_TOKEN is set: use it. (A CI job does this.)
-    2. BWS_TOKEN_FILE exists: ask for the passphrase and decrypt the token (_decrypt_bws_token). The token goes to `bws` only. This process is replaced by it.
-    3. Neither: run `bws`, which stops with its own message (Missing access token).
-    """
-    env = dict(os.environ)
-    if "BWS_ACCESS_TOKEN" not in env and BWS_TOKEN_FILE.is_file():
-        env["BWS_ACCESS_TOKEN"] = _decrypt_bws_token()
-    os.execvpe("bws", ["bws", "run", "--", command], env)
-
-
 def allow_host(host: str) -> None:
     """Add `host` to network.allow in sandbox.yaml. The comments, the quotes and the order of the file stay as they are.
 
@@ -321,8 +263,6 @@ def main() -> None:
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
     for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
-    steps.add_parser("encrypt-bws-token")
-    steps.add_parser("bws-run").add_argument("command")
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
@@ -332,10 +272,6 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
-        case "encrypt-bws-token":
-            encrypt_bws_token()
-        case "bws-run":
-            bws_run(args.command)
         case "allow-host":
             allow_host(args.host)
 
