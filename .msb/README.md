@@ -104,7 +104,7 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 
 | You see | Do this |
 |---|---|
-| `secret GH_TOKEN: host environment variable GH_TOKEN is not set` (or another key) | `bws run` did not give that key. Check that the key exists in the Bitwarden project and that your machine account can read the project. |
+| `msb: these keys are not in the environment: ...` | `bws run` did not give those keys. Check that each key exists in the Bitwarden project with this exact name, and that your machine account can read the project. To list the key names, run `BWS_ACCESS_TOKEN=$(age -d ~/.config/bws/access-token.age) bws secret list \| jq -r '.[].key'`. |
 | `age: error: incorrect passphrase`, then `Missing access token` | You entered the wrong passphrase. Run the recipe again. |
 | `age: error: failed to open input file`, then `Missing access token` | The encrypted token file does not exist. Do prerequisite 4. |
 | `run` cannot pull the image (`not found` or `unauthorized`) | `not found`: `sandbox.yaml` does not pin an image that exists. Run `just msb build`. `unauthorized`: the Bitwarden key `GITHUB_TOKEN` needs the scope `read:packages`. |

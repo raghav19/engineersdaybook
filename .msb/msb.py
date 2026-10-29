@@ -154,6 +154,17 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
+def _missing_keys() -> list[str]:
+    """Return the names that msb reads from the environment when it starts the VM, and that the environment lacks. `ensure-vm` calls this.
+
+    They are the secrets of sandbox.yaml and the registry password. They come from the Bitwarden project through `bws run`.
+    msb itself names only the first missing one, so this lists all of them.
+    """
+    config = YAML().load(CONFIG)
+    names = [*config["secrets"], config["registry"]["password_env"]]
+    return [name for name in names if not os.environ.get(name)]
+
+
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -202,6 +213,7 @@ def ensure_vm() -> None:
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
        msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
        A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
+       If a key is missing from the environment, stop and name all missing keys (_missing_keys).
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
@@ -218,6 +230,11 @@ def ensure_vm() -> None:
         print(f"msb: {name} does not match the configuration now. sandbox.yaml or a host value changed.", file=sys.stderr)
         _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     if not vm or vm["status"].lower() != "running":
+        if missing := _missing_keys():
+            _die(
+                f"these keys are not in the environment: {', '.join(missing)}. `bws run` gives them from the Bitwarden project."
+                " Check that each key exists there with this exact name, and that your machine account can read the project."
+            )
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
