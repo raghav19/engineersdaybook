@@ -13,7 +13,7 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
 | Other secrets (Bitwarden) | `bws-secret.sh` and `secrets-sync` make an sbx custom secret | `bws run` puts the Bitwarden keys in the environment of one command. msb gives the VM a placeholder |
 | MCP servers | registered on the gateway (`sbx mcp add`) | `managedMcpServers` in a root-owned file of the image |
 | Tool filter for GitHub MCP | the gateway removes the tools | a deny list in the same file. The client enforces it. It is a soft limit (see "The limit of the deny list") |
-| Claude login | the sbx proxy holds your login and adds it to requests | `msb.py` reads the access token of the login that `claude` keeps on the host. msb gives the VM a placeholder. You do not log in to Claude in the VM |
+| Claude login | the sbx proxy holds your login and adds it to requests | a long-lived token from `claude setup-token`, in Bitwarden. msb gives the VM a placeholder. You do not log in to Claude in the VM |
 | Licence | proprietary | Apache-2.0, beta (v0.7) |
 
 **Not ported yet:** the SPIRE agent (and Envoy) and the kind kubeconfig. The VM can already reach their ports on the host, and the Flux Operator web UI (host port 19090). The skills are in `.claude/skills` of the repository.
@@ -41,19 +41,24 @@ This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https:/
    - GitHub sends the browser to port 8765 of this host (`http://127.0.0.1:8765/callback`). The step waits 5 minutes for you.
    - The client secret is the Bitwarden key `GITHUB_APP_CLIENT_SECRET` (prerequisite 6).
    - You installed the app on this repository only. It has the permissions contents, issues and pull requests. It has no Administration permission, so GitHub refuses a change to the settings of the repository.
-   - The tokens go to `~/.config/msb/github-app.json` (mode 600). The access token lasts 8 hours, and `run` refreshes it.
-   - If the refresh token is lost or older than about 6 months, `run` tells you to log in again.
+   - In the settings of the app (Optional features), turn off "User-to-server token expiration". The token then has no refresh token and does not end by itself.
+   - The step saves the token to `~/.config/msb/github-app.json` (mode 600). Copy the access token to the Bitwarden key `GH_TOKEN` (prerequisite 6). Then delete the file.
    - There is no fallback to `gh`, because that token is broader.
 
 3. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it.
 
 4. **Commit your work.** The VM clones the committed files only.
 
-5. **Log in to Claude on the host.** Run `claude` and sign in with your subscription. The VM uses this login, so you do not log in again in the VM. `run` stops with a message if the login is missing or its access token lasts less than 30 minutes. Then start `claude` on the host. It refreshes the token.
+5. **Make a Claude token.** Run `claude setup-token` on the host and sign in with your subscription. Copy the token to the Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` (prerequisite 6). The VM uses this token, so you do not log in to Claude in the VM. The login of `claude` on the host is a different token. It can refresh without breaking the VM.
 
 6. **Set up Bitwarden.** `run`, `github-login` and `build` use `bws run`. It puts each key of the Bitwarden project in the environment of one command.
-   - Set `BWS_ACCESS_TOKEN` in your shell, for example `export BWS_ACCESS_TOKEN=$(cat ~/.config/bws/access-token)`. If it is missing, `bws` stops the recipe with `Missing access token`.
-   - The project needs two keys. `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. `build` pushes the image with it, and `run` pulls the private image with it (`registry` in `sandbox.yaml`).
+   - The Bitwarden access token is the one secret you keep on the host. Keep it encrypted with a passphrase, so that a process of your user cannot read it. Every recipe that needs Bitwarden (`run`, `build`, `github-login`) calls the step `bws-run` of `msb.py`. It asks for your passphrase on the terminal, decrypts the token and starts `bws run`. Nothing stores the passphrase. You enter it once for each recipe.
+   - Set it up once, in your own terminal (not in an agent session): `just msb encrypt-bws-token`. It asks for the token (not shown) and for a new passphrase twice (at least 12 characters), and writes `~/.config/bws/access-token.age` (mode 600). The token is never in a file or in the history of the shell. Delete any plain copy, such as `~/.config/bws/access-token`.
+   - The file is in the age format, made with `pyrage`. The `age` command reads it too (`age -d ~/.config/bws/access-token.age`). You can also make the file with `age -p -o ~/.config/bws/access-token.age <file>`.
+   - The passphrase is the only protection, because anyone who can read the file can try guesses offline. Use a long one.
+   - If `BWS_ACCESS_TOKEN` is set in the environment (for example in CI), `bws-run` uses it and does not ask. If neither exists, `bws` stops with `Missing access token`.
+   - Run these commands from reviewed code. `msb.py` and the justfile run with your token, so check changes to them before you run them.
+   - The project needs four keys. `GH_TOKEN` is the token of the GitHub App (prerequisite 2). `CLAUDE_CODE_OAUTH_TOKEN` is the Claude token (prerequisite 5). `GITHUB_APP_CLIENT_SECRET` is the client secret of the GitHub App, and `github-login` uses it. `GITHUB_TOKEN` is a classic token with the scope `write:packages`. `build` pushes the image with it, and `run` pulls the private image with it (`registry` in `sandbox.yaml`).
    - For the EU cloud, set `BWS_SERVER_URL=https://vault.bitwarden.eu`.
 
 ## Getting started
@@ -70,7 +75,7 @@ just msb run           # 3. every day
 | 2 | `build` | Builds `dev-tools/` with Docker (Debian, mise and the tools of `dev-tools/tools/`). Pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
 | 3 | `run` | Makes the VM, or starts it, and gives it the new tokens. Runs `sandbox-boot` in it. Opens VS Code on it. You can run it as often as you want. |
 
-In VS Code, open a terminal and run `claude`. It starts with the login of the host, so it does not ask you to sign in.
+In VS Code, open a terminal and run `claude`. It uses the token from Bitwarden, so it does not ask you to sign in.
 
 Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host <host>` and `just msb rm`. `just msb rm --volumes` also removes the Claude settings, the Terraform provider cache and the podman images.
 
@@ -116,18 +121,17 @@ Other recipes: `just msb shell` (a bash prompt in the VM), `just msb allow-host 
 - The VM has only placeholders: `GH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`.
 - The host replaces `GH_TOKEN` in requests to `github.com`, `api.github.com` and `api.githubcopilot.com`. It does this in Bearer auth and in Basic auth, so `git push` works.
 - The host replaces `CLAUDE_CODE_OAUTH_TOKEN` in requests to `api.anthropic.com`. The host blocks each token for every other host.
-- `GH_TOKEN` is the token of the GitHub App (`_github_token()`). `CLAUDE_CODE_OAUTH_TOKEN` is the access token of your Claude login on the host (`_claude_token()`).
+- `GH_TOKEN` is the token of the GitHub App. `CLAUDE_CODE_OAUTH_TOKEN` is the token of `claude setup-token`. Both are Bitwarden keys, and `bws run` puts them in the environment of `ensure-vm`.
 - The VM has no Claude login file, because the environment token comes before a stored login.
 - The secret is `GH_TOKEN`, not `GITHUB_TOKEN`, because the Bitwarden key `GITHUB_TOKEN` is another token (for `ghcr.io`). With that name, `bws run` would give the wrong token to msb.
 
-### Token refresh
+### Token lifetime
 
-- `_github_token()` returns the saved access token if it has more than 30 minutes left. Otherwise it sends the refresh token and the client credentials to GitHub. It saves the new access token and the new refresh token.
-- Each refresh makes the old refresh token useless.
-- `_claude_token()` only reads the access token of the login on the host. It never refreshes it. `claude` on the host refreshes it and rotates the refresh token. A second refresh from here would make the refresh token of `claude` useless.
-- If the Claude token lasts less than 30 minutes, `run` stops and tells you to start `claude` on the host.
-- At each run, after the VM is made or started, `ensure-vm` gives it both tokens with `msb modify --secret`. The placeholders do not change, and the VM does not restart.
-- There is no timer. After about 8 hours without `just msb run`, GitHub and Claude answer 401 to requests from the VM. Run `just msb run` again to fix this.
+- Neither token refreshes by itself. The GitHub App does not expire user tokens (prerequisite 2), and `claude setup-token` makes a long-lived token. Nothing runs on the host between two runs of `just msb run`.
+- A token that does not end by itself is valid until you revoke it, so a leak lasts longer. The GitHub token reaches this repository only. A rotation schedule is not decided yet.
+- To change a token: make the new token, change the Bitwarden key, revoke the old token, then run `msb stop sandbox-dev` and `just msb run`. msb reads a secret when the VM starts. A running VM does not read a changed secret. A VM that you stopped reads it again. The clone and the volumes stay.
+- Revoke the old GitHub token alone. If you delete the app under Settings, Applications, Authorized GitHub Apps, GitHub revokes the new token too. Use that only for a leak.
+- Why not a proxy like sbx: msb has no secret that refreshes, and the docs and the code give no hook for one. A new value reaches new connections only. A client that keeps a connection open, such as Headroom, keeps the old value until it restarts. See `docs/research/microsandbox-credential-injection.md`.
 
 ### Secrets from Bitwarden
 
@@ -241,7 +245,7 @@ Risks:
 | `run` says that the VM does not match the configuration | `sandbox.yaml` (it pins the image) or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
 | VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
-| `claude` asks for a login | The login of the host ended. Start `claude` on the host to refresh it. Then run `just msb run`. |
+| `claude` says the token is revoked or invalid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` is wrong, revoked or old. Make a new one with `claude setup-token` and update the key. Then run `msb stop sandbox-dev` and `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
 
 More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-dev` (the settings and the `config-sha` label) and `msb <command> --help`.

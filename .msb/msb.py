@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = "==3.13.*"
-# dependencies = ["ruamel.yaml==0.19.1"]
+# dependencies = ["ruamel.yaml==0.19.1", "pyrage==1.4.0"]
 # ///
 """The steps of the msb sandbox recipes: msb.py <step>
 
@@ -14,10 +14,15 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
+encrypt-bws-token
+                 encrypt the Bitwarden access token with a passphrase. It asks for the token and the passphrase on the terminal.
+bws-run          run a command under `bws run`. The recipes use this step for everything that needs Bitwarden.
+                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase and decrypts the token (see _decrypt_bws_token).
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
+import getpass
 import hashlib
 import json
 import os
@@ -33,12 +38,12 @@ import webbrowser
 from pathlib import Path
 from typing import NoReturn
 
+import pyrage  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
-REFRESH_MARGIN = 1800  # seconds. GitHub: refresh a token that ends sooner. Claude: refuse it
 # The GitHub App of this repository. The client ID is public. The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET.
 # You installed the app on this repository only, with the permissions contents, issues and pull requests. So the token cannot do more.
 # The access token lasts 8 hours. The refresh token lasts about 6 months, and each refresh gives a new one.
@@ -47,7 +52,10 @@ GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
 GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
-CLAUDE_CREDENTIALS = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")) / ".credentials.json"
+# The Bitwarden access token, encrypted with a passphrase (age format). The step `encrypt-bws-token` makes the file. `bws-run` decrypts it.
+BWS_TOKEN_FILE = Path.home() / ".config" / "bws" / "access-token.age"
+# Anyone can read the file, so the passphrase is the only protection. Guesses are offline, so use a long one.
+MIN_PASSPHRASE = 12  # characters
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -103,10 +111,10 @@ def _fingerprint() -> str:
 
 
 def _github_exchange(**data: str) -> str:
-    """Send `data` and the client credentials of the GitHub App to GitHub. Save the tokens that come back. Return the access token.
+    """Send `data` and the client credentials of the GitHub App to GitHub. Save the access token that comes back. Return it.
 
     The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET. `bws run` puts it in the environment.
-    The token file has mode 600. It holds the access token, the refresh token and the time when the access token ends.
+    The token file has mode 600. It holds the access token only. The app does not expire user tokens, so there is no refresh token.
     """
     secret = os.environ.get("GITHUB_APP_CLIENT_SECRET") or _die(
         "GITHUB_APP_CLIENT_SECRET is not set. Run this through `just msb <recipe>`."
@@ -117,11 +125,7 @@ def _github_exchange(**data: str) -> str:
         reply = json.load(response)
     if "access_token" not in reply:
         _die(f"GitHub refused the request ({reply.get('error')}). Run: just msb github-login")
-    saved = {
-        "access_token": reply["access_token"],
-        "refresh_token": reply.get("refresh_token"),
-        "expires_at": time.time() + reply.get("expires_in", 10**9),
-    }
+    saved = {"access_token": reply["access_token"]}
     GITHUB_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(GITHUB_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(fd, 0o600)
@@ -160,41 +164,17 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
-def _github_token() -> str:
-    """Return the GitHub access token from the token file. `ensure-vm` calls this.
+def _decrypt_bws_token() -> str:
+    """Return the Bitwarden access token. `bws-run` calls this when BWS_ACCESS_TOKEN is not set.
 
-    If the token ends in less than REFRESH_MARGIN seconds, ask GitHub for a new one with the refresh token. Save it first.
-    Each refresh gives a new refresh token. Stop if there is no file. If GitHub refuses the refresh, the message says to log in again.
+    The token is in BWS_TOKEN_FILE, encrypted with a passphrase (the step `encrypt-bws-token` makes the file). The passphrase comes from the terminal.
+    Nothing keeps it. A wrong passphrase stops the step.
     """
-    if not GITHUB_TOKEN_FILE.is_file():
-        _die("there is no GitHub login. Run: just msb github-login")
-    saved = json.loads(GITHUB_TOKEN_FILE.read_text())
-    if saved["expires_at"] - time.time() > REFRESH_MARGIN:
-        return saved["access_token"]
-    return _github_exchange(grant_type="refresh_token", refresh_token=saved["refresh_token"])
-
-
-def _claude_token() -> str:
-    """Return the access token of the Claude login that `claude` keeps on this host. `ensure-vm` calls this.
-
-    The login is the key `claudeAiOauth` in ~/.claude/.credentials.json (Linux). The VM does not log in. It has a placeholder, as sbx does.
-    This function only reads the file. It never refreshes the token. `claude` on the host refreshes it and rotates the refresh token.
-    A second refresh from here would make the refresh token of `claude` useless.
-    Stop in three cases:
-    - there is no file, or its mode is not 600
-    - the login is not a subscription login
-    - the token lasts less than REFRESH_MARGIN seconds
-    """
-    if not CLAUDE_CREDENTIALS.is_file():
-        _die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
-    if CLAUDE_CREDENTIALS.stat().st_mode & 0o077:
-        _die(f"{CLAUDE_CREDENTIALS} must have mode 600.")
-    login = json.loads(CLAUDE_CREDENTIALS.read_text()).get("claudeAiOauth")
-    if not login or "accessToken" not in login:
-        _die("the Claude login of this host is not a subscription login. Run `claude` and sign in with your subscription.")
-    if login["expiresAt"] / 1000 - time.time() < REFRESH_MARGIN:
-        _die("the Claude login of this host ends soon, or it is not valid. Start `claude` on the host to refresh it. Then run this again.")
-    return login["accessToken"]
+    passphrase = getpass.getpass("Passphrase for the Bitwarden token: ")
+    try:
+        return pyrage.passphrase.decrypt(BWS_TOKEN_FILE.read_bytes(), passphrase).decode().strip()
+    except pyrage.DecryptError:
+        _die(f"could not decrypt {BWS_TOKEN_FILE}. Did you enter the right passphrase?")
 
 
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
@@ -222,7 +202,7 @@ def github_login() -> None:
     1. Print the address of the approval page and open it in the browser. You approve the app.
     2. GitHub sends the browser to a port of this host (the callback address of the app) with a one-time code.
        _github_callback waits for it. The random `state` value must come back the same. If it does not, the answer is not from GitHub.
-    3. Send the code and the client secret to GitHub. Save the tokens (_github_exchange).
+    3. Send the code and the client secret to GitHub. Save the token (_github_exchange). You copy it to Bitwarden.
     """
     state = secrets.token_urlsafe(16)
     redirect = f"http://127.0.0.1:{GITHUB_CALLBACK_PORT}/callback"
@@ -234,6 +214,7 @@ def github_login() -> None:
         _die("there was no valid approval in time. Run: just msb github-login")
     _github_exchange(code=got["code"][0], redirect_uri=redirect)
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
+    print("Copy the access token to the Bitwarden key GH_TOKEN. Then delete the file. The VM gets the token from Bitwarden.")
 
 
 def ensure_vm() -> None:
@@ -242,14 +223,12 @@ def ensure_vm() -> None:
     msb keeps the fingerprint (_fingerprint) in the label `config-sha` of the VM.
     1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
-       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the Bitwarden keys).
-       GH_TOKEN is the GitHub App token. CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host.
-    3. Give the VM the current tokens with `msb modify --secret`. It does not restart.
+       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
+       A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
-    tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
     wanted = _fingerprint()
 
     found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
@@ -265,24 +244,10 @@ def ensure_vm() -> None:
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
-            env=os.environ | tokens,
             check=False,
         )
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
-    # Give the VM the current tokens. The placeholders in the VM stay, and the VM does not restart.
-    secrets_config = YAML().load(CONFIG)["secrets"]
-    for secret, value in tokens.items():
-        hosts = ",".join(secrets_config[secret]["allow"])
-        done = subprocess.run(
-            ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
-            env=os.environ | {secret: value},
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if done.returncode != 0:
-            _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
@@ -290,6 +255,41 @@ def ensure_vm() -> None:
         _die(
             "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
+
+
+def encrypt_bws_token() -> None:
+    """Encrypt the Bitwarden access token with a passphrase. Run it on the host, in your own terminal (`just msb encrypt-bws-token`).
+
+    Ask for the token (not shown), then for the passphrase twice. Write BWS_TOKEN_FILE with mode 600. A file that exists is replaced.
+    The token is never in a file, in the environment or in the history of the shell. Stop if the passphrase is short or the two entries differ.
+    """
+    token = getpass.getpass("Bitwarden access token: ").strip()
+    passphrase = getpass.getpass("New passphrase: ")
+    if not token:
+        _die("the token is empty.")
+    if len(passphrase) < MIN_PASSPHRASE:
+        _die(f"the passphrase needs at least {MIN_PASSPHRASE} characters.")
+    if getpass.getpass("Passphrase again: ") != passphrase:
+        _die("the two passphrases are different.")
+    BWS_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(BWS_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "wb") as file:
+        file.write(pyrage.passphrase.encrypt(token.encode(), passphrase))
+    print(f"The token is encrypted in {BWS_TOKEN_FILE} (mode 600). Delete the plain copy, if you have one.")
+
+
+def bws_run(command: str) -> NoReturn:
+    """Run `command` under `bws run`: the Bitwarden keys are variables in its environment. The recipes use this for every command that needs Bitwarden.
+
+    1. BWS_ACCESS_TOKEN is set: use it. (A CI job does this.)
+    2. BWS_TOKEN_FILE exists: ask for the passphrase and decrypt the token (_decrypt_bws_token). The token goes to `bws` only. This process is replaced by it.
+    3. Neither: run `bws`, which stops with its own message (Missing access token).
+    """
+    env = dict(os.environ)
+    if "BWS_ACCESS_TOKEN" not in env and BWS_TOKEN_FILE.is_file():
+        env["BWS_ACCESS_TOKEN"] = _decrypt_bws_token()
+    os.execvpe("bws", ["bws", "run", "--", command], env)
 
 
 def allow_host(host: str) -> None:
@@ -321,6 +321,8 @@ def main() -> None:
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
     for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
+    steps.add_parser("encrypt-bws-token")
+    steps.add_parser("bws-run").add_argument("command")
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
@@ -330,6 +332,10 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
+        case "encrypt-bws-token":
+            encrypt_bws_token()
+        case "bws-run":
+            bws_run(args.command)
         case "allow-host":
             allow_host(args.host)
 
