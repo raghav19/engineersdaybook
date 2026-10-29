@@ -22,7 +22,7 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
-# The Bitwarden access token, encrypted with a passphrase (`age -p`). Prerequisite 6 in README.md makes the file.
+# The Bitwarden access token, encrypted with a passphrase (`age -p`). Prerequisite 4 in README.md makes the file.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
