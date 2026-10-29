@@ -10,7 +10,6 @@
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
 
 set quiet
-set lazy
 set shell := ['bash', '-euo', 'pipefail', '-c']
 set script-interpreter := ['bash', '-euo', 'pipefail']
 
@@ -19,6 +18,22 @@ export MSB_NAME := 'sandbox-dev'
 # The path of the clone in the VM. SANDBOX_WORKSPACE in sandbox.yaml has the same value.
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
+# --- Required tools ---
+msb    := require("msb")
+bws    := require("bws")
+age    := require("age")
+uv     := require("uv")
+code   := require("code")
+docker := require("docker")
+jq     := require("jq")
+yq     := require("yq")
+
+# --- Required environment variables ---
+in_bws                  := env('MSB_IN_BWS', '')
+GH_TOKEN                := if in_bws == '' { '' } else { env('GH_TOKEN') }
+CLAUDE_CODE_OAUTH_TOKEN := if in_bws == '' { '' } else { env('CLAUDE_CODE_OAUTH_TOKEN') }
+GITHUB_TOKEN            := if in_bws == '' { '' } else { env('GITHUB_TOKEN') }
+
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
@@ -26,20 +41,18 @@ volumes := 'claude-home terraform-providers podman-storage'
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
-bws := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
+bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
 # The user in the VM that `shell` opens. The Dockerfile makes this user.
 vm_user := 'agent'
-# The tools that `run` uses. `allow-host` runs `run` after it, so it checks the same tools first.
-run_tools := 'msb bws age uv code'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
 # The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. VSCODE_SETTINGS in msb.py has the settings.
 remote_ssh_extension := 'ms-vscode-remote.remote-ssh'
 vscode_settings_file := config_directory() / 'Code/User/settings.json'
-# The tag of the image is the commit. `set lazy` runs git only for the recipe that uses the variable.
+# The tag of the image is the commit.
 commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
 image_epoch := '1700000000'
@@ -55,12 +68,8 @@ help:
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
-# Stop with a message if a tool is not on the PATH. Each recipe names the tools that it uses.
-_need +tools:
-    for tool in {{ tools }}; do command -v "$tool" >/dev/null || { echo "msb: $tool is not on the PATH. Install it: see the prerequisites in .msb/README.md." >&2; exit 1; }; done
-
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
-setup: _host-only (_need 'msb code uv')
+setup: _host-only
     [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file '{{ ssh_pubkey }}'
     code --install-extension {{ remote_ssh_extension }}
@@ -69,16 +78,16 @@ setup: _host-only (_need 'msb code uv')
 
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
-github-login: _host-only (_need 'bws age uv')
-    {{ bws }} '{{ step }} github-login'
+github-login: _host-only
+    {{ bws_run }} '{{ step }} github-login'
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
-# `bws run` needs BWS_ACCESS_TOKEN (see `bws` at the top of this file).
+# `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
 # The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
-build: _host-only (_need 'bws age docker jq yq')
-    {{ bws }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
+build: _host-only
+    {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
@@ -88,6 +97,9 @@ build: _host-only (_need 'bws age docker jq yq')
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
       && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
+_vm:
+    {{ step }} ensure-vm
+
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
 # Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open VS Code on it
@@ -95,20 +107,20 @@ build: _host-only (_need 'bws age docker jq yq')
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
-run: _host-only (_need run_tools)
+run: _host-only
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
-    {{ bws }} '{{ step }} ensure-vm'
+    {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
-allow-host $host: _host-only (_need run_tools) && run
+allow-host $host: _host-only && run
     {{ step }} allow-host "$host"
 
 # A bash prompt in the VM, as the agent user
-shell: _host-only (_need 'msb')
+shell: _host-only
     msb exec -t -u {{ vm_user }} $MSB_NAME -- bash -l
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
-rm *args: _host-only (_need 'msb')
+rm *args: _host-only
     msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi
