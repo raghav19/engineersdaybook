@@ -34,6 +34,7 @@ env:
   MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # mise ignores the root mise.toml of the clone, because it lists host tools.
   CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the settings.
   DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
+  HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it.
 
 mounts:
   # The git directory of the host repo, read-only. The VM reads the committed history only.
