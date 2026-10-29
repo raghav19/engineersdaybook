@@ -11,7 +11,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
 1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
    - Run the commands in the root of the repository. `mise install` provides `just`, `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI), `age`, `jq` and `yq`.
    - You install `docker` and `code` yourself.
-   - A recipe stops with a message if a tool is missing.
+   - Every recipe stops with a message if a tool is missing.
 
    ```shell
    mise trust && mise install
@@ -78,7 +78,7 @@ In a VS Code terminal, run `claude`. It uses the token from Bitwarden and does n
 | Open a bash prompt in the VM | `just msb shell` |
 | Allow one more host | `just msb allow-host example.org`, then `just msb rm && just msb run`, then commit |
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
-| Add another secret | Add it under `secrets:` in `sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to the recipe `_vm` in `.msb/justfile`, then `just msb rm && just msb run` |
+| Add another secret | Add it under `secrets:` in `sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `.msb/vm.just`, then `just msb rm && just msb run` |
 | Change a tool of the image | Edit a file in `dev-tools/`, commit, `just msb build`, commit the new digest, then `just msb rm && just msb run` |
 | Remove the VM | `just msb rm`. Add `--volumes` to remove the volumes too |
 
@@ -97,7 +97,7 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden. The first `build` prints `failed to configure registry cache importer ... not found`. The build goes on.
 - **MCP servers.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns it, and project and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub. It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). To change it, run `just msb build`.
 - **Podman.** The VM has rootless podman. `docker` is an alias of podman. `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun`, makes `/` a shared mount, and `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` in each container. The policy of the VM applies to a container too. To push to a registry on the host, allow its port in `HOST_PORTS`.
-- **The recipes.** The justfile lists the steps of each recipe in order. Each recipe names the tools it needs as parameters with defaults, for example `setup msb=require("msb") code=require("code")`. The just function `require` stops the recipe if a tool is not on the `PATH`. Do not pass arguments to these recipes, because an argument skips the check. The keys are checked the same way in the recipe `_vm`, which `run` starts inside `bws run`, with `env_var("GH_TOKEN")`. `msb.py` has the steps that need Python (`vscode-settings`, `github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
+- **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. `.msb/vm.just` lists the required Bitwarden keys with `env`. `run` starts it with `bws run`, because the keys exist only there. `msb.py` has the steps that need Python (`vscode-settings`, `github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
 - **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before VS Code connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
 
 ## When something fails
@@ -193,3 +193,9 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 - **Decision.** `ensure-vm` runs `sandbox-boot` in the VM at each `run`, for a new VM and for an old VM.
 - **Why.** Each step of the script does nothing if its work exists. So the next `run` repairs a stopped VM, a failed boot or a stopped Headroom. The clone stays.
 - **Cost.** `run` takes a few seconds even when nothing changed.
+
+### 13. Check the tools and the keys at the top of the justfile
+
+- **Decision.** The top of `.msb/justfile` lists the tools with `require`, and `.msb/vm.just` lists the Bitwarden keys with `env`. We do not use `set lazy`.
+- **Why.** just checks every top-level definition at the start and stops with its own message. The recipes need no check of their own, and we wrote no shell loop. `bws run` starts `vm.just`, because the keys exist only in its environment.
+- **Cost.** Every recipe needs all the tools, also `shell` and `rm`. just runs `git rev-parse HEAD` for each recipe. It reports one missing item at a time, in the alphabetical order of the variable names. The key names in `vm.just` must match `sandbox.yaml`.
