@@ -11,7 +11,7 @@ Evidence tags: **documented** means the docs say it. **source** means the code s
 1. Yes. Lapce works with a VM that has no `sshd`. The window runs on the host. Only `lapce-proxy` runs in the VM.
 2. Lapce has no setting for a language server. A language server starts from a volt (a WASM plugin).
 3. No volt exists for ty, bash, Docker or just. The volts for Terraform, YAML and TOML are archived.
-4. One small volt can start any program. We build it once and give it one `volt.toml` for each server.
+4. One small volt can start any program. We build it once. The image build makes one copy for each table of the one file `servers.toml`.
 5. Lapce sends an empty language id for `.tf` files. terraform-ls then gives no hover, completion or symbols. A small script fixes this.
 6. The version of Lapce on the host and the version of the proxy must be equal.
 

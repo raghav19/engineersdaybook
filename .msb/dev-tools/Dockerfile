@@ -68,19 +68,40 @@ RUN mkdir -p /home/agent/.local/share/lapce-stable/proxy \
  && gunzip -c /tmp/lapce-proxy.gz > /home/agent/.local/share/lapce-stable/proxy/lapce \
  && chmod 0755 /home/agent/.local/share/lapce-stable/proxy/lapce
 
-# The volts (plugins) of Lapce that start the language servers. One wasm module starts every server. lapce-lsp/volts/ has one volt.toml for each server.
-# The wasm module reads the [server] table of its volt.toml. The build is a throwaway stage: the image keeps the wasm files and no Rust.
-FROM rust:1.99-slim-trixie AS lapce-volts
+# Lapce has no setting for a language server. A volt (a plugin: a folder with volt.toml and a WASM file) starts each one. One WASM module starts every server.
+# It reads the [server] table of the volt.toml next to it. This stage builds the module. It is throwaway: the image keeps the wasm file and no Rust.
+FROM rust:1.99-slim-trixie AS lapce-wasm
 RUN rustup target add wasm32-wasip1
 WORKDIR /src
-COPY lapce-lsp/ ./
-RUN cargo build --release --locked --target wasm32-wasip1 \
- && for volt in volts/*/; do \
-      name=$(basename "$volt"); \
-      mkdir -p "/out/$name"; \
-      cp "$volt/volt.toml" "/out/$name/volt.toml"; \
-      cp target/wasm32-wasip1/release/lapce-lsp-launcher.wasm "/out/$name/lapce-lsp-launcher.wasm"; \
-    done
+COPY lapce-lsp/Cargo.toml lapce-lsp/Cargo.lock ./
+COPY lapce-lsp/src src
+RUN cargo build --release --locked --target wasm32-wasip1
+
+# One volt for each table of lapce-lsp/servers.toml. yq (the version of the dev stage) writes the volt.toml of the volt: the name, the activation, and the table itself as [server].
+FROM base AS lapce-volts
+COPY --from=dev /opt/mise/installs/yq/latest/yq /usr/local/bin/yq
+COPY --from=lapce-wasm /src/target/wasm32-wasip1/release/lapce-lsp-launcher.wasm /tmp/lapce-lsp-launcher.wasm
+COPY lapce-lsp/servers.toml /tmp/servers.toml
+RUN <<'EOF'
+set -euo pipefail
+cd /tmp
+names=$(yq -p toml -oy 'keys | .[]' servers.toml)
+[ -n "$names" ]
+for name in $names; do
+  mkdir -p "out/$name"
+  cp lapce-lsp-launcher.wasm "out/$name/"
+  NAME=$name yq -p toml -o toml '{
+    "name": "lsp-" + strenv(NAME),
+    "version": "0.1.0",
+    "author": "sandbox",
+    "display-name": strenv(NAME),
+    "description": "Starts the " + strenv(NAME) + " language server from the image of the sandbox.",
+    "wasm": "lapce-lsp-launcher.wasm",
+    "activation": {"language": ([.[strenv(NAME)].language] | map(select(. != null))), "workspace-contains": .[strenv(NAME)].patterns},
+    "server": .[strenv(NAME)]
+  }' servers.toml > "out/$name/volt.toml"
+done
+EOF
 
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -91,7 +112,7 @@ COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=lapce-proxy --chown=agent:agent /home/agent/.local/share/lapce-stable/proxy /home/agent/.local/share/lapce-stable/proxy
-COPY --from=lapce-volts --chown=agent:agent /out /home/agent/.local/share/lapce-stable/plugins
+COPY --from=lapce-volts --chown=agent:agent /tmp/out /home/agent/.local/share/lapce-stable/plugins
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.

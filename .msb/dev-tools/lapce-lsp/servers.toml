@@ -1,0 +1,56 @@
+# The language servers of the editor. Lapce has no setting for a language server, so the image build makes one Lapce volt (plugin) for each table here.
+# command and args: the program and its arguments. The program must be in the PATH of the VM (tools/lsp.toml and tools/dev.toml install them).
+# language: the language id that Lapce sends for the file. Terraform and just have none. patterns: the files of the server.
+# A server starts when you open one of its files. To add a server, add a table here, add the program to tools/lsp.toml, and run `just msb build`.
+
+[bash-language-server]
+command = "bash-language-server"
+args = ["start"]
+language = "shellscript"
+patterns = ["**/*.sh", "**/*.bash"]
+
+[docker-langserver]
+command = "docker-langserver"
+args = ["--stdio"]
+language = "dockerfile"
+patterns = ["**/Dockerfile", "**/Containerfile"]
+
+[just-lsp]
+command = "just-lsp"
+args = []
+patterns = ["**/justfile", "**/Justfile", "**/*.just"]
+
+[marksman]
+command = "marksman"
+args = ["server"]
+language = "markdown"
+patterns = ["**/*.md"]
+
+[ruff]
+command = "ruff"
+args = ["server"]
+language = "python"
+patterns = ["**/*.py"]
+
+[taplo]
+command = "taplo"
+args = ["lsp", "stdio"]
+language = "toml"
+patterns = ["**/*.toml"]
+
+[terraform-ls]
+command = "lsp-langid"  # fills in the language id "terraform" that Lapce leaves empty. terraform-ls answers no request without it
+args = ["terraform", "terraform-ls", "serve"]
+patterns = ["**/*.tf"]
+
+[ty]
+command = "ty"
+args = ["server"]
+language = "python"
+patterns = ["**/*.py"]
+
+[yaml-language-server]
+command = "yaml-language-server"
+args = ["--stdio"]
+language = "yaml"
+patterns = ["**/*.yaml", "**/*.yml"]

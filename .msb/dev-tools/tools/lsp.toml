@@ -1,4 +1,4 @@
-# The language servers for the editor. Lapce starts them through the volts of lapce-lsp/ (one volt for each server).
+# The language servers for the editor. Lapce starts them as lapce-lsp/servers.toml says. That file is the one place that names a server, its arguments and its files.
 # ty and ruff are in dev.toml. The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
 [tools]
 node = "24.22"  # the npm: tools below need node at build time. It is the same version as in runtimes.toml, so the final image has one copy

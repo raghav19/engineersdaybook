@@ -1,5 +1,5 @@
 //! A Lapce volt (plugin) that starts a language server. One build serves every language server of the sandbox.
-//! Each server has its own folder with `volt.toml`. The `[server]` table of that file says which program to run.
+//! Each server has its own folder with `volt.toml`. The image build writes it from a table of `servers.toml`. Its `[server]` table says which program to run.
 //! Lapce gives the volt folder to the wasm module as `/`, so the module reads `/volt.toml`.
 use anyhow::{Context, Result};
 use lapce_plugin::{
