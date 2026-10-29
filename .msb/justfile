@@ -7,7 +7,6 @@
 #   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
-#   just msb sync           keep the Claude token of the VM current. Leave it running in a terminal.
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
 
 set quiet
@@ -63,7 +62,7 @@ setup: _host-only (_need 'msb code uv')
     {{ step }} vscode-settings '{{ vscode_settings_file }}'
     echo "Setup is complete. Next, run: just msb build. Then run: just msb run"
 
-# The client secret comes from Bitwarden. The tokens go to ~/.config/msb/github-app.json (mode 600). The VM never has them.
+# The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
 github-login: _host-only (_need 'bws uv')
     bws run -- '{{ step }} github-login'
@@ -95,10 +94,6 @@ run: _host-only (_need run_tools)
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
     bws run -- '{{ step }} ensure-vm'
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
-
-# Keep the Claude token of the VM current. Runs until you press Ctrl-C. It runs once at the start, then when `claude` on the host changes its login
-sync: _host-only (_need 'msb watchexec uv')
-    watchexec --watch "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" --filter '.credentials.json' --debounce 2s --on-busy-update queue -- '{{ step }} sync-token'
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only (_need run_tools) && run

@@ -14,8 +14,6 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-sync-token       give the running VM the current Claude token of the host, then restart Headroom. It does nothing if the VM has the token.
-                 `just msb sync` runs this step each time `claude` on the host changes its login.
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
@@ -40,7 +38,6 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unre
 
 MSB_DIR = Path(__file__).resolve().parent
 CONFIG = MSB_DIR / "sandbox.yaml"
-REFRESH_MARGIN = 1800  # seconds. GitHub: refresh a token that ends sooner. Claude: refuse it
 # The GitHub App of this repository. The client ID is public. The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET.
 # You installed the app on this repository only, with the permissions contents, issues and pull requests. So the token cannot do more.
 # The access token lasts 8 hours. The refresh token lasts about 6 months, and each refresh gives a new one.
@@ -49,18 +46,6 @@ GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
 GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
-CLAUDE_CREDENTIALS = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude")) / ".credentials.json"
-CLAUDE_TOKEN_SEEN = Path.home() / ".config" / "msb" / "claude-token.sha256"  # the hash of the token that `sync-token` gave the VM last
-# Run in the VM as root. msb gives a new value of a secret to new connections only, so Headroom must close its old ones.
-# The restart is the same as in dev-tools/sandbox-boot. Headroom starts again as the agent user.
-HEADROOM_RESTART = """
-pkill -u agent -f 'headroom proxy' || true
-for _ in $(seq 50); do pgrep -u agent -f 'headroom proxy' >/dev/null || break; sleep 0.2; done
-runuser -u agent -- env HOME=/home/agent sh -c 'setsid nohup headroom proxy --port 8787 >/tmp/headroom.log 2>&1 &'
-for _ in $(seq 60); do curl -sf -o /dev/null http://127.0.0.1:8787/health && exit 0; sleep 1; done
-tail -n 20 /tmp/headroom.log >&2
-exit 1
-"""
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -116,10 +101,10 @@ def _fingerprint() -> str:
 
 
 def _github_exchange(**data: str) -> str:
-    """Send `data` and the client credentials of the GitHub App to GitHub. Save the tokens that come back. Return the access token.
+    """Send `data` and the client credentials of the GitHub App to GitHub. Save the access token that comes back. Return it.
 
     The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET. `bws run` puts it in the environment.
-    The token file has mode 600. It holds the access token, the refresh token and the time when the access token ends.
+    The token file has mode 600. It holds the access token only. The app does not expire user tokens, so there is no refresh token.
     """
     secret = os.environ.get("GITHUB_APP_CLIENT_SECRET") or _die(
         "GITHUB_APP_CLIENT_SECRET is not set. Run this through `just msb <recipe>`."
@@ -130,11 +115,7 @@ def _github_exchange(**data: str) -> str:
         reply = json.load(response)
     if "access_token" not in reply:
         _die(f"GitHub refused the request ({reply.get('error')}). Run: just msb github-login")
-    saved = {
-        "access_token": reply["access_token"],
-        "refresh_token": reply.get("refresh_token"),
-        "expires_at": time.time() + reply.get("expires_in", 10**9),
-    }
+    saved = {"access_token": reply["access_token"]}
     GITHUB_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(GITHUB_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     os.fchmod(fd, 0o600)
@@ -173,60 +154,6 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
-def _github_token() -> str:
-    """Return the GitHub access token from the token file. `ensure-vm` calls this.
-
-    If the token ends in less than REFRESH_MARGIN seconds, ask GitHub for a new one with the refresh token. Save it first.
-    Each refresh gives a new refresh token. Stop if there is no file. If GitHub refuses the refresh, the message says to log in again.
-    """
-    if not GITHUB_TOKEN_FILE.is_file():
-        _die("there is no GitHub login. Run: just msb github-login")
-    saved = json.loads(GITHUB_TOKEN_FILE.read_text())
-    if saved["expires_at"] - time.time() > REFRESH_MARGIN:
-        return saved["access_token"]
-    return _github_exchange(grant_type="refresh_token", refresh_token=saved["refresh_token"])
-
-
-def _claude_token() -> str:
-    """Return the access token of the Claude login that `claude` keeps on this host. `ensure-vm` calls this.
-
-    The login is the key `claudeAiOauth` in ~/.claude/.credentials.json (Linux). The VM does not log in. It has a placeholder, as sbx does.
-    This function only reads the file. It never refreshes the token. `claude` on the host refreshes it and rotates the refresh token.
-    A second refresh from here would make the refresh token of `claude` useless.
-    Stop in three cases:
-    - there is no file, or its mode is not 600
-    - the login is not a subscription login
-    - the token lasts less than REFRESH_MARGIN seconds
-    """
-    if not CLAUDE_CREDENTIALS.is_file():
-        _die(f"there is no Claude login on this host ({CLAUDE_CREDENTIALS}). Run `claude` and sign in with your subscription.")
-    if CLAUDE_CREDENTIALS.stat().st_mode & 0o077:
-        _die(f"{CLAUDE_CREDENTIALS} must have mode 600.")
-    login = json.loads(CLAUDE_CREDENTIALS.read_text()).get("claudeAiOauth")
-    if not login or "accessToken" not in login:
-        _die("the Claude login of this host is not a subscription login. Run `claude` and sign in with your subscription.")
-    if login["expiresAt"] / 1000 - time.time() < REFRESH_MARGIN:
-        _die("the Claude login of this host ends soon, or it is not valid. Start `claude` on the host to refresh it. Then run this again.")
-    return login["accessToken"]
-
-
-def _rotate_secret(name: str, secret: str, value: str) -> None:
-    """Give the VM `name` the current `value` of `secret` with `msb modify`. The placeholder in the VM stays, and the VM does not restart.
-
-    msb gives the new value to the connections that the VM opens afterwards. A connection that is open keeps the old value.
-    """
-    hosts = ",".join(YAML().load(CONFIG)["secrets"][secret]["allow"])
-    done = subprocess.run(
-        ["msb", "modify", name, "--secret", f"{secret}@{hosts}"],
-        env=os.environ | {secret: value},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if done.returncode != 0:
-        _die(f"msb could not give the VM the current value of {secret}: {done.stderr.strip()[:300]}")
-
-
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -252,7 +179,7 @@ def github_login() -> None:
     1. Print the address of the approval page and open it in the browser. You approve the app.
     2. GitHub sends the browser to a port of this host (the callback address of the app) with a one-time code.
        _github_callback waits for it. The random `state` value must come back the same. If it does not, the answer is not from GitHub.
-    3. Send the code and the client secret to GitHub. Save the tokens (_github_exchange).
+    3. Send the code and the client secret to GitHub. Save the token (_github_exchange). You copy it to Bitwarden.
     """
     state = secrets.token_urlsafe(16)
     redirect = f"http://127.0.0.1:{GITHUB_CALLBACK_PORT}/callback"
@@ -264,6 +191,7 @@ def github_login() -> None:
         _die("there was no valid approval in time. Run: just msb github-login")
     _github_exchange(code=got["code"][0], redirect_uri=redirect)
     print(f"GitHub login saved in {GITHUB_TOKEN_FILE} (mode 600).")
+    print("Copy the access token to the Bitwarden key GH_TOKEN. Then delete the file. The VM gets the token from Bitwarden.")
 
 
 def ensure_vm() -> None:
@@ -272,14 +200,12 @@ def ensure_vm() -> None:
     msb keeps the fingerprint (_fingerprint) in the label `config-sha` of the VM.
     1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
-       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the Bitwarden keys).
-       GH_TOKEN is the GitHub App token. CLAUDE_CODE_OAUTH_TOKEN is the access token of the Claude login of this host.
-    3. Give the VM the current tokens with `msb modify --secret`. It does not restart.
+       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
+       A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
-    tokens = {"GH_TOKEN": _github_token(), "CLAUDE_CODE_OAUTH_TOKEN": _claude_token()}
     wanted = _fingerprint()
 
     found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
@@ -295,14 +221,10 @@ def ensure_vm() -> None:
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
-            env=os.environ | tokens,
             check=False,
         )
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
-    # Give the VM the current tokens. The placeholders in the VM stay, and the VM does not restart.
-    for secret, value in tokens.items():
-        _rotate_secret(name, secret, value)
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
@@ -310,28 +232,6 @@ def ensure_vm() -> None:
         _die(
             "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
-
-
-def sync_token() -> None:
-    """Give the running VM the Claude token of the host now, then restart Headroom. Do nothing if the VM has this token already.
-
-    `claude` on the host refreshes its login and the old access token stops working. msb gives a new value to new connections only.
-    Headroom keeps its connections to api.anthropic.com open, so it keeps sending the old token. The restart closes them.
-    The file CLAUDE_TOKEN_SEEN has the hash of the token that this step gave the VM last. The justfile runs this step under `watchexec`.
-    """
-    name = os.environ["MSB_NAME"]
-    token = _claude_token()
-    digest = hashlib.sha256(token.encode()).hexdigest()
-    if CLAUDE_TOKEN_SEEN.is_file() and CLAUDE_TOKEN_SEEN.read_text() == digest:
-        print("sync-token: the VM has this token already.")
-        return
-    _rotate_secret(name, "CLAUDE_CODE_OAUTH_TOKEN", token)
-    done = subprocess.run(["msb", "exec", name, "--", "bash", "-c", HEADROOM_RESTART], stdin=subprocess.DEVNULL, check=False)
-    if done.returncode != 0:
-        _die("Headroom did not restart in the VM (its message is above). Check that the VM runs (msb ls). Run: just msb run")
-    CLAUDE_TOKEN_SEEN.parent.mkdir(parents=True, exist_ok=True)
-    CLAUDE_TOKEN_SEEN.write_text(digest)
-    print("sync-token: the VM has the new token and Headroom restarted.")
 
 
 def allow_host(host: str) -> None:
@@ -361,7 +261,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
-    for step in ("github-login", "ensure-vm", "sync-token"):
+    for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -372,8 +272,6 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
-        case "sync-token":
-            sync_token()
         case "allow-host":
             allow_host(args.host)
 
