@@ -148,7 +148,7 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 
 ### 5. The justfile decrypts the token with the `age` command
 
-- **Decision.** The variable `bws` at the top of `.msb/justfile` runs `age -d`. The recipes use it. `msb.py` does not handle the Bitwarden token.
+- **Decision.** The variable `bws_run` at the top of `.msb/justfile` runs `age -d`. The recipes use it. `msb.py` does not handle the Bitwarden token.
 - **Why.** The `age` command already does the prompt and the decryption. A short shell line is easier to read than Python code with a library.
 - **Cost.** A wrong passphrase shows two messages: the error of `age`, then `Missing access token` from `bws`. `age -p` has no minimum length for the passphrase.
 

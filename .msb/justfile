@@ -19,14 +19,14 @@ export MSB_NAME := 'sandbox-dev'
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 
 # --- Required tools ---
-msb_bin    := require("msb")
-bws_bin    := require("bws")
-age_bin    := require("age")
-uv_bin     := require("uv")
-code_bin   := require("code")
-docker_bin := require("docker")
-jq_bin     := require("jq")
-yq_bin     := require("yq")
+msb    := require("msb")
+bws    := require("bws")
+age    := require("age")
+uv     := require("uv")
+code   := require("code")
+docker := require("docker")
+jq     := require("jq")
+yq     := require("yq")
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
@@ -35,7 +35,7 @@ volumes := 'claude-home terraform-providers podman-storage'
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
-bws := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
+bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
@@ -73,15 +73,15 @@ setup: _host-only
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
 github-login: _host-only
-    {{ bws }} '{{ step }} github-login'
+    {{ bws_run }} '{{ step }} github-login'
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
-# `bws run` needs BWS_ACCESS_TOKEN (see `bws` at the top of this file).
+# `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
 # The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
 build: _host-only
-    {{ bws }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
+    {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
@@ -100,7 +100,7 @@ build: _host-only
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 run: _host-only
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
-    {{ bws }} 'just --justfile {{ msb_dir }}/vm.just'
+    {{ bws_run }} 'just --justfile {{ msb_dir }}/vm.just'
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
