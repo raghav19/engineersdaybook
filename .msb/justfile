@@ -27,17 +27,16 @@ token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
 # If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
 bws := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
-# The names that msb reads from the environment: the secrets of sandbox.yaml and the registry password.
-msb_keys := replace(shell("yq -r '(.secrets | keys | .[]), .registry.password_env' " + msb_dir / 'sandbox.yaml'), "\n", " ")
-# A shell check for `run`. It lists every key that `bws run` did not give. It runs inside `bws run`, because the keys are only there.
-check_keys := 'missing=; for k in ' + msb_keys + '; do [ -n "${!k:-}" ] || missing="$missing $k"; done; [ -z "$missing" ] || { echo "msb: these keys are not in the environment:$missing. bws run gives them from the Bitwarden project. Check that each key exists there with this exact name, and that your machine account can read the project." >&2; exit 1; };'
+# The keys that are not in the environment. msb reads them: the secrets of sandbox.yaml and the registry password (`password_env`).
+# Keep this list the same as sandbox.yaml. `_vm` stops if it is not empty.
+missing := (if env('GH_TOKEN', '') == '' { ' GH_TOKEN' } else { '' }) + (if env('CLAUDE_CODE_OAUTH_TOKEN', '') == '' { ' CLAUDE_CODE_OAUTH_TOKEN' } else { '' }) + (if env('GITHUB_TOKEN', '') == '' { ' GITHUB_TOKEN' } else { '' })
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
 # The user in the VM that `shell` opens. The Dockerfile makes this user.
 vm_user := 'agent'
 # The tools that `run` uses. `allow-host` runs `run` after it, so it checks the same tools first.
-run_tools := 'msb bws age uv code yq'
+run_tools := 'msb bws age uv code'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
 # The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. VSCODE_SETTINGS in msb.py has the settings.
@@ -92,6 +91,11 @@ build: _host-only (_need 'bws age docker jq yq')
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/sandbox.yaml \
       && echo "sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
+# Runs inside `bws run`, where the Bitwarden keys are in the environment. Stops, and names every missing key, before msb starts the VM
+_vm:
+    {{ assert(missing == '', 'msb: these keys are not in the environment:' + missing + '. bws run gives them from the Bitwarden project. Check that each key exists there with this exact name, and that your machine account can read the project.') }}
+    {{ step }} ensure-vm
+
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
 # Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open VS Code on it
@@ -101,7 +105,7 @@ build: _host-only (_need 'bws age docker jq yq')
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 run: _host-only (_need run_tools)
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
-    {{ bws }} '{{ check_keys }} {{ step }} ensure-vm'
+    {{ bws }} 'just --justfile {{ source_file() }} _vm'
     code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first

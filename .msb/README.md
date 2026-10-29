@@ -78,7 +78,7 @@ In a VS Code terminal, run `claude`. It uses the token from Bitwarden and does n
 | Open a bash prompt in the VM | `just msb shell` |
 | Allow one more host | `just msb allow-host example.org`, then `just msb rm && just msb run`, then commit |
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
-| Add another secret | Add it under `secrets:` in `sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, then `just msb rm && just msb run` |
+| Add another secret | Add it under `secrets:` in `sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `missing` in `.msb/justfile`, then `just msb rm && just msb run` |
 | Change a tool of the image | Edit a file in `dev-tools/`, commit, `just msb build`, commit the new digest, then `just msb rm && just msb run` |
 | Remove the VM | `just msb rm`. Add `--volumes` to remove the volumes too |
 
@@ -104,7 +104,7 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 
 | You see | Do this |
 |---|---|
-| `msb: these keys are not in the environment: ...` | `bws run` did not give those keys. Check that each key exists in the Bitwarden project with this exact name, and that your machine account can read the project. To list the key names, run `BWS_ACCESS_TOKEN=$(age -d ~/.config/bws/access-token.age) bws secret list \| jq -r '.[].key'`. |
+| `assert failed: msb: these keys are not in the environment: ...` | `bws run` did not give those keys. Check that each key exists in the Bitwarden project with this exact name, and that your machine account can read the project. To list the key names, run `BWS_ACCESS_TOKEN=$(age -d ~/.config/bws/access-token.age) bws secret list \| jq -r '.[].key'`. |
 | `age: error: incorrect passphrase`, then `Missing access token` | You entered the wrong passphrase. Run the recipe again. |
 | `age: error: failed to open input file`, then `Missing access token` | The encrypted token file does not exist. Do prerequisite 4. |
 | `run` cannot pull the image (`not found` or `unauthorized`) | `not found`: `sandbox.yaml` does not pin an image that exists. Run `just msb build`. `unauthorized`: the Bitwarden key `GITHUB_TOKEN` needs the scope `read:packages`. |
