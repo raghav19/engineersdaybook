@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The image of the msb sandbox. It has Debian, mise and exactly the tools in tools/. The VM boots from this image,
 # so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
-# VS Code Remote-SSH needs an image with glibc (not Alpine), tar and libstdc++.
+# The mise tools and Fresh need an image with glibc (not Alpine).
 FROM debian:trixie-slim AS base
 ARG MISE_VERSION=v2026.10.0
 
@@ -13,7 +13,7 @@ ENV MISE_DATA_DIR=/opt/mise \
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client \
+      curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client nano \
       podman podman-docker uidmap passt fuse-overlayfs \
  && rm -rf /var/lib/apt/lists/* \
  && ldconfig
@@ -52,6 +52,20 @@ FROM base AS claude
 COPY tools/claude.toml /etc/mise/conf.d/claude.toml
 RUN mise install --yes
 
+FROM base AS lsp
+COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
+RUN mise install --yes
+
+# The editor: Fresh (https://github.com/sinelaw/fresh), one static-enough binary. The checksum is the digest of the asset in the GitHub release.
+# FRESH_VERSION and FRESH_SHA256 change together.
+FROM base AS fresh
+ARG FRESH_VERSION=v0.5.4
+ARG FRESH_SHA256=e3599c93b1eece4700d7c30726b461c9b962a91bee5da31cdf44e3dffeb6206c
+RUN curl -fsSL -o /tmp/fresh.tar.xz "https://github.com/sinelaw/fresh/releases/download/${FRESH_VERSION}/fresh-editor-x86_64-unknown-linux-gnu.tar.xz" \
+ && echo "${FRESH_SHA256}  /tmp/fresh.tar.xz" | sha256sum -c - \
+ && mkdir /tmp/fresh \
+ && tar -xJf /tmp/fresh.tar.xz -C /tmp/fresh --strip-components=1 fresh-editor-x86_64-unknown-linux-gnu/fresh
+
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -59,6 +73,7 @@ COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
@@ -67,6 +82,9 @@ RUN mise reshim && mise run sandbox:completions
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
+# Fresh and its configuration. fresh-config.json is the one place that says which language server starts for which language.
+COPY --from=fresh /tmp/fresh/fresh /usr/local/bin/fresh
+COPY --chown=agent:agent fresh-config.json /home/agent/.config/fresh/config.json
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
@@ -81,8 +99,8 @@ COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 # GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
  && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
-# The /etc/profile of Debian resets PATH for login shells (bash -l, the VS Code terminal and ssh). This removes the shims that the ENV below adds.
-RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR="code --wait"' > /etc/profile.d/mise-shims.sh \
+# The /etc/profile of Debian resets PATH for login shells (bash -l, the Fresh terminal and ssh). This removes the shims that the ENV below adds.
+RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR=nano' > /etc/profile.d/mise-shims.sh \
  && chmod 0755 /usr/local/bin/sandbox-boot
 
 # The tools are the mise shims. sandbox.yaml sets the workspace paths for mise (MISE_TRUSTED_CONFIG_PATHS and MISE_IGNORED_CONFIG_PATHS).
