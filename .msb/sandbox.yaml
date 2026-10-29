@@ -75,6 +75,9 @@ secrets:
 network:
   tls:
     enabled: true # the host reads HTTPS requests. The host rules and the token replacement need this.
+  # The ports of the VM that the host can reach, as [bind:]host:guest. The bind address is the loopback of the host.
+  ports:
+    - "127.0.0.1:8787:8787" # the Headroom proxy: http://127.0.0.1:8787/dashboard on the host
   allow:
     # Claude Code
     - api.anthropic.com

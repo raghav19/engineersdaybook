@@ -160,6 +160,13 @@ To give the VM another secret, do three things:
 - `sandbox.yaml` cannot express a rule for a port, so `msb.py` passes one `--net-rule` for each (`HOST_PORTS`).
 - The services are in the kind cluster. Nothing in the VM uses them yet, because the kubeconfig and the SPIRE agent are not ported.
 
+### Headroom dashboard
+
+- `sandbox.yaml` publishes the Headroom proxy of the VM (port 8787) on the loopback of the host (`network.ports`). Open `http://127.0.0.1:8787/dashboard`. `/stats` and `/health` work too.
+- Host port 8787 must be free, or `just msb run` fails. To use another port, change the host side of the mapping (`127.0.0.1:8788:8787`).
+- Headroom has no login. Only the host can reach the port, but any user of the host can.
+- An existing VM does not have the port. Run `just msb rm && just msb run` once.
+
 ### Volumes
 
 - `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login).

@@ -33,9 +33,10 @@ if [ ! -d "$ws/.git" ]; then
 fi
 as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
 
-# The Headroom proxy for Claude Code listens on 127.0.0.1:8787. ANTHROPIC_BASE_URL in .claude/settings.json points to it.
+# The Headroom proxy for Claude Code listens on port 8787. ANTHROPIC_BASE_URL in .claude/settings.json points to 127.0.0.1:8787.
+# It binds 0.0.0.0, because the port that sandbox.yaml publishes to the host arrives on the network interface of the VM, not on loopback.
 # Start it only if it does not answer. Then wait until it answers.
-curl -sf -o /dev/null http://127.0.0.1:8787/health || as_agent sh -c "setsid nohup headroom proxy --port 8787 >$headroom_log 2>&1 &"
+curl -sf -o /dev/null http://127.0.0.1:8787/health || as_agent sh -c "setsid nohup headroom proxy --host 0.0.0.0 --port 8787 >$headroom_log 2>&1 &"
 for _ in $(seq 60); do
   curl -sf -o /dev/null http://127.0.0.1:8787/health && break
   sleep 1
