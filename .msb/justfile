@@ -7,6 +7,7 @@
 #   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
+#   just msb bws-token      once: encrypt the Bitwarden access token with a passphrase. run, build and github-login ask for it.
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
 
 set quiet
@@ -66,6 +67,10 @@ setup: _host-only (_need 'msb code uv')
 # Log in to GitHub with the GitHub App. You approve it in the browser
 github-login: _host-only (_need 'bws uv')
     {{ step }} bws-run '{{ step }} github-login'
+
+# Encrypt the Bitwarden access token with a passphrase. Run it in your own terminal. It asks for the token and the passphrase
+bws-token: _host-only (_need 'uv')
+    {{ step }} bws-token
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN. If it is missing, `bws` stops the recipe with its own message.

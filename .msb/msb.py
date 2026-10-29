@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = "==3.13.*"
-# dependencies = ["ruamel.yaml==0.19.1"]
+# dependencies = ["ruamel.yaml==0.19.1", "pyrage==1.4.0"]
 # ///
 """The steps of the msb sandbox recipes: msb.py <step>
 
@@ -14,18 +14,19 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
+bws-token        encrypt the Bitwarden access token with a passphrase. It asks for the token and the passphrase on the terminal.
 bws-run          run a command under `bws run`. The recipes use this step for everything that needs Bitwarden.
-                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase of the age key and decrypts the token (see _bws_token).
+                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase and decrypts the token (see _bws_token).
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
+import getpass
 import hashlib
 import json
 import os
 import re
 import secrets
-import shlex
 import socket
 import subprocess
 import sys
@@ -36,6 +37,7 @@ import webbrowser
 from pathlib import Path
 from typing import NoReturn
 
+import pyrage  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 
@@ -49,10 +51,10 @@ GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
 GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
-# The Bitwarden access token, encrypted with sops to an age key. The age key is the default file of sops. The file is encrypted with a passphrase (age -p).
-BWS_TOKEN_FILE = Path.home() / ".config" / "bws" / "access-token.sops.json"
-AGE_KEY_FILE = Path.home() / ".config" / "sops" / "age" / "keys.txt"
-AGE_ENCRYPTED_HEADERS = (b"age-encryption.org/v1", b"-----BEGIN AGE ENCRYPTED FILE-----")
+# The Bitwarden access token, encrypted with a passphrase (age format). The step `bws-token` makes the file. `bws-run` decrypts it.
+BWS_TOKEN_FILE = Path.home() / ".config" / "bws" / "access-token.age"
+# Anyone can read the file, so the passphrase is the only protection. Guesses are offline, so use a long one.
+MIN_PASSPHRASE = 12  # characters
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
@@ -164,29 +166,14 @@ def _github_callback() -> dict[str, list[str]]:
 def _bws_token() -> str:
     """Return the Bitwarden access token. `bws-run` calls this when BWS_ACCESS_TOKEN is not set.
 
-    The token is in BWS_TOKEN_FILE (sops, JSON, the key BWS_ACCESS_TOKEN). sops decrypts it with an age key, and that key is the file AGE_KEY_FILE.
-    The key file must be encrypted with a passphrase. `age -d` asks for the passphrase on your terminal. Nothing keeps the passphrase or the key.
-    Stop in three cases:
-    - AGE_KEY_FILE is not encrypted. A plain key in that file lets every process of your user decrypt the token, so the passphrase would protect nothing
-    - sops is not on the PATH, or it cannot decrypt the file (a wrong passphrase, or a key that does not fit)
-    - the file has no BWS_ACCESS_TOKEN
+    The token is in BWS_TOKEN_FILE, encrypted with a passphrase (the step `bws-token` makes the file). The passphrase comes from the terminal.
+    Nothing keeps it. A wrong passphrase stops the step.
     """
-    if not AGE_KEY_FILE.is_file() or not AGE_KEY_FILE.read_bytes().startswith(AGE_ENCRYPTED_HEADERS):
-        _die(
-            f"{AGE_KEY_FILE} must be encrypted with a passphrase (age -p). A plain key there lets any process of your user decrypt the token."
-            " See prerequisite 6 in .msb/README.md."
-        )
-    # sops reads SOPS_AGE_KEY_CMD and runs it to get the key. A key from the environment would make sops skip the passphrase.
-    env = {k: v for k, v in os.environ.items() if k not in ("SOPS_AGE_KEY", "SOPS_AGE_KEY_FILE")}
-    env["SOPS_AGE_KEY_CMD"] = shlex.join(["age", "-d", str(AGE_KEY_FILE)])
+    passphrase = getpass.getpass("Passphrase for the Bitwarden token: ")
     try:
-        done = subprocess.run(["sops", "decrypt", str(BWS_TOKEN_FILE)], env=env, stdout=subprocess.PIPE, text=True, check=False)
-    except FileNotFoundError:
-        _die("sops is not on the PATH. Install it: see the prerequisites in .msb/README.md.")
-    if done.returncode != 0:
-        _die(f"sops could not decrypt {BWS_TOKEN_FILE} (its message is above). Did you enter the right passphrase?")
-    token = json.loads(done.stdout).get("BWS_ACCESS_TOKEN")
-    return token or _die(f"{BWS_TOKEN_FILE} has no key BWS_ACCESS_TOKEN.")
+        return pyrage.passphrase.decrypt(BWS_TOKEN_FILE.read_bytes(), passphrase).decode().strip()
+    except pyrage.DecryptError:
+        _die(f"could not decrypt {BWS_TOKEN_FILE}. Did you enter the right passphrase?")
 
 
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
@@ -269,6 +256,28 @@ def ensure_vm() -> None:
         )
 
 
+def bws_token() -> None:
+    """Encrypt the Bitwarden access token with a passphrase. Run it on the host, in your own terminal (`just msb bws-token`).
+
+    Ask for the token (not shown), then for the passphrase twice. Write BWS_TOKEN_FILE with mode 600. A file that exists is replaced.
+    The token is never in a file, in the environment or in the history of the shell. Stop if the passphrase is short or the two entries differ.
+    """
+    token = getpass.getpass("Bitwarden access token: ").strip()
+    passphrase = getpass.getpass("New passphrase: ")
+    if not token:
+        _die("the token is empty.")
+    if len(passphrase) < MIN_PASSPHRASE:
+        _die(f"the passphrase needs at least {MIN_PASSPHRASE} characters.")
+    if getpass.getpass("Passphrase again: ") != passphrase:
+        _die("the two passphrases are different.")
+    BWS_TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(BWS_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "wb") as file:
+        file.write(pyrage.passphrase.encrypt(token.encode(), passphrase))
+    print(f"The token is encrypted in {BWS_TOKEN_FILE} (mode 600). Delete the plain copy, if you have one.")
+
+
 def bws_run(command: str) -> NoReturn:
     """Run `command` under `bws run`: the Bitwarden keys are variables in its environment. The recipes use this for every command that needs Bitwarden.
 
@@ -311,6 +320,7 @@ def main() -> None:
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
     for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
+    steps.add_parser("bws-token")
     steps.add_parser("bws-run").add_argument("command")
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -321,6 +331,8 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
+        case "bws-token":
+            bws_token()
         case "bws-run":
             bws_run(args.command)
         case "allow-host":
