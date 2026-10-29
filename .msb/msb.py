@@ -14,9 +14,10 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-bws-token        encrypt the Bitwarden access token with a passphrase. It asks for the token and the passphrase on the terminal.
+encrypt-bws-token
+                 encrypt the Bitwarden access token with a passphrase. It asks for the token and the passphrase on the terminal.
 bws-run          run a command under `bws run`. The recipes use this step for everything that needs Bitwarden.
-                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase and decrypts the token (see _bws_token).
+                 If BWS_ACCESS_TOKEN is not set, it asks for the passphrase and decrypts the token (see _decrypt_bws_token).
 allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
 """
 
@@ -51,7 +52,7 @@ GITHUB_CLIENT_ID = "Iv23liVvjK9IHk8lWmIh"
 GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0.1:8765/callback
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
-# The Bitwarden access token, encrypted with a passphrase (age format). The step `bws-token` makes the file. `bws-run` decrypts it.
+# The Bitwarden access token, encrypted with a passphrase (age format). The step `encrypt-bws-token` makes the file. `bws-run` decrypts it.
 BWS_TOKEN_FILE = Path.home() / ".config" / "bws" / "access-token.age"
 # Anyone can read the file, so the passphrase is the only protection. Guesses are offline, so use a long one.
 MIN_PASSPHRASE = 12  # characters
@@ -163,10 +164,10 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
-def _bws_token() -> str:
+def _decrypt_bws_token() -> str:
     """Return the Bitwarden access token. `bws-run` calls this when BWS_ACCESS_TOKEN is not set.
 
-    The token is in BWS_TOKEN_FILE, encrypted with a passphrase (the step `bws-token` makes the file). The passphrase comes from the terminal.
+    The token is in BWS_TOKEN_FILE, encrypted with a passphrase (the step `encrypt-bws-token` makes the file). The passphrase comes from the terminal.
     Nothing keeps it. A wrong passphrase stops the step.
     """
     passphrase = getpass.getpass("Passphrase for the Bitwarden token: ")
@@ -256,8 +257,8 @@ def ensure_vm() -> None:
         )
 
 
-def bws_token() -> None:
-    """Encrypt the Bitwarden access token with a passphrase. Run it on the host, in your own terminal (`just msb bws-token`).
+def encrypt_bws_token() -> None:
+    """Encrypt the Bitwarden access token with a passphrase. Run it on the host, in your own terminal (`just msb encrypt-bws-token`).
 
     Ask for the token (not shown), then for the passphrase twice. Write BWS_TOKEN_FILE with mode 600. A file that exists is replaced.
     The token is never in a file, in the environment or in the history of the shell. Stop if the passphrase is short or the two entries differ.
@@ -282,12 +283,12 @@ def bws_run(command: str) -> NoReturn:
     """Run `command` under `bws run`: the Bitwarden keys are variables in its environment. The recipes use this for every command that needs Bitwarden.
 
     1. BWS_ACCESS_TOKEN is set: use it. (A CI job does this.)
-    2. BWS_TOKEN_FILE exists: ask for the passphrase and decrypt the token (_bws_token). The token goes to `bws` only. This process is replaced by it.
+    2. BWS_TOKEN_FILE exists: ask for the passphrase and decrypt the token (_decrypt_bws_token). The token goes to `bws` only. This process is replaced by it.
     3. Neither: run `bws`, which stops with its own message (Missing access token).
     """
     env = dict(os.environ)
     if "BWS_ACCESS_TOKEN" not in env and BWS_TOKEN_FILE.is_file():
-        env["BWS_ACCESS_TOKEN"] = _bws_token()
+        env["BWS_ACCESS_TOKEN"] = _decrypt_bws_token()
     os.execvpe("bws", ["bws", "run", "--", command], env)
 
 
@@ -320,7 +321,7 @@ def main() -> None:
     steps.add_parser("vscode-settings").add_argument("file", type=Path)
     for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
-    steps.add_parser("bws-token")
+    steps.add_parser("encrypt-bws-token")
     steps.add_parser("bws-run").add_argument("command")
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -331,8 +332,8 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
-        case "bws-token":
-            bws_token()
+        case "encrypt-bws-token":
+            encrypt_bws_token()
         case "bws-run":
             bws_run(args.command)
         case "allow-host":
