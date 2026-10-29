@@ -69,14 +69,14 @@ github-login: _host-only
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
-# The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
+# No registry cache (`--cache-to type=registry`): in a test its export grew past 6 GB in 25 seconds. In full builds Docker reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
+# The BuildKit cache of this machine already rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
 build: _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
-      --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
       --metadata-file {{ build_metadata }} --output {{ image_output }}
     docker logout {{ registry_host }}
     digest=$(jq -r '."containerimage.digest"' {{ build_metadata }}) \
