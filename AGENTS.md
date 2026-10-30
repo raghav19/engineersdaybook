@@ -98,11 +98,15 @@ Never push to `main`. Before you ask the user to run a command on the host, read
 
 Before you commit, push, or create or update a pull request, read `docs/agents/pull-requests.md` in full. Follow its steps in order.
 
-## 8. Diagrams
+## 8. Sandbox network
+
+The msb sandbox VM blocks all egress except hosts listed in `network.allow` in `.msb/sandbox.yaml`. If a DNS or connection error happens inside the sandbox, read `docs/agents/sandbox-network.md` in full.
+
+## 9. Diagrams
 
 Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
-## 9. Python
+## 10. Python
 
 Before you write or edit Python, read `docs/agents/python.md` in full.
 
