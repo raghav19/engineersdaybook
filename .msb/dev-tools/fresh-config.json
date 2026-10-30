@@ -1,6 +1,10 @@
 {
   "check_for_updates": false,
   "auto_attach": false,
+  "theme": "terminal",
+  "active_keybinding_map": "vscode",
+  "terminal": {"shell": {"command": "/bin/bash", "args": ["--login", "-i"]}},
+  "clipboard": {"use_osc52": true, "use_system_clipboard": false},
   "plugins": {
     "agent_discovery": {"enabled": false},
     "agent_sessions": {"enabled": false},
@@ -15,7 +19,26 @@
     "welcome": {"enabled": false},
     "welcome_screen": {"enabled": false}
   },
-  "clipboard": {"use_osc52": true, "use_system_clipboard": false},
+  "keybindings": [
+    {"key": "t", "modifiers": ["ctrl"], "action": "quick_open_buffers", "when": "global"},
+    {"key": "w", "modifiers": ["ctrl"], "action": "close_tab", "when": "normal"},
+    {"key": "\\", "modifiers": ["ctrl"], "action": "split_vertical", "when": "normal"},
+    {"key": "Up", "modifiers": ["alt"], "action": "move_line_up", "when": "normal"},
+    {"key": "Down", "modifiers": ["alt"], "action": "move_line_down", "when": "normal"},
+    {"key": "Up", "modifiers": ["alt", "shift"], "action": "duplicate_line_above", "when": "normal"},
+    {"key": "Down", "modifiers": ["alt", "shift"], "action": "duplicate_line", "when": "normal"},
+    {"key": "z", "modifiers": ["alt"], "action": "toggle_line_wrap", "when": "normal"},
+    {"key": "p", "modifiers": ["ctrl", "shift"], "action": "command_palette", "when": "global"},
+    {"key": "e", "modifiers": ["ctrl", "shift"], "action": "focus_file_explorer", "when": "normal"},
+    {"key": "f", "modifiers": ["ctrl", "shift"], "action": "open_live_grep", "when": "normal"},
+    {"key": "s", "modifiers": ["ctrl", "shift"], "action": "save_as", "when": "normal"},
+    {"key": "`", "modifiers": ["ctrl"], "action": "open_terminal_in_dock", "when": "normal"},
+    {"key": "`", "modifiers": ["ctrl", "shift"], "action": "toggle_utility_dock", "when": "normal"},
+    {"key": ".", "modifiers": ["ctrl"], "action": "lsp_code_actions", "when": "normal"},
+    {"key": ",", "modifiers": ["ctrl"], "action": "open_settings", "when": "normal"},
+    {"key": "Tab", "modifiers": ["ctrl"], "action": "next_buffer", "when": "normal"},
+    {"key": "Tab", "modifiers": ["ctrl", "shift"], "action": "prev_buffer", "when": "normal"}
+  ],
   "lsp": {
     "python": [
       {"name": "ty", "command": "ty", "args": ["server"], "auto_start": true, "root_markers": ["pyproject.toml", ".git"]},

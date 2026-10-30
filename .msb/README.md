@@ -71,27 +71,34 @@ just msb run           # 3. every day
 
 Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. The first time you open the clone, Fresh asks whether to trust the folder. Press `T`, then Enter. Then the language servers start. To open the editor again in a running VM, run `just msb edit`.
 
-| You want to | Keys |
-|---|---|
-| Open the command palette (type a name for files, `>` for commands, `#` for open buffers, `:` for a line) | `Ctrl+P` |
-| Open a terminal in the bottom dock | `` Alt+` `` (backtick). Or `Ctrl+P`, then `>Open Terminal` |
-| Show or hide the dock, and move focus between the dock and the editor | `Alt+J`, `Alt+O` |
-| In a terminal: scroll, search and copy (read-only mode), and back | `Ctrl+Space` (or `Ctrl+]`) |
-| In a terminal: send **every** key to the program (use it for `claude`) | `F9` (again to leave) |
-| Show or hide the file explorer, and move focus to it | `Ctrl+B`, `Ctrl+E` |
-| Save, open a file, new file, quit | `Ctrl+S`, `Ctrl+O`, `Ctrl+N`, `Ctrl+Q` |
-| Find, replace, next match, previous match | `Ctrl+F`, `Ctrl+R`, `F3`, `Shift+F3` |
-| Search in all files | `Alt+/` |
-| Go to a line | `Ctrl+G` |
-| Close a tab, next tab, previous tab | `Alt+W`, `Ctrl+PageDown`, `Ctrl+PageUp` |
-| Move between splits (make a split from the palette) | `Alt+]`, `Alt+[` |
-| Undo, redo, comment a line, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+/`, `Ctrl+A` |
-| Copy, cut, paste | `Ctrl+C`, `Ctrl+X`, `Ctrl+V` |
-| Go to the definition, find references, rename | `F12`, `Shift+F12`, `F2` |
-| Hover, code actions, completion | `Alt+K`, `Alt+.`, `Ctrl+Space` |
-| Open the menu bar, open help | `F10`, `F1` |
+The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 18 keys in `keybindings`). The colors come from your terminal (`theme` is `terminal`), so Fresh looks like your desktop theme, for example Omarchy Solitude. The terminal in the dock runs `/bin/bash --login -i`.
 
-The keys come from the default keymap of Fresh 0.5.4. Your terminal or window manager can take a key before Fresh sees it. If `` Alt+` `` does nothing, use the palette. To use the keys of VS Code (for example `Ctrl+D` for the next match and `Ctrl+Shift+K` to delete a line), add `"keymap": "vscode"` to `fresh-config.json`.
+| You want to | VS Code key | Notes |
+|---|---|---|
+| Command palette (commands) | `Ctrl+Shift+P` | or `Ctrl+P`, then `>` |
+| Open a file by name | `Ctrl+P` | type `:` for a line, `#` for an open tab |
+| **Search the open tabs** | `Ctrl+T` | or `Ctrl+P`, then `#`. Also `Ctrl+;` |
+| **Open a terminal** (bottom dock) | `` Ctrl+` `` | or `` Alt+` `` |
+| Show or hide the dock; move focus dock or editor | `` Ctrl+Shift+` ``, `Alt+J`; `Alt+O` | |
+| In a terminal: scroll, search and copy, and back | `Ctrl+Space` | `Ctrl+]` also works |
+| In a terminal: send **every** key to the program | `F9` | use it for `claude`, then `F9` again |
+| Show or hide the file explorer; focus it | `Ctrl+B`; `Ctrl+Shift+E` | |
+| Search in all files | `Ctrl+Shift+F` | or `Alt+/` |
+| Save, save as, open, new file, quit | `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`, `Ctrl+N`, `Ctrl+Q` | |
+| Find, next, previous | `Ctrl+F`, `F3`, `Shift+F3` | |
+| Replace | `Ctrl+R` | VS Code uses `Ctrl+H`. A terminal cannot tell it from Backspace |
+| Go to a line | `Ctrl+G` | |
+| Close a tab; next tab; previous tab | `Ctrl+W`; `Ctrl+Tab`; `Ctrl+Shift+Tab` | `Ctrl+PageDown` and `Ctrl+PageUp` also work |
+| Split the editor; move between splits | `Ctrl+\`; `Alt+]`, `Alt+[` | |
+| Move a line; copy a line up or down | `Alt+Up`, `Alt+Down`; `Alt+Shift+Up`, `Alt+Shift+Down` | |
+| Delete a line; comment a line; wrap long lines | `Ctrl+Shift+K`; `Ctrl+/`; `Alt+Z` | |
+| Add a cursor at the next match | `Ctrl+D` | |
+| Undo, redo, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+A` | |
+| Go to the definition, references, rename | `F12`, `Shift+F12`, `F2` | |
+| Hover, code actions, completion | `Alt+K`; `Ctrl+.`; `Ctrl+Space` | `Alt+.` also gives code actions |
+| Settings; menu bar; help | `Ctrl+,`; `F10`; `F1` | |
+
+The keys with `Shift`, `Ctrl+Tab`, `` Ctrl+` ``, `Ctrl+.` and `Ctrl+,` need a terminal with the kitty keyboard protocol. Fresh turns the protocol on. `foot` 1.28 supports it. In a terminal without it, use the other key in the Notes column. Your window manager can also take a key before Fresh sees it. To change a key, use the palette: "Keybinding Editor".
 
 To run `claude`, open a terminal in Fresh (command palette: "Open Terminal") or use `just msb shell`. It uses the token from Bitwarden and does not ask you to sign in.
 

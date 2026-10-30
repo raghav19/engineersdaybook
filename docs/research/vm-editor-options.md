@@ -36,6 +36,11 @@ Sources: `docs.helix-editor.com/languages.html` and `languages.toml` (Helix); `z
 | A folder with executable markers (for example `Cargo.toml`) starts as Restricted. Language servers do not run until you trust the folder (`T`). | documented | `docs/features/workspace-trust.md` |
 | Fresh answers a `workspace/configuration` request from the `initialization_options` of the server. It gives `null` for an unknown section and one item for an empty request. | source | `services/lsp/async_handler.rs` (`resolve_workspace_configuration`) |
 | Each server has a memory limit of 50% of system memory and a CPU limit of 90%, on Linux. | documented | `plugins/config-schema.json` (`ProcessLimits`) |
+| `theme = "terminal"` uses the colors of the terminal (`Default` and the ANSI names), so Fresh follows the theme of the host terminal, for example Omarchy Solitude through `foot`. | documented, source | `docs/features/themes.md`, `themes/terminal.json` |
+| `terminal.shell = {"command": "/bin/bash", "args": ["--login", "-i"]}` sets the shell of the terminal in the dock. Unset, Fresh uses `$SHELL`. | documented | `docs/features/terminal.md` (Shell Override) |
+| `active_keybinding_map = "vscode"` changes only 4 keys of the default map (`Ctrl+D`, `Ctrl+/`, `Ctrl+Shift+K`, `Ctrl+G`). Other VS Code keys are custom entries in `keybindings`. | source | `keymaps/vscode.json`, `plugins/config-schema.json` |
+| Fresh turns on the kitty keyboard protocol, so `Ctrl+Shift+<letter>`, `Ctrl+Tab` and `` Ctrl+` `` work in a terminal that supports it. `foot` 1.28 does. | source, documented | `services/terminal_modes.rs`, `man foot-ctlseqs` |
+| `Ctrl+H` cannot replace VS Code's replace key: a terminal sends Backspace for it. | inferred | |
 
 ## 3. Measured in the image
 
