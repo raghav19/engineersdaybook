@@ -52,6 +52,10 @@ FROM base AS claude
 COPY tools/claude.toml /etc/mise/conf.d/claude.toml
 RUN mise install --yes
 
+FROM base AS qwen
+COPY tools/qwen.toml /etc/mise/conf.d/qwen.toml
+RUN mise install --yes
+
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -59,6 +63,7 @@ COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=qwen --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
