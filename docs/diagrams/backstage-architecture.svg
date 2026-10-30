@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="780" viewBox="0 0 1240 780"><rect width="1240" height="780" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#444444"/></marker></defs>
+<text x="20" y="28" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#333333">Backstage architecture and components</text>
+<rect x="20" y="50" width="380" height="330" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="20" y1="76" x2="400" y2="76" stroke="#666666"/>
+<text x="30" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Frontend, in the browser</text>
+<rect x="420" y="50" width="430" height="330" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="420" y1="76" x2="850" y2="76" stroke="#666666"/>
+<text x="430" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Backend, in Node</text>
+<rect x="870" y="50" width="350" height="330" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="870" y1="76" x2="1220" y2="76" stroke="#666666"/>
+<text x="880" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Data</text>
+<rect x="20" y="420" width="1200" height="150" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="20" y1="446" x2="1220" y2="446" stroke="#666666"/>
+<text x="30" y="438" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Outside Backstage</text>
+<rect x="40" y="100" width="160" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="120" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">App</text>
+<text x="120" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">wires the extension tree</text>
+<rect x="220" y="100" width="160" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="300" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">UI extension</text>
+<text x="300" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">renders plugin pages</text>
+<rect x="40" y="220" width="340" height="80" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="210" y="256" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Frontend plugins</text>
+<text x="210" y="273" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">catalog, templates, kubernetes, techdocs</text>
+<rect x="440" y="100" width="180" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="530" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Backend</text>
+<text x="530" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">the unit of deployment</text>
+<rect x="650" y="100" width="180" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="740" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Core services</text>
+<text x="740" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">config, database, http, cache</text>
+<rect x="440" y="220" width="190" height="80" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="535" y="256" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Backend plugins</text>
+<text x="535" y="273" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">catalog, scaffolder, auth, permission</text>
+<rect x="650" y="220" width="180" height="80" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="740" y="256" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Modules</text>
+<text x="740" y="273" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">custom actions, entity providers</text>
+<rect x="890" y="100" width="310" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1045" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Database</text>
+<text x="1045" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">postgres in production, sqlite in dev</text>
+<rect x="890" y="220" width="310" height="80" rx="10" fill="#f5f5f5" stroke="#666666"/>
+<text x="1045" y="256" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Cache</text>
+<text x="1045" y="273" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">memory, redis, memcache, valkey</text>
+<rect x="40" y="470" width="260" height="70" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="170" y="501" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">GitHub</text>
+<text x="170" y="518" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">repos, pull requests, actions</text>
+<rect x="350" y="470" width="260" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="480" y="501" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Kubernetes cluster</text>
+<text x="480" y="518" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">kind now, EKS in phase 5</text>
+<rect x="660" y="470" width="260" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="790" y="501" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Identity provider</text>
+<text x="790" y="518" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">guest now, OIDC or GitHub later</text>
+<rect x="20" y="610" width="1200" height="150" rx="10" fill="#ffffff" stroke="#666666"/>
+<text x="32" y="638" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Flow</text>
+<text font-style="italic" x="32" y="662" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">1  A frontend plugin calls a backend plugin over HTTP</text>
+<text font-style="italic" x="32" y="688" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">2  A backend plugin reads core services for config and storage</text>
+<text font-style="italic" x="32" y="714" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">3  A module extends one plugin through its extension point</text>
+<text font-style="italic" x="32" y="740" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">4  Core services give each plugin its own database and cache</text>
+<text font-style="italic" x="472" y="662" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">5  Integrations reach GitHub and the Kubernetes cluster</text>
+<text font-style="italic" x="472" y="688" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">6  The Kubernetes plugin reads workloads from the cluster</text>
+<text font-style="italic" x="472" y="714" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">7  The auth plugin signs users in through one identity provider</text>
+<path d="M 200 135 L 220 135" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M 300 170 L 300 183 Q 300 195 288 195 L 222 195 Q 210 195 210 207 L 210 220" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M 380 260 L 440 260" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="402.9" y="250.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="410" y="263.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">1</text>
+<path d="M 630 244 L 628 244 Q 640 244 640 232 L 640 147 Q 640 135 652 135 L 650 135" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="632.9" y="180" width="14.2" height="19" fill="#ffffff"/>
+<text x="640" y="193" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">2</text>
+<path d="M 650 260 L 630 260" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="632.9" y="250.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="640" y="263.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">3</text>
+<path d="M 830 135 L 890 135" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="852.9" y="125.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="860" y="138.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">4</text>
+<path d="M 794 170 L 794 183 Q 794 195 806 195 L 1033 195 Q 1045 195 1045 207 L 1045 220" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M 478 300 L 478 373 Q 478 385 466 385 L 182 385 Q 170 385 170 397 L 170 470" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="316.9" y="375.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="324" y="388.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<path d="M 544.5 300 L 544.5 373 Q 544.5 385 532.5 385 L 492 385 Q 480 385 480 397 L 480 470" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="505.15" y="375.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="512.25" y="388.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">6</text>
+<path d="M 530 170 L 530 308 Q 530 320 542 320 L 778 320 Q 790 320 790 332 L 790 470" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="652.9" y="310.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="660" y="323.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">7</text>
+</svg>

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="680" viewBox="0 0 1240 680"><rect width="1240" height="680" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#444444"/></marker></defs>
+<text x="20" y="28" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#333333">The target platform, and what the sandbox blocks</text>
+<rect x="20" y="50" width="430" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="20" y1="76" x2="450" y2="76" stroke="#666666"/>
+<text x="30" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">msb VM, 3 GB and no swap</text>
+<rect x="470" y="50" width="330" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="470" y1="76" x2="800" y2="76" stroke="#666666"/>
+<text x="480" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Host</text>
+<rect x="820" y="50" width="400" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="820" y1="76" x2="1220" y2="76" stroke="#666666"/>
+<text x="830" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Outside</text>
+<rect x="40" y="100" width="190" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="135" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Backstage</text>
+<text x="135" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">frontend and backend</text>
+<rect x="40" y="210" width="190" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="135" y="232.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Online Boutique</text>
+<text x="135" y="249.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">12 services,</text>
+<text x="135" y="266.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">no catalog-info.yaml yet</text>
+<rect x="240" y="210" width="190" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="335" y="232.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Database</text>
+<text x="335" y="249.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">sqlite first,</text>
+<text x="335" y="266.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">postgres later</text>
+<rect x="490" y="100" width="290" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="635" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">kind cluster</text>
+<text x="635" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">api server forwarded at port 6444</text>
+<rect x="490" y="210" width="290" height="70" rx="10" fill="#f8cecc" stroke="#b85450"/>
+<text x="635" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">kubeconfig</text>
+<text x="635" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">not ported into the VM yet</text>
+<rect x="840" y="100" width="360" height="70" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1020" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">GitHub</text>
+<text x="1020" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">app repo and a templates repo</text>
+<rect x="840" y="210" width="360" height="70" rx="10" fill="#f5f5f5" stroke="#666666"/>
+<text x="1020" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">AWS EKS</text>
+<text x="1020" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">phase 5, run from the host</text>
+<rect x="20" y="340" width="580" height="130" rx="10" fill="#f8cecc" stroke="#b85450"/>
+<text x="32" y="368" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Blocked in the VM</text>
+<text font-style="italic" x="32" y="398" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">backstage.io, ghcr.io and backstage.github.io fail at DNS.</text>
+<text font-style="italic" x="32" y="418" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">No AWS API host is on the allow list, and no AWS credential exists.</text>
+<text font-style="italic" x="32" y="438" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">The chart must install from a local clone of backstage/charts.</text>
+<rect x="620" y="340" width="600" height="130" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="632" y="368" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Phase order</text>
+<text font-style="italic" x="632" y="398" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">1 catalog and discovery, 2 templates and one custom action,</text>
+<text font-style="italic" x="632" y="418" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">3 sign-in and a permission policy, 4 kubernetes plugin and TechDocs,</text>
+<text font-style="italic" x="632" y="438" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">5 move the cluster to EKS from the host.</text>
+<rect x="20" y="500" width="1200" height="140" rx="10" fill="#ffffff" stroke="#666666"/>
+<text x="32" y="528" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Flow</text>
+<text font-style="italic" x="32" y="552" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">1  Backstage stores its data in its own database</text>
+<text font-style="italic" x="32" y="578" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">2  Templates and descriptors live in GitHub</text>
+<text font-style="italic" x="32" y="604" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">3  The Kubernetes plugin needs the cluster, and the kubeconfig first</text>
+<text font-style="italic" x="472" y="552" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">4  The kubeconfig is the one missing link to the host cluster</text>
+<text font-style="italic" x="472" y="578" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">5  EKS arrives in phase 5, run from the host and not from the VM</text>
+<path d="M 173 170 L 173 178 Q 173 190 185 190 L 285 190 Q 297 190 297 202 L 297 210" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="227.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="235" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">1</text>
+<path d="M 135 100 L 135 84 Q 135 72 147 72 L 1008 72 Q 1020 72 1020 84 L 1020 100" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="570.4" y="62.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="577.5" y="75.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">2</text>
+<path d="M 230 135 L 490 135" fill="none" stroke="#444444" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<rect x="352.9" y="125.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="360" y="138.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">3</text>
+<path d="M 635 210 L 635 170" fill="none" stroke="#444444" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<rect x="627.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="635" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">4</text>
+<path d="M 97 170 L 97 178 Q 97 190 109 190 L 1008 190 Q 1020 190 1020 202 L 1020 210" fill="none" stroke="#444444" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<rect x="551.4" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="558.5" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">5</text>
+</svg>
