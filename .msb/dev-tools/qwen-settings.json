@@ -17,5 +17,20 @@
   },
   "model": {
     "name": "qwen3.8-max"
+  },
+  "mcpServers": {
+    "drawio": {
+      "httpUrl": "https://mcp.draw.io/mcp"
+    },
+    "flux-schema-catalog": {
+      "httpUrl": "https://schemas.fluxoperator.dev/mcp"
+    },
+    "github": {
+      "httpUrl": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer $MSB_GH_TOKEN",
+        "X-MCP-Toolsets": "context,issues,pull_requests,repos"
+      }
+    }
   }
 }
