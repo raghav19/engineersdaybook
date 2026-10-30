@@ -9,7 +9,7 @@
     "terraform": [{"name": "terraform-ls", "command": "terraform-ls", "args": ["serve"], "auto_start": true}],
     "yaml": [{"name": "yaml-language-server", "command": "yaml-language-server", "args": ["--stdio"], "auto_start": true}],
     "toml": [{"name": "taplo", "command": "taplo", "args": ["lsp", "stdio"], "auto_start": true}],
-    "markdown": [{"name": "marksman", "command": "marksman", "args": ["server"], "auto_start": true}],
+    "markdown": [{"name": "marksman", "command": "marksman", "args": ["server"], "auto_start": true, "process_limits": {"enabled": false}}],
     "bash": [{"name": "bash-language-server", "command": "bash-language-server", "args": ["start"], "auto_start": true, "process_limits": {"enabled": false}}],
     "dockerfile": [{"name": "docker-language-server", "command": "docker-language-server", "args": ["start", "--stdio"], "auto_start": true}],
     "justfile": [{"name": "just-lsp", "command": "just-lsp", "args": [], "auto_start": true}]

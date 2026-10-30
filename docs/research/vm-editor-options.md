@@ -58,13 +58,13 @@ Fresh sends the language id `bash`, `terraform` and so on from its own language 
 
 | Problem | Cause | Fix |
 |---|---|---|
-| `bash-language-server` closes at start: `Fatal process out of memory: Zone` | Fresh limits each server to 50% of system memory. The server loads a WASM parser and needs a large address space. It works alone and with the limit off. We did not find the exact limit type. | `process_limits.enabled = false` for this server |
+| `bash-language-server` closes at start: `Fatal process out of memory: Zone` | Fresh limits each server to 50% of system memory (an address-space limit). The server loads a WASM parser and needs a large address space. It works alone and with the limit off. | `process_limits.enabled = false` for this server |
 | `dockerfile-language-server-nodejs` closes: `Cannot read properties of undefined (reading 'scopeUri')` | The server asks for configuration with an empty list. Fresh answers with one item. | Use `docker-language-server` (Docker, Go) |
 | `marksman` says `Workspace folder is bogus` | The folder had no `.git`. | None. The clone has `.git`. |
 | bash-language-server warns: no `shellcheck` | The tool was not in the image. | Add `shellcheck` to `tools/lsp.toml` |
 | The editor froze after about 14 minutes in the VM. The shell of the VM was alive, the server of Fresh was idle, and 446 bytes of keystrokes waited unread | `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal. Fresh, `less` and plain `cat` all stopped near 1 MB. Fresh sat in a `write()` to its terminal. | `edit` and `shell` use ssh (`msb ssh serve --stdio` as ProxyCommand), as VS Code did. See section 5 |
 | Fresh tried the X11 clipboard at start and logged `X11 server connection timed out` after 47 seconds | The VM has no display server. | `clipboard.use_system_clipboard = false`. Copy uses OSC 52 (the clipboard of the host terminal). We did not prove that this call blocks the editor. |
-| `marksman` crashed 5 times in 35 seconds with `Could not load file or assembly 'FSharpPlus'`, then Fresh stopped trying (cooldown) | Unknown. It started fine later, alone and 6 at once, on the same files. | None yet. Restart the Fresh server (`fresh --cmd daemon kill orchestrator`) if it recurs, and send me the log. |
+| `marksman` crashed with `Could not load file or assembly 'FSharpPlus'` on `README.md` and on `AGENTS.md`, then Fresh stopped trying (cooldown) | Fresh limits each server to 50% of system memory (`ulimit -v`, 1970 MB in the 4 GB VM). .NET needs more address space, and the failed reservation shows as a missing file. With the cap, the server exits before `initialize`. Without it, it starts. Same cause as the bash server above. | `process_limits.enabled = false` for this server too |
 
 ## 5. The transport: `msb exec` against ssh
 
