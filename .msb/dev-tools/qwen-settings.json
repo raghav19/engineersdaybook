@@ -2,10 +2,10 @@
   "modelProviders": {
     "openai": [
       {
-        "id": "qwen3.7-plus",
-        "name": "qwen3.7-plus (Token Plan)",
+        "id": "qwen3.8-max",
+        "name": "qwen3.8-max (Token Plan)",
         "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
-        "description": "qwen3.7-plus from the Alibaba Cloud Token Plan",
+        "description": "qwen3.8-max from the Alibaba Cloud Token Plan",
         "envKey": "QWEN_API_KEY"
       }
     ]
@@ -16,6 +16,6 @@
     }
   },
   "model": {
-    "name": "qwen3.7-plus"
+    "name": "qwen3.8-max"
   }
 }
