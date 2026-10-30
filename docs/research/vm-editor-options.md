@@ -117,14 +117,28 @@ Fresh uses 24-bit color only if `COLORTERM` is `truecolor` or `24bit` (`color_su
 
 The theme was generated from the `dark` theme of Fresh: the grays moved onto the Solitude ramp, and every named color (`Red`, `Yellow`, ...) replaced by an exact RGB value. The text colors were raised until each had at least 4.5:1 contrast.
 
-## 8. Not tested
+## 8. Memory of the sandbox
+
+Test: a new VM with 2 GB (same image, no swap), loaded like a heavy session. "Used" is `MemTotal - MemAvailable`, so the page cache is not counted.
+
+| Step | Used |
+|---|---|
+| Idle VM (kernel and shell) | 110 MB |
+| + Headroom proxy | 413 MB |
+| + Fresh editor with 3 files | 527 MB |
+| + all nine language servers at once | 721 MB |
+| + `claude` started, no prompt | 777 MB (peak 810 MB, 40% of 2027 MB) |
+
+All processes stayed alive. The test did not cover a long `claude` session, container builds or large Terraform plans. The sandbox has 3 GB so that these have room. On the host, one VM process held 1.37 GB (4 GB VM, after 9 minutes) and the 2 GB test VM held 1.23 GB after the load, because the file cache of the guest stays resident.
+
+## 9. Not tested
 
 - The mouse. We drove Fresh with keys in `tmux`. The docs and the source say the mouse works.
 - `just msb run` and `just msb edit` against a real VM, and the 4 GB memory of the VM. The host runs these.
 - Diagnostics from the Docker server.
 - Whether a person who knows VS Code finds the layout familiar enough.
 
-## 9. Risks
+## 10. Risks
 
 - Fresh is at version 0.5.4. Its config keys can change.
 - The editor is in a terminal. A terminal without mouse support loses the mouse.
