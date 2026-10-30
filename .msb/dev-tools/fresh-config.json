@@ -37,7 +37,9 @@
     {"key": ".", "modifiers": ["ctrl"], "action": "lsp_code_actions", "when": "normal"},
     {"key": ",", "modifiers": ["ctrl"], "action": "open_settings", "when": "normal"},
     {"key": "Tab", "modifiers": ["ctrl"], "action": "next_buffer", "when": "normal"},
-    {"key": "Tab", "modifiers": ["ctrl", "shift"], "action": "prev_buffer", "when": "normal"}
+    {"key": "Tab", "modifiers": ["ctrl", "shift"], "action": "prev_buffer", "when": "normal"},
+    {"key": "t", "modifiers": ["ctrl", "alt"], "action": "open_terminal", "when": "normal"},
+    {"key": "F11", "modifiers": [], "action": "toggle_maximize_split", "when": "normal"}
   ],
   "lsp": {
     "python": [
