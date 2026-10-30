@@ -1,7 +1,7 @@
 # The sandbox tooling lives in .msb/ (microsandbox). `mod` makes it `just msb <recipe>` from anywhere in the repo. `just msb` lists its recipes.
 # Part 3 has its own justfiles under code/mcp-sandbox/part-3-mcp-guardrails/; they do not fall back to this one.
 #
-#   just msb run            developer: create or start the sandbox and open VS Code on it. See .msb/README.md
+#   just msb run            developer: create or start the sandbox and open the Fresh editor in it. See .msb/README.md
 
 set quiet
 

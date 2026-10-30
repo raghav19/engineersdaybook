@@ -1,10 +1,11 @@
-# The msb sandbox: a microsandbox VM for Claude Code and VS Code. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
+# The msb sandbox: a microsandbox VM for Claude Code and the Fresh editor. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
 # Every recipe runs on the host. sandbox.yaml declares the VM. The recipe `run` makes the VM from it.
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
 # The recipes list the steps in order. msb.py has the steps that need Python.
 #
-#   just msb setup          once for each host: authorize your SSH key and set up VS Code.
-#   just msb run            every day: make or start the VM, prepare it, then open VS Code on it.
+#   just msb setup          once for each host: authorize your SSH key.
+#   just msb run            every day: make or start the VM, prepare it, then open the Fresh editor in it.
+#   just msb edit [full]    open the Fresh editor in the running VM, in a new terminal window (full: full screen; edit-here: in this terminal).
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
@@ -23,10 +24,10 @@ msb    := require("msb")
 bws    := require("bws")
 age    := require("age")
 uv     := require("uv")
-code   := require("code")
 docker := require("docker")
 jq     := require("jq")
 yq     := require("yq")
+ssh    := require("ssh")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')
@@ -46,13 +47,11 @@ bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}"
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
-# The user in the VM that `shell` opens. The Dockerfile makes this user.
-vm_user := 'agent'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
-# The VS Code extension for Remote-SSH, and the user settings file that `setup` writes. VSCODE_SETTINGS in msb.py has the settings.
-remote_ssh_extension := 'ms-vscode-remote.remote-ssh'
-vscode_settings_file := config_directory() / 'Code/User/settings.json'
+# `shell` and `edit` connect with ssh and this file. It starts `msb ssh serve` as a ProxyCommand and logs in as the user `agent`.
+# They do not use `msb exec`: in msb 0.7.10 it stops passing output after about 1 MB, with or without a terminal, so a screen editor freezes. ssh does not.
+ssh_config := source_directory() / 'ssh_config'
 # The tag of the image is the commit.
 commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
@@ -69,13 +68,10 @@ help:
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
 
-# Once for each host (safe to run again): authorize your SSH key for `msb ssh`, install Remote-SSH, set VS Code to use .msb/ssh_config
+# Once for each host (safe to run again): authorize your SSH key for `msb ssh`
 setup: _host-only
     [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file '{{ ssh_pubkey }}'
-    code --install-extension {{ remote_ssh_extension }}
-    {{ step }} vscode-settings '{{ vscode_settings_file }}'
-    echo "Setup is complete. Next, run: just msb build. Then run: just msb run"
 
 # The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
 # Log in to GitHub with the GitHub App. You approve it in the browser
@@ -84,14 +80,15 @@ github-login: _host-only
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
-# The layers of every stage go to the tag `cache`. A machine then rebuilds only the stage that changed.
+# No registry cache (`--cache-to type=registry`): in a test its export grew past 6 GB in 25 seconds. In full builds Docker reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
+# The BuildKit cache of this machine already rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
-# Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml
-build: _host-only
+# `build refresh` also installs the newest claude of the version in tools/claude.toml again: the stage `claude` skips the cache.
+# Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml. `build refresh`: also update claude
+build refresh='': _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
-    docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} \
+    docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} {{ if refresh == 'refresh' { '--no-cache-filter claude' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
-      --cache-from type=registry,ref={{ registry }}:cache --cache-to type=registry,ref={{ registry }}:cache,mode=max \
       --metadata-file {{ build_metadata }} --output {{ image_output }}
     docker logout {{ registry_host }}
     digest=$(jq -r '."containerimage.digest"' {{ build_metadata }}) \
@@ -103,15 +100,47 @@ _vm:
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
-# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open VS Code on it
+# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open the Fresh editor in it
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 run: _host-only
-    # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. `code` does not get them.
+    # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. The editor does not get them.
     {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
-    code --folder-uri "vscode-remote://ssh-remote+$MSB_NAME.msb$MSB_WORKSPACE"
+    just --justfile {{ source_file() }} edit
+
+# Fresh is a terminal editor. It runs in the VM, in a terminal window on the host.
+# `edit` opens that window with the terminal below. The default is a normal foot window. Any terminal works that takes the command as its last
+# arguments (alacritty -e, ghostty -e, kitty). For full screen at launch run `just msb edit full`. It adds the flag below right after the name of
+# the terminal (foot and ghostty: --fullscreen; kitty: --start-as=fullscreen; alacritty: -o window.startup_mode=Fullscreen).
+# To toggle full screen later, in any window, use SUPER+F in Hyprland.
+# If there is no display or no such terminal, `edit` uses the terminal where you run it.
+terminal := env('SANDBOX_TERMINAL', 'foot --title sandbox-dev')
+fullscreen_flag := env('SANDBOX_FULLSCREEN_FLAG', '--fullscreen')
+
+# Open the Fresh editor on the clone in the running VM, in a new terminal window. `edit full` opens it full screen. Quit with Ctrl+Q
+[script]
+edit mode='': _host-only
+    # ssh does not send COLORTERM to the VM. Without it Fresh uses 256 colors and the exact colors of its theme turn into the nearest of 256. Every terminal that opens here has 24-bit color.
+    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && COLORTERM=truecolor exec fresh")
+    read -r -a term <<< '{{ terminal }}'
+    case '{{ mode }}' in
+      '') ;;
+      full|fullscreen) read -r -a flag <<< '{{ fullscreen_flag }}'; term=("${term[0]}" "${flag[@]}" "${term[@]:1}") ;;
+      *) echo "msb: edit takes no argument, or: full" >&2; exit 1 ;;
+    esac
+    if [ "${#term[@]}" -gt 0 ] && command -v "${term[0]}" >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
+      # If the connection fails, the window waits for Enter, so that you can read the error.
+      setsid -f "${term[@]}" bash -c '"$@" || { echo "msb: could not connect to the VM. Run: just msb run"; read -r; }' _ "${cmd[@]}" >/dev/null 2>&1
+      echo "Fresh opened in a new window (${term[*]})."
+    else
+      exec "${cmd[@]}"
+    fi
+
+# Open the Fresh editor in this terminal, not in a new window
+edit-here: _host-only
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=${COLORTERM:-} exec fresh"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
@@ -119,7 +148,7 @@ allow-host $host: _host-only && run
 
 # A bash prompt in the VM, as the agent user
 shell: _host-only
-    msb exec -t -u {{ vm_user }} $MSB_NAME -- bash -l
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
