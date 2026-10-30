@@ -5,7 +5,7 @@
 #
 #   just msb setup          once for each host: authorize your SSH key.
 #   just msb run            every day: make or start the VM, prepare it, then open the Fresh editor in it.
-#   just msb edit           open the Fresh editor in the running VM, in a new terminal window (edit-here: in this terminal).
+#   just msb edit [full]    open the Fresh editor in the running VM, in a new terminal window (full: full screen; edit-here: in this terminal).
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
@@ -109,20 +109,28 @@ run: _host-only
     just --justfile {{ source_file() }} edit
 
 # Fresh is a terminal editor. It runs in the VM, in a terminal window on the host.
-# `edit` opens that window with the terminal below. The default is a full-screen foot window, for the most room. For a normal window set
-# SANDBOX_TERMINAL=foot. Any terminal works that takes the command as its last arguments (alacritty -e, ghostty -e, kitty).
+# `edit` opens that window with the terminal below. The default is a normal foot window. Any terminal works that takes the command as its last
+# arguments (alacritty -e, ghostty -e, kitty). For full screen at launch run `just msb edit full`. It adds the flag below right after the name of
+# the terminal (foot and ghostty: --fullscreen; kitty: --start-as=fullscreen; alacritty: -o window.startup_mode=Fullscreen).
+# To toggle full screen later, in any window, use SUPER+F in Hyprland.
 # If there is no display or no such terminal, `edit` uses the terminal where you run it.
-terminal := env('SANDBOX_TERMINAL', 'foot --fullscreen --title sandbox-dev')
+terminal := env('SANDBOX_TERMINAL', 'foot --title sandbox-dev')
+fullscreen_flag := env('SANDBOX_FULLSCREEN_FLAG', '--fullscreen')
 
-# Open the Fresh editor on the clone in the running VM, in a new terminal window. Quit with Ctrl+Q
+# Open the Fresh editor on the clone in the running VM, in a new terminal window. `edit full` opens it full screen. Quit with Ctrl+Q
 [script]
-edit: _host-only
+edit mode='': _host-only
     cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && exec fresh")
     read -r -a term <<< '{{ terminal }}'
+    case '{{ mode }}' in
+      '') ;;
+      full|fullscreen) read -r -a flag <<< '{{ fullscreen_flag }}'; term=("${term[0]}" "${flag[@]}" "${term[@]:1}") ;;
+      *) echo "msb: edit takes no argument, or: full" >&2; exit 1 ;;
+    esac
     if [ "${#term[@]}" -gt 0 ] && command -v "${term[0]}" >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
       # If the connection fails, the window waits for Enter, so that you can read the error.
       setsid -f "${term[@]}" bash -c '"$@" || { echo "msb: could not connect to the VM. Run: just msb run"; read -r; }' _ "${cmd[@]}" >/dev/null 2>&1
-      echo "Fresh opened in a new window ({{ terminal }})."
+      echo "Fresh opened in a new window (${term[*]})."
     else
       exec "${cmd[@]}"
     fi
