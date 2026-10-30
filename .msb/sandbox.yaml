@@ -66,14 +66,17 @@ mounts:
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
-    # The placeholder text ($MSB_GH_TOKEN) can land in a conversation, for example in the output of `env`. Claude Code then sends it to the API in the request body.
+    # The placeholder text ($MSB_GH_TOKEN) can land in a conversation, for example in the output of `env` or in a file such as .msb/README.md. Claude Code and Qwen Code then send it to the API in the request body.
     # Without passthrough, msb blocks that request with 403 "Request blocked by secret policy". Passthrough sends the placeholder only, never the token.
-    passthrough: [api.anthropic.com]
+    # Each secret passes through to the model API of the other agents. Qwen Code shows the 403 as "API Error: 403 status code (no body)", and the session then fails on every request, because it sends the whole history each time.
+    passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
   CLAUDE_CODE_OAUTH_TOKEN:
     allow: [api.anthropic.com]
+    passthrough: [token-plan.ap-southeast-1.maas.aliyuncs.com]
   # The key of the Qwen Token Plan (international, Singapore). Qwen Code reads QWEN_API_KEY (dev-tools/qwen-settings.json, "envKey"), sends the placeholder, and the host swaps it.
   QWEN_API_KEY:
     allow: [token-plan.ap-southeast-1.maas.aliyuncs.com]
+    passthrough: [api.anthropic.com]
 
 # The egress allow list. If `allow` has entries, the VM blocks all other hosts. To add a host, run `just msb allow-host <host>`.
 # *.example.com matches subdomains at any depth (*.istio.io matches istio-release.r2.istio.io). It does not match the bare domain.
