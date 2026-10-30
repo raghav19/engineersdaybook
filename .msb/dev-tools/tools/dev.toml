@@ -1,5 +1,3 @@
-# The tools for development.
-# The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
 [tools]
 just = "1.59"
 yq = "4.54"

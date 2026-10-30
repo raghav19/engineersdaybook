@@ -1,4 +1,0 @@
-# Claude Code. It changes the most often, so it has its own file.
-# The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
-[tools]
-claude = "2.1"  # Claude Code, from the aqua registry with a SHA256 check. "2.1" means the newest 2.1.x when the image is built. Docker reuses the cached layer of this stage, so run `just msb build refresh` to get a newer 2.1.x. DISABLE_UPDATES=1 in sandbox.yaml: the claude in the image does not update itself. For 2.2 or later, change the number here

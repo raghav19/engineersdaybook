@@ -48,8 +48,8 @@ FROM base AS dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
 RUN mise install --yes
 
-FROM base AS claude
-COPY tools/claude.toml /etc/mise/conf.d/claude.toml
+FROM base AS agents
+COPY tools/agents.toml /etc/mise/conf.d/agents.toml
 RUN mise install --yes
 
 FROM base AS lsp
@@ -72,7 +72,7 @@ COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
@@ -97,6 +97,8 @@ RUN touch /etc/containers/nodocker
 # The deny list stops mistakes. The agent can still call the GitHub API with the placeholder. The scope of the token is the real limit.
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+# The settings of Qwen Code: one provider (the Token Plan, international, Singapore). The key is the placeholder QWEN_API_KEY. The host swaps it on the network, so the file has no secret.
+COPY --chown=agent:agent qwen-settings.json /home/agent/.qwen/settings.json
 # Git settings for every user. Git treats each directory as safe, because agent owns the clone and root owns the mount.
 # GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
