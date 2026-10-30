@@ -121,7 +121,7 @@ Use 15% as the realistic low end.
 - `dev-tools.yaml` adds `claude-hr() { headroom wrap claude --code-memory none -- "$@"; }`. Plain `claude` stays the direct path.
 - `headroom wrap claude` starts the proxy in the background. The proxy keeps running after Claude Code exits. The command also adds a `headroom` MCP server (`headroom mcp serve`) to `~/.claude.json`.
 - `headroom wrap claude` keeps tool search on, and it prints "Remote Control (/rc) is disabled while routed through Headroom".
-- The dashboard (`/dashboard`) and `/stats` answer for any `Host` header. The proxy listens on `127.0.0.1` only. Reach the dashboard from the host with a VS Code port forward.
+- The dashboard (`/dashboard`) and `/stats` answer for any `Host` header. The proxy listens on `127.0.0.1` only. Reach the dashboard from the host at `http://127.0.0.1:8787/dashboard`: `sandbox.yaml` publishes the port on the host loopback (`.msb/README.md`).
 - The policy kit has no change. The trial needed no new egress host.
 - Keep `--log-messages` off.
 - If a later version needs the Hugging Face model, bake it into the image at build time. Do not allow `huggingface.co` in the policy kit.

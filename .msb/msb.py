@@ -7,9 +7,8 @@
 
 The justfile has the recipes and the order of the steps. This file has the steps that need Python. Exit 1 means a wrong setup or a failed step.
 The justfile exports MSB_NAME and MSB_WORKSPACE. It also puts the git values that sandbox.yaml names in the environment.
-Run msb.py with `just msb <recipe>`. The justfile does the small checks (the tools on the PATH, the SSH key).
+Run msb.py with `just msb <recipe>`. The justfile does the small checks (the tools on the PATH).
 
-vscode-settings  merge the settings that Remote-SSH needs into the VS Code user settings file. Your other settings stay.
 github-login     log in to GitHub with the GitHub App (web flow). The tokens go to a file with mode 600.
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
@@ -52,28 +51,6 @@ HOST_PORTS = {
     6444: "kind API server",
     18081: "SPIRE server",
     19090: "Flux Operator web UI",
-}
-# The VS Code settings that Remote-SSH needs. `vscode-settings` merges them into your user settings. Your other settings stay.
-VSCODE_SETTINGS = {
-    "remote.SSH.configFile": str(MSB_DIR / "ssh_config"),
-    "remote.SSH.defaultExtensions": [
-        "astral-sh.ty",
-        "charliermarsh.ruff",
-        "tamasfe.even-better-toml",
-        "kennylong.kubernetes-yaml-formatter",
-        "yzhang.markdown-all-in-one",
-        "skellock.just",
-        "isontheline.vscode-sysmon",
-    ],
-    "remote.SSH.useExecServer": False,
-    "remote.SSH.enableDynamicForwarding": False,
-    "remote.SSH.enableAgentForwarding": False,
-    "remote.SSH.connectTimeout": 30,
-    "remote.SSH.showLoginTerminal": False,
-    "remote.SSH.localServerDownload": "always",
-    "update.mode": "none",
-    "extensions.autoUpdate": "off",
-    "extensions.autoCheckUpdates": False,
 }
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
@@ -157,22 +134,6 @@ def _github_callback() -> dict[str, list[str]]:
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
-def vscode_settings(path: Path) -> None:
-    """Merge VSCODE_SETTINGS into the VS Code user settings file `path`. Your other settings stay. The values of VSCODE_SETTINGS win.
-
-    A missing file starts as an empty one. New VS Code windows use the new values.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        current = json.loads(path.read_text()) if path.is_file() else {}
-    except json.JSONDecodeError as error:
-        _die(
-            f"could not read {path} ({error}). VS Code accepts comments there. This step does not. Remove the comments. Then run setup again."
-        )
-    path.write_text(json.dumps(current | VSCODE_SETTINGS, indent=2) + "\n")
-    print(f"The VS Code settings are in {path}. New VS Code windows use them.")
-
-
 def github_login() -> None:
     """Log in to GitHub with the web flow of the GitHub App (`just msb github-login`). It writes the token file.
 
@@ -226,7 +187,7 @@ def ensure_vm() -> None:
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
-    # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and VS Code never opens.
+    # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and the recipe never goes on.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
         _die(
@@ -260,14 +221,11 @@ def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    steps.add_parser("vscode-settings").add_argument("file", type=Path)
     for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
     match args.step:
-        case "vscode-settings":
-            vscode_settings(args.file)
         case "github-login":
             github_login()
         case "ensure-vm":

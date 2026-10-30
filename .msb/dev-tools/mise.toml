@@ -7,7 +7,7 @@
 
 # The mise shims in the sandbox set these values.
 [env]
-EDITOR = "code --wait"
+EDITOR = "nano"
 LANG = "C.UTF-8"
 TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
 CHECKPOINT_DISABLE = "1"  # Terraform does not check its version at checkpoint-api.hashicorp.com
@@ -18,6 +18,7 @@ HEADROOM_TELEMETRY = "off"
 HEADROOM_BEACON = "off"
 HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
+DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language server) runs on .NET. The image has no ICU library, and this setting lets .NET start without it
 HF_HUB_OFFLINE = "1"
 UV_PYTHON_INSTALL_DIR = "/opt/mise/uv-python"  # at build time, the Python of the headroom-ai venv. The image copies /opt/mise with the venv. Without this value, uv uses ~/.local/share/uv.
 # Ponytail (sandbox-boot installs the plugin) puts no codebase map in the session context. This saves input tokens.

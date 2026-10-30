@@ -1,0 +1,62 @@
+{
+  "check_for_updates": false,
+  "auto_attach": false,
+  "theme": "solitude.json",
+  "active_keybinding_map": "vscode",
+  "terminal": {"shell": {"command": "/bin/bash", "args": ["--login", "-i"]}},
+  "clipboard": {"use_osc52": true, "use_system_clipboard": false},
+  "plugins": {
+    "agent_discovery": {"enabled": false},
+    "agent_sessions": {"enabled": false},
+    "agent_sessions_claude_code": {"enabled": false},
+    "agent_sessions_codex": {"enabled": false},
+    "agent_sessions_multiplexers": {"enabled": false},
+    "agent_sessions_orchestrators": {"enabled": false},
+    "agent_sessions_tmux": {"enabled": false},
+    "orchestrator": {"enabled": false},
+    "live_sessions": {"enabled": false},
+    "dashboard": {"enabled": false},
+    "welcome": {"enabled": false},
+    "welcome_screen": {"enabled": false}
+  },
+  "keybindings": [
+    {"key": "t", "modifiers": ["ctrl"], "action": "quick_open_buffers", "when": "global"},
+    {"key": "w", "modifiers": ["ctrl"], "action": "close_tab", "when": "normal"},
+    {"key": "\\", "modifiers": ["ctrl"], "action": "split_vertical", "when": "normal"},
+    {"key": "Up", "modifiers": ["alt"], "action": "move_line_up", "when": "normal"},
+    {"key": "Down", "modifiers": ["alt"], "action": "move_line_down", "when": "normal"},
+    {"key": "Up", "modifiers": ["alt", "shift"], "action": "duplicate_line_above", "when": "normal"},
+    {"key": "Down", "modifiers": ["alt", "shift"], "action": "duplicate_line", "when": "normal"},
+    {"key": "z", "modifiers": ["alt"], "action": "toggle_line_wrap", "when": "normal"},
+    {"key": "p", "modifiers": ["ctrl", "shift"], "action": "command_palette", "when": "global"},
+    {"key": "e", "modifiers": ["ctrl", "shift"], "action": "focus_file_explorer", "when": "normal"},
+    {"key": "f", "modifiers": ["ctrl", "shift"], "action": "open_live_grep", "when": "normal"},
+    {"key": "s", "modifiers": ["ctrl", "shift"], "action": "save_as", "when": "normal"},
+    {"key": "`", "modifiers": ["ctrl"], "action": "open_terminal_in_dock", "when": "normal"},
+    {"key": "`", "modifiers": ["ctrl", "shift"], "action": "toggle_utility_dock", "when": "normal"},
+    {"key": ".", "modifiers": ["ctrl"], "action": "lsp_code_actions", "when": "normal"},
+    {"key": ",", "modifiers": ["ctrl"], "action": "open_settings", "when": "normal"},
+    {"key": "Tab", "modifiers": ["ctrl"], "action": "next_buffer", "when": "normal"},
+    {"key": "Tab", "modifiers": ["ctrl", "shift"], "action": "prev_buffer", "when": "normal"},
+    {"key": "t", "modifiers": ["ctrl", "alt"], "action": "open_terminal", "when": "normal"},
+    {"key": "F11", "modifiers": [], "action": "toggle_maximize_split", "when": "normal"},
+    {"key": "g", "modifiers": ["ctrl", "shift"], "action": "start_review_diff", "when": "normal"},
+    {"key": "g", "modifiers": ["ctrl", "alt"], "action": "show_git_log", "when": "normal"},
+    {"key": "b", "modifiers": ["ctrl", "alt"], "action": "show_git_blame", "when": "normal"},
+    {"key": "F7", "modifiers": [], "action": "diff_nav_next", "when": "normal"},
+    {"key": "F7", "modifiers": ["shift"], "action": "diff_nav_prev", "when": "normal"}
+  ],
+  "lsp": {
+    "python": [
+      {"name": "ty", "command": "ty", "args": ["server"], "auto_start": true, "root_markers": ["pyproject.toml", ".git"]},
+      {"name": "ruff", "command": "ruff", "args": ["server"], "auto_start": true, "root_markers": ["pyproject.toml", ".git"]}
+    ],
+    "terraform": [{"name": "terraform-ls", "command": "terraform-ls", "args": ["serve"], "auto_start": true}],
+    "yaml": [{"name": "yaml-language-server", "command": "yaml-language-server", "args": ["--stdio"], "auto_start": true}],
+    "toml": [{"name": "taplo", "command": "taplo", "args": ["lsp", "stdio"], "auto_start": true}],
+    "markdown": [{"name": "marksman", "command": "marksman", "args": ["server"], "auto_start": true, "process_limits": {"enabled": false}}],
+    "bash": [{"name": "bash-language-server", "command": "bash-language-server", "args": ["start"], "auto_start": true, "process_limits": {"enabled": false}}],
+    "dockerfile": [{"name": "docker-language-server", "command": "docker-language-server", "args": ["start", "--stdio"], "auto_start": true}],
+    "justfile": [{"name": "just-lsp", "command": "just-lsp", "args": [], "auto_start": true}]
+  }
+}
