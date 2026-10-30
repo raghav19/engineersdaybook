@@ -1,5 +1,20 @@
 {
   "check_for_updates": false,
+  "auto_attach": false,
+  "plugins": {
+    "agent_discovery": {"enabled": false},
+    "agent_sessions": {"enabled": false},
+    "agent_sessions_claude_code": {"enabled": false},
+    "agent_sessions_codex": {"enabled": false},
+    "agent_sessions_multiplexers": {"enabled": false},
+    "agent_sessions_orchestrators": {"enabled": false},
+    "agent_sessions_tmux": {"enabled": false},
+    "orchestrator": {"enabled": false},
+    "live_sessions": {"enabled": false},
+    "dashboard": {"enabled": false},
+    "welcome": {"enabled": false},
+    "welcome_screen": {"enabled": false}
+  },
   "clipboard": {"use_osc52": true, "use_system_clipboard": false},
   "lsp": {
     "python": [

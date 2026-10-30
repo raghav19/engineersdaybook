@@ -109,7 +109,7 @@ run: _host-only
     just --justfile {{ source_file() }} edit
 
 # Fresh is a terminal editor. It runs in the VM, in this terminal. The first time you open a folder, press T to trust it (language servers then start).
-# Open the Fresh editor on the clone in the running VM. Quit with File > Quit (click the menu bar)
+# Open the Fresh editor on the clone in the running VM. Quit with Ctrl+Q
 edit: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && exec fresh"
 

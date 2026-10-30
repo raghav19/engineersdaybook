@@ -81,14 +81,28 @@ Test: a host pty runs the command, and we count the output that arrives. The VM 
 
 We did not find the cause inside msb. The host `msb exec` process was idle (0% CPU) and the guest process waited in `write()`.
 
-## 6. Not tested
+## 6. Trimming Fresh
+
+Fresh loads its bundled features as plugins, and `plugins.<name>.enabled = false` turns one off (documented in the config schema). Test: Fresh opens one 900-line Python file in a container, no language server, idle after 12 seconds.
+
+| Config | Memory (RSS) | Plugins started |
+|---|---|---|
+| Default | 79–85 MB | 49 |
+| `auto_attach = false` only | 84 MB | 49 |
+| + 9 agent plugins off (`agent_*`, `orchestrator`, `live_sessions`) | 67 MB | 40 |
+| + `dashboard`, `welcome`, `welcome_screen` off (the config of this branch) | 63 MB | 37 |
+| + 14 more off (`k8s-workspace`, `devcontainer`, `code-tour`, `audit_mode`, `vi_mode`, `theme_editor`, `compare_files`, `env-manager`, `flash`, and 5 language helpers) | 50–51 MB | 23 |
+
+The agent plugins are not an AI assistant. They list and rejoin sessions of Claude Code and Codex that already run. For comparison, termide (no switches for its agent, database viewer or SFTP) used 49 MB, and Helix used 22 MB, in the same test.
+
+## 7. Not tested
 
 - The mouse. We drove Fresh with keys in `tmux`. The docs and the source say the mouse works.
 - `just msb run` and `just msb edit` against a real VM, and the 4 GB memory of the VM. The host runs these.
 - Diagnostics from the Docker server.
 - Whether a person who knows VS Code finds the layout familiar enough.
 
-## 7. Risks
+## 8. Risks
 
 - Fresh is at version 0.5.4. Its config keys can change.
 - The editor is in a terminal. A terminal without mouse support loses the mouse.

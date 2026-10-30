@@ -69,7 +69,29 @@ just msb run           # 3. every day
 | 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
 | 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in your terminal. You can run it as often as you want. |
 
-Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. `Ctrl+P` opens the command palette. To quit, use File > Quit. To open the editor again in a running VM, run `just msb edit`. The first time you open the clone, Fresh asks whether to trust the folder. Press `T`. Then the language servers start.
+Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. The first time you open the clone, Fresh asks whether to trust the folder. Press `T`, then Enter. Then the language servers start. To open the editor again in a running VM, run `just msb edit`.
+
+| You want to | Keys |
+|---|---|
+| Open the command palette (type a name for files, `>` for commands, `#` for open buffers, `:` for a line) | `Ctrl+P` |
+| Open a terminal in the bottom dock | `` Alt+` `` (backtick). Or `Ctrl+P`, then `>Open Terminal` |
+| Show or hide the dock, and move focus between the dock and the editor | `Alt+J`, `Alt+O` |
+| In a terminal: scroll, search and copy (read-only mode), and back | `Ctrl+Space` (or `Ctrl+]`) |
+| In a terminal: send **every** key to the program (use it for `claude`) | `F9` (again to leave) |
+| Show or hide the file explorer, and move focus to it | `Ctrl+B`, `Ctrl+E` |
+| Save, open a file, new file, quit | `Ctrl+S`, `Ctrl+O`, `Ctrl+N`, `Ctrl+Q` |
+| Find, replace, next match, previous match | `Ctrl+F`, `Ctrl+R`, `F3`, `Shift+F3` |
+| Search in all files | `Alt+/` |
+| Go to a line | `Ctrl+G` |
+| Close a tab, next tab, previous tab | `Alt+W`, `Ctrl+PageDown`, `Ctrl+PageUp` |
+| Move between splits (make a split from the palette) | `Alt+]`, `Alt+[` |
+| Undo, redo, comment a line, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+/`, `Ctrl+A` |
+| Copy, cut, paste | `Ctrl+C`, `Ctrl+X`, `Ctrl+V` |
+| Go to the definition, find references, rename | `F12`, `Shift+F12`, `F2` |
+| Hover, code actions, completion | `Alt+K`, `Alt+.`, `Ctrl+Space` |
+| Open the menu bar, open help | `F10`, `F1` |
+
+The keys come from the default keymap of Fresh 0.5.4. Your terminal or window manager can take a key before Fresh sees it. If `` Alt+` `` does nothing, use the palette. To use the keys of VS Code (for example `Ctrl+D` for the next match and `Ctrl+Shift+K` to delete a line), add `"keymap": "vscode"` to `fresh-config.json`.
 
 To run `claude`, open a terminal in Fresh (command palette: "Open Terminal") or use `just msb shell`. It uses the token from Bitwarden and does not ask you to sign in.
 
@@ -210,4 +232,4 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 
 - **Decision.** The editor is [Fresh](https://github.com/sinelaw/fresh) 0.5.4 (Rust, GPL-3.0). It is a terminal editor with menus, tabs, a file explorer, mouse support and a built-in terminal. It has no modes. It runs in the VM, in the terminal where you run `just msb run`. `dev-tools/fresh-config.json` is the one file that says which language server starts for which language. The Dockerfile copies it to `~/.config/fresh/config.json`. The servers are in `tools/lsp.toml` (and ty and ruff in `tools/dev.toml`).
 - **Why.** VS Code needed an SSH link, a server in the VM and an extension host. Fresh needs a binary and one file. It has no plugin code in this repo and nothing to install or match on the host. `edit` and `shell` connect with ssh (`ssh_config`, `msb ssh serve --stdio`), not with `msb exec`. Fresh finds the servers in the PATH. The comparison with Zed, Helix, Lapce, micro and Emacs is in `docs/research/vm-editor-options.md`.
-- **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) and `marksman` (.NET) need `process_limits.enabled = false` in the config. Without it they crash with errors that name a missing file or an out-of-memory zone. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim. `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal, and a screen editor then freezes. I measured this: Fresh, `less` and plain `cat` all stopped near 1 MB, and ssh through `msb ssh serve --stdio` passed 6.9 MB at once. So the editor and the shell use ssh. `setup` and the SSH key are needed again. Fresh also tries the X11 clipboard, which does not exist in the VM, so the config turns it off (copy then uses the terminal clipboard, OSC 52).
+- **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) and `marksman` (.NET) need `process_limits.enabled = false` in the config. Without it they crash with errors that name a missing file or an out-of-memory zone. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim. `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal, and a screen editor then freezes. I measured this: Fresh, `less` and plain `cat` all stopped near 1 MB, and ssh through `msb ssh serve --stdio` passed 6.9 MB at once. So the editor and the shell use ssh. `setup` and the SSH key are needed again. The config turns off 12 bundled plugins that this sandbox does not need: the agent and orchestrator plugins (they list your Claude Code and Codex sessions and run Fresh as a background daemon, so `auto_attach` is off too) and the welcome screen and dashboard. This takes the idle memory of Fresh from about 80 MB to about 63 MB. Fresh also tries the X11 clipboard, which does not exist in the VM, so the config turns it off (copy then uses the terminal clipboard, OSC 52).
