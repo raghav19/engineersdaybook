@@ -20,7 +20,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    ```
 
 2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it. `edit` and `shell` connect with ssh.
-   - Fresh runs in the terminal where you run `just msb run`. Use a terminal with mouse and 256-color support. Most modern terminals have both.
+   - Fresh opens in a new window of a terminal on the host (`foot` by default, see `SANDBOX_TERMINAL` below). Use a terminal with mouse and 256-color support. Most modern terminals have both.
 
 3. **Commit your work.** The VM clones the committed files only.
 
@@ -67,9 +67,9 @@ just msb run           # 3. every day
 |---|---|---|
 | 1 | `setup` | Authorizes your SSH key for `msb ssh`. |
 | 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
-| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in your terminal. You can run it as often as you want. |
+| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in a new full-screen terminal window. You can run it as often as you want. |
 
-Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. The first time you open the clone, Fresh asks whether to trust the folder. Press `T`, then Enter. Then the language servers start. To open the editor again in a running VM, run `just msb edit`.
+Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. Fresh does not ask whether to trust the clone: `sandbox-boot` records the answer "trusted" for it (the file that the key `T` writes), so the language servers start at once. To open the editor again in a running VM, run `just msb edit`. It opens a new window with the terminal in `SANDBOX_TERMINAL` (default: `foot --fullscreen --title sandbox-dev`). For a normal window run `SANDBOX_TERMINAL=foot just msb edit`. Another terminal works if it takes the command as its last arguments, for example `SANDBOX_TERMINAL='alacritty -e'`. If there is no display or no such terminal, or to use the terminal you are in, run `just msb edit-here`.
 
 The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 18 keys in `keybindings`). The colors come from your terminal (`theme` is `terminal`), so Fresh looks like your desktop theme, for example Omarchy Solitude. The terminal in the dock runs `/bin/bash --login -i`.
 
@@ -148,7 +148,7 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
 | `just msb edit` cannot connect | Run `just msb run`, then `just msb setup` again. Check that `msb ls` shows the VM as `running`. |
 | The editor or the shell freezes after some output | You are on `msb exec`. `edit` and `shell` use ssh because of this. See decision 14. |
-| A language server does not start | Look at the LSP indicator in the status bar of Fresh (click it). Fresh starts servers only in a trusted folder: command palette, "Workspace Trust...", then trust. The server logs are in `~/.local/state/fresh/logs/lsp/` in the VM. |
+| A language server does not start | Look at the LSP indicator in the status bar of Fresh (click it). Fresh starts servers only in a trusted folder. `sandbox-boot` trusts the clone. For another folder use the command palette, "Workspace Trust...", then trust. The server logs are in `~/.local/state/fresh/logs/lsp/` in the VM. |
 | No hints in a Dockerfile | The server starts, but I did not see diagnostics from it. See decision 14. |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |

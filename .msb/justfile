@@ -5,7 +5,7 @@
 #
 #   just msb setup          once for each host: authorize your SSH key.
 #   just msb run            every day: make or start the VM, prepare it, then open the Fresh editor in it.
-#   just msb edit           open the Fresh editor in the running VM.
+#   just msb edit           open the Fresh editor in the running VM, in a new terminal window (edit-here: in this terminal).
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
@@ -108,9 +108,27 @@ run: _host-only
     {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
     just --justfile {{ source_file() }} edit
 
-# Fresh is a terminal editor. It runs in the VM, in this terminal. The first time you open a folder, press T to trust it (language servers then start).
-# Open the Fresh editor on the clone in the running VM. Quit with Ctrl+Q
+# Fresh is a terminal editor. It runs in the VM, in a terminal window on the host.
+# `edit` opens that window with the terminal below. The default is a full-screen foot window, for the most room. For a normal window set
+# SANDBOX_TERMINAL=foot. Any terminal works that takes the command as its last arguments (alacritty -e, ghostty -e, kitty).
+# If there is no display or no such terminal, `edit` uses the terminal where you run it.
+terminal := env('SANDBOX_TERMINAL', 'foot --fullscreen --title sandbox-dev')
+
+# Open the Fresh editor on the clone in the running VM, in a new terminal window. Quit with Ctrl+Q
+[script]
 edit: _host-only
+    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && exec fresh")
+    read -r -a term <<< '{{ terminal }}'
+    if [ "${#term[@]}" -gt 0 ] && command -v "${term[0]}" >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
+      # If the connection fails, the window waits for Enter, so that you can read the error.
+      setsid -f "${term[@]}" bash -c '"$@" || { echo "msb: could not connect to the VM. Run: just msb run"; read -r; }' _ "${cmd[@]}" >/dev/null 2>&1
+      echo "Fresh opened in a new window ({{ terminal }})."
+    else
+      exec "${cmd[@]}"
+    fi
+
+# Open the Fresh editor in this terminal, not in a new window
+edit-here: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && exec fresh"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first

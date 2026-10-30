@@ -40,6 +40,7 @@ Sources: `docs.helix-editor.com/languages.html` and `languages.toml` (Helix); `z
 | `terminal.shell = {"command": "/bin/bash", "args": ["--login", "-i"]}` sets the shell of the terminal in the dock. Unset, Fresh uses `$SHELL`. | documented | `docs/features/terminal.md` (Shell Override) |
 | `active_keybinding_map = "vscode"` changes only 4 keys of the default map (`Ctrl+D`, `Ctrl+/`, `Ctrl+Shift+K`, `Ctrl+G`). Other VS Code keys are custom entries in `keybindings`. | source | `keymaps/vscode.json`, `plugins/config-schema.json` |
 | Fresh turns on the kitty keyboard protocol, so `Ctrl+Shift+<letter>`, `Ctrl+Tab` and `` Ctrl+` `` work in a terminal that supports it. `foot` 1.28 does. | source, documented | `services/terminal_modes.rs`, `man foot-ctlseqs` |
+| There is no config key or flag for workspace trust. Fresh keeps the decision in `<data_dir>/workspaces/<path with / as _>/trust.json` as `{"level": "trusted"}` (also in the file that the key `T` writes, measured in the VM). Without the file Fresh asks. With it Fresh opens `Trusted` and does not ask (measured). `sandbox-boot` writes the file for the clone. | source, measured | `services/workspace_trust.rs` (`TrustStore`) |
 | `Ctrl+H` cannot replace VS Code's replace key: a terminal sends Backspace for it. | inferred | |
 
 ## 3. Measured in the image
