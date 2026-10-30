@@ -1,6 +1,6 @@
 # The dev sandbox on microsandbox
 
-This sandbox is a VM for Claude Code and VS Code. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
+This sandbox is a VM for Claude Code and the [Fresh](https://github.com/sinelaw/fresh) editor. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
 
 The VM holds no secrets, only placeholders. The host replaces a placeholder with the real value when the VM calls an allowed host. The "Decision records" at the end explain why the sandbox works this way.
 
@@ -8,9 +8,9 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
 
 ## Prerequisites
 
-1. **Install the tools.** You need [mise](https://mise.jdx.dev), VS Code (`code`), Docker (for the image build) and access to `/dev/kvm`.
+1. **Install the tools.** You need [mise](https://mise.jdx.dev), Docker (for the image build) and access to `/dev/kvm`.
    - Run the commands in the root of the repository. `mise install` provides `just`, `msb`, `uv`, `bws` (the Bitwarden Secrets Manager CLI), `age`, `jq` and `yq`.
-   - You install `docker` and `code` yourself.
+   - You install `docker` yourself. The editor runs in the VM, so the host needs no editor.
    - Every recipe stops with a message if a tool is missing.
 
    ```shell
@@ -19,7 +19,8 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    msb doctor        # each line must have a check mark
    ```
 
-2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it.
+2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it. `edit` and `shell` connect with ssh.
+   - Fresh opens in a new window of a terminal on the host (`foot` by default, see `SANDBOX_TERMINAL` below). Use a terminal with mouse and 256-color support. Most modern terminals have both.
 
 3. **Commit your work.** The VM clones the committed files only.
 
@@ -64,11 +65,50 @@ just msb run           # 3. every day
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `setup` | Authorizes your SSH key for `msb ssh`. Installs the Remote-SSH extension. Writes the VS Code user settings, including `remote.SSH.configFile`. Your `settings.json` must have no comments, because the step cannot read them. |
+| 1 | `setup` | Authorizes your SSH key for `msb ssh`. |
 | 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
-| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens VS Code on it. You can run it as often as you want. |
+| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in a new terminal window. You can run it as often as you want. |
 
-In a VS Code terminal, run `claude`. It uses the token from Bitwarden and does not ask you to sign in.
+Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. Fresh does not ask whether to trust the clone: `sandbox-boot` records the answer "trusted" for it (the file that the key `T` writes), so the language servers start at once. To open the editor again in a running VM, run `just msb edit`. It opens a new normal window with the terminal in `SANDBOX_TERMINAL` (default: `foot --title sandbox-dev`). For full screen at launch run `just msb edit full`. To switch a window to full screen or back at any time, press `SUPER+F` (Hyprland). Another terminal works if it takes the command as its last arguments, for example `SANDBOX_TERMINAL='alacritty -e'`. For `edit full`, set `SANDBOX_FULLSCREEN_FLAG` to the flag of that terminal (default `--fullscreen`, which `foot` and `ghostty` take). If there is no display or no such terminal, or to use the terminal you are in, run `just msb edit-here`. More room inside Fresh: `Ctrl+Alt+T` opens a terminal that fills the editor area, and `F11` maximizes the pane that has focus (and restores it). For even more rows, hide the bars with the palette commands "Toggle Menu Bar", "Toggle Status Bar" and "Toggle Tab Bar".
+
+The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 25 keys in `keybindings`). The theme is `solitude.json` (`dev-tools/fresh-theme-solitude.json`): the exact colors of Omarchy Solitude, with real colors for diffs (green for added lines, red for removed), errors, warnings and syntax. The `terminal` theme used the ANSI colors of the terminal, and Solitude is almost gray, so its added and removed lines were both gray and its comments had only 2.2:1 contrast. `edit` sets `COLORTERM=truecolor` in the VM, because ssh does not send it and Fresh then falls back to 256 colors. To try another theme, use the palette: "Select Theme" (built in: dark, dracula, gruvbox, high-contrast, light, nord, nostalgia, solarized-dark, terminal, tokyo-night). To change a color, use "Edit Theme". The terminal in the dock runs `/bin/bash --login -i`.
+
+| You want to | VS Code key | Notes |
+|---|---|---|
+| Command palette (commands) | `Ctrl+Shift+P` | or `Ctrl+P`, then `>` |
+| Open a file by name | `Ctrl+P` | type `:` for a line, `#` for an open tab |
+| **Search the open tabs** | `Ctrl+T` | or `Ctrl+P`, then `#`. Also `Ctrl+;` |
+| **Open a terminal** (bottom dock) | `` Ctrl+` `` | or `` Alt+` `` |
+| **Terminal full size**: open a terminal as a tab that fills the whole editor area | `Ctrl+Alt+T` | the dock stays free; close it like any tab (`Ctrl+W`) |
+| **Terminal full size**: make the focused pane (for example the dock terminal) fill the window, and back | `F11` | `` Ctrl+` `` first, then `F11`; `F11` again restores the layout |
+| Show or hide the dock; move focus dock or editor | `` Ctrl+Shift+` ``, `Alt+J`; `Alt+O` | |
+| In a terminal: scroll, search and copy, and back | `Ctrl+Space` | `Ctrl+]` also works |
+| In a terminal: send **every** key to the program | `F9` | use it for `claude`, then `F9` again |
+| Show or hide the file explorer; focus it | `Ctrl+B`; `Ctrl+Shift+E` | |
+| Search in all files | `Ctrl+Shift+F` | or `Alt+/` |
+| Save, save as, open, new file, quit | `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`, `Ctrl+N`, `Ctrl+Q` | |
+| Find, next, previous | `Ctrl+F`, `F3`, `Shift+F3` | |
+| Replace | `Ctrl+R` | VS Code uses `Ctrl+H`. A terminal cannot tell it from Backspace |
+| Go to a line | `Ctrl+G` | |
+| Close a tab; next tab; previous tab | `Ctrl+W`; `Ctrl+Tab`; `Ctrl+Shift+Tab` | `Ctrl+PageDown` and `Ctrl+PageUp` also work |
+| Split the editor; move between splits | `Ctrl+\`; `Alt+]`, `Alt+[` | |
+| Move a line; copy a line up or down | `Alt+Up`, `Alt+Down`; `Alt+Shift+Up`, `Alt+Shift+Down` | |
+| Delete a line; comment a line; wrap long lines | `Ctrl+Shift+K`; `Ctrl+/`; `Alt+Z` | |
+| **See your git changes**: staged, unstaged and new files with their diffs; stage or discard | `Ctrl+Shift+G` | in that view: `n`/`p` next or previous hunk, `s` stage, `u` unstage, `d` discard, `c` comment, `1`/`2` unified or split, `Enter` jump to the line, `q` close |
+| Git history with a live diff of the selected commit | `Ctrl+Alt+G` | palette: "Git Log: Current File" for one file |
+| Who changed this line (blame) | `Ctrl+Alt+B` | |
+| Jump to the next or previous changed region of the file | `F7`, `Shift+F7` | |
+| Add a cursor at the next match | `Ctrl+D` | |
+| Undo, redo, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+A` | |
+| Go to the definition, references, rename | `F12`, `Shift+F12`, `F2` | |
+| Hover, code actions, completion | `Alt+K`; `Ctrl+.`; `Ctrl+Space` | `Alt+.` also gives code actions |
+| Settings; menu bar; help | `Ctrl+,`; `F10`; `F1` | |
+
+Git in Fresh: changed lines are marked in the gutter, and the file explorer (`Ctrl+B`) marks each file `M` (modified) or `U` (untracked). The palette also has "Review Diff: Range (Commit or Branch)" (for example `main..HEAD`, to review a whole branch), "Review Diff: Stash" and "Live Diff: vs HEAD". Fresh has no commit or push command. For those use the terminal (`` Ctrl+` ``) or Claude.
+
+The keys with `Shift`, `Ctrl+Tab`, `` Ctrl+` ``, `Ctrl+.` and `Ctrl+,` need a terminal with the kitty keyboard protocol. Fresh turns the protocol on. `foot` 1.28 supports it. In a terminal without it, use the other key in the Notes column. Your window manager can also take a key before Fresh sees it. To change a key, use the palette: "Keybinding Editor".
+
+To run `claude`, open a terminal in Fresh (command palette: "Open Terminal") or use `just msb shell`. It uses the token from Bitwarden and does not ask you to sign in.
 
 ## Daily use
 
@@ -94,11 +134,12 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **Ports of the host.** The VM reaches three ports of the host at `host.microsandbox.internal:<port>`: 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). Nothing in the VM uses them yet.
 - **Headroom dashboard.** Open `http://127.0.0.1:8787/dashboard` (`/stats` and `/health` work too). Host port 8787 must be free, or `just msb run` fails. To use another port, change `network.ports` in `sandbox.yaml` (`127.0.0.1:8788:8787`). Headroom has no login, so any user of the host can open it. An existing VM needs `just msb rm && just msb run` once.
 - **Volumes.** `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login). `terraform-providers` is the Terraform provider cache. `podman-storage` has the images that podman pulls and builds. They stay when you remove the VM.
-- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in five groups: `runtimes`, `headroom`, `infra`, `dev` and `claude`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden. The first `build` prints `failed to configure registry cache importer ... not found`. The build goes on.
+- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in six groups: `runtimes`, `headroom`, `infra`, `dev`, `claude` and `lsp`. Every tool has an exact version, except `claude`: it is `2.1`, so a build takes the newest 2.1.x. Docker caches that stage by the text of the file, so run `just msb build refresh` to install a newer 2.1.x. A new VM (`just msb rm && just msb run`) then has it. For 2.2 or later, edit `tools/claude.toml`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden.
 - **MCP servers.** `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json` in the VM. Root owns it, and project and user settings cannot override it. It declares draw.io, the Flux schema catalog and GitHub. It denies five GitHub tools (`merge_pull_request`, `delete_file` and others). To change it, run `just msb build`.
 - **Podman.** The VM has rootless podman. `docker` is an alias of podman. `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun`, makes `/` a shared mount, and `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` in each container. The policy of the VM applies to a container too. To push to a registry on the host, allow its port in `HOST_PORTS`.
-- **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`vscode-settings`, `github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
-- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before VS Code connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
+- **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
+- **Memory.** The VM has 3 GB and 4 CPUs (`memory` and `cpus` in `sandbox.yaml`). A test with Headroom, Fresh, all nine language servers and `claude` together peaked at 810 MB. The VM has no swap, so a process that needs more than the VM has is killed. Big container builds or Terraform plans may need more: change `memory`, then `just msb rm && just msb run` (push your work first).
+- **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before `edit` or `shell` connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
 
 ## When something fails
 
@@ -114,7 +155,10 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | `msb ls` shows `crashed` or `stopped` | Run `just msb run`. The clone stays. If `run` still fails and the clone has work, push the work first. Then run `just msb rm && just msb run`. |
 | `run` says that the VM does not match the configuration | `sandbox.yaml` or a host value changed. Push the work in the clone (`just msb shell`). Then run `just msb rm && just msb run`. |
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
-| VS Code cannot connect | Run `just msb setup` again. Check that `msb ls` shows the VM as `running`. Close the VS Code window. Open it again with `run`. |
+| `just msb edit` cannot connect | Run `just msb run`, then `just msb setup` again. Check that `msb ls` shows the VM as `running`. |
+| The editor or the shell freezes after some output | You are on `msb exec`. `edit` and `shell` use ssh because of this. See decision 14. |
+| A language server does not start | Look at the LSP indicator in the status bar of Fresh (click it). Fresh starts servers only in a trusted folder. `sandbox-boot` trusts the clone. For another folder use the command palette, "Workspace Trust...", then trust. The server logs are in `~/.local/state/fresh/logs/lsp/` in the VM. |
+| No hints in a Dockerfile | The server starts, but I did not see diagnostics from it. See decision 14. |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
 
@@ -172,7 +216,7 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 
 ### 9. Pin the image by digest, and build it the same way each time
 
-- **Decision.** `sandbox.yaml` pins the image by digest. `build` gives every file the same timestamp and adds no provenance and no SBOM. Layers use zstd level 9, and each stage caches in the registry.
+- **Decision.** `sandbox.yaml` pins the image by digest. `build` gives every file the same timestamp and adds no provenance and no SBOM. Layers use zstd level 9. The build does not export a cache to the registry: on a 14 GB machine, that export grew past 6 GB in 25 seconds in a test, and in full builds systemd-oomd killed Docker at 6 GB of memory and 17 GB of swap. The cache of BuildKit on your machine is enough.
 - **Why.** The same files give the same digest, so a commit does not change every layer. A pin means that a VM does not change when someone pushes a tag. zstd unpacks faster than gzip.
 - **Cost.** After a change you run `build`, commit the new digest and make a new VM.
 
@@ -199,3 +243,9 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 - **Decision.** The top of `.msb/justfile` lists the tools with `require` and the Bitwarden keys with `env`. We do not use `set lazy`.
 - **Why.** just checks every top-level definition at the start and stops with its own message. The recipes need no check of their own, and we wrote no shell loop. The keys exist only inside `bws run`, so `run` starts `_vm` there with `MSB_IN_BWS=1`. The key lines are `if`-expressions that read the variable only when `MSB_IN_BWS` is set.
 - **Cost.** Every recipe needs all the tools, also `shell` and `rm`. just runs `git rev-parse HEAD` for each recipe. It reports one missing item at a time, in the alphabetical order of the variable names. The key names in the justfile must match `sandbox.yaml`.
+
+### 14. Fresh is the editor, and it runs in the VM
+
+- **Decision.** The editor is [Fresh](https://github.com/sinelaw/fresh) 0.5.4 (Rust, GPL-3.0). It is a terminal editor with menus, tabs, a file explorer, mouse support and a built-in terminal. It has no modes. It runs in the VM, in the terminal where you run `just msb run`. `dev-tools/fresh-config.json` is the one file that says which language server starts for which language. The Dockerfile copies it to `~/.config/fresh/config.json`. The servers are in `tools/lsp.toml` (and ty and ruff in `tools/dev.toml`).
+- **Why.** VS Code needed an SSH link, a server in the VM and an extension host. Fresh needs a binary and one file. It has no plugin code in this repo and nothing to install or match on the host. `edit` and `shell` connect with ssh (`ssh_config`, `msb ssh serve --stdio`), not with `msb exec`. Fresh finds the servers in the PATH. The comparison with Zed, Helix, Lapce, micro and Emacs is in `docs/research/vm-editor-options.md`.
+- **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) and `marksman` (.NET) need `process_limits.enabled = false` in the config. Without it they crash with errors that name a missing file or an out-of-memory zone. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim. `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal, and a screen editor then freezes. I measured this: Fresh, `less` and plain `cat` all stopped near 1 MB, and ssh through `msb ssh serve --stdio` passed 6.9 MB at once. So the editor and the shell use ssh. `setup` and the SSH key are needed again. The config turns off 12 bundled plugins that this sandbox does not need: the agent and orchestrator plugins (they list your Claude Code and Codex sessions and run Fresh as a background daemon, so `auto_attach` is off too) and the welcome screen and dashboard. This takes the idle memory of Fresh from about 80 MB to about 63 MB. Fresh also tries the X11 clipboard, which does not exist in the VM, so the config turns it off (copy then uses the terminal clipboard, OSC 52).

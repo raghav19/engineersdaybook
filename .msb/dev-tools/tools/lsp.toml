@@ -1,0 +1,12 @@
+# The language servers for the editor (Fresh finds them in the PATH; fresh-config.json says which server to start for which language).
+# ty and ruff are in dev.toml. The Dockerfile builds each file in its own stage, so a new version in one file rebuilds only that stage.
+[tools]
+node = "24.22"  # the npm: tools below need node at build time. It is the same version as in runtimes.toml, so the final image has one copy
+terraform-ls = "0.39.1"
+taplo = "0.10.0"
+marksman = "2026-02-08"
+"github:terror/just-lsp" = "0.10.0"
+"npm:yaml-language-server" = "1.25.0"
+"npm:bash-language-server" = "5.8.1"
+"github:docker/docker-language-server" = "0.20.1"  # not the npm dockerfile-language-server-nodejs: it crashes on the answer that Fresh gives to workspace/configuration
+shellcheck = "0.11.0"  # bash-language-server runs it for the diagnostics of shell scripts

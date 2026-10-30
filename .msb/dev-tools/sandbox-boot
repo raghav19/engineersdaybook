@@ -33,6 +33,12 @@ if [ ! -d "$ws/.git" ]; then
 fi
 as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
 
+# Fresh asks once whether it may run the tools of a folder (language servers, scripts). This folder is the clone of your own repo in your own VM,
+# so write the answer "trusted" for it. It is the file that the key T writes. The folder name is the path of the clone with / replaced by _.
+# If the file exists, leave it: you may have chosen another answer.
+trust_dir="$home/.local/share/fresh/workspaces/$(printf %s "${ws#/}" | tr / _)"
+[ -s "$trust_dir/trust.json" ] || as_agent sh -c "mkdir -p '$trust_dir' && printf '{\\n  \"level\": \"trusted\"\\n}\\n' > '$trust_dir/trust.json'" || fail "could not write the trust decision for Fresh"
+
 # The Headroom proxy for Claude Code listens on port 8787. ANTHROPIC_BASE_URL in .claude/settings.json points to 127.0.0.1:8787.
 # It binds 0.0.0.0, because the port that sandbox.yaml publishes to the host arrives on the network interface of the VM, not on loopback.
 # Start it only if it does not answer. Then wait until it answers.
