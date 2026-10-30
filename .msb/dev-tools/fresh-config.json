@@ -1,7 +1,7 @@
 {
   "check_for_updates": false,
   "auto_attach": false,
-  "theme": "terminal",
+  "theme": "solitude.json",
   "active_keybinding_map": "vscode",
   "terminal": {"shell": {"command": "/bin/bash", "args": ["--login", "-i"]}},
   "clipboard": {"use_osc52": true, "use_system_clipboard": false},

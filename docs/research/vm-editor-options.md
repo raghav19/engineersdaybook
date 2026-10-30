@@ -101,14 +101,30 @@ Fresh loads its bundled features as plugins, and `plugins.<name>.enabled = false
 
 The agent plugins are not an AI assistant. They list and rejoin sessions of Claude Code and Codex that already run. For comparison, termide (no switches for its agent, database viewer or SFTP) used 49 MB, and Helix used 22 MB, in the same test.
 
-## 7. Not tested
+## 7. Theme and colors
+
+The `terminal` theme paints with ANSI color names, and the terminal maps them to its own palette. In Omarchy Solitude (`foot`) the palette is almost gray, so the names lose their meaning.
+
+| Item | Old (`terminal` theme, Solitude palette) | New (`solitude.json`) |
+|---|---|---|
+| Added line | `Green` = `#9fa5a9` (gray) | `#1a4c2e` (green), 6.1:1 with the text |
+| Removed line | `Red` = `#565d60` (gray) | `#5c2226` (red), 7.6:1 with the text |
+| Keyword | `Red` = `#565d60`, 2.8:1 on the background | `#de6145`, 5.2:1 |
+| Comment | `DarkGray` = `#4b4e55`, 2.2:1 | `#8b9296`, 5.9:1 |
+| Text | `#cacccc` on `#101315`, 11.6:1 | the same |
+
+Fresh uses 24-bit color only if `COLORTERM` is `truecolor` or `24bit` (`color_support.rs`). ssh does not send `COLORTERM` to the VM, so Fresh used 256 colors. Measured: Fresh in a container, Review Diff open. With `COLORTERM=truecolor` it sent the exact backgrounds `16;19;21` (editor), `26;76;46` (added) and `92;34;38` (removed). Without it, it sent only 256-palette indices, such as 232 for the editor background. The `edit` recipe now sets `COLORTERM=truecolor`.
+
+The theme was generated from the `dark` theme of Fresh: the grays moved onto the Solitude ramp, and every named color (`Red`, `Yellow`, ...) replaced by an exact RGB value. The text colors were raised until each had at least 4.5:1 contrast.
+
+## 8. Not tested
 
 - The mouse. We drove Fresh with keys in `tmux`. The docs and the source say the mouse works.
 - `just msb run` and `just msb edit` against a real VM, and the 4 GB memory of the VM. The host runs these.
 - Diagnostics from the Docker server.
 - Whether a person who knows VS Code finds the layout familiar enough.
 
-## 8. Risks
+## 9. Risks
 
 - Fresh is at version 0.5.4. Its config keys can change.
 - The editor is in a terminal. A terminal without mouse support loses the mouse.

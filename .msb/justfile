@@ -120,7 +120,8 @@ fullscreen_flag := env('SANDBOX_FULLSCREEN_FLAG', '--fullscreen')
 # Open the Fresh editor on the clone in the running VM, in a new terminal window. `edit full` opens it full screen. Quit with Ctrl+Q
 [script]
 edit mode='': _host-only
-    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && exec fresh")
+    # ssh does not send COLORTERM to the VM. Without it Fresh uses 256 colors and the exact colors of its theme turn into the nearest of 256. Every terminal that opens here has 24-bit color.
+    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && COLORTERM=truecolor exec fresh")
     read -r -a term <<< '{{ terminal }}'
     case '{{ mode }}' in
       '') ;;
@@ -137,7 +138,7 @@ edit mode='': _host-only
 
 # Open the Fresh editor in this terminal, not in a new window
 edit-here: _host-only
-    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && exec fresh"
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=${COLORTERM:-} exec fresh"
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run

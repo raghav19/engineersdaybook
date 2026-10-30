@@ -85,6 +85,8 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 # Fresh and its configuration. fresh-config.json is the one place that says which language server starts for which language.
 COPY --from=fresh /tmp/fresh/fresh /usr/local/bin/fresh
 COPY --chown=agent:agent fresh-config.json /home/agent/.config/fresh/config.json
+# The theme of Fresh: the colors of Omarchy Solitude as exact RGB values, with real colors for diffs, errors and syntax (see fresh-config.json, "theme").
+COPY --chown=agent:agent fresh-theme-solitude.json /home/agent/.config/fresh/themes/solitude.json
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
