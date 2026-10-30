@@ -102,7 +102,11 @@ RUN touch /etc/containers/nodocker
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 # The settings of Qwen Code: one provider (the Token Plan, international, Singapore), and the MCP servers (draw.io, Flux schema catalog, GitHub). Root owns the file. The agent cannot change it, and project settings cannot override it. The key is the placeholder QWEN_API_KEY. The host swaps it on the network, so the file has no secret.
-COPY --chmod=0644 qwen-settings.json /home/agent/.qwen/settings.json
+# This is the system scope of Qwen Code. It wins over the user scope (~/.qwen/settings.json) and the project scope, and root owns the folder, so the agent cannot replace the file.
+# Qwen Code makes ~/.qwen itself, as agent, for the state that it writes (extensions, logs, history).
+# The mkdir is necessary, as above: COPY --chmod also sets the mode of a folder that it creates, and 0644 has no execute bit, so the agent could not open a file in it.
+RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
+COPY --chmod=0644 qwen-settings.json /etc/qwen-code/settings.json
 # Git settings for every user. Git treats each directory as safe, because agent owns the clone and root owns the mount.
 # GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
