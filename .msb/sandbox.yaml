@@ -71,6 +71,9 @@ secrets:
     passthrough: [api.anthropic.com]
   CLAUDE_CODE_OAUTH_TOKEN:
     allow: [api.anthropic.com]
+  # The key of the Qwen Coding Plan (international). Qwen Code reads QWEN_API_KEY (dev-tools/qwen-settings.json, "envKey"), sends the placeholder, and the host swaps it.
+  QWEN_API_KEY:
+    allow: [coding-intl.dashscope.aliyuncs.com]
 
 # The egress allow list. If `allow` has entries, the VM blocks all other hosts. To add a host, run `just msb allow-host <host>`.
 # *.example.com matches subdomains at any depth (*.istio.io matches istio-release.r2.istio.io). It does not match the bare domain.
@@ -89,6 +92,8 @@ network:
     - console.anthropic.com
     - platform.claude.com
     - code.claude.com
+    # Qwen Code: the Coding Plan (international) endpoint
+    - coding-intl.dashscope.aliyuncs.com
     # GitHub: git, API, release downloads and the GitHub MCP server
     - github.com
     - api.github.com

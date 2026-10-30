@@ -33,6 +33,7 @@ in_bws                  := env('MSB_IN_BWS', '')
 GH_TOKEN                := if in_bws == '' { '' } else { env('GH_TOKEN') }
 CLAUDE_CODE_OAUTH_TOKEN := if in_bws == '' { '' } else { env('CLAUDE_CODE_OAUTH_TOKEN') }
 GITHUB_TOKEN            := if in_bws == '' { '' } else { env('GITHUB_TOKEN') }
+QWEN_API_KEY            := if in_bws == '' { '' } else { env('QWEN_API_KEY') }
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
