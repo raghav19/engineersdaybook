@@ -1,5 +1,4 @@
 [tools]
-node = "24.22"
 terraform-ls = "0.39.1"
 taplo = "0.10.0"
 marksman = "2026-02-08"
