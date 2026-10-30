@@ -32,13 +32,14 @@ USER agent
 # so the other stages come from the cache. The last stage puts the results together.
 FROM base AS runtimes
 COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
-# The same step removes the headers of node (include/, 67 MB). Only a build of a native module needs them. The npm tools of the image have no native build.
+# The same step removes the headers of node (include/, 61 MB). Only a build of a native module needs them. The npm tools of the image have no native build.
+# No other stage may install node: a node with its headers would put them back in the final image. So lsp.toml has no node.
 RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
-FROM base AS headroom
+# This stage starts from runtimes, so the venv of Headroom is built on the python of runtimes.toml (UV_PYTHON in headroom.toml is its path).
+# The final stage copies only pypi-headroom-ai and uv from this stage, so the image has one python and one node.
+FROM runtimes AS headroom
 COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
-# python is here only because the venv of Headroom uses it. The image gets python from the runtimes stage, so the final stage copies only pypi-headroom-ai and uv from this stage.
-# The python version in runtimes.toml and headroom.toml, and the path in UV_PYTHON (headroom.toml), must be the same: the venv points to that path.
 # The uv cache (about 880 MiB) is a download cache of the install. The tools do not read it, so the same step removes it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
