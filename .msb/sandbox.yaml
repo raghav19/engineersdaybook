@@ -66,6 +66,9 @@ mounts:
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
+    # The placeholder text ($MSB_GH_TOKEN) can land in a conversation, for example in the output of `env`. Claude Code then sends it to the API in the request body.
+    # Without passthrough, msb blocks that request with 403 "Request blocked by secret policy". Passthrough sends the placeholder only, never the token.
+    passthrough: [api.anthropic.com]
   CLAUDE_CODE_OAUTH_TOKEN:
     allow: [api.anthropic.com]
 
