@@ -32,10 +32,13 @@ USER agent
 # so the other stages come from the cache. The last stage puts the results together.
 FROM base AS runtimes
 COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
-RUN mise install --yes
+# The same step removes the headers of node (include/, 67 MB). Only a build of a native module needs them. The npm tools of the image have no native build.
+RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
 FROM base AS headroom
 COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
+# python is here only because the venv of Headroom uses it. The image gets python from the runtimes stage, so the final stage copies only pypi-headroom-ai and uv from this stage.
+# The python version in runtimes.toml and headroom.toml, and the path in UV_PYTHON (headroom.toml), must be the same: the venv points to that path.
 # The uv cache (about 880 MiB) is a download cache of the install. The tools do not read it, so the same step removes it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
@@ -68,8 +71,8 @@ RUN curl -fsSL -o /tmp/fresh.tar.xz "https://github.com/sinelaw/fresh/releases/d
 
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
+COPY --from=headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
+COPY --from=headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
