@@ -6,6 +6,7 @@ Include ~/.ssh/config
 # ssh runs ProxyCommand through your shell, so $HOME expands. ProxyCommand does not allow %d.
 # `latest` is the symlink that mise keeps on the installed msb. A terminal that your shell did not start (the new window of `edit`) finds msb with it, without a PATH or a shim.
 # The VM must run. If `msb ssh serve` started a VM, it stops that VM when the session ends. `just msb run` starts the VM first.
+# `--no-inactivity-timeout` keeps an idle session open. Without it, msb disconnects a session that has no SSH traffic for a while, and the Fresh window closes.
 # The connection is a local pipe, not a network, so host key checks add no safety. They fail for each new VM.
 Host sandbox-dev.msb
   User agent
@@ -14,4 +15,4 @@ Host sandbox-dev.msb
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   LogLevel ERROR
-  ProxyCommand $HOME/.local/share/mise/installs/aqua-superradcompany-microsandbox/latest/msb ssh serve sandbox-dev --stdio
+  ProxyCommand $HOME/.local/share/mise/installs/aqua-superradcompany-microsandbox/latest/msb ssh serve sandbox-dev --stdio --no-inactivity-timeout
