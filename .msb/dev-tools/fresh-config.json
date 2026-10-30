@@ -39,7 +39,12 @@
     {"key": "Tab", "modifiers": ["ctrl"], "action": "next_buffer", "when": "normal"},
     {"key": "Tab", "modifiers": ["ctrl", "shift"], "action": "prev_buffer", "when": "normal"},
     {"key": "t", "modifiers": ["ctrl", "alt"], "action": "open_terminal", "when": "normal"},
-    {"key": "F11", "modifiers": [], "action": "toggle_maximize_split", "when": "normal"}
+    {"key": "F11", "modifiers": [], "action": "toggle_maximize_split", "when": "normal"},
+    {"key": "g", "modifiers": ["ctrl", "shift"], "action": "start_review_diff", "when": "normal"},
+    {"key": "g", "modifiers": ["ctrl", "alt"], "action": "show_git_log", "when": "normal"},
+    {"key": "b", "modifiers": ["ctrl", "alt"], "action": "show_git_blame", "when": "normal"},
+    {"key": "F7", "modifiers": [], "action": "diff_nav_next", "when": "normal"},
+    {"key": "F7", "modifiers": ["shift"], "action": "diff_nav_prev", "when": "normal"}
   ],
   "lsp": {
     "python": [

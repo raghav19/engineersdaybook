@@ -71,7 +71,7 @@ just msb run           # 3. every day
 
 Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. Fresh does not ask whether to trust the clone: `sandbox-boot` records the answer "trusted" for it (the file that the key `T` writes), so the language servers start at once. To open the editor again in a running VM, run `just msb edit`. It opens a new normal window with the terminal in `SANDBOX_TERMINAL` (default: `foot --title sandbox-dev`). For full screen at launch run `just msb edit full`. To switch a window to full screen or back at any time, press `SUPER+F` (Hyprland). Another terminal works if it takes the command as its last arguments, for example `SANDBOX_TERMINAL='alacritty -e'`. For `edit full`, set `SANDBOX_FULLSCREEN_FLAG` to the flag of that terminal (default `--fullscreen`, which `foot` and `ghostty` take). If there is no display or no such terminal, or to use the terminal you are in, run `just msb edit-here`. More room inside Fresh: `Ctrl+Alt+T` opens a terminal that fills the editor area, and `F11` maximizes the pane that has focus (and restores it). For even more rows, hide the bars with the palette commands "Toggle Menu Bar", "Toggle Status Bar" and "Toggle Tab Bar".
 
-The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 20 keys in `keybindings`). The colors come from your terminal (`theme` is `terminal`), so Fresh looks like your desktop theme, for example Omarchy Solitude. The terminal in the dock runs `/bin/bash --login -i`.
+The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 25 keys in `keybindings`). The colors come from your terminal (`theme` is `terminal`), so Fresh looks like your desktop theme, for example Omarchy Solitude. The terminal in the dock runs `/bin/bash --login -i`.
 
 | You want to | VS Code key | Notes |
 |---|---|---|
@@ -94,11 +94,17 @@ The config uses the VS Code keys wherever a terminal can send them (`active_keyb
 | Split the editor; move between splits | `Ctrl+\`; `Alt+]`, `Alt+[` | |
 | Move a line; copy a line up or down | `Alt+Up`, `Alt+Down`; `Alt+Shift+Up`, `Alt+Shift+Down` | |
 | Delete a line; comment a line; wrap long lines | `Ctrl+Shift+K`; `Ctrl+/`; `Alt+Z` | |
+| **See your git changes**: staged, unstaged and new files with their diffs; stage or discard | `Ctrl+Shift+G` | in that view: `n`/`p` next or previous hunk, `s` stage, `u` unstage, `d` discard, `c` comment, `1`/`2` unified or split, `Enter` jump to the line, `q` close |
+| Git history with a live diff of the selected commit | `Ctrl+Alt+G` | palette: "Git Log: Current File" for one file |
+| Who changed this line (blame) | `Ctrl+Alt+B` | |
+| Jump to the next or previous changed region of the file | `F7`, `Shift+F7` | |
 | Add a cursor at the next match | `Ctrl+D` | |
 | Undo, redo, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+A` | |
 | Go to the definition, references, rename | `F12`, `Shift+F12`, `F2` | |
 | Hover, code actions, completion | `Alt+K`; `Ctrl+.`; `Ctrl+Space` | `Alt+.` also gives code actions |
 | Settings; menu bar; help | `Ctrl+,`; `F10`; `F1` | |
+
+Git in Fresh: changed lines are marked in the gutter, and the file explorer (`Ctrl+B`) marks each file `M` (modified) or `U` (untracked). The palette also has "Review Diff: Range (Commit or Branch)" (for example `main..HEAD`, to review a whole branch), "Review Diff: Stash" and "Live Diff: vs HEAD". Fresh has no commit or push command. For those use the terminal (`` Ctrl+` ``) or Claude.
 
 The keys with `Shift`, `Ctrl+Tab`, `` Ctrl+` ``, `Ctrl+.` and `Ctrl+,` need a terminal with the kitty keyboard protocol. Fresh turns the protocol on. `foot` 1.28 supports it. In a terminal without it, use the other key in the Notes column. Your window manager can also take a key before Fresh sees it. To change a key, use the palette: "Keybinding Editor".
 
