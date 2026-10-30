@@ -48,8 +48,8 @@ FROM base AS dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
 RUN mise install --yes
 
-FROM base AS claude
-COPY tools/claude.toml /etc/mise/conf.d/claude.toml
+FROM base AS agents
+COPY tools/agents.toml /etc/mise/conf.d/agents.toml
 RUN mise install --yes
 
 FROM base AS lsp
@@ -66,19 +66,14 @@ RUN curl -fsSL -o /tmp/fresh.tar.xz "https://github.com/sinelaw/fresh/releases/d
  && mkdir /tmp/fresh \
  && tar -xJf /tmp/fresh.tar.xz -C /tmp/fresh --strip-components=1 fresh-editor-x86_64-unknown-linux-gnu/fresh
 
-FROM base AS qwen
-COPY tools/qwen.toml /etc/mise/conf.d/qwen.toml
-RUN mise install --yes
-
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/uv-python /opt/mise/uv-python
 COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=claude --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=qwen --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.

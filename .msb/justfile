@@ -83,11 +83,11 @@ github-login: _host-only
 # No registry cache (`--cache-to type=registry`): in a test its export grew past 6 GB in 25 seconds. In full builds Docker reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
 # The BuildKit cache of this machine already rebuilds only the stage that changed.
 # The digest comes from the metadata file of buildx. yq writes it in sandbox.yaml. The first run of yq removes the blank lines of the file.
-# `build refresh` also installs the newest claude of the version in tools/claude.toml again: the stage `claude` skips the cache.
+# `build refresh` also installs the newest claude of the version in tools/agents.toml again: the stage `agents` skips the cache.
 # Build the image from dev-tools/ and push it to ghcr.io, tagged with the commit. Then pin its digest in sandbox.yaml. `build refresh`: also update claude
 build refresh='': _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
-    docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} {{ if refresh == 'refresh' { '--no-cache-filter claude' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }} \
+    docker buildx build {{ msb_dir }}/dev-tools -t {{ registry }}:{{ commit }} {{ if refresh == 'refresh' { '--no-cache-filter agents' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }} \
       --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
       --metadata-file {{ build_metadata }} --output {{ image_output }}
     docker logout {{ registry_host }}
