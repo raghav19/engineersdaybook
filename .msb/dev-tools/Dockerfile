@@ -70,6 +70,9 @@ RUN mise install --yes
 # branch, so a build is reproducible. Only the entry file and the manifest of each plugin are taken: that is all TTT loads.
 # Upstream is MIT (copyright 2026 Eugene Yakhnenko), and its LICENSE travels with the copy in the image.
 FROM base AS ttt-plugins
+# `base` ends as USER agent, and agent cannot make a folder at /. This stage writes to /, so it goes back to root, the way
+# the `final` stage does. The COPY lines in `final` set the owner there, so none of this ends up owned by root.
+USER root
 ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
 RUN set -eu; \
     url="https://raw.githubusercontent.com/eugenioenko/ttt-plugins/${TTT_PLUGINS_REF}"; \
