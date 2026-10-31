@@ -16,8 +16,8 @@ registry:
   password_env: GITHUB_TOKEN
 
 cpus: 4
-memory: "3G" # measured in a 2 GB test VM: Headroom, Fresh, 9 language servers and claude together peaked at 810 MB. 3G leaves room for builds (podman, terraform). See docs/research/vm-editor-options.md.
-shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. The Fresh terminal uses bash. The login shell adds the mise shims to the PATH.
+memory: "3G" # measured in a 2 GB test VM before the move to TTT: Headroom, the editor, 9 language servers and claude together peaked at 810 MB. 3G leaves room for builds (podman, terraform). Not yet re-measured with TTT. See docs/research/vm-editor-ttt.md.
+shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. The TTT terminal uses bash too (dev-tools/ttt-settings.json, "terminal"). The login shell adds the mise shims to the PATH.
 
 # The VM has no command of its own. At each run, `just msb run` runs /usr/local/bin/sandbox-boot in the VM with `msb exec`.
 # The script prepares the agent user, clones the repo and starts Headroom. See dev-tools/sandbox-boot.

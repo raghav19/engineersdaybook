@@ -1,11 +1,11 @@
-# The msb sandbox: a microsandbox VM for Claude Code and the Fresh editor. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
+# The msb sandbox: a microsandbox VM for Claude Code and the TTT editor. ../justfile loads this file as `mod msb`. Use `just msb <recipe>`.
 # Every recipe runs on the host. sandbox.yaml declares the VM. The recipe `run` makes the VM from it.
 # If sandbox.yaml changes, `run` tells you to remove the VM first.
 # The recipes list the steps in order. msb.py has the steps that need Python.
 #
 #   just msb setup          once for each host: authorize your SSH key.
-#   just msb run            every day: make or start the VM, prepare it, then open the Fresh editor in it.
-#   just msb edit [full]    open the Fresh editor in the running VM, in a new terminal window (full: full screen; edit-here: in this terminal).
+#   just msb run            every day: make or start the VM, prepare it, then open the TTT editor in it.
+#   just msb edit [full]    open the TTT editor in the running VM, in a new terminal window (full: full screen; edit-here: in this terminal).
 #   just msb allow-host     allow one more host for the VM.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of dev-tools/, push it to ghcr.io, and pin its digest in sandbox.yaml.
@@ -100,7 +100,7 @@ _vm:
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
 # They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
-# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open the Fresh editor in it
+# Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open the TTT editor in it
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
@@ -110,7 +110,7 @@ run: _host-only
     {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
     just --justfile {{ source_file() }} edit
 
-# Fresh is a terminal editor. It runs in the VM, in a terminal window on the host.
+# TTT is a terminal editor. It runs in the VM, in a terminal window on the host.
 # `edit` opens that window with the terminal below. The default is a normal foot window. Any terminal works that takes the command as its last
 # arguments (alacritty -e, ghostty -e, kitty). For full screen at launch run `just msb edit full`. It adds the flag below right after the name of
 # the terminal (foot and ghostty: --fullscreen; kitty: --start-as=fullscreen; alacritty: -o window.startup_mode=Fullscreen).
@@ -119,11 +119,12 @@ run: _host-only
 terminal := env('SANDBOX_TERMINAL', 'foot --title sandbox-dev')
 fullscreen_flag := env('SANDBOX_FULLSCREEN_FLAG', '--fullscreen')
 
-# Open the Fresh editor on the clone in the running VM, in a new terminal window. `edit full` opens it full screen. Quit with Ctrl+Q
+# Open the TTT editor on the clone in the running VM, in a new terminal window. `edit full` opens it full screen. Quit with Ctrl+Q
 [script]
 edit mode='': _host-only
-    # ssh does not send COLORTERM to the VM. Without it Fresh uses 256 colors and the exact colors of its theme turn into the nearest of 256. Every terminal that opens here has 24-bit color.
-    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && COLORTERM=truecolor exec fresh")
+    # ssh does not send COLORTERM to the VM. Without it TTT uses 256 colors and the exact colors of its theme turn into the nearest of 256. Every terminal that opens here has 24-bit color.
+    # The `.` argument names the clone. TTT opens the current directory without it, but the argument says the intent plainly.
+    cmd=(ssh -t -F '{{ ssh_config }}' "$MSB_NAME.msb" "cd $MSB_WORKSPACE && COLORTERM=truecolor exec ttt .")
     read -r -a term <<< '{{ terminal }}'
     case '{{ mode }}' in
       '') ;;
@@ -133,14 +134,14 @@ edit mode='': _host-only
     if [ "${#term[@]}" -gt 0 ] && command -v "${term[0]}" >/dev/null 2>&1 && [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
       # If the connection fails, the window waits for Enter, so that you can read the error.
       setsid -f "${term[@]}" bash -c '"$@" || { echo "msb: could not connect to the VM. Run: just msb run"; read -r; }' _ "${cmd[@]}" >/dev/null 2>&1
-      echo "Fresh opened in a new window (${term[*]})."
+      echo "TTT opened in a new window (${term[*]})."
     else
       exec "${cmd[@]}"
     fi
 
-# Open the Fresh editor in this terminal, not in a new window
+# Open the TTT editor in this terminal, not in a new window
 edit-here: _host-only
-    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=${COLORTERM:-} exec fresh"
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=${COLORTERM:-} exec ttt ."
 
 # Add a host to network.allow in sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run

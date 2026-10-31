@@ -10,6 +10,9 @@
 EDITOR = "nano"
 LANG = "C.UTF-8"
 TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
+# TTT reads a config directory next to its own executable first, and that directory wins file by file with no merge.
+# The mise install path has no config/ today. This pins the directory the Dockerfile bakes, so that stays true.
+TTT_CONFIG_DIR = "{{env.HOME}}/.config/ttt"
 CHECKPOINT_DISABLE = "1"  # Terraform does not check its version at checkpoint-api.hashicorp.com
 COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/bash-completion/completions') }}"  # the Dockerfile sets the same path at build time
 KUBECONFIG = "/run/sandbox/source/.msb/kubeconfig"  # a path in the host repo, which is read-only in the VM. The kube step writes the file on the host. It is not ported yet.

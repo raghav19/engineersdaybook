@@ -1,5 +1,7 @@
 # The editor for the msb sandbox: Fresh
 
+**This verdict no longer holds.** `vm-editor-ttt.md` replaces it, and records why TTT took over from Fresh on 2026-10-31. The measurements below were true on 2026-10-29, and they stay as the record of that comparison.
+
 Question: Which light editor replaces VS Code in the msb sandbox? It must have mouse support and no vim modes. It must use these language servers: ty, ruff, terraform-ls, yaml-language-server, taplo, marksman, bash-language-server, a Docker server and just-lsp.
 
 Source: the repositories and docs of each editor, read on 2026-10-29. Fresh `v0.5.4` (released 2026-10-20) was run in the image of the sandbox. Style: ASD-STE100, STE-flavored mode.

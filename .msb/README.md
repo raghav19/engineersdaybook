@@ -1,6 +1,6 @@
 # The dev sandbox on microsandbox
 
-This sandbox is a VM for Claude Code and the [Fresh](https://github.com/sinelaw/fresh) editor. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
+This sandbox is a VM for Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. It uses [microsandbox](https://docs.microsandbox.dev) (open source, Apache-2.0, beta v0.7). It replaced the Docker sbx sandbox (tag `docker-sbx`). One file, `sandbox.yaml`, declares the VM.
 
 The VM holds no secrets, only placeholders. The host replaces a placeholder with the real value when the VM calls an allowed host. The "Decision records" at the end explain why the sandbox works this way.
 
@@ -20,7 +20,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    ```
 
 2. **Have an SSH key** at `~/.ssh/id_ed25519` (`ssh-keygen -t ed25519`). `ssh_config` uses it. `edit` and `shell` connect with ssh.
-   - Fresh opens in a new window of a terminal on the host (`foot` by default, see `SANDBOX_TERMINAL` below). Use a terminal with mouse and 256-color support. Most modern terminals have both.
+   - TTT opens in a new window of a terminal on the host (`foot` by default, see `SANDBOX_TERMINAL` below). Use a terminal with mouse and 24-bit color support. Most modern terminals have both.
 
 3. **Commit your work.** The VM clones the committed files only.
 
@@ -70,61 +70,82 @@ just msb run           # 3. every day
 |---|---|---|
 | 1 | `setup` | Authorizes your SSH key for `msb ssh`. |
 | 2 | `build` | Builds `dev-tools/` with Docker and pushes the image to ghcr.io. Pins its digest in `sandbox.yaml`. Commit that change. The first build takes several minutes. |
-| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the Fresh editor in it, in a new terminal window. You can run it as often as you want. |
+| 3 | `run` | Makes the VM, or starts it. Runs `sandbox-boot` in it. Opens the TTT editor in it, in a new terminal window. You can run it as often as you want. |
 
-Fresh shows a menu bar (File, Edit, View, Selection, Go, LSP, Help), tabs and a status bar. You can use the mouse. Fresh does not ask whether to trust the clone: `sandbox-boot` records the answer "trusted" for it (the file that the key `T` writes), so the language servers start at once. To open the editor again in a running VM, run `just msb edit`. It opens a new normal window with the terminal in `SANDBOX_TERMINAL` (default: `foot --title sandbox-dev`). For full screen at launch run `just msb edit full`. To switch a window to full screen or back at any time, press `SUPER+F` (Hyprland). Another terminal works if it takes the command as its last arguments, for example `SANDBOX_TERMINAL='alacritty -e'`. For `edit full`, set `SANDBOX_FULLSCREEN_FLAG` to the flag of that terminal (default `--fullscreen`, which `foot` and `ghostty` take). If there is no display or no such terminal, or to use the terminal you are in, run `just msb edit-here`. More room inside Fresh: `Ctrl+Alt+T` opens a terminal that fills the editor area, and `F11` maximizes the pane that has focus (and restores it). For even more rows, hide the bars with the palette commands "Toggle Menu Bar", "Toggle Status Bar" and "Toggle Tab Bar".
+TTT shows a menu bar, tabs, a sidebar and a status bar. You can use the mouse. TTT has no workspace trust gate, so it does not ask about the clone. A language server starts as soon as you open a file that matches one. To open the editor again in a running VM, run `just msb edit`. It opens a new normal window with the terminal in `SANDBOX_TERMINAL` (default: `foot --title sandbox-dev`). For full screen at launch run `just msb edit full`. To switch a window to full screen or back at any time, press `SUPER+F` (Hyprland). Another terminal works if it takes the command as its last arguments, for example `SANDBOX_TERMINAL='alacritty -e'`. For `edit full`, set `SANDBOX_FULLSCREEN_FLAG` to the flag of that terminal (default `--fullscreen`, which `foot` and `ghostty` take). If there is no display or no such terminal, or to use the terminal you are in, run `just msb edit-here`. More room inside TTT: `Alt+T` makes the terminal fill the window, `Ctrl+K B` shows or hides the bottom panel, and `Alt+Shift+M` hides the menu bar.
 
-The config uses the VS Code keys wherever a terminal can send them (`active_keybinding_map` is `vscode`, plus 25 keys in `keybindings`). The theme is `solitude.json` (`dev-tools/fresh-theme-solitude.json`): the exact colors of Omarchy Solitude, with real colors for diffs (green for added lines, red for removed), errors, warnings and syntax. The `terminal` theme used the ANSI colors of the terminal, and Solitude is almost gray, so its added and removed lines were both gray and its comments had only 2.2:1 contrast. `edit` sets `COLORTERM=truecolor` in the VM, because ssh does not send it and Fresh then falls back to 256 colors. To try another theme, use the palette: "Select Theme" (built in: dark, dracula, gruvbox, high-contrast, light, nord, nostalgia, solarized-dark, terminal, tokyo-night). To change a color, use "Edit Theme". The terminal in the dock runs `/bin/bash --login -i`.
+The image bakes one file into `~/.config/ttt/`, and that file is `settings.json`. `dev-tools/ttt-settings.json` is the one place that says which language server starts for which language. The theme is `vscode-dark-plus`, one of the 19 that the binary carries, so no theme file is baked. The picker previews each theme live. Open it with `Ctrl+P`, then search for "Switch Theme". `edit` sets `COLORTERM=truecolor` in the VM, because ssh does not send it and TTT then falls back to 256 colors. The terminal runs `/bin/bash --login -i`.
 
-| You want to | VS Code key | Notes |
+| You want to | TTT key | Notes |
 |---|---|---|
-| Command palette (commands) | `Ctrl+Shift+P` | or `Ctrl+P`, then `>` |
-| Open a file by name | `Ctrl+P` | type `:` for a line, `#` for an open tab |
-| **Search the open tabs** | `Ctrl+T` | or `Ctrl+P`, then `#`. Also `Ctrl+;` |
-| **Open a terminal** (bottom dock) | `` Ctrl+` `` | or `` Alt+` `` |
-| **Terminal full size**: open a terminal as a tab that fills the whole editor area | `Ctrl+Alt+T` | the dock stays free; close it like any tab (`Ctrl+W`) |
-| **Terminal full size**: make the focused pane (for example the dock terminal) fill the window, and back | `F11` | `` Ctrl+` `` first, then `F11`; `F11` again restores the layout |
-| Show or hide the dock; move focus dock or editor | `` Ctrl+Shift+` ``, `Alt+J`; `Alt+O` | |
-| In a terminal: scroll, search and copy, and back | `Ctrl+Space` | `Ctrl+]` also works |
-| In a terminal: send **every** key to the program | `F9` | use it for `claude`, then `F9` again |
-| Show or hide the file explorer; focus it | `Ctrl+B`; `Ctrl+Shift+E` | |
-| Search in all files | `Ctrl+Shift+F` | or `Alt+/` |
-| Save, save as, open, new file, quit | `Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`, `Ctrl+N`, `Ctrl+Q` | |
+| Command palette | `Ctrl+P` | VS Code uses `Ctrl+Shift+P`. TTT cannot bind that key. See below |
+| Open a file by name | `Ctrl+K P` | VS Code uses `Ctrl+P`. A chord: press `Ctrl+K`, release, then press `P` |
+| Open a folder | `Ctrl+O` | |
+| New file, save, save as, quit | `Ctrl+N`, `Ctrl+S`, `Ctrl+K S`, `Ctrl+Q` | VS Code uses `Ctrl+Shift+S` for save as |
+| **Open a terminal** (bottom panel) | `Ctrl+T` | VS Code uses `` Ctrl+` `` |
+| **Make the terminal fill the window**, and back | `Alt+T` | |
+| A new terminal tab | `Ctrl+K T` | the tabs list down the left edge of the panel |
+| Show or hide the bottom panel | `Ctrl+K B` | the panel holds Terminal, Problems and References |
+| In a terminal: scroll | mouse wheel, `Shift+PgUp`, `Shift+PgDn` | any key snaps back to the live view |
+| Move focus: editor, panel, sidebar | `F6`, `Shift+F6` | |
+| Show or hide the sidebar, focus it | `Ctrl+B`, `Ctrl+0` | |
+| Focus the file explorer | `Ctrl+K E` | VS Code uses `Ctrl+Shift+E` |
+| Search in all files | `Ctrl+K F` | VS Code uses `Ctrl+Shift+F` |
+| Search and replace in all files | `Ctrl+K R` | VS Code uses `Ctrl+Shift+H` |
 | Find, next, previous | `Ctrl+F`, `F3`, `Shift+F3` | |
-| Replace | `Ctrl+R` | VS Code uses `Ctrl+H`. A terminal cannot tell it from Backspace |
+| Replace | `Ctrl+R` | VS Code uses `Ctrl+H`. A terminal sends Backspace for it |
 | Go to a line | `Ctrl+G` | |
-| Close a tab; next tab; previous tab | `Ctrl+W`; `Ctrl+Tab`; `Ctrl+Shift+Tab` | `Ctrl+PageDown` and `Ctrl+PageUp` also work |
-| Split the editor; move between splits | `Ctrl+\`; `Alt+]`, `Alt+[` | |
-| Move a line; copy a line up or down | `Alt+Up`, `Alt+Down`; `Alt+Shift+Up`, `Alt+Shift+Down` | |
-| Delete a line; comment a line; wrap long lines | `Ctrl+Shift+K`; `Ctrl+/`; `Alt+Z` | |
-| **See your git changes**: staged, unstaged and new files with their diffs; stage or discard | `Ctrl+Shift+G` | in that view: `n`/`p` next or previous hunk, `s` stage, `u` unstage, `d` discard, `c` comment, `1`/`2` unified or split, `Enter` jump to the line, `q` close |
-| Git history with a live diff of the selected commit | `Ctrl+Alt+G` | palette: "Git Log: Current File" for one file |
-| Who changed this line (blame) | `Ctrl+Alt+B` | |
-| Jump to the next or previous changed region of the file | `F7`, `Shift+F7` | |
+| Close a tab, pin a tab | `Ctrl+W`, `Ctrl+K Enter` | |
+| Next tab, previous tab | `Alt+.`, `Alt+,` | VS Code uses `Ctrl+Tab` |
+| Move a line up or down | `Alt+Up`, `Alt+Down` | |
+| Delete a line | `Ctrl+K K` | VS Code uses `Ctrl+Shift+K` |
+| Duplicate a line | no key | `Ctrl+P`, then search "duplicate line" |
+| Comment a line | `Ctrl+/` | |
+| Wrap long lines | no key | `Ctrl+P`, then search "word wrap" |
+| Insert a line below, join two lines | `Ctrl+Enter`, `Ctrl+K J` | |
+| Fold, collapse all, expand all | `Ctrl+K [`, `Ctrl+K 0`, `Ctrl+K 9` | |
+| Go to the matching bracket, sort lines | `Ctrl+K M`, `Ctrl+K O` | |
+| A word left or right, delete a word | `Ctrl+Left`, `Ctrl+Right`, `Alt+Backspace` | |
+| Start of file, end of file | `Ctrl+Home`, `Ctrl+End` | add `Shift` to select instead |
+| **Your git changes**: stage, unstage, discard, commit, push, pull, sync | `Ctrl+K C` | VS Code uses `Ctrl+Shift+G`. The panel also lists the commit history |
 | Add a cursor at the next match | `Ctrl+D` | |
+| A cursor on every match, undo the last cursor | `Ctrl+K L`, `Ctrl+K U` | |
 | Undo, redo, select all | `Ctrl+Z`, `Ctrl+Y`, `Ctrl+A` | |
-| Go to the definition, references, rename | `F12`, `Shift+F12`, `F2` | |
-| Hover, code actions, completion | `Alt+K`; `Ctrl+.`; `Ctrl+Space` | `Alt+.` also gives code actions |
-| Settings; menu bar; help | `Ctrl+,`; `F10`; `F1` | |
+| Copy, cut, paste | `Ctrl+C`, `Ctrl+X`, `Ctrl+V` | in the terminal, `Ctrl+V` pastes the buffer of TTT, not the clipboard of the host |
+| Go to the definition | `F12` | |
+| Go to the implementation, to the type | `Shift+F12` or `Ctrl+L I`, `Ctrl+L T` | VS Code uses `Shift+F12` for references |
+| Find references | `Ctrl+L R` | |
+| Rename | `F2` | |
+| Hover information | `Ctrl+K I` | the mouse also hovers |
+| Format the document, the selection | `Ctrl+L F`, `Ctrl+L S` | VS Code uses `Shift+Alt+F` |
+| Fix all, organize imports | `Ctrl+L X`, `Ctrl+L O` | |
+| Completion | `Ctrl+U` | it also suggests while you type |
+| Restart a language server | no key | `Ctrl+P`, then search "restart" |
+| Settings, keybindings | `Ctrl+K ,`, `Ctrl+K Y` | VS Code uses `Ctrl+,` |
+| Menu bar | `F10`, or `Alt+F`, `Alt+E`, `Alt+S`, `Alt+V`, `Alt+O`, `Alt+H` | File, Edit, Selection, View, Options, Help |
+| Show or hide the menu bar | `Alt+Shift+M` | |
+| Resize the panel, resize the sidebar | `Alt+Shift+Up`, `Alt+Shift+Down`, `Alt+Shift+Left`, `Alt+Shift+Right` | VS Code uses the first two to duplicate a line |
+| Switch theme | no key | `Ctrl+P`, then search "switch theme" |
+| Split the editor | none | TTT has no split editor. `F6` moves focus, it does not split |
 
-Git in Fresh: changed lines are marked in the gutter, and the file explorer (`Ctrl+B`) marks each file `M` (modified) or `U` (untracked). The palette also has "Review Diff: Range (Commit or Branch)" (for example `main..HEAD`, to review a whole branch), "Review Diff: Stash" and "Live Diff: vs HEAD". Fresh has no commit or push command. For those use the terminal (`` Ctrl+` ``) or Claude.
+Git in TTT: changed lines are marked in the gutter and on the scrollbar, and the file explorer (`Ctrl+B`) colors each file by its status. The Changes panel (`Ctrl+K C`) stages, unstages and discards, lists the commit history, writes the commit, and pushes, pulls and syncs. Fresh could not commit or push. A diff opens split or unified. Blame has no command of its own. It shows as a segment in the status bar. TTT also reviews a GitHub pull request when you pass its URL, but that needs the `gh` CLI, and the image has no `gh`.
 
-The keys with `Shift`, `Ctrl+Tab`, `` Ctrl+` ``, `Ctrl+.` and `Ctrl+,` need a terminal with the kitty keyboard protocol. Fresh turns the protocol on. `foot` 1.28 supports it. In a terminal without it, use the other key in the Notes column. Your window manager can also take a key before Fresh sees it. To change a key, use the palette: "Keybinding Editor".
+TTT does not need the kitty keyboard protocol for its own keys. Every binding is a plain key or a chord, and a chord works in any terminal. TTT does ask the terminal for the protocol at its lowest level, and it waits at most one second for the answer. It cannot bind `Ctrl+Shift+<letter>`, because it registers that combination as one key and the terminal reports it as another. That is why the table above has no `Ctrl+Shift+P`, `Ctrl+Shift+F` or `Ctrl+Shift+G`. A chord replaces each of them. Your window manager can also take a key before TTT sees it. To change a key, use `Ctrl+K Y`.
 
-To run `claude`, open a terminal in Fresh (command palette: "Open Terminal") or use `just msb shell`. It uses the token from Bitwarden and does not ask you to sign in.
+To run `claude` or `qwen`, open a terminal in TTT (`Ctrl+T`) or use `just msb shell`. `claude` uses the token from Bitwarden and does not ask you to sign in.
 
-Both agents at once, from the command palette:
+TTT keeps seven keys for itself while the terminal has focus. They are `Ctrl+T`, `Alt+T`, `Ctrl+Q`, `Ctrl+P`, `Ctrl+B`, `F6` and `Shift+F6`. Every other key reaches the program, so `claude` and `qwen` get their own keys. Fresh needed `F9` for this, and TTT has no such switch. You can still give a key back. Clear its binding in `keybindings.json`, or move it to a chord, and TTT stops forcing it.
 
-| You want to | Palette command |
+TTT has no agent session hub and no orchestrator. No plugin in its community list scans `~/.claude/projects/`. Sessions are a shell matter:
+
+| You want to | Run |
 |---|---|
-| Start an agent (`claude`, `qwen`, any command) in this workspace or a new one | **Run Agent…** |
-| A session with a git worktree of its own | **Orchestrator: New Workspace** |
-| Show or hide the dock of sessions | **Orchestrator: Toggle Dock** |
-| Switch to the session that needs you, and back | **Orchestrator: Jump to Attention**, **Orchestrator: Jump Back** |
-| List the sessions on disk and rejoin one | **Orchestrator: Import sessions** |
-| All workspaces in a floating selector | **Orchestrator: Open** |
+| List the Qwen Code sessions | `qwen sessions` |
+| Rejoin the newest session of this project | `qwen -c` |
+| Pick a Qwen Code session to rejoin | `qwen --resume` |
+| Rejoin a Claude Code conversation | `claude --resume` |
 
-"Import sessions" lists the Claude Code conversations that it finds in `~/.claude/projects/`, which the `claude-home` volume keeps, so a conversation survives `just msb rm`. Qwen Code has no scanner, so it never appears there. Its own sessions are a shell matter: `qwen sessions`, `qwen -c` (the newest session of this project) or `qwen --resume`. `qwen --help` notes that `--chat-recording` must be on, or `--continue` and `--resume` have nothing to read.
+The `claude-home` volume keeps the Claude Code conversations, so they survive `just msb rm`. `qwen --help` notes that `--chat-recording` must be on, or `--continue` and `--resume` have nothing to read.
 
 ## Daily use
 
@@ -150,12 +171,12 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 - **Ports of the host.** The VM reaches three ports of the host at `host.microsandbox.internal:<port>`: 6444 (the kind API server), 18081 (the SPIRE server) and 19090 (the Flux Operator web UI). `msb.py` passes one `--net-rule` for each (`HOST_PORTS`). Nothing in the VM uses them yet.
 - **Headroom dashboard.** Open `http://127.0.0.1:8787/dashboard` (`/stats` and `/health` work too). Host port 8787 must be free, or `just msb run` fails. To use another port, change `network.ports` in `sandbox.yaml` (`127.0.0.1:8788:8787`). Headroom has no login, so any user of the host can open it. An existing VM needs `just msb rm && just msb run` once.
 - **Volumes.** `claude-home` keeps the settings, the history and the plugins of Claude Code (not a login). `terraform-providers` is the Terraform provider cache. `podman-storage` has the images that podman pulls and builds. They stay when you remove the VM.
-- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in six groups: `runtimes`, `headroom`, `infra`, `dev`, `agents` and `lsp`. `agents` has Claude Code and Qwen Code (the command `qwen`). `dev-tools/qwen-settings.json` becomes `/etc/qwen-code/settings.json`: one provider (the Token Plan, international, Singapore), model `qwen3.8-max`, with the key in `QWEN_API_KEY` (prerequisite 7), and the MCP servers (draw.io, Flux schema catalog, GitHub). Qwen Code makes `~/.qwen` itself, as agent, for the state that it writes. Every tool has an exact version, except `claude` and `qwen-code`: they are `2.1` and `0.26`, so a build takes the newest 2.1.x and 0.26.x. Docker caches that stage by the text of the file, so run `just msb build refresh` to install a newer one. A new VM (`just msb rm && just msb run`) then has it. For 2.2 or 0.27 or later, edit `tools/agents.toml`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden.
+- **The image.** The files of `dev-tools/tools/` list the tools and their exact versions in six groups: `runtimes`, `headroom`, `infra`, `dev`, `agents` and `lsp`. `agents` has Claude Code and Qwen Code (the command `qwen`). `dev` has the editor (`ttt`), which mise fetches from its GitHub release and verifies against the `checksums.txt` of that release. `dev-tools/qwen-settings.json` becomes `/etc/qwen-code/settings.json`: one provider (the Token Plan, international, Singapore), model `qwen3.8-max`, with the key in `QWEN_API_KEY` (prerequisite 7), and the MCP servers (draw.io, Flux schema catalog, GitHub). Qwen Code makes `~/.qwen` itself, as agent, for the state that it writes. Every tool has an exact version, except `claude` and `qwen-code`: they are `2.1` and `0.26`, so a build takes the newest 2.1.x and 0.26.x. Docker caches that stage by the text of the file, so run `just msb build refresh` to install a newer one. A new VM (`just msb rm && just msb run`) then has it. For 2.2 or 0.27 or later, edit `tools/agents.toml`. `build` pushes `ghcr.io/raghav19/engineersdaybook/dev-sbx`, tagged with the commit, and writes the digest in `sandbox.yaml` (`image.oci: ...@sha256:...`). The package is private. `sandbox.yaml` has a `registry` block with `password_env: GITHUB_TOKEN`, so `run` pulls with the token from Bitwarden.
 - **MCP servers.** Both Claude Code and Qwen Code have the same MCP servers (draw.io, Flux schema catalog, GitHub) configured at the system level. For Claude Code, `dev-tools/managed-settings.json` becomes `/etc/claude-code/managed-settings.json`. For Qwen Code, `dev-tools/qwen-settings.json` becomes `/etc/qwen-code/settings.json`, the system scope of Qwen Code. Root owns both files and their folders, so the agent cannot replace a file, and project and user settings cannot override them. The Claude Code settings deny five GitHub tools (`merge_pull_request`, `delete_file` and others). To change them, run `just msb build`.
-- **Fresh plugins.** `fresh-config.json` turns five plugins on. `orchestrator` gives each session a git worktree, a dock and a busy or idle badge. `agent_sessions` is the hub that runs the scanners. `agent_sessions_claude_code` reads the transcripts in `~/.claude/projects/`, so the conversations of the `claude-home` volume are listed and resumable. `agent_discovery` is the "Import sessions" dialog, the only UI of the hub, and it scans this machine unless you add one. `agent_sessions_orchestrators` puts the workspaces in that dialog. The others stay off: `agent_sessions_codex` (no Codex here), `agent_sessions_tmux` and `agent_sessions_multiplexers` (the image has no tmux), `live_sessions` (Claude cloud sessions), `dashboard`, `welcome` and `welcome_screen`. To change the set, edit `fresh-config.json` and run `just msb build`.
+- **The editor config.** `dev-tools/ttt-settings.json` becomes `~/.config/ttt/settings.json`. It is the one place that says which language server starts for which language. `plugins.enabled` is `false`. TTT ships no plugin of its own, so nothing is lost. The switch also removes the one automatic network call that TTT makes. That call fetches the community plugin list from `raw.githubusercontent.com` at each start. The image bakes no theme and no grammar. The binary carries 19 themes and 125 grammars, and those grammars cover every language this repo uses except Just. So a `justfile` opens as plain text, and no server runs for it. `just` itself still reports a bad recipe when you run it. To add one theme or one grammar later, drop its JSON in `dev-tools/` and COPY it to `~/.config/ttt/themes/` or `~/.config/ttt/grammars/`. No upstream clone is needed. `TTT_CONFIG_DIR` in `dev-tools/mise.toml` pins that directory. Without it TTT prefers a `config/` directory next to its own executable, and that one wins file by file with no merge. One entry of `lsp.servers` needs care. `dockerfile` has no `languages` map, because a name with no dot has no extension to match, so TTT falls back to the name of the grammar. Every server key is lower case, because TTT lowercases the name before it looks the key up, and nothing checks it. Python has one server, because TTT runs one server per extension and two entries for `.py` would give a random winner. See `docs/research/vm-editor-ttt.md`.
 - **Podman.** The VM has rootless podman. `docker` is an alias of podman. `sandbox-boot` gives the group `agent` access to `/dev/fuse` and `/dev/net/tun`, makes `/` a shared mount, and `/etc/containers/containers.conf.d/10-sandbox.conf` mounts `/etc/ssl/certs` in each container. The policy of the VM applies to a container too. To push to a registry on the host, allow its port in `HOST_PORTS`.
 - **The recipes.** The justfile lists the steps of each recipe in order. The top of the justfile lists the required tools with the just function `require`. just checks them at the start of every recipe and stops with a message if one is missing. The block `# --- Required environment variables ---` lists the required Bitwarden keys with `env`. `run` starts the private recipe `_vm` with `bws run` and the variable `MSB_IN_BWS=1`. The keys exist only there, so just checks them only when that variable is set. `msb.py` has the steps that need Python (`github-login`, `ensure-vm`, `allow-host`). It is a `uv` script. On the first run, `uv` installs Python 3.13 and the one dependency, `ruamel.yaml` (this needs the network).
-- **Memory.** The VM has 3 GB and 4 CPUs (`memory` and `cpus` in `sandbox.yaml`). A test with Headroom, Fresh, all nine language servers and `claude` together peaked at 810 MB. The VM has no swap, so a process that needs more than the VM has is killed. Big container builds or Terraform plans may need more: change `memory`, then `just msb rm && just msb run` (push your work first).
+- **Memory.** The VM has 3 GB and 4 CPUs (`memory` and `cpus` in `sandbox.yaml`). A test with Headroom, the previous editor, all nine language servers and `claude` together peaked at 810 MB. That test predates TTT, so no figure is measured with it yet. The VM has no swap, so a process that needs more than the VM has is killed. Big container builds or Terraform plans may need more: change `memory`, then `just msb rm && just msb run` (push your work first).
 - **Small items.** `sandbox-boot` installs the plugin ponytail 5.3.2. The shell is plain bash. `sandbox.yaml` sets the git identity from your host git config. The VM has no sshd: `ssh_config` starts `msb ssh serve` as a `ProxyCommand`, so the VM must run before `edit` or `shell` connects. `ssh_config` expects `msb` in the default mise data directory (`~/.local/share/mise`).
 
 ## When something fails
@@ -174,8 +195,8 @@ More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-de
 | A site fails in the VM | The site is not in `network.allow`. Run `just msb allow-host <host>`. |
 | `just msb edit` cannot connect | Run `just msb run`, then `just msb setup` again. Check that `msb ls` shows the VM as `running`. |
 | The editor or the shell freezes after some output | You are on `msb exec`. `edit` and `shell` use ssh because of this. See decision 14. |
-| A language server does not start | Look at the LSP indicator in the status bar of Fresh (click it). Fresh starts servers only in a trusted folder. `sandbox-boot` trusts the clone. For another folder use the command palette, "Workspace Trust...", then trust. The server logs are in `~/.local/state/fresh/logs/lsp/` in the VM. |
-| No hints in a Dockerfile | The server starts, but I did not see diagnostics from it. See decision 14. |
+| A language server does not start | Click the language segment in the status bar. It opens the output panel. TTT starts a server only when the file matches an entry of `lsp.servers` in `dev-tools/ttt-settings.json`, and only when the first word of `command` is on the `PATH`. Every request has a timeout of 10 seconds. A server that misses it on `initialize` is marked failed and does not retry by itself. Restart it with `Ctrl+P`, then search "restart". With `--debug`, TTT writes `~/.config/ttt/ttt.log`. |
+| No hints in a Dockerfile | Not measured with TTT yet. Under Fresh the server started and answered hover, but it gave no diagnostics. See decision 14. |
 | `claude` says the token is revoked or not valid (401) | The Bitwarden key `CLAUDE_CODE_OAUTH_TOKEN` has a wrong or old token, or you revoked it. Make a new token with `claude setup-token` and change the key. Run `msb stop sandbox-dev`, then `just msb run`. |
 | You want a clean start | Run `just msb rm --volumes`, then `just msb run`. |
 
@@ -261,8 +282,22 @@ Each record says what we decided, why, and what it costs. Newer records go at th
 - **Why.** just checks every top-level definition at the start and stops with its own message. The recipes need no check of their own, and we wrote no shell loop. The keys exist only inside `bws run`, so `run` starts `_vm` there with `MSB_IN_BWS=1`. The key lines are `if`-expressions that read the variable only when `MSB_IN_BWS` is set.
 - **Cost.** Every recipe needs all the tools, also `shell` and `rm`. just runs `git rev-parse HEAD` for each recipe. It reports one missing item at a time, in the alphabetical order of the variable names. The key names in the justfile must match `sandbox.yaml`.
 
-### 14. Fresh is the editor, and it runs in the VM
+### 14. Fresh is the editor, and it runs in the VM (record 15 replaces this one)
 
 - **Decision.** The editor is [Fresh](https://github.com/sinelaw/fresh) 0.5.4 (Rust, GPL-3.0). It is a terminal editor with menus, tabs, a file explorer, mouse support and a built-in terminal. It has no modes. It runs in the VM, in the terminal where you run `just msb run`. `dev-tools/fresh-config.json` is the one file that says which language server starts for which language. The Dockerfile copies it to `~/.config/fresh/config.json`. The servers are in `tools/lsp.toml` (and ty and ruff in `tools/dev.toml`).
 - **Why.** VS Code needed an SSH link, a server in the VM and an extension host. Fresh needs a binary and one file. It has no plugin code in this repo and nothing to install or match on the host. `edit` and `shell` connect with ssh (`ssh_config`, `msb ssh serve --stdio`), not with `msb exec`. Fresh finds the servers in the PATH. The comparison with Zed, Helix, Lapce, micro and Emacs is in `docs/research/vm-editor-options.md`.
 - **Cost.** Fresh is young (0.5.4) and its terminal UI is not a GUI window. The Node server for Dockerfiles (`dockerfile-language-server-nodejs`) crashes on the answer that Fresh gives to `workspace/configuration`, so we use Docker's own `docker-language-server`. For it, I saw the server start and answer hover, but no diagnostics. Fresh limits each server to 50% of the memory of the system. `bash-language-server` (it loads a WASM parser) and `marksman` (.NET) need `process_limits.enabled = false` in the config. Without it they crash with errors that name a missing file or an out-of-memory zone. The memory limit of the VM stays. Fresh sends the right language id for Terraform and just, so they need no shim. `msb exec` (msb 0.7.10) stops passing output after about 1 MB, with or without a terminal, and a screen editor then freezes. I measured this: Fresh, `less` and plain `cat` all stopped near 1 MB, and ssh through `msb ssh serve --stdio` passed 6.9 MB at once. So the editor and the shell use ssh. `setup` and the SSH key are needed again. The config turns off 12 bundled plugins that this sandbox does not need: the agent and orchestrator plugins (they list your Claude Code and Codex sessions and run Fresh as a background daemon, so `auto_attach` is off too) and the welcome screen and dashboard. This takes the idle memory of Fresh from about 80 MB to about 63 MB. Fresh also tries the X11 clipboard, which does not exist in the VM, so the config turns it off (copy then uses the terminal clipboard, OSC 52).
+
+### 15. TTT replaces Fresh as the editor
+
+- **Decision.** The editor is [TTT](https://github.com/eugenioenko/ttt) 1.10.0 (Go, MIT). It is a terminal editor with a menu bar, tabs, a sidebar, a bottom panel, mouse support and an integrated terminal. It has no modes. `tools/dev.toml` installs it through the mise `github:` backend, so the Dockerfile has no editor stage of its own. `dev-tools/ttt-settings.json` is the one file that says which language server starts for which language. The Dockerfile copies it to `~/.config/ttt/settings.json`, and that is the only editor file the image bakes. The theme is `vscode-dark-plus`, which the binary carries, so the image bakes no theme file.
+- **Why.** Fresh could not commit or push, and TTT can. TTT also formats through the server, organizes imports, folds code and opens a diff, with no plugin code in this repo. Three faults of Fresh have no analogue in TTT, and I read each one in its source. TTT never opens an X11 or a Wayland connection, so the clipboard stall of 47 seconds cannot happen. TTT sets no memory limit on a language server, so `marksman` and `bash-language-server` need no exception. TTT has no workspace trust gate, so `sandbox-boot` writes no trust file. TTT also waits at most one second for the terminal to answer its capability query. The evidence and the file paths are in `docs/research/vm-editor-ttt.md`.
+- **Cost.** Six things are lost.
+  1. TTT runs one language server per file extension, and two entries for `.py` give a random winner. So Python has `ruff` only. `ty` stays in the image for `prek`, and it still gates every commit, but it gives no diagnostics while you type.
+  2. TTT has no split editor. `F6` moves focus between the editor, the panel and the sidebar.
+  3. TTT cannot bind `Ctrl+Shift+<letter>`. It registers that combination as one key and the terminal reports it as another. The VS Code keys that the Fresh config mapped are gone, and the chords of TTT replace them.
+  4. TTT has no agent session hub and no orchestrator, and no plugin in its community list scans `~/.claude/projects/`. Sessions are a shell matter again. The answer in that ecosystem is Herdr, and `herdr.dev` is not in `network.allow`.
+  5. TTT has no workspace trust gate, and that changes the threat model. Opening a hostile repository now runs the configured servers and formatters at once. Our config is baked and the agent cannot rewrite it, so the blast radius is what we configured. TTT also scans a `plugins/` directory inside the repository, but a plugin there still needs an approval dialog before it runs.
+  6. A `justfile` has no editor support. TTT compiles in 125 grammars and Just is not one of them, so the file opens as plain text and no server runs for it. Wiring it would need one vendored grammar of 18 KB plus its MIT notice, and we chose not to carry that. `just-lsp` is out of `tools/lsp.toml` for the same reason, because nothing could start it. `just` still reports a bad recipe when you run it. The grammar is available upstream at `ttt-plugins/lang-just`, so this is reversible with one file.
+
+  Three more costs are smaller. Every LSP request has a timeout of 10 seconds, and no setting changes it. So a server that is slow to answer `initialize` is marked failed, and it does not retry by itself. `marksman` and `bash-language-server` are the two candidates, and neither is measured yet. TTT installs no handler for SIGTERM, so a killed TTT can leave the terminal in the keyboard mode that TTT set. If keys break after that, set `TCELL_KEYBOARD_PROTOCOL` to `legacy` in `dev-tools/mise.toml`, and accept the loss of `Ctrl+Tab`. The theme needs no contrast patch, and that is a change from the first candidate. `vscode-dark-plus` paints `#1e1e1e` as its background and its body text at 11.25 to 1 against it. Comments are `#6a9955` at 5.00 to 1, and every syntax color sits at 4.5 to 1 or above. Its three diff backgrounds are distinct: `#1e3a1e` for added, `#3a1e1e` for deleted and `#3a3a1e` for modified. I computed those ratios from the theme file, and I did not read them on a screen. The earlier candidate, `29-slate`, painted comments at 2.55 to 1, which is the same defect that the Solitude theme had before its fix.
