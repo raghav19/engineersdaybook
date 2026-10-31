@@ -525,7 +525,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
 | The theme depends on a host mount | `omarchy.json` is written at runtime from a read-only mount of the host palette. A host with no Omarchy at that path fails the VM creation. If the mount is unreadable at runtime, the plugin leaves the previous snapshot alone and logs the reason to the output panel |
-| The plugin pin is fixed at build time | An upstream change needs a new `TTT_PLUGINS_REF` and a rebuild. `ttt-plugins.json` must keep matching the two manifests at that pin, or TTT asks for approval at every start |
+| The build pins the plugin versions | An upstream change needs a new `TTT_PLUGINS_REF` and a rebuild. `ttt-plugins.json` must keep matching the two manifests at that pin, or TTT asks for approval at every start |
 | Only 19 themes ship in the binary | The other 78 need a vendored JSON each, and that copy then drifts from upstream |
 | No image, so no diagram | `image.protocol` allows `auto`, `kitty` and `none`. `foot` has sixel and not Kitty graphics. Section 7 |
 | No trust gate | A change to the threat model, not a bug. Section 9 |
