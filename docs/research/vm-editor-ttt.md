@@ -22,7 +22,7 @@ Evidence tags: **source** means the code says it, and the path follows. **docume
 | The release publishes one bare binary per platform. `ttt-linux-amd64` is 16,961,720 bytes, and its sha256 is `0e9344c396a783eaf4fc60f1d6f76b85de2b2c303bba2cb07e563a09950097a0`. A `checksums.txt` asset sits beside it. | source | the GitHub releases API for `v1.10.0` |
 | The license is MIT. | documented | the repository |
 | The aqua registry has no entry for it. | source | `aquaproj/aqua-registry`, `pkgs/eugenioenko/ttt/pkg.yaml` returns 404 |
-| The mise `github:` backend pins an exact version, selects an asset by pattern and renames the executable. It also verifies the digest that GitHub reports, or a checksum file in the same release. | documented | `mise.jdx.dev/dev-tools/backends/github.html` |
+| The mise `github:` backend pins an exact version, selects an asset by pattern and renames the executable. It also verifies the digest that GitHub reports, or a checksum file in the same release. | documented | `mise.jdx.dev/image/backends/github.html` |
 | `tools/lsp.toml` already uses that backend for `github:docker/docker-language-server`, and `tools/infra.toml` already uses the table form with `asset_pattern` and `filter_bins`. | source | this repo |
 | So the editor needs no Dockerfile stage of its own. One line in `tools/dev.toml` replaces the `curl`, `sha256sum` and `tar` steps that Fresh needed. | inferred | |
 
@@ -274,7 +274,7 @@ func configPaths() []string {
 
 **source** `internal/config/config.go`. Two paths, first file found wins per filename, and no merge across them. `XDG_CONFIG_HOME` is not read. `TTT_CONFIG_DIR` overrides both and becomes the only path, which `cmd/ttt/main.go` sets.
 
-The first path comes from `os.Executable()`, so it is the real binary and not the mise shim. A mise install has no `config/` beside it, so the home path wins today. `TTT_CONFIG_DIR` in `dev-tools/mise.toml` makes that permanent instead of lucky. **inferred**
+The first path comes from `os.Executable()`, so it is the real binary and not the mise shim. A mise install has no `config/` beside it, so the home path wins today. `TTT_CONFIG_DIR` in `image/mise.toml` makes that permanent instead of lucky. **inferred**
 
 The config directory must be writable. TTT creates it with `os.MkdirAll` and then writes `state.json`, `settings.json`, `keybindings.json`, `plugins.ttt.json`, `grammars/` and `state/plugins/` into it. With `--debug` it also writes `ttt.log`, and on a panic `crash.log`. **source** `internal/config/config.go`, `internal/config/state.go`
 
@@ -293,7 +293,7 @@ var FS embed.FS
 
 **source** `internal/config/themes/embed.go`. That directory holds `aurora`, `bubblegum`, `default-dark`, `default-light`, `dracula`, `high-contrast-dark`, `high-contrast-light`, `hotline`, `monokai`, `nord`, `one-dark`, `rainy-day-dark`, `rainy-day`, `solarized-dark`, `solarized-light`, `turbo-vision`, `virtru-dark`, `vscode-dark-plus` and `zenith`. The 78 numbered themes live in `config/themes/` in the repository only. `guides/extra-themes.md` says they "are not bundled in the binary but are available in the repository for download". Resolution tries the two config paths and then the embedded set. **source** `internal/config/config.go`, `readFirstTheme`
 
-So a bare binary from mise gives 19 themes. This sandbox uses none of them by name. `editor.transparentBackground` is `true` in `dev-tools/ttt-settings.json`, so TTT defers to the terminal's own palette. The host terminal is `foot` with the Fireside theme, so the editor inherits it. To add a custom theme later, drop its JSON into `~/.config/ttt/themes/` with one COPY line and name it in `settings.json`.
+So a bare binary from mise gives 19 themes. This sandbox uses none of them by name. `editor.transparentBackground` is `true` in `image/ttt-settings.json`, so TTT defers to the terminal's own palette. The host terminal is `foot` with the Fireside theme, so the editor inherits it. To add a custom theme later, drop its JSON into `~/.config/ttt/themes/` with one COPY line and name it in `settings.json`.
 
 Theme colors are `"#rrggbb"` hex, and ANSI names are accepted only in `editor.bracketColors`. An empty string means the color of the terminal. `tokenColors` in VS Code format overrides the whole `syntax` mapping if it is present. **documented** `guides/themes.md`
 

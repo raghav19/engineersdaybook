@@ -27,7 +27,7 @@ Earlier parts: [Part 1](../mcp-sandbox/part-1-lethal-trifecta/README.md) shows t
 | Egress allow list | every host the VM connects to | `network.allow` in `.msb/sandbox.yaml` |
 | Token placeholders | GitHub and Claude tokens: the VM never sees them | `secrets:` in `.msb/sandbox.yaml`, `.msb/msb.py` |
 | GitHub App scope | what the GitHub token can do: one repository, contents, issues and pull requests, no administration | the app installation (see `.msb/README.md`, prerequisite 2) |
-| Managed MCP settings and deny list | which MCP servers load and which GitHub tools are removed | `.msb/dev-tools/managed-settings.json` |
+| Managed MCP settings and deny list | which MCP servers load and which GitHub tools are removed | `.msb/image/configs/agents/managed-settings.json` |
 | Clone, not the working tree | which host files the VM can read | the VM mounts the `.git` directory read-only and clones from it |
 
 Run it with `just msb setup`, `just msb build` and `just msb run`. The prerequisites, every step and the fixes for common failures are in [`.msb/README.md`](../../.msb/README.md).

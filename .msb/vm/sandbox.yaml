@@ -39,7 +39,7 @@ mounts:
   - named: podman-storage
     target: /home/agent/.local/share/containers
     create: ensure-exists
-  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in dev-tools/mise.toml). It stays when you remove the VM.
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in image/mise.toml). It stays when you remove the VM.
   # A new VM does not download the providers again. `just msb rm --volumes` removes the cache. sandbox-boot gives the folder to the agent user.
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers

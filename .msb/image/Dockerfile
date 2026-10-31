@@ -78,24 +78,24 @@ RUN mise reshim && mise run sandbox:completions
 RUN PATH=/opt/mise/shims:$PATH ttt --version
 
 USER root
-COPY spire-agent.conf /etc/spire/agent.conf
+COPY configs/spire/spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
 
-COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
+COPY --chown=agent:agent configs/editor/ttt-settings.json /home/agent/.config/ttt/settings.json
 COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
-COPY --chown=agent:agent ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
+COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
-COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
+COPY configs/containers/containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
 RUN touch /etc/containers/nodocker
 
 # claude code settings
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
-COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
 
 # qwen settings
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
-COPY --chmod=0644 qwen-settings.json /etc/qwen-code/settings.json
+COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
 # git settings
 RUN git config --system --add safe.directory '*' \
