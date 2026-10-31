@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "theme": "29-slate",
+  "editor": {
+    "grammars": [
+      {
+        "path": "grammars/just.tmLanguage.json",
+        "language": "justfile",
+        "fileTypes": ["justfile", "just"]
+      }
+    ]
+  },
+  "terminal": {
+    "shell": "/bin/bash",
+    "args": ["--login", "-i"]
+  },
+  "plugins": {
+    "enabled": false
+  },
+  "lsp": {
+    "servers": {
+      "python": {
+        "command": ["ruff", "server"],
+        "languages": {".py": "python", ".pyi": "python"}
+      },
+      "terraform": {
+        "command": ["terraform-ls", "serve"],
+        "languages": {".tf": "terraform", ".tfvars": "terraform-vars"}
+      },
+      "yaml": {
+        "command": ["yaml-language-server", "--stdio"],
+        "languages": {".yaml": "yaml", ".yml": "yaml"}
+      },
+      "json": {
+        "command": ["vscode-json-language-server", "--stdio"],
+        "languages": {".json": "json", ".jsonc": "jsonc"}
+      },
+      "toml": {
+        "command": ["taplo", "lsp", "stdio"],
+        "languages": {".toml": "toml"}
+      },
+      "markdown": {
+        "command": ["marksman", "server"],
+        "languages": {".md": "markdown"}
+      },
+      "bash": {
+        "command": ["bash-language-server", "start"],
+        "languages": {".sh": "shellscript", ".bash": "shellscript"}
+      },
+      "dockerfile": {
+        "command": ["docker-language-server", "start", "--stdio"]
+      },
+      "justfile": {
+        "command": ["just-lsp"]
+      }
+    }
+  }
+}

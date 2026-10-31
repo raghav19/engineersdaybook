@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The image of the msb sandbox. It has Debian, mise and exactly the tools in tools/. The VM boots from this image,
 # so the image is a full root file system. (The sbx kit was a layer on top of the sbx shell kit.)
-# The mise tools and Fresh need an image with glibc (not Alpine).
+# The mise tools need an image with glibc (not Alpine).
 FROM debian:trixie-slim AS base
 ARG MISE_VERSION=v2026.10.0
 
@@ -60,15 +60,15 @@ FROM base AS lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
-# The editor: Fresh (https://github.com/sinelaw/fresh), one static-enough binary. The checksum is the digest of the asset in the GitHub release.
-# FRESH_VERSION and FRESH_SHA256 change together.
-FROM base AS fresh
-ARG FRESH_VERSION=v0.5.4
-ARG FRESH_SHA256=e3599c93b1eece4700d7c30726b461c9b962a91bee5da31cdf44e3dffeb6206c
-RUN curl -fsSL -o /tmp/fresh.tar.xz "https://github.com/sinelaw/fresh/releases/download/${FRESH_VERSION}/fresh-editor-x86_64-unknown-linux-gnu.tar.xz" \
- && echo "${FRESH_SHA256}  /tmp/fresh.tar.xz" | sha256sum -c - \
- && mkdir /tmp/fresh \
- && tar -xJf /tmp/fresh.tar.xz -C /tmp/fresh --strip-components=1 fresh-editor-x86_64-unknown-linux-gnu/fresh
+# The editor is TTT (https://github.com/eugenioenko/ttt), and tools/dev.toml installs the binary through the mise github backend.
+# The binary compiles in 19 themes. The other 78 exist only in the repository, so this stage fetches them at the same version.
+# TTT_REF is the commit of that release, not the tag, because a tag can move. It must match the version in tools/dev.toml.
+FROM base AS ttt-themes
+ARG TTT_REF=ea56091bc5d7d9cb8ea2ef7aa8363dc3b12b6042
+RUN git init -q /tmp/ttt \
+ && git -C /tmp/ttt remote add origin https://github.com/eugenioenko/ttt \
+ && git -C /tmp/ttt fetch -q --depth 1 origin "$TTT_REF" \
+ && git -C /tmp/ttt checkout -q FETCH_HEAD -- config/themes
 
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -83,14 +83,23 @@ COPY tools/ /etc/mise/conf.d/
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
 RUN mise reshim && mise run sandbox:completions
 
+# Proof at build time that the editor runs in this image. It prints the version and exits before it opens a screen.
+# The shims are not on PATH here yet: the ENV at the bottom of this file adds them, after every step above.
+RUN PATH=/opt/mise/shims:$PATH ttt --version
+
 USER root
 COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
-# Fresh and its configuration. fresh-config.json is the one place that says which language server starts for which language.
-COPY --from=fresh /tmp/fresh/fresh /usr/local/bin/fresh
-COPY --chown=agent:agent fresh-config.json /home/agent/.config/fresh/config.json
-# The theme of Fresh: the colors of Omarchy Solitude as exact RGB values, with real colors for diffs, errors and syntax (see fresh-config.json, "theme").
-COPY --chown=agent:agent fresh-theme-solitude.json /home/agent/.config/fresh/themes/solitude.json
+# TTT and its configuration. The binary is a mise tool (tools/dev.toml), so it needs no COPY of its own.
+# ttt-settings.json is the one place that says which language server starts for which language. TTT reads it from
+# ~/.config/ttt, the directory that TTT_CONFIG_DIR names in mise.toml. agent owns it, because TTT rewrites files in it.
+COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
+# The 78 themes that the binary does not compile in. The 19 embedded ones stay available, so the picker shows both sets.
+COPY --from=ttt-themes --chown=agent:agent /tmp/ttt/config/themes/ /home/agent/.config/ttt/themes/
+# The Just grammar. TTT compiles in 125 grammars and Just is not one of them, so without this file a justfile gets no
+# highlighting and just-lsp never starts. NOTICE travels with it, because the grammar is MIT. See ttt-grammars/NOTICE.
+COPY --chown=agent:agent ttt-grammars/just.tmLanguage.json /home/agent/.config/ttt/grammars/just.tmLanguage.json
+COPY --chown=agent:agent ttt-grammars/NOTICE /home/agent/.config/ttt/grammars/NOTICE
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
@@ -111,7 +120,7 @@ COPY --chmod=0644 qwen-settings.json /etc/qwen-code/settings.json
 # GitHub over HTTPS takes the token from GH_TOKEN. GH_TOKEN holds only a placeholder. The host replaces it with the token on the network.
 RUN git config --system --add safe.directory '*' \
  && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
-# The /etc/profile of Debian resets PATH for login shells (bash -l, the Fresh terminal and ssh). This removes the shims that the ENV below adds.
+# The /etc/profile of Debian resets PATH for login shells (bash -l, the TTT terminal and ssh). This removes the shims that the ENV below adds.
 RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR=nano' > /etc/profile.d/mise-shims.sh \
  && chmod 0755 /usr/local/bin/sandbox-boot
 
