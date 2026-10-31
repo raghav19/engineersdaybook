@@ -2,7 +2,7 @@
 # The Dockerfile puts these exact versions in the image. mise reads this file and the files of tools/ from /etc/mise/conf.d/.
 # The root mise.toml is for the host only (kind, msb, bws). The image does not read it.
 # If both sides use a tool (kubectl, helm, kustomize), both files list it.
-# This folder is in dev-tools/, not in .msb/. No recipe runs here, so the mise of the host does not load these files.
+# This folder is in image/, not in .msb/. No recipe runs here, so the mise of the host does not load these files.
 # node (npm is part of it) and python are in tools/runtimes.toml because the sbx shell kit supplied them. python is 3.13, as in the repo scripts and tools.
 
 # The mise shims in the sandbox set these values.

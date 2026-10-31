@@ -1,0 +1,9 @@
+[tools]
+terraform-ls = "0.39"
+taplo = "0.10"
+marksman = "2026-02-08"
+"npm:yaml-language-server" = "2.0"
+"npm:bash-language-server" = "5.8"
+"npm:vscode-langservers-extracted" = "4.10"
+"github:docker/docker-language-server" = "0.20"
+shellcheck = "0.11"

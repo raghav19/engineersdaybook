@@ -13,7 +13,7 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-allow-host       add one host to network.allow in sandbox.yaml. The comments and the layout of the file stay.
+allow-host       add one host to network.allow in vm/sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
@@ -36,7 +36,7 @@ from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependen
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 
 MSB_DIR = Path(__file__).resolve().parent
-CONFIG = MSB_DIR / "sandbox.yaml"
+CONFIG = MSB_DIR / "vm" / "sandbox.yaml"
 # The GitHub App of this repository. The client ID is public. The client secret is the Bitwarden key GITHUB_APP_CLIENT_SECRET.
 # You installed the app on this repository only, with the permissions contents, issues and pull requests. So the token cannot do more.
 # The access token lasts 8 hours. The refresh token lasts about 6 months, and each refresh gives a new one.
@@ -177,7 +177,7 @@ def ensure_vm() -> None:
     vm = json.loads(found.stdout) if found.returncode == 0 else None
     if vm and vm["config"]["labels"].get("config-sha") != wanted:
         # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
-        print(f"msb: {name} does not match the configuration now. sandbox.yaml or a host value changed.", file=sys.stderr)
+        print(f"msb: {name} does not match the configuration now. vm/sandbox.yaml or a host value changed.", file=sys.stderr)
         _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
@@ -192,12 +192,12 @@ def ensure_vm() -> None:
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
     if done.returncode != 0:
         _die(
-            "sandbox-boot failed (its message is above). If the cause is in sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
+            "sandbox-boot failed (its message is above). If the cause is in vm/sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
 
 
 def allow_host(host: str) -> None:
-    """Add `host` to network.allow in sandbox.yaml. The comments, the quotes and the order of the file stay as they are.
+    """Add `host` to network.allow in vm/sandbox.yaml. The comments, the quotes and the order of the file stay as they are.
 
     A host is a name such as api.example.com, or a wildcard such as *.example.com. If the list has the host already, the file does not change.
     """

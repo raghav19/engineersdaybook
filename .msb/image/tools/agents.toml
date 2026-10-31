@@ -1,3 +1,4 @@
 [tools]
 claude = "2.1"
 qwen-code = "0.26"
+herdr = "0.9"

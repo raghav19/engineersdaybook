@@ -1,0 +1,15 @@
+[
+  {
+    "name": "markdown-preview",
+    "displayName": "Markdown Preview",
+    "repo": "https://github.com/eugenioenko/ttt-plugins",
+    "version": "0.1.0",
+    "enabled": true,
+    "permissions": {
+      "panel.editor": true,
+      "commands": true,
+      "editor.read": true
+    },
+    "grantsVersion": 2
+  }
+]
