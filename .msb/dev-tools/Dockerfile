@@ -88,10 +88,6 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 # ttt-settings.json is the one place that says which language server starts for which language. TTT reads it from
 # ~/.config/ttt, the directory that TTT_CONFIG_DIR names in mise.toml. agent owns it, because TTT rewrites files in it.
 COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
-# The Just grammar. TTT compiles in 125 grammars and Just is not one of them, so without this file a justfile gets no
-# highlighting and just-lsp never starts. NOTICE travels with it, because the grammar is MIT. See ttt-grammars/NOTICE.
-COPY --chown=agent:agent ttt-grammars/just.tmLanguage.json /home/agent/.config/ttt/grammars/just.tmLanguage.json
-COPY --chown=agent:agent ttt-grammars/NOTICE /home/agent/.config/ttt/grammars/NOTICE
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf

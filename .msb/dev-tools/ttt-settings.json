@@ -1,15 +1,6 @@
 {
   "version": 1,
   "theme": "vscode-dark-plus",
-  "editor": {
-    "grammars": [
-      {
-        "path": "grammars/just.tmLanguage.json",
-        "language": "justfile",
-        "fileTypes": ["justfile", "just"]
-      }
-    ]
-  },
   "terminal": {
     "shell": "/bin/bash",
     "args": ["--login", "-i"]
@@ -49,9 +40,6 @@
       },
       "dockerfile": {
         "command": ["docker-language-server", "start", "--stdio"]
-      },
-      "justfile": {
-        "command": ["just-lsp"]
       }
     }
   }

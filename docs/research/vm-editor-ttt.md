@@ -1,6 +1,6 @@
 # The editor for the msb sandbox: TTT
 
-Question: Can TTT replace Fresh in the msb sandbox? The VM has no display server, 3 GB of memory, no swap, and an egress allow list. The editor must run the same nine language servers, and it must work over `ssh -t` into `foot`.
+Question: Can TTT replace Fresh in the msb sandbox? The VM has no display server, 3 GB of memory, no swap, and an egress allow list. The editor must run the same language servers, and it must work over `ssh -t` into `foot`.
 
 Source: the source and the docs of `eugenioenko/ttt`, read on 2026-10-31. The version is `v1.10.0`, released 2026-10-30, at commit `ea56091bc5d7d9cb8ea2ef7aa8363dc3b12b6042`. The docs are the Markdown files under `docs-web/src/content/docs/` and the site `tttedit.dev`. The terminal library is the pinned dependency `github.com/gdamore/tcell/v3.4.1`. Section 13 records what we ran on the host. Nothing was run in the VM. This note replaces the verdict of `vm-editor-options.md`, which was correct on 2026-10-29.
 
@@ -11,7 +11,7 @@ Evidence tags: **source** means the code says it, and the path follows. **docume
 1. Use TTT. It runs in the VM, it has menus, tabs, a sidebar, a bottom panel, an integrated terminal and the mouse, and it has no modes.
 2. Three faults of Fresh have no analogue in TTT. The clipboard never touches X11. No memory limit is set on a language server. There is no workspace trust gate.
 3. TTT gives git commit, push, pull and sync in the UI. Fresh gave none of them.
-4. Five things are lost. One language server per file extension. No split editor. No `Ctrl+Shift+<letter>` binding. No agent session hub and no orchestrator. No trust gate, which changes the threat model.
+4. Six things are lost. One language server per file extension. No split editor. No `Ctrl+Shift+<letter>` binding. No agent session hub and no orchestrator. No trust gate, which changes the threat model. And no editor support for a `justfile`, because TTT has no Just grammar and we chose not to vendor one.
 5. Two risks need a measurement in the VM before we trust them. A flat timeout of 10 seconds covers every request, including `initialize`. And no handler restores the terminal after SIGTERM.
 6. The install path works, and we ran it. mise fetched the bare binary, verified it, and named the shim `ttt`. TTT then started against our own `settings.json` with no complaint. Section 13.
 
@@ -23,10 +23,10 @@ Evidence tags: **source** means the code says it, and the path follows. **docume
 | The license is MIT. | documented | the repository |
 | The aqua registry has no entry for it. | source | `aquaproj/aqua-registry`, `pkgs/eugenioenko/ttt/pkg.yaml` returns 404 |
 | The mise `github:` backend pins an exact version, selects an asset by pattern and renames the executable. It also verifies the digest that GitHub reports, or a checksum file in the same release. | documented | `mise.jdx.dev/dev-tools/backends/github.html` |
-| `tools/lsp.toml` already uses that backend for `github:terror/just-lsp` and `github:docker/docker-language-server`, and `tools/infra.toml` already uses the table form with `asset_pattern` and `filter_bins`. | source | this repo |
+| `tools/lsp.toml` already uses that backend for `github:docker/docker-language-server`, and `tools/infra.toml` already uses the table form with `asset_pattern` and `filter_bins`. | source | this repo |
 | So the editor needs no Dockerfile stage of its own. One line in `tools/dev.toml` replaces the `curl`, `sha256sum` and `tar` steps that Fresh needed. | inferred | |
 
-The two existing `github:` entries download archives. TTT publishes a bare binary. Section 13 records the test of that combination on the host.
+The other `github:` entries in this repo download archives. TTT publishes a bare binary. Section 13 records the test of that combination on the host.
 
 ## 2. How TTT finds a language server for a file
 
@@ -100,6 +100,10 @@ type GrammarSetting struct {
 **source** `internal/config/settings.go`. `external.go` prefers the declared `Language` over the name in the grammar, and `externalForFilename` matches the whole lowercased basename before any extension. So one grammar file, one `editor.grammars` entry with `language` set to `justfile`, and a server key named `justfile` close the loop. **source** `internal/highlight/external.go`
 
 The grammar comes from `eugenioenko/ttt-plugins`, path `lang-just/syntaxes/just.tmLanguage.json`, at commit `2722887bdbd6080e1a8970fcdf4cb958b2089484`. It is 18,330 bytes, its scope is `source.just`, and it is MIT, copyright 2024 Robert Neff, taken there from `nefrob/vscode-just`. We declare it through settings rather than install the plugin. The plugin would need the plugin system, an approval dialog and a `git clone` at first run.
+
+**We do not carry it.** This sandbox ships no grammar and no `justfile` server. A `justfile` opens as plain text, and `just-lsp` is out of `tools/lsp.toml`, because nothing could start it without the grammar. The cost is live diagnostics and highlighting in two files, one of them about 350 lines. `just` itself still reports a bad recipe when you run it. The alternative was one vendored file of 18 KB, its MIT notice, and three coordinated settings entries. The mechanism above stays recorded for two reasons. The choice is reversible with one file, and nobody should have to derive the two-route rule again.
+
+The durable answer is upstream. The gap is in the 125 entry table of `textmate-go`, and the same author already ships the grammar in `ttt-plugins/lang-just`. If Just joined that table, a later TTT would handle a `justfile` with no config at all.
 
 ## 3. How TTT starts a language server
 
@@ -426,17 +430,17 @@ We ran four checks on 2026-10-31, on x86_64 Linux with glibc, outside the VM. Al
 
 The last line matters. The docs promise that `--exec` "exits nonzero on a failed action". We planned to use it as the loud check for a config error, because unknown keys and unknown command ids load in silence. With no tty it does not return. So the image cannot check the config that way, and the check moves into the VM. **documented** for the promise, **measured** for the hang.
 
-The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the nine servers was installed on the host.
+The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the eight servers was installed on the host.
 
-One part of that run no longer matches the shipped config. The test used `29-slate`, and `settings.json` now names `vscode-dark-plus`. The new name needs no file at all, because the binary carries it, so the resolution path is shorter and not longer. The grammar half of the test still applies unchanged.
+Two parts of that run no longer match the shipped config. The test used `29-slate` and the vendored Just grammar. `settings.json` now names `vscode-dark-plus`, which the binary carries, and it declares no grammar at all. So the shipped config takes a shorter path than the one we tested, on both counts. What still holds is the shape of the test: TTT read a settings file of this kind and started.
 
 ## 14. Not tested
 
 Nothing was run in the VM or in a container. Section 13 covers what we ran on the host.
 
-- The nine language servers, and the diagnostics of each.
+- The eight language servers, and the diagnostics of each.
 - Whether `marksman` and `bash-language-server` answer `initialize` inside 10 seconds on 4 CPUs.
-- The Just grammar and `just-lsp` together. This is the least proven part of the config.
+- The `dockerfile` entry. It has no `languages` map, so it depends on the second route of `ResolveLanguage` and on the grammar display name being `Dockerfile`. With the Just grammar gone it is the only entry that takes that route, and it is now the least proven part of the config.
 - Whether `docker-language-server` gives diagnostics under TTT. It gave none under Fresh, for a reason specific to Fresh.
 - The memory of TTT, and the peak of the loaded VM.
 - OSC 52 copy through `foot` into the host clipboard, and `clipboard-control` in `foot.ini`.
@@ -452,6 +456,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | The 10 second LSP timeout | Not configurable. A server that misses `initialize` is marked failed and does not retry. Two candidates are named in section 3 |
 | No SIGTERM handler | A killed TTT can leave the terminal in kitty flag 1. `TCELL_KEYBOARD_PROTOCOL=legacy` avoids it and costs `ctrl+tab` |
 | One server per extension | A future need for `ty` and `ruff` together has no config answer. It needs an upstream change |
+| No `justfile` support | A `justfile` opens as plain text and no server runs for it. Reversible with one vendored grammar, or by an upstream change to `textmate-go`. Section 2 |
 | No split editor | Permanent. It is not a missing binding, the concept does not exist |
 | `Ctrl+Shift+<letter>` | Permanent until upstream passes `OptAdvancedKeys(true)`. Any future VS Code style keymap hits this wall |
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
