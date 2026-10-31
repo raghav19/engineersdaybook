@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "theme": "vscode-dark-plus",
+  "theme": "omarchy",
   "terminal": {
     "shell": "/bin/bash",
     "args": ["--login", "-i"]
   },
   "plugins": {
-    "enabled": false
+    "enabled": true
   },
   "lsp": {
     "servers": {
