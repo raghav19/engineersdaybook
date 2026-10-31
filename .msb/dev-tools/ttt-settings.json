@@ -1,6 +1,8 @@
 {
   "version": 1,
-  "theme": "omarchy",
+  "editor": {
+    "transparentBackground": true
+  },
   "terminal": {
     "shell": "/bin/bash",
     "args": ["--login", "-i"]

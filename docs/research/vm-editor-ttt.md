@@ -293,9 +293,11 @@ var FS embed.FS
 
 **source** `internal/config/themes/embed.go`. That directory holds `aurora`, `bubblegum`, `default-dark`, `default-light`, `dracula`, `high-contrast-dark`, `high-contrast-light`, `hotline`, `monokai`, `nord`, `one-dark`, `rainy-day-dark`, `rainy-day`, `solarized-dark`, `solarized-light`, `turbo-vision`, `virtru-dark`, `vscode-dark-plus` and `zenith`. The 78 numbered themes live in `config/themes/` in the repository only. `guides/extra-themes.md` says they "are not bundled in the binary but are available in the repository for download". Resolution tries the two config paths and then the embedded set. **source** `internal/config/config.go`, `readFirstTheme`
 
-So a bare binary from mise gives 19 themes. This sandbox uses none of them by name. It sets `theme` to `omarchy`, and the `omarchy-theme` plugin writes `themes/omarchy.json` at each start from the palette of the host. To add one of the 78 or one of the 19 as a file instead, drop its JSON into `~/.config/ttt/themes/` with one COPY line. No clone of the upstream repository is needed.
+So a bare binary from mise gives 19 themes. This sandbox uses none of them by name. `editor.transparentBackground` is `true` in `dev-tools/ttt-settings.json`, so TTT defers to the terminal's own palette. The host terminal is `foot` with the Fireside theme, so the editor inherits it. To add a custom theme later, drop its JSON into `~/.config/ttt/themes/` with one COPY line and name it in `settings.json`.
 
 Theme colors are `"#rrggbb"` hex, and ANSI names are accepted only in `editor.bracketColors`. An empty string means the color of the terminal. `tokenColors` in VS Code format overrides the whole `syntax` mapping if it is present. **documented** `guides/themes.md`
+
+**Note: the plugin route below was dropped.** The editor now uses `editor.transparentBackground` and inherits the terminal's palette directly. The palette research remains for reference.
 
 The palette of the host is Fireside, and Omarchy generates a VS Code theme from it at `~/.local/state/omarchy/current/theme/vscode-theme.json`. That file holds 81 `tokenColors` entries in the same shape that TTT accepts, plus 664 named colors. The plugin merges those token rules into the snapshot it writes. We measured the palette against its own background `#0a1220`. Body text `#f0f2f5` is 16.71 to 1. Every syntax color is 5.72 to 1 or above. The one weak color is `#5a606b`, which the palette uses for comments, for muted text and for line numbers, at 2.96 to 1. That is below the 4.5 to 1 of WCAG AA. We kept it. Fireside authors it that way, its own README calls it a low-contrast theme, and the rest of the desktop renders the same value. **measured**, in the sense that we computed the ratios from the palette. We did not read them on a screen.
 
@@ -397,29 +399,25 @@ There is no update check, no version check and no telemetry in the files we read
 
 ### What this sandbox does
 
-`plugins.enabled` is `true`, and a Dockerfile stage of its own fetches both plugins at build time. Nothing third-party is committed. Both are also in the community registry at the pinned commit. Each has the `path` entry that an install from a monorepo needs, so the panel could install them instead:
+`plugins.enabled` is `true`, and a Dockerfile stage of its own fetches `markdown-preview` at build time. Nothing third-party is committed. It is also in the community registry at the pinned commit, with the `path` entry that an install from a monorepo needs, so the panel could install it instead:
 
 ```text
 markdown-preview   path "markdown-preview"   featured true   version 0.1.0
-omarchy-theme      path "omarchy-theme"                      version 0.1.0
 ```
 
-**source** `community-plugins.json` at commit `ea56091b`, 55 entries. The README of `omarchy-theme` says it "can only be installed from the plugin panel once it is listed in the community registry with a `path` entry". That warning is stale. The entry is there, so the panel can install both.
+**source** `community-plugins.json` at commit `ea56091b`, 55 entries.
 
-This went back and forth, and the sequence is worth keeping. A first draft committed both plugins and their grants. That was reverted, because 11 files of upstream Lua in a public repo bought only the removal of two clicks. The panel route was then tried, and it proved easy to miss. A new VM started with an empty `plugins/` folder and an empty `themes/` folder. So `theme: omarchy` did not resolve, and TTT fell back to its own default with nothing on screen to say why. The shape that settled it fetches four files in a build stage: the entry and the manifest of each plugin. Nothing third-party is committed, and a failed fetch stops the build instead of leaving a silently unthemed editor.
+This went back and forth, and the sequence is worth keeping. A first draft committed the plugin and its grants. That was reverted, because upstream Lua in a public repo bought only the removal of a click. The panel route was then tried, and it proved easy to miss. A new VM started with an empty `plugins/` folder. The shape that settled it fetches two files in a build stage: the entry and the manifest. Nothing third-party is committed, and a failed fetch stops the build. An earlier draft also fetched `omarchy-theme`, which wrote a generated theme file from a host mount. That was dropped when the user observed that `editor.transparentBackground` gives the same Fireside colors with none of the machinery.
 
 The grants file is what makes that work with no dialog. Approval is skipped when `Find(manifest.Name)` succeeds in `~/.config/ttt/plugins.ttt.json` and `DiffPermissions` then reports nothing. `DiffPermissions` flags only a permission that is requested and not granted, so an exact match gives an empty diff. `Find` matches on `Name` alone and ignores `Version`, so an upstream version bump does not re-trigger the dialog. That file is a bare JSON array, and `grantsVersion` should be 2, the value of `localAccessGrants`. A lower value makes `LoadRegistry` clear that entry's `network.http`, and nothing else. **source** `internal/plugin/registry.go`, `internal/plugin/permissions.go`
 
-What each plugin asks for, from its own manifest:
+What the plugin asks for, from its own manifest:
 
 | Plugin | Permissions |
 |---|---|
 | `markdown-preview` | `panel.editor`, `commands`, `editor.read` |
-| `omarchy-theme` | `fs.read ["~/.local/state/omarchy"]`, `fs.write ["{config}/themes"]`, `settings`, `settings_keys ["theme"]`, `commands` |
 
-Neither asks for `system.exec`, `network.http` or `network.rpc`. The scoped `fs` paths need the change in `eugenioenko/ttt#908`, which merged on 2026-10-16 and is in v1.10.0. We read `FsRead FsAccess` in `permissions.go` at the pinned commit. On a build without it the manifest does not parse and TTT skips the plugin. **source** for the manifests and for `permissions.go`, **documented** for #908 in the plugin README.
-
-Two costs follow. Enabling plugins brings the registry fetch above, once per start, to a host that `network.allow` already covers. And the build pins the plugin versions, so an upstream change needs a new `TTT_PLUGINS_REF` and a rebuild.
+It does not ask for `system.exec`, `network.http` or `network.rpc`. Enabling plugins brings the registry fetch above, once per start, to a host that `network.allow` already covers. The build pins the plugin version, so an upstream change needs a new `TTT_PLUGINS_REF` and a rebuild.
 
 ## 9. Trust
 
@@ -491,7 +489,7 @@ The last line matters. The docs promise that `--exec` "exits nonzero on a failed
 
 The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the eight servers was installed on the host.
 
-Three parts of that run no longer match the shipped config. The test used `29-slate`, the vendored Just grammar, and `plugins.enabled` set to `false`. `settings.json` now names the theme `omarchy`, declares no grammar, and turns the plugin system on. So the shipped config exercises paths that the host test did not reach. Those are the plugin loader, an install from the panel, and a theme that a plugin writes at runtime. What still holds is the shape of the test. TTT read a settings file of this kind and started.
+Three parts of that run no longer match the shipped config. The test used `29-slate`, the vendored Just grammar, and `plugins.enabled` set to `false`. `settings.json` now sets `editor.transparentBackground` to `true`, declares no grammar, and turns the plugin system on with one baked plugin. So the shipped config exercises paths that the host test did not reach. Those are the plugin loader and the transparent-background path. What still holds is the shape of the test. TTT read a settings file of this kind and started.
 
 ## 14. Not tested
 
@@ -507,10 +505,8 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 - The terminal state after SIGTERM.
 - The mise install inside the image build. Section 13 tested it on the host, not under `docker buildx build`.
 - The mouse in general. We read the code and the docs.
-- Whether both baked plugins load with no dialog, and whether `omarchy-theme` then writes `themes/omarchy.json`.
-- Whether the agent user can read the mounted palette. The host files are mode 644 and the host folders are 755, so a uid mismatch should still allow a read. That is reasoning and not a test.
+- Whether the baked plugin loads with no dialog.
 - Whether "Preview: Markdown" renders, and what it does with a fenced block.
-- Whether the theme follows a switch of the Omarchy theme on the host within two seconds.
 
 ## 15. Risks
 
@@ -524,8 +520,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | `Ctrl+Shift+<letter>` | Permanent until upstream passes `OptAdvancedKeys(true)`. Any future VS Code style keymap hits this wall |
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
-| The theme depends on a host mount | `omarchy.json` is written at runtime from a read-only mount of the host palette. A host with no Omarchy at that path fails the VM creation. If the mount is unreadable at runtime, the plugin leaves the previous snapshot alone and logs the reason to the output panel |
-| The build pins the plugin versions | An upstream change needs a new `TTT_PLUGINS_REF` and a rebuild. `ttt-plugins.json` must keep matching the two manifests at that pin, or TTT asks for approval at every start |
+| The build pins the plugin version | An upstream change needs a new `TTT_PLUGINS_REF` and a rebuild. `ttt-plugins.json` must keep matching the manifest at that pin, or TTT asks for approval at every start |
 | Only 19 themes ship in the binary | The other 78 need a vendored JSON each, and that copy then drifts from upstream |
 | No image, so no diagram | `image.protocol` allows `auto`, `kitty` and `none`. `foot` has sixel and not Kitty graphics. Section 7 |
 | No trust gate | A change to the threat model, not a bug. Section 9 |

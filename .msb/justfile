@@ -99,14 +99,12 @@ _vm:
     {{ step }} ensure-vm
 
 # The [env] lines give the git values that sandbox.yaml names as ${NAME}.
-# They are the git directory to clone, the branch to start on, the author of the commits in the VM, and the Omarchy theme
-# folder that the editor reads its colors from. They apply to this recipe only.
+# They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
 # Every day. Make or start the VM from sandbox.yaml, run sandbox-boot in it, then open the TTT editor in it
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
-[env('SANDBOX_OMARCHY_THEME', shell('printf %s "$HOME/.local/state/omarchy/current/theme"'))]
 run: _host-only
     # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. The editor does not get them.
     {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
