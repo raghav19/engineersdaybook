@@ -1,0 +1,82 @@
+Vendored by this repository
+---------------------------
+
+What is here: two plugins for the TTT editor, and the MIT licence of the
+repository they come from.
+
+Taken from: https://github.com/eugenioenko/ttt-plugins at commit
+            2722887bdbd6080e1a8970fcdf4cb958b2089484
+Copied on:  2026-10-31, unchanged:
+
+    markdown-preview/plugin.lua        1,187 bytes
+    markdown-preview/plugin.ttt.json     317 bytes
+    markdown-preview/README.md           419 bytes
+    omarchy-theme/init.lua            19,888 bytes
+    omarchy-theme/plugin.ttt.json        414 bytes
+    omarchy-theme/README.md            4,777 bytes
+
+Licence: MIT, copyright 2026 Eugene Yakhnenko. See the LICENSE file beside this
+one. It is the licence of the whole ttt-plugins repository. The README of
+omarchy-theme records that @danielmrdev contributed that plugin.
+
+The Dockerfile copies each plugin folder to /home/agent/.config/ttt/plugins/,
+and copies dev-tools/ttt-plugins.json to /home/agent/.config/ttt/plugins.ttt.json.
+
+Why the plugins are vendored rather than installed from the panel
+----------------------------------------------------------------
+
+TTT installs a plugin with `git clone` into the config directory. That
+directory is not a mounted volume, so the clone would happen again in every new
+VM, at first run, over the network. Vendoring puts the files in the image
+instead, and pins them to a commit rather than to a moving branch.
+
+Why dev-tools/ttt-plugins.json exists
+-------------------------------------
+
+TTT asks for approval before it loads a plugin whose name is absent from
+~/.config/ttt/plugins.ttt.json, or whose manifest requests a permission that
+the entry there does not grant. That file is a plain JSON array, so it can be
+written ahead of time. Each entry here grants exactly the permissions in the
+matching plugin.ttt.json, and no more. Neither plugin asks for system.exec,
+network.http or network.rpc:
+
+    markdown-preview  panel.editor, commands, editor.read
+    omarchy-theme     fs.read  ["~/.local/state/omarchy"]
+                      fs.write ["{config}/themes"]
+                      settings, settings_keys ["theme"], commands
+
+markdown-preview reads the open buffer and renders it. It cannot write a file,
+run a command, or open a connection. omarchy-theme reads one directory and
+writes one directory, both named above. "grantsVersion": 2 matches the constant
+`localAccessGrants` in internal/plugin/registry.go. A lower value would make
+TTT clear the entry's network.http grant on load. Neither plugin uses that
+grant, so the value only keeps this file identical to what TTT would write.
+
+Why the theme palette is NOT vendored
+-------------------------------------
+
+omarchy-theme reads ~/.local/state/omarchy/current/theme/colors.toml, and the
+sibling vscode-theme.json when it exists. Those two files come from
+bjarneo/omarchy-fireside-theme, which declares no licence, so its palette is
+all rights reserved by default. This repository is public. Committing the
+palette would redistribute it.
+
+Instead sandbox.yaml mounts that directory into the VM read-only:
+
+    ${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro
+
+Nothing is copied into the repository, and the VM then follows whichever
+Omarchy theme is active on the host. The plugin polls every two seconds, so a
+theme switch on the host recolours the editor without a restart. Every file in
+that directory is a colour definition. It was scanned for credentials before
+this mount was added, and it holds none.
+
+A note on diagrams
+------------------
+
+markdown-preview renders text only. TTT's whole image support is the setting
+`image.protocol`, and internal/config/settings.go allows it three values: auto,
+kitty and none. There is no sixel and no iterm2. The host terminal here is foot,
+which supports sixel and not the Kitty graphics protocol. So no image can appear
+in this editor, and a fenced mermaid block renders as highlighted source. See
+docs/research/vm-editor-ttt.md.

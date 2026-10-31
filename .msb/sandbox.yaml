@@ -6,22 +6,18 @@
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
-  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:b371dc309af09ccad22b2bca14f92d3904caa78cbce504e900c7db3f3d1b971d
   upper_size: "20G"
-
 # msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
 # `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.
 registry:
   username: raghav19
   password_env: GITHUB_TOKEN
-
 cpus: 4
 memory: "3G" # measured in a 2 GB test VM before the move to TTT: Headroom, the editor, 9 language servers and claude together peaked at 810 MB. 3G leaves room for builds (podman, terraform). Not yet re-measured with TTT. See docs/research/vm-editor-ttt.md.
 shell: "/bin/bash" # the shell of SSH sessions and of `msb exec`. The TTT terminal uses bash too (dev-tools/ttt-settings.json, "terminal"). The login shell adds the mise shims to the PATH.
-
 # The VM has no command of its own. At each run, `just msb run` runs /usr/local/bin/sandbox-boot in the VM with `msb exec`.
 # The script prepares the agent user, clones the repo and starts Headroom. See dev-tools/sandbox-boot.
-
 env:
   SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile (MSB_WORKSPACE) has the same value.
   SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch of the host checkout. The clone starts on it.
@@ -35,12 +31,16 @@ env:
   CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the settings.
   DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
   HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it.
-
 mounts:
   # The git directory of the host repo, read-only. The VM reads the committed history only.
   # It cannot read untracked files or .env. sandbox-boot clones the directory, so the VM has a private clone.
   # A git worktree works too. msb 0.7.10 refuses a relative path to a parent folder, so the path is a host value.
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
+  # The active Omarchy theme of the host, read-only. The TTT plugin omarchy-theme reads colors.toml and vscode-theme.json
+  # from it, and writes ~/.config/ttt/themes/omarchy.json inside the VM. The palette is not committed to this repo, because
+  # its upstream repo declares no licence and this repo is public. Every file in that folder is a color definition, and it
+  # was scanned for credentials before this mount was added. See dev-tools/ttt-plugins/NOTICE.
+  - "${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude
@@ -55,7 +55,6 @@ mounts:
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers
     create: ensure-exists
-
 # No token enters the VM. The VM has a placeholder for each secret. The host replaces it with the value, for the hosts of that secret only.
 # msb reads each value from the environment of the host. `just msb run` starts msb.py under `bws run`, so each Bitwarden key is a variable there.
 # Both secrets are Bitwarden keys. Neither token refreshes by itself (.msb/README.md, "Token lifetime").
@@ -77,7 +76,6 @@ secrets:
   QWEN_API_KEY:
     allow: [token-plan.ap-southeast-1.maas.aliyuncs.com]
     passthrough: [api.anthropic.com]
-
 # The egress allow list. If `allow` has entries, the VM blocks all other hosts. To add a host, run `just msb allow-host <host>`.
 # *.example.com matches subdomains at any depth (*.istio.io matches istio-release.r2.istio.io). It does not match the bare domain.
 # If a site needs the bare domain, add it too. msb rejects **.example.com and an entry with a port.

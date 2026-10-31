@@ -1,0 +1,16 @@
+{
+  "name": "omarchy-theme",
+  "displayName": "Omarchy Theme",
+  "description": "Keep a TTT theme snapshot in sync with the active Omarchy palette.",
+  "version": "0.1.0",
+  "author": "danielmrdev",
+  "entry": "init.lua",
+  "api": 1,
+  "permissions": {
+    "fs.read": ["~/.local/state/omarchy"],
+    "fs.write": ["{config}/themes"],
+    "settings": true,
+    "settings_keys": ["theme"],
+    "commands": true
+  }
+}
