@@ -39,7 +39,7 @@ mounts:
   # The active Omarchy theme of the host, read-only. The TTT plugin omarchy-theme reads colors.toml and vscode-theme.json
   # from it, and writes ~/.config/ttt/themes/omarchy.json inside the VM. The palette is not committed to this repo, because
   # its upstream repo declares no licence and this repo is public. Every file in that folder is a color definition, and it
-  # was scanned for credentials before this mount was added. See dev-tools/ttt-plugins/NOTICE.
+  # was scanned for credentials before this mount was added. See README.md, decision 17.
   - "${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home

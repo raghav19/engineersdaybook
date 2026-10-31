@@ -397,13 +397,29 @@ There is no update check, no version check and no telemetry in the files we read
 
 ### What this sandbox does
 
-`plugins.enabled` is `true`. The image vendors two plugins from `eugenioenko/ttt-plugins` at commit `2722887bdbd6080e1a8970fcdf4cb958b2089484`. Both are MIT. Neither asks for `system.exec`, `network.http` or `network.rpc`.
+`plugins.enabled` is `true`, and the image vendors no plugin. Both that we use are in the community registry at the pinned commit, each with the `path` entry that an install from a monorepo needs:
 
-`markdown-preview` asks for `panel.editor`, `commands` and `editor.read`. It is 47 lines that wire a palette command and a right-click entry to the markdown renderer TTT already has. `omarchy-theme` asks for `fs.read` scoped to `~/.local/state/omarchy`, `fs.write` scoped to `{config}/themes`, and `settings` with `settings_keys` limited to `theme`. Those scoped paths need the change in `eugenioenko/ttt#908`. That pull request merged on 2026-10-16, so v1.10.0 has it, and we read `FsRead FsAccess` in `permissions.go` at the pinned commit. On a build without it the manifest does not parse and TTT skips the plugin. **source** for the manifests and for `permissions.go`, **documented** for #908 in the plugin README.
+```text
+markdown-preview   path "markdown-preview"   featured true   version 0.1.0
+omarchy-theme      path "omarchy-theme"                      version 0.1.0
+```
 
-`dev-tools/ttt-plugins.json` becomes `~/.config/ttt/plugins.ttt.json`, and it grants each plugin exactly what its manifest asks for. That is what removes the approval dialog. `Find` matches on `Name`, and `DiffPermissions` reports only a permission that is requested and not granted, so an exact match gives an empty diff. `grantsVersion` is 2, which equals `localAccessGrants`. A lower value would make `LoadRegistry` clear that entry's `network.http`, and neither plugin uses that grant. **source** `internal/plugin/registry.go`
+**source** `community-plugins.json` at commit `ea56091b`, 55 entries. The README of `omarchy-theme` says it "can only be installed from the plugin panel once it is listed in the community registry with a `path` entry". That warning is stale. The entry is there, so the panel installs both, and that is what we do.
 
-The cost is the registry fetch above, once per start, to a host that `network.allow` already covers.
+An earlier draft of this change vendored both plugins and pre-wrote their grants. It was reverted. The 11 files bought only the removal of two clicks, and they put a copy of upstream Lua in a public repo.
+
+The mechanism still belongs here, because it is how a dialog would be suppressed if that ever mattered. Approval is skipped when `Find(manifest.Name)` succeeds in `~/.config/ttt/plugins.ttt.json` and `DiffPermissions` then reports nothing. `DiffPermissions` flags only a permission that is requested and not granted, so an exact match gives an empty diff. `Find` matches on `Name` alone and ignores `Version`, so an upstream version bump does not re-trigger the dialog. That file is a bare JSON array, and `grantsVersion` should be 2, the value of `localAccessGrants`. A lower value makes `LoadRegistry` clear that entry's `network.http`, and nothing else. **source** `internal/plugin/registry.go`, `internal/plugin/permissions.go`
+
+What each plugin asks for, from its own manifest:
+
+| Plugin | Permissions |
+|---|---|
+| `markdown-preview` | `panel.editor`, `commands`, `editor.read` |
+| `omarchy-theme` | `fs.read ["~/.local/state/omarchy"]`, `fs.write ["{config}/themes"]`, `settings`, `settings_keys ["theme"]`, `commands` |
+
+Neither asks for `system.exec`, `network.http` or `network.rpc`. The scoped `fs` paths need the change in `eugenioenko/ttt#908`, which merged on 2026-10-16 and is in v1.10.0. We read `FsRead FsAccess` in `permissions.go` at the pinned commit. On a build without it the manifest does not parse and TTT skips the plugin. **source** for the manifests and for `permissions.go`, **documented** for #908 in the plugin README.
+
+Two costs follow. Enabling plugins brings the registry fetch above, once per start, to a host that `network.allow` already covers. And an install does not survive `just msb rm`, because `~/.config/ttt` is in the VM and not in a volume.
 
 ## 9. Trust
 
@@ -475,7 +491,7 @@ The last line matters. The docs promise that `--exec` "exits nonzero on a failed
 
 The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the eight servers was installed on the host.
 
-Three parts of that run no longer match the shipped config. The test used `29-slate`, the vendored Just grammar, and `plugins.enabled` set to `false`. `settings.json` now names the theme `omarchy`, declares no grammar, and enables two vendored plugins. So the shipped config exercises paths that the host test did not reach. Those are the plugin loader, the approval check against `plugins.ttt.json`, and a theme that a plugin writes at runtime. What still holds is the shape of the test. TTT read a settings file of this kind and started.
+Three parts of that run no longer match the shipped config. The test used `29-slate`, the vendored Just grammar, and `plugins.enabled` set to `false`. `settings.json` now names the theme `omarchy`, declares no grammar, and turns the plugin system on. So the shipped config exercises paths that the host test did not reach. Those are the plugin loader, an install from the panel, and a theme that a plugin writes at runtime. What still holds is the shape of the test. TTT read a settings file of this kind and started.
 
 ## 14. Not tested
 
@@ -491,7 +507,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 - The terminal state after SIGTERM.
 - The mise install inside the image build. Section 13 tested it on the host, not under `docker buildx build`.
 - The mouse in general. We read the code and the docs.
-- Whether the two vendored plugins load with no approval dialog, and whether `themes/omarchy.json` appears.
+- Whether the panel installs both plugins, and whether `omarchy-theme` then writes `themes/omarchy.json`.
 - Whether the agent user can read the mounted palette. The host files are mode 644 and the host folders are 755, so a uid mismatch should still allow a read. That is reasoning and not a test.
 - Whether "Preview: Markdown" renders, and what it does with a fenced block.
 - Whether the theme follows a switch of the Omarchy theme on the host within two seconds.
@@ -509,7 +525,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
 | The theme depends on a host mount | `omarchy.json` is written at runtime from a read-only mount of the host palette. A host with no Omarchy at that path fails the VM creation. If the mount is unreadable at runtime, the plugin leaves the previous snapshot alone and logs the reason to the output panel |
-| Two vendored plugins | They are pinned to a commit, so an upstream change needs a manual update. `ttt-plugins.json` must keep matching the two manifests, or TTT asks for approval at every start |
+| Two plugins are installed by hand | The install does not survive `just msb rm`, and each one asks for approval. Until `omarchy-theme` runs, the theme `omarchy` does not resolve and TTT falls back to its own default |
 | Only 19 themes ship in the binary | The other 78 need a vendored JSON each, and that copy then drifts from upstream |
 | No image, so no diagram | `image.protocol` allows `auto`, `kitty` and `none`. `foot` has sixel and not Kitty graphics. Section 7 |
 | No trust gate | A change to the threat model, not a bug. Section 9 |

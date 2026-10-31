@@ -88,17 +88,11 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 # ttt-settings.json is the one place that says which language server starts for which language. TTT reads it from
 # ~/.config/ttt, the directory that TTT_CONFIG_DIR names in mise.toml. agent owns it, because TTT rewrites files in it.
 COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
-# Two vendored plugins, and the grants that stop TTT asking about them. ttt-plugins.json becomes plugins.ttt.json, and TTT
-# loads a plugin with no dialog when that file names it and grants every permission its manifest asks for. See ttt-plugins/NOTICE.
-# Only the plugin folders go into plugins/, because TTT treats every entry of that directory as a plugin.
-COPY --chown=agent:agent ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
-COPY --chown=agent:agent ttt-plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
-COPY --chown=agent:agent ttt-plugins/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
-# omarchy-theme writes ~/.config/ttt/themes/omarchy.json, and its filesystem API cannot create a directory: it refuses to
-# open a missing root. So the folder is made here. agent owns it, because the plugin writes into it at every start.
+# No plugin is vendored. Both that this sandbox uses are in the TTT community registry with a `path` entry, so the plugin
+# panel installs each of them in one step. See README.md, "The editor plugins". That install does not survive `just msb rm`.
+# omarchy-theme writes ~/.config/ttt/themes/omarchy.json, and the filesystem API of a plugin cannot create a directory: it
+# refuses to open a missing root. So the folder is made here. agent owns it, because the plugin writes into it.
 RUN mkdir -p /home/agent/.config/ttt/themes && chown agent:agent /home/agent/.config/ttt/themes
-# The licence of the vendored plugins travels with them in the image too. It stays out of plugins/ for the reason above.
-COPY --chown=agent:agent ttt-plugins/LICENSE ttt-plugins/NOTICE /usr/share/doc/ttt-plugins/
 # Podman, for the container builds of a developer. It runs rootless, as agent. `docker` is the podman-docker script, and nodocker removes its notice.
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
 COPY containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
