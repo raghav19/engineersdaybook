@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM debian:trixie-slim AS base
+FROM debian:trixie-slim AS stage1-base
 ARG MISE_VERSION=v2026.10.0
 
 ENV MISE_DATA_DIR=/opt/mise \
@@ -24,34 +24,34 @@ COPY mise.toml /etc/mise/conf.d/mise.toml
 USER agent
 
 
-FROM base AS runtimes
+FROM stage1-base AS stage2-runtimes
 COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
 RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
 # 
-FROM runtimes AS headroom
+FROM stage2-runtimes AS stage3-headroom
 COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
 # The uv cache (about 880 MiB) is a download cache of the install. The tools do not read it, so the same step removes it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
-FROM base AS infra
+FROM stage1-base AS stage4-infra
 COPY tools/infra.toml /etc/mise/conf.d/infra.toml
 # The same step removes spire-server. The VM runs only the agent.
 RUN mise install --yes && rm -f /opt/mise/installs/github-spiffe-spire/*/bin/spire-server
 
-FROM base AS dev
+FROM stage1-base AS stage5-dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
 RUN mise install --yes
 
-FROM base AS agents
+FROM stage1-base AS stage6-agents
 COPY tools/agents.toml /etc/mise/conf.d/agents.toml
 RUN mise install --yes
 
-FROM base AS lsp
+FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
-FROM base AS ttt-plugins
+FROM stage1-base AS stage8-ttt-plugins
 USER root
 ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
 RUN set -eu; \
@@ -60,14 +60,14 @@ RUN set -eu; \
     curl -fsSL -o /plugins/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
     curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"
 
-FROM base AS final
-COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
-COPY --from=headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
-COPY --from=infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
+FROM stage1-base AS stage9-final
+COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
+COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
+COPY --from=stage4-infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=stage5-dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=stage6-agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
+COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise makes the shims from the tools that it finds. A task in mise.toml makes the bash completions. Bash loads a file from
 # ~/.local/share/bash-completion/completions when you first complete its command. No rc file is necessary.
@@ -82,7 +82,7 @@ COPY spire-agent.conf /etc/spire/agent.conf
 COPY sandbox-boot /usr/local/bin/sandbox-boot
 
 COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
-COPY --from=ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
+COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
 COPY --chown=agent:agent ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.
