@@ -23,11 +23,11 @@ export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 msb    := require("msb")
 bws    := require("bws")
 age    := require("age")
-uv     := require("uv")
-docker := require("docker")
-jq     := require("jq")
-yq     := require("yq")
-ssh    := require("ssh")
+uv      := require("uv")
+podman  := require("podman")
+jq      := require("jq")
+yq      := require("yq")
+ssh     := require("ssh")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')
@@ -56,9 +56,6 @@ ssh_config := source_directory() / 'vm' / 'ssh_config'
 commit := shell('git rev-parse HEAD')
 # The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
 image_epoch := '1700000000'
-# zstd level 9 as the sbx kits. With image_epoch, the same files give the same digest.
-build_metadata := cache_directory() / 'msb-build-metadata.json'
-image_output := 'type=registry,compression=zstd,compression-level=9,force-compression=true,rewrite-timestamp=true'
 
 # List the recipes (the default)
 [default]
@@ -66,7 +63,7 @@ help:
     just --list --unsorted
 
 _host-only:
-    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Docker are on the host." >&2; exit 1; }
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Podman are on the host." >&2; exit 1; }
 
 # Once for each host (safe to run again): authorize your SSH key for `msb ssh`
 setup: _host-only
@@ -78,20 +75,21 @@ setup: _host-only
 github-login: _host-only
     {{ bws_run }} '{{ step }} github-login'
 
-# The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `docker login`, so no variable holds it.
+# The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `podman login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
-# No registry cache (`--cache-to type=registry`): in a test its export grew past 6 GB in 25 seconds. In full builds Docker reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
-# The BuildKit cache of this machine already rebuilds only the stage that changed.
-# The digest comes from the metadata file of buildx. yq writes it in vm/sandbox.yaml. The first run of yq removes the blank lines of the file.
-# `build refresh` also installs the newest claude of the version in tools/agents.toml again: the stage `agents` skips the cache.
+# No registry cache: in a test its export grew past 6 GB in 25 seconds. In full builds the container engine reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
+# The local BuildKit/Buildah cache already rebuilds only the stage that changed.
+# The digest comes from `podman push --digestfile`. yq writes it in vm/sandbox.yaml. The first run of yq removes the blank lines of the file.
+# `build refresh` rebuilds the whole image without cache, so claude and qwen are reinstalled at the newest version of their pin.
 # Build the image from image/ and push it to ghcr.io, tagged with the commit. Then pin its digest in vm/sandbox.yaml. `build refresh`: also update claude
 build refresh='': _host-only
-    {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | docker login {{ registry_host }} -u {{ registry_user }} --password-stdin'
-    docker buildx build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} {{ if refresh == 'refresh' { '--no-cache-filter agents' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }} \
-      --provenance=false --sbom=false --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
-      --metadata-file {{ build_metadata }} --output {{ image_output }}
-    docker logout {{ registry_host }}
-    digest=$(jq -r '."containerimage.digest"' {{ build_metadata }}) \
+    {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | podman login {{ registry_host }} -u {{ registry_user }} --password-stdin'
+    podman build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} \
+      --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
+      {{ if refresh == 'refresh' { '--no-cache' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }}
+    podman push {{ registry }}:{{ commit }} --compression-format zstd --digestfile /tmp/msb-digest
+    podman logout {{ registry_host }}
+    digest=$(cat /tmp/msb-digest) && rm -f /tmp/msb-digest \
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/vm/sandbox.yaml \
       && echo "vm/sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
