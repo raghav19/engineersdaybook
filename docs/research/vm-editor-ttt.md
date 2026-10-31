@@ -293,13 +293,37 @@ var FS embed.FS
 
 **source** `internal/config/themes/embed.go`. That directory holds `aurora`, `bubblegum`, `default-dark`, `default-light`, `dracula`, `high-contrast-dark`, `high-contrast-light`, `hotline`, `monokai`, `nord`, `one-dark`, `rainy-day-dark`, `rainy-day`, `solarized-dark`, `solarized-light`, `turbo-vision`, `virtru-dark`, `vscode-dark-plus` and `zenith`. The 78 numbered themes live in `config/themes/` in the repository only. `guides/extra-themes.md` says they "are not bundled in the binary but are available in the repository for download". Resolution tries the two config paths and then the embedded set. **source** `internal/config/config.go`, `readFirstTheme`
 
-So a bare binary from mise gives 19 themes. We use one of those 19, and the image bakes no theme file. To add one of the other 78 later, drop its JSON into `~/.config/ttt/themes/` with one COPY line. No clone of the upstream repository is needed.
+So a bare binary from mise gives 19 themes. This sandbox uses none of them by name. It sets `theme` to `omarchy`, and the `omarchy-theme` plugin writes `themes/omarchy.json` at each start from the palette of the host. To add one of the 78 or one of the 19 as a file instead, drop its JSON into `~/.config/ttt/themes/` with one COPY line. No clone of the upstream repository is needed.
 
 Theme colors are `"#rrggbb"` hex, and ANSI names are accepted only in `editor.bracketColors`. An empty string means the color of the terminal. `tokenColors` in VS Code format overrides the whole `syntax` mapping if it is present. **documented** `guides/themes.md`
 
-`vscode-dark-plus` is the one this sandbox uses. Its background is `#1e1e1e` and its body text is `#d4d4d4`, which is 11.25 to 1. `syntax.comment.fg` is `#6a9955` at 5.00 to 1. Its `tokenColors` array repeats that value for the `comment` scope, so the number holds in practice and not only in the fallback map. Every syntax color we checked sits at 4.5 to 1 or above, and `muted.fg` is the lowest of them at 4.52 to 1. The `diff` block sets three distinct backgrounds, `#1e3a1e`, `#3a1e1e` and `#3a3a1e`, in the order that the schema names them. **measured**, in the sense that we computed the ratios from the theme file. We did not read them on a screen.
+The palette of the host is Fireside, and Omarchy generates a VS Code theme from it at `~/.local/state/omarchy/current/theme/vscode-theme.json`. That file holds 81 `tokenColors` entries in the same shape that TTT accepts, plus 664 named colors. The plugin merges those token rules into the snapshot it writes. We measured the palette against its own background `#0a1220`. Body text `#f0f2f5` is 16.71 to 1. Every syntax color is 5.72 to 1 or above. The one weak color is `#5a606b`, which the palette uses for comments, for muted text and for line numbers, at 2.96 to 1. That is below the 4.5 to 1 of WCAG AA. We kept it. Fireside authors it that way, its own README calls it a low-contrast theme, and the rest of the desktop renders the same value. **measured**, in the sense that we computed the ratios from the palette. We did not read them on a screen.
+
+Two properties of the source palette matter if anyone converts it by hand instead of letting the plugin do it. The VS Code colors carry alpha, and TTT wants `"#rrggbb"`, so a value such as `#88988920` must be flattened onto the background. Flattened at the source alpha, the three `diff` backgrounds land 1.01 to 1.04 to 1 apart, which looks like the defect the Solitude theme had. It is not. TTT's own `nord` is the same. Two of its three diff backgrounds are 1.06 to 1 apart, and its added background sits 1.05 to 1 from the editor background. Subtle diff backgrounds are the house style here, and the solid gutter marks carry the signal, at 5.72 to 7.01 to 1 in this palette. One source value is genuinely broken. `editor.lineHighlightBackground` is `#0a122060`, which flattens to the background itself, so a direct copy would leave the active line invisible. The plugin mixes its own values instead of copying these (`mix(background, green, diff_blend)`). So this is a warning about the source, not a defect we ship. What the plugin does for the active line is not verified. **measured** for the ratios, **source** for the mix call.
+
+`vscode-dark-plus` was the fallback while the palette route was open. Its comments are 5.00 to 1 and its body text is 11.25 to 1, so it needs no patch. It stays one keystroke away, because the binary carries it.
 
 The first candidate was `29-slate`, one of the 78. It sets `default.fg` to `#b0b8c4` on `#1a1e24`, and its diff colors are distinct too. But `syntax.comment.fg` and `muted.fg` are both `#555e6a`, which is 2.55 to 1 against that background. The Solitude theme for Fresh had the same defect at 2.2 to 1, and we raised it to 5.9 to 1. `#8b9296` would give 5.30 to 1 there, but that means a patched copy of an upstream file, and it would drift. We dropped the candidate. **source** for the values, **measured** for the ratios.
+
+### Images and diagrams
+
+TTT has no way to draw a picture in this sandbox. Its whole image support is one setting.
+
+```go
+const (
+	ImageProtocolAuto  = "auto"
+	ImageProtocolKitty = "kitty"
+	ImageProtocolNone  = "none"
+)
+
+type ImageSettings struct {
+	Protocol string `json:"protocol"`
+}
+```
+
+**source** `internal/config/settings.go`. There is no sixel and no iterm2, and `normalizeSettings` rejects any other value. The host terminal is `foot` 1.28.0, which supports sixel and whose README never mentions the Kitty graphics protocol. **documented** for foot, **measured** for the version. So the two do not meet, and a fenced `mermaid` block renders as highlighted source.
+
+Rendering one would need a second thing anyway: a mermaid renderer. `@mermaid-js/mermaid-cli` pulls Node, Puppeteer and Chromium, and Chromium needs Xvfb plus new hosts in `network.allow`. The published settings reference does not mention images at all, which is how the `Image` struct was missed at first. **source** for the struct, **documented** for the absence in the reference.
 
 ### Keybindings
 
@@ -345,11 +369,20 @@ Nothing is bundled. Discovery is `os.ReadDir` over two directories, and there is
 	localPluginsDir := filepath.Join(editor.Workspace.Primary(), "plugins")
 ```
 
-**source** `cmd/ttt/main.go`, `internal/plugin/manager.go`. The 25 built-in server configurations are community plugins in `eugenioenko/ttt-plugins`, not embedded Lua. We write `lsp.servers` into settings instead, so no plugin is needed.
+**source** `cmd/ttt/main.go`, `internal/plugin/manager.go`. The 25 built-in server configurations are community plugins in `eugenioenko/ttt-plugins`, not embedded Lua. We write `lsp.servers` into settings instead, so no plugin is needed for a language server.
 
-Approval is required only when the registry has no entry for the plugin, or when the declared permissions differ from the registry entry. `LoadAll()` returns the pending list, and an empty list means no dialog. So a plugin free image never prompts. Grants persist to `plugins.ttt.json` as a bare JSON array, which is writable ahead of time. **source** `internal/plugin/manager.go`, `internal/plugin/registry.go`
+Approval is required only when the registry has no entry for the plugin, or when the declared permissions differ from the registry entry. `LoadAll()` returns the pending list, and an empty list means no dialog. Grants persist to `plugins.ttt.json` as a bare JSON array, which is writable ahead of time. **source** `internal/plugin/manager.go`, `internal/plugin/registry.go`
 
-One caveat on pre-writing grants. An entry whose `GrantsVersion` is below `localAccessGrants` silently loses its `network.http` permission on load. We did not find the two constants. **source** for the behavior, and the values are an open item.
+One caveat on pre-writing grants. An entry whose `GrantsVersion` is below `localAccessGrants` loses its `network.http` permission on load. Both constants are 2:
+
+```go
+const (
+	localAccessGrants = 2
+	grantsVersion     = localAccessGrants
+)
+```
+
+**source** `internal/plugin/registry.go`. Only `NetworkHTTP` is cleared, so scoped `fs.read` and `fs.write` grants survive a stale version. Writing `"grantsVersion": 2` avoids the question and keeps the file identical to what `Save()` would write, which uses a two space indent.
 
 The one automatic outbound call is a plugin registry fetch.
 
@@ -361,6 +394,16 @@ const DefaultRegistryURL = "https://raw.githubusercontent.com/eugenioenko/ttt/ma
 **source** `internal/plugin/registry_remote.go`. It runs in a goroutine inside `if cfg.Settings.Plugins.IsEnabled()`, so `{"plugins": {"enabled": false}}` removes it, and even a DNS failure cannot block startup. `raw.githubusercontent.com` is covered by `*.githubusercontent.com` in `network.allow`.
 
 There is no update check, no version check and no telemetry in the files we read. `internal/github/github.go` imports no `net/http` at all. It shells out to `gh` for `repo clone`, `pr view`, `pr diff` and `api graphql`, and none of those calls has a timeout. The image has no `gh`, so pull request review does not work. `--listen` opens an HTTP server on `127.0.0.1:4242`, and it is flag gated. The two URLs in `internal/app/about.go` are display strings. **source** **inferred** for the absence claims, because we could not grep the whole tree.
+
+### What this sandbox does
+
+`plugins.enabled` is `true`. The image vendors two plugins from `eugenioenko/ttt-plugins` at commit `2722887bdbd6080e1a8970fcdf4cb958b2089484`. Both are MIT. Neither asks for `system.exec`, `network.http` or `network.rpc`.
+
+`markdown-preview` asks for `panel.editor`, `commands` and `editor.read`. It is 47 lines that wire a palette command and a right-click entry to the markdown renderer TTT already has. `omarchy-theme` asks for `fs.read` scoped to `~/.local/state/omarchy`, `fs.write` scoped to `{config}/themes`, and `settings` with `settings_keys` limited to `theme`. Those scoped paths need the change in `eugenioenko/ttt#908`. That pull request merged on 2026-10-16, so v1.10.0 has it, and we read `FsRead FsAccess` in `permissions.go` at the pinned commit. On a build without it the manifest does not parse and TTT skips the plugin. **source** for the manifests and for `permissions.go`, **documented** for #908 in the plugin README.
+
+`dev-tools/ttt-plugins.json` becomes `~/.config/ttt/plugins.ttt.json`, and it grants each plugin exactly what its manifest asks for. That is what removes the approval dialog. `Find` matches on `Name`, and `DiffPermissions` reports only a permission that is requested and not granted, so an exact match gives an empty diff. `grantsVersion` is 2, which equals `localAccessGrants`. A lower value would make `LoadRegistry` clear that entry's `network.http`, and neither plugin uses that grant. **source** `internal/plugin/registry.go`
+
+The cost is the registry fetch above, once per start, to a host that `network.allow` already covers.
 
 ## 9. Trust
 
@@ -432,7 +475,7 @@ The last line matters. The docs promise that `--exec` "exits nonzero on a failed
 
 The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the eight servers was installed on the host.
 
-Two parts of that run no longer match the shipped config. The test used `29-slate` and the vendored Just grammar. `settings.json` now names `vscode-dark-plus`, which the binary carries, and it declares no grammar at all. So the shipped config takes a shorter path than the one we tested, on both counts. What still holds is the shape of the test: TTT read a settings file of this kind and started.
+Three parts of that run no longer match the shipped config. The test used `29-slate`, the vendored Just grammar, and `plugins.enabled` set to `false`. `settings.json` now names the theme `omarchy`, declares no grammar, and enables two vendored plugins. So the shipped config exercises paths that the host test did not reach. Those are the plugin loader, the approval check against `plugins.ttt.json`, and a theme that a plugin writes at runtime. What still holds is the shape of the test. TTT read a settings file of this kind and started.
 
 ## 14. Not tested
 
@@ -448,6 +491,10 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 - The terminal state after SIGTERM.
 - The mise install inside the image build. Section 13 tested it on the host, not under `docker buildx build`.
 - The mouse in general. We read the code and the docs.
+- Whether the two vendored plugins load with no approval dialog, and whether `themes/omarchy.json` appears.
+- Whether the agent user can read the mounted palette. The host files are mode 644 and the host folders are 755, so a uid mismatch should still allow a read. That is reasoning and not a test.
+- Whether "Preview: Markdown" renders, and what it does with a fenced block.
+- Whether the theme follows a switch of the Omarchy theme on the host within two seconds.
 
 ## 15. Risks
 
@@ -461,6 +508,9 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | `Ctrl+Shift+<letter>` | Permanent until upstream passes `OptAdvancedKeys(true)`. Any future VS Code style keymap hits this wall |
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
-| Only 19 themes are available | The binary carries 19, and `vscode-dark-plus` is one of them. Any of the other 78 means one vendored JSON in the image, and that copy then drifts from upstream |
+| The theme depends on a host mount | `omarchy.json` is written at runtime from a read-only mount of the host palette. A host with no Omarchy at that path fails the VM creation. If the mount is unreadable at runtime, the plugin leaves the previous snapshot alone and logs the reason to the output panel |
+| Two vendored plugins | They are pinned to a commit, so an upstream change needs a manual update. `ttt-plugins.json` must keep matching the two manifests, or TTT asks for approval at every start |
+| Only 19 themes ship in the binary | The other 78 need a vendored JSON each, and that copy then drifts from upstream |
+| No image, so no diagram | `image.protocol` allows `auto`, `kitty` and `none`. `foot` has sixel and not Kitty graphics. Section 7 |
 | No trust gate | A change to the threat model, not a bug. Section 9 |
 | `TERM` is forced | `xterm-256color` inside the integrated terminal, whatever the host terminal exported |

@@ -64,8 +64,9 @@ def _die(message: str) -> NoReturn:
 def _fingerprint() -> str:
     """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values and the host ports. `ensure-vm` calls this.
 
-    The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
-    The tokens and the branch are not in the fingerprint.
+    The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, SANDBOX_OMARCHY_THEME, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
+    The tokens and the branch are not in the fingerprint. SANDBOX_OMARCHY_THEME is not in it either. It names a read-only mount
+    of the theme folder of the host, and that path changes only with $HOME.
     """
     parts = [
         CONFIG.read_text(),
