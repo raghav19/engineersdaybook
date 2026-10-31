@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "theme": "29-slate",
+  "theme": "vscode-dark-plus",
   "editor": {
     "grammars": [
       {

@@ -61,14 +61,8 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 # The editor is TTT (https://github.com/eugenioenko/ttt), and tools/dev.toml installs the binary through the mise github backend.
-# The binary compiles in 19 themes. The other 78 exist only in the repository, so this stage fetches them at the same version.
-# TTT_REF is the commit of that release, not the tag, because a tag can move. It must match the version in tools/dev.toml.
-FROM base AS ttt-themes
-ARG TTT_REF=ea56091bc5d7d9cb8ea2ef7aa8363dc3b12b6042
-RUN git init -q /tmp/ttt \
- && git -C /tmp/ttt remote add origin https://github.com/eugenioenko/ttt \
- && git -C /tmp/ttt fetch -q --depth 1 origin "$TTT_REF" \
- && git -C /tmp/ttt checkout -q FETCH_HEAD -- config/themes
+# The binary carries its own themes and grammars, so it needs no build stage of its own. To add one theme or one grammar later,
+# drop its JSON in a folder here and COPY it to ~/.config/ttt/themes/ or ~/.config/ttt/grammars/. No upstream clone is needed.
 
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -94,8 +88,6 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 # ttt-settings.json is the one place that says which language server starts for which language. TTT reads it from
 # ~/.config/ttt, the directory that TTT_CONFIG_DIR names in mise.toml. agent owns it, because TTT rewrites files in it.
 COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
-# The 78 themes that the binary does not compile in. The 19 embedded ones stay available, so the picker shows both sets.
-COPY --from=ttt-themes --chown=agent:agent /tmp/ttt/config/themes/ /home/agent/.config/ttt/themes/
 # The Just grammar. TTT compiles in 125 grammars and Just is not one of them, so without this file a justfile gets no
 # highlighting and just-lsp never starts. NOTICE travels with it, because the grammar is MIT. See ttt-grammars/NOTICE.
 COPY --chown=agent:agent ttt-grammars/just.tmLanguage.json /home/agent/.config/ttt/grammars/just.tmLanguage.json

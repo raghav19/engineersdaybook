@@ -289,11 +289,13 @@ var FS embed.FS
 
 **source** `internal/config/themes/embed.go`. That directory holds `aurora`, `bubblegum`, `default-dark`, `default-light`, `dracula`, `high-contrast-dark`, `high-contrast-light`, `hotline`, `monokai`, `nord`, `one-dark`, `rainy-day-dark`, `rainy-day`, `solarized-dark`, `solarized-light`, `turbo-vision`, `virtru-dark`, `vscode-dark-plus` and `zenith`. The 78 numbered themes live in `config/themes/` in the repository only. `guides/extra-themes.md` says they "are not bundled in the binary but are available in the repository for download". Resolution tries the two config paths and then the embedded set. **source** `internal/config/config.go`, `readFirstTheme`
 
-So a bare binary from mise gives 19 themes. The Dockerfile fetches the other 78 at the pinned commit.
+So a bare binary from mise gives 19 themes. We use one of those 19, and the image bakes no theme file. To add one of the other 78 later, drop its JSON into `~/.config/ttt/themes/` with one COPY line. No clone of the upstream repository is needed.
 
 Theme colors are `"#rrggbb"` hex, and ANSI names are accepted only in `editor.bracketColors`. An empty string means the color of the terminal. `tokenColors` in VS Code format overrides the whole `syntax` mapping if it is present. **documented** `guides/themes.md`
 
-`29-slate` sets `default.fg` to `#b0b8c4` on `#1a1e24`, `diff.added.bg` to `#1a2820` and `diff.deleted.bg` to `#281a1a`. Those two diff colors are distinct. But `syntax.comment.fg` and `muted.fg` are both `#555e6a`, which is 2.55 to 1 against that background. The Solitude theme for Fresh had the same defect at 2.2 to 1 and we raised it to 5.9 to 1. `#8b9296` would give 5.30 to 1 here. **source** for the values, **inferred** for the two ratios, which we computed and did not measure on screen.
+`vscode-dark-plus` is the one this sandbox uses. Its background is `#1e1e1e` and its body text is `#d4d4d4`, which is 11.25 to 1. `syntax.comment.fg` is `#6a9955` at 5.00 to 1. Its `tokenColors` array repeats that value for the `comment` scope, so the number holds in practice and not only in the fallback map. Every syntax color we checked sits at 4.5 to 1 or above, and `muted.fg` is the lowest of them at 4.52 to 1. The `diff` block sets three distinct backgrounds, `#1e3a1e`, `#3a1e1e` and `#3a3a1e`, in the order that the schema names them. **measured**, in the sense that we computed the ratios from the theme file. We did not read them on a screen.
+
+The first candidate was `29-slate`, one of the 78. It sets `default.fg` to `#b0b8c4` on `#1a1e24`, and its diff colors are distinct too. But `syntax.comment.fg` and `muted.fg` are both `#555e6a`, which is 2.55 to 1 against that background. The Solitude theme for Fresh had the same defect at 2.2 to 1, and we raised it to 5.9 to 1. `#8b9296` would give 5.30 to 1 there, but that means a patched copy of an upstream file, and it would drift. We dropped the candidate. **source** for the values, **measured** for the ratios.
 
 ### Keybindings
 
@@ -426,6 +428,8 @@ The last line matters. The docs promise that `--exec` "exits nonzero on a failed
 
 The startup check is weaker than it looks. The log stops at the `exec_script` line. It tells us that TTT read the settings, resolved the theme name and loaded the grammar with no complaint. It does not tell us that the grammar matches a `justfile`, and it does not tell us that any server starts. None of the nine servers was installed on the host.
 
+One part of that run no longer matches the shipped config. The test used `29-slate`, and `settings.json` now names `vscode-dark-plus`. The new name needs no file at all, because the binary carries it, so the resolution path is shorter and not longer. The grammar half of the test still applies unchanged.
+
 ## 14. Not tested
 
 Nothing was run in the VM or in a container. Section 13 covers what we ran on the host.
@@ -452,6 +456,6 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | `Ctrl+Shift+<letter>` | Permanent until upstream passes `OptAdvancedKeys(true)`. Any future VS Code style keymap hits this wall |
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
-| The themes come from upstream at build time | A contrast change to `29-slate` would need a patch step in the Dockerfile, and it would drift from upstream |
+| Only 19 themes are available | The binary carries 19, and `vscode-dark-plus` is one of them. Any of the other 78 means one vendored JSON in the image, and that copy then drifts from upstream |
 | No trust gate | A change to the threat model, not a bug. Section 9 |
 | `TERM` is forced | `xterm-256color` inside the integrated terminal, whatever the host terminal exported |
