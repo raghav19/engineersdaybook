@@ -6,7 +6,7 @@
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
-  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:b371dc309af09ccad22b2bca14f92d3904caa78cbce504e900c7db3f3d1b971d
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:68c2e45378e64d842c74795008f5798c3d6b1a23e0389a8b2ebdd01d1cc524bb
   upper_size: "20G"
 # msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
 # `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.

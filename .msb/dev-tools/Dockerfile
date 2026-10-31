@@ -64,6 +64,22 @@ RUN mise install --yes
 # The binary carries its own themes and grammars, so it needs no build stage of its own. To add one theme or one grammar later,
 # drop its JSON in a folder here and COPY it to ~/.config/ttt/themes/ or ~/.config/ttt/grammars/. No upstream clone is needed.
 
+# The two plugins of the editor, in a layer of their own. Both are in the TTT community registry, so its panel can install
+# them by hand. This bakes them in instead, so a new VM needs no click and no approval dialog. They are fetched here and are
+# not committed to this repo, so no third-party code lands in a public repository. TTT_PLUGINS_REF is a commit and not a
+# branch, so a build is reproducible. Only the entry file and the manifest of each plugin are taken: that is all TTT loads.
+# Upstream is MIT (copyright 2026 Eugene Yakhnenko), and its LICENSE travels with the copy in the image.
+FROM base AS ttt-plugins
+ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
+RUN set -eu; \
+    url="https://raw.githubusercontent.com/eugenioenko/ttt-plugins/${TTT_PLUGINS_REF}"; \
+    mkdir -p /plugins/markdown-preview /plugins/omarchy-theme /upstream-licence; \
+    curl -fsSL -o /plugins/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
+    curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
+    curl -fsSL -o /plugins/omarchy-theme/init.lua           "$url/omarchy-theme/init.lua"; \
+    curl -fsSL -o /plugins/omarchy-theme/plugin.ttt.json    "$url/omarchy-theme/plugin.ttt.json"; \
+    curl -fsSL -o /upstream-licence/LICENSE                 "$url/LICENSE"
+
 FROM base AS final
 COPY --from=runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
@@ -88,8 +104,13 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 # ttt-settings.json is the one place that says which language server starts for which language. TTT reads it from
 # ~/.config/ttt, the directory that TTT_CONFIG_DIR names in mise.toml. agent owns it, because TTT rewrites files in it.
 COPY --chown=agent:agent ttt-settings.json /home/agent/.config/ttt/settings.json
-# No plugin is vendored. Both that this sandbox uses are in the TTT community registry with a `path` entry, so the plugin
-# panel installs each of them in one step. See README.md, "The editor plugins". That install does not survive `just msb rm`.
+# The two plugins that the ttt-plugins stage fetched, and the grants that stop TTT asking about them. TTT loads a plugin with
+# no dialog when ttt-plugins.json names it and grants every permission that its own manifest asks for. Only the plugin folders
+# go into plugins/, because TTT treats every entry of that directory as a plugin, so the licence goes somewhere else.
+COPY --from=ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
+COPY --from=ttt-plugins --chown=agent:agent /plugins/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
+COPY --chown=agent:agent ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
+COPY --from=ttt-plugins /upstream-licence/LICENSE /usr/share/doc/ttt-plugins/LICENSE
 # omarchy-theme writes ~/.config/ttt/themes/omarchy.json, and the filesystem API of a plugin cannot create a directory: it
 # refuses to open a missing root. So the folder is made here. agent owns it, because the plugin writes into it.
 RUN mkdir -p /home/agent/.config/ttt/themes && chown agent:agent /home/agent/.config/ttt/themes

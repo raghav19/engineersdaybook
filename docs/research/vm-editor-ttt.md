@@ -397,18 +397,18 @@ There is no update check, no version check and no telemetry in the files we read
 
 ### What this sandbox does
 
-`plugins.enabled` is `true`, and the image vendors no plugin. Both that we use are in the community registry at the pinned commit, each with the `path` entry that an install from a monorepo needs:
+`plugins.enabled` is `true`, and a Dockerfile stage of its own fetches both plugins at build time. Nothing third-party is committed. Both are also in the community registry at the pinned commit. Each has the `path` entry that an install from a monorepo needs, so the panel could install them instead:
 
 ```text
 markdown-preview   path "markdown-preview"   featured true   version 0.1.0
 omarchy-theme      path "omarchy-theme"                      version 0.1.0
 ```
 
-**source** `community-plugins.json` at commit `ea56091b`, 55 entries. The README of `omarchy-theme` says it "can only be installed from the plugin panel once it is listed in the community registry with a `path` entry". That warning is stale. The entry is there, so the panel installs both, and that is what we do.
+**source** `community-plugins.json` at commit `ea56091b`, 55 entries. The README of `omarchy-theme` says it "can only be installed from the plugin panel once it is listed in the community registry with a `path` entry". That warning is stale. The entry is there, so the panel can install both.
 
-An earlier draft of this change vendored both plugins and pre-wrote their grants. It was reverted. The 11 files bought only the removal of two clicks, and they put a copy of upstream Lua in a public repo.
+This went back and forth, and the sequence is worth keeping. A first draft committed both plugins and their grants. That was reverted, because 11 files of upstream Lua in a public repo bought only the removal of two clicks. The panel route was then tried, and it proved easy to miss. A new VM started with an empty `plugins/` folder and an empty `themes/` folder. So `theme: omarchy` did not resolve, and TTT fell back to its own default with nothing on screen to say why. The shape that settled it fetches four files in a build stage: the entry and the manifest of each plugin. Nothing third-party is committed, and a failed fetch stops the build instead of leaving a silently unthemed editor.
 
-The mechanism still belongs here, because it is how a dialog would be suppressed if that ever mattered. Approval is skipped when `Find(manifest.Name)` succeeds in `~/.config/ttt/plugins.ttt.json` and `DiffPermissions` then reports nothing. `DiffPermissions` flags only a permission that is requested and not granted, so an exact match gives an empty diff. `Find` matches on `Name` alone and ignores `Version`, so an upstream version bump does not re-trigger the dialog. That file is a bare JSON array, and `grantsVersion` should be 2, the value of `localAccessGrants`. A lower value makes `LoadRegistry` clear that entry's `network.http`, and nothing else. **source** `internal/plugin/registry.go`, `internal/plugin/permissions.go`
+The grants file is what makes that work with no dialog. Approval is skipped when `Find(manifest.Name)` succeeds in `~/.config/ttt/plugins.ttt.json` and `DiffPermissions` then reports nothing. `DiffPermissions` flags only a permission that is requested and not granted, so an exact match gives an empty diff. `Find` matches on `Name` alone and ignores `Version`, so an upstream version bump does not re-trigger the dialog. That file is a bare JSON array, and `grantsVersion` should be 2, the value of `localAccessGrants`. A lower value makes `LoadRegistry` clear that entry's `network.http`, and nothing else. **source** `internal/plugin/registry.go`, `internal/plugin/permissions.go`
 
 What each plugin asks for, from its own manifest:
 
@@ -419,7 +419,7 @@ What each plugin asks for, from its own manifest:
 
 Neither asks for `system.exec`, `network.http` or `network.rpc`. The scoped `fs` paths need the change in `eugenioenko/ttt#908`, which merged on 2026-10-16 and is in v1.10.0. We read `FsRead FsAccess` in `permissions.go` at the pinned commit. On a build without it the manifest does not parse and TTT skips the plugin. **source** for the manifests and for `permissions.go`, **documented** for #908 in the plugin README.
 
-Two costs follow. Enabling plugins brings the registry fetch above, once per start, to a host that `network.allow` already covers. And an install does not survive `just msb rm`, because `~/.config/ttt` is in the VM and not in a volume.
+Two costs follow. Enabling plugins brings the registry fetch above, once per start, to a host that `network.allow` already covers. And the build pins the plugin versions, so an upstream change needs a new `TTT_PLUGINS_REF` and a rebuild.
 
 ## 9. Trust
 
@@ -507,7 +507,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 - The terminal state after SIGTERM.
 - The mise install inside the image build. Section 13 tested it on the host, not under `docker buildx build`.
 - The mouse in general. We read the code and the docs.
-- Whether the panel installs both plugins, and whether `omarchy-theme` then writes `themes/omarchy.json`.
+- Whether both baked plugins load with no dialog, and whether `omarchy-theme` then writes `themes/omarchy.json`.
 - Whether the agent user can read the mounted palette. The host files are mode 644 and the host folders are 755, so a uid mismatch should still allow a read. That is reasoning and not a test.
 - Whether "Preview: Markdown" renders, and what it does with a fenced block.
 - Whether the theme follows a switch of the Omarchy theme on the host within two seconds.
@@ -525,7 +525,7 @@ Nothing was run in the VM or in a container. Section 13 covers what we ran on th
 | Silent config errors | Unknown keys and unknown command ids load without a complaint. `ttt --exec` hung with no tty, so no automatic check exists. Section 13 |
 | Version 1.10.0 | The settings schema is versioned by a `version` field, so it can change. The `Args` field is already absent from the published reference |
 | The theme depends on a host mount | `omarchy.json` is written at runtime from a read-only mount of the host palette. A host with no Omarchy at that path fails the VM creation. If the mount is unreadable at runtime, the plugin leaves the previous snapshot alone and logs the reason to the output panel |
-| Two plugins are installed by hand | The install does not survive `just msb rm`, and each one asks for approval. Until `omarchy-theme` runs, the theme `omarchy` does not resolve and TTT falls back to its own default |
+| The build pins the plugin versions | An upstream change needs a new `TTT_PLUGINS_REF` and a rebuild. `ttt-plugins.json` must keep matching the two manifests at that pin, or TTT asks for approval at every start |
 | Only 19 themes ship in the binary | The other 78 need a vendored JSON each, and that copy then drifts from upstream |
 | No image, so no diagram | `image.protocol` allows `auto`, `kitty` and `none`. `foot` has sixel and not Kitty graphics. Section 7 |
 | No trust gate | A change to the threat model, not a bug. Section 9 |
