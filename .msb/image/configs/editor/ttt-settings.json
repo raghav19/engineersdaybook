@@ -6,7 +6,8 @@
   "editor": {
     "transparentBackground": true,
     "bracketPairColorization": true,
-    "diffMode": "unified"
+    "diffMode": "unified",
+    "formatOnSave": true
   },
   "terminal": {
     "shell": "/bin/bash",
