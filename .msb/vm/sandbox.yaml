@@ -5,7 +5,7 @@
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
-  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:623cb0261fbc520a66630b8c3bf8117a5301d4a2cee756a1165f0576a65871f1
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:7d885b21baacd1cdcb5e17903f731be0603d4547a0280b7a896a031829c6b02f
   upper_size: "20G"
 # msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
 # `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.
@@ -28,9 +28,12 @@ env:
   CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the settings.
   DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
   HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it.
+  KUBECONFIG: /home/agent/.kube/config # the k3s kubeconfig. sandbox-boot copies it from the mount and rewrites the server URL.
 mounts:
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
   - "${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro"
+  # The k3s kubeconfig. sandbox-boot rewrites the server URL to host.microsandbox.internal.
+  - "/etc/rancher/k3s/k3s.yaml:/run/sandbox/kubeconfig/k3s.yaml:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude

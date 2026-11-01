@@ -33,6 +33,16 @@ if [ ! -d "$ws/.git" ]; then
 fi
 as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
 
+# The k3s kubeconfig. The mount is read-only and has 127.0.0.1 as the server URL.
+# Copy it, rewrite the server to host.microsandbox.internal (the host as the VM sees it), and give it to agent.
+src_kube=/run/sandbox/kubeconfig/k3s.yaml
+if [ -f "$src_kube" ]; then
+  mkdir -p "$home/.kube"
+  cp "$src_kube" "$home/.kube/config"
+  sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' "$home/.kube/config"
+  chown agent:agent "$home/.kube" "$home/.kube/config"
+fi
+
 # The editor (TTT) has no workspace trust gate, so nothing here pre-answers one. It starts a language server as soon as
 # a file matches an entry of lsp.servers, with no prompt. See decision 15 in README.md for what that costs.
 
