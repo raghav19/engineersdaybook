@@ -51,4 +51,8 @@ curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_lo
 as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; claude plugin install ponytail@ponytail" \
   || echo "sandbox-boot: warning: the ponytail plugin is not installed" >&2
 
+# TokenEconomizer: Claude Code plugin. Clone at /home/agent/token-economizer.
+as_agent sh -c "claude plugin marketplace add /home/agent/token-economizer; claude plugin install tokeneconomizer@tokeneconomizer" \
+  || echo "sandbox-boot: warning: the TokenEconomizer plugin is not installed" >&2
+
 echo "sandbox-boot: ready"
