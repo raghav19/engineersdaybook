@@ -5,7 +5,7 @@
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
-  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:ee249a0098cf97827ab647aaef829799539f55b1ca0ae785e6e8f15d070968be
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:623cb0261fbc520a66630b8c3bf8117a5301d4a2cee756a1165f0576a65871f1
   upper_size: "20G"
 # msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
 # `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.
@@ -108,6 +108,8 @@ network:
     # Schemas
     - www.schemastore.org
     # Documentation and project sites, for research
+    - artifacthub.io
+    - backstage.io
     - kind.sigs.k8s.io
     - just.systems
     - fluxcd.io

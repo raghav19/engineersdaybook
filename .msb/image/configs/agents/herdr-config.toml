@@ -1,20 +1,9 @@
-# Herdr config — omarchy fireside theme
-# Matches the foot terminal palette from ~/.local/state/omarchy/current/theme/foot.ini
+# Herdr config — terminal theme inherits colours from the host terminal (foot/omarchy).
+# Herdr re-reads the palette on resize or SIGWINCH, so theme changes on the host
+# propagate without rebuilding the image.
 
 [theme]
-# "terminal" inherits colours from the host terminal (foot/fireside)
 name = "terminal"
-
-[theme.custom]
-# Fireside UI colours mapped to Herdr tokens
-panel_bg = "#0a1220"
-sidebar_bg = "#0a1220"
-active_row_bg = "#111f37"
-selection_bg = "#111f37"
-accent = "#e48b7a"
-text = "#f0f2f5"
-red = "#e06b58"
-green = "#889889"
 
 [terminal]
 default_shell = "/bin/bash"
