@@ -112,7 +112,7 @@ Before you write or edit Python, read `docs/agents/python.md` in full.
 
 ## 11. Simplified Technical English
 
-All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, read `docs/agents/simplified-english.md` in full. For the rule set and worked examples, invoke `/asd-ste100`.
+All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, invoke `/asd-ste100` for the rule set and worked examples.
 
 ---
 
