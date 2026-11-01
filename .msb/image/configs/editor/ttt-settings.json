@@ -48,6 +48,9 @@
       },
       "dockerfile": {
         "command": ["docker-language-server", "start", "--stdio"]
+      },
+      "just": {
+        "command": ["just-lsp"]
       }
     }
   },
