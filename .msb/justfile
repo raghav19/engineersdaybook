@@ -118,9 +118,9 @@ edit: _host-only
 allow-host $host: _host-only && run
     {{ step }} allow-host "$host"
 
-# A bash prompt in the VM, as the agent user
+# Herdr in the VM, engineersdaybook workspace open by default. VM outlives the session.
 shell: _host-only
-    ssh -t -F {{ ssh_config }} $MSB_NAME.msb
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec sudo -u agent herdr"
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
