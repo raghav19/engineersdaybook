@@ -1,0 +1,38 @@
+# The CA of the node attestor x509pop. The SPIRE server trusts a node certificate only if this CA signed it. The CA is not the CA of SPIRE.
+# The CA lives in the namespace cert-manager, so only the users who can read Secrets there can read its key.
+# The chain: a self-signed Issuer signs the CA Certificate, and the ClusterIssuer node-ca signs the node certificates.
+# The lifetime is 10 years, so no renewal happens in practice. If one happens, rotationPolicy Never keeps the key, and the node certificates stay valid.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: node-ca-selfsigned
+  namespace: cert-manager
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: node-ca
+  namespace: cert-manager
+spec:
+  secretName: node-ca
+  isCA: true
+  commonName: mcp.local node CA
+  duration: 87600h
+  renewBefore: 24h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Never
+  issuerRef:
+    kind: Issuer
+    name: node-ca-selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: node-ca
+spec:
+  ca:
+    secretName: node-ca
