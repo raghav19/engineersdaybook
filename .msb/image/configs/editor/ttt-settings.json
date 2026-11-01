@@ -8,11 +8,7 @@
     "transparentBackground": true,
     "bracketPairColorization": true,
     "diffMode": "unified",
-    "formatOnSave": true,
-    "autoClosing": {
-      "brackets": true,
-      "quotes": true
-    }
+    "formatOnSave": true
   },
   "terminal": {
     "shell": "/bin/bash",
