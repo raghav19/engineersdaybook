@@ -56,9 +56,13 @@ USER root
 ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
 RUN set -eu; \
     url="https://raw.githubusercontent.com/eugenioenko/ttt-plugins/${TTT_PLUGINS_REF}"; \
-    mkdir -p /plugins/markdown-preview; \
+    mkdir -p /plugins/markdown-preview /plugins/lang-just/syntaxes; \
     curl -fsSL -o /plugins/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
-    curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"
+    curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
+    curl -fsSL -o /plugins/lang-just/plugin.ttt.json        "$url/lang-just/plugin.ttt.json"; \
+    curl -fsSL -o /plugins/lang-just/NOTICE                 "$url/lang-just/NOTICE"; \
+    curl -fsSL -o /plugins/lang-just/README.md              "$url/lang-just/README.md"; \
+    curl -fsSL -o /plugins/lang-just/syntaxes/just.tmLanguage.json "$url/lang-just/syntaxes/just.tmLanguage.json"
 
 FROM stage1-base AS stage9-final
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -83,6 +87,7 @@ COPY sandbox-boot /usr/local/bin/sandbox-boot
 
 COPY --chown=agent:agent configs/editor/ttt-settings.json /home/agent/.config/ttt/settings.json
 COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
+COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/lang-just/ /home/agent/.config/ttt/plugins/lang-just/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 
 # containers.conf puts the trust store of the VM in each container. It has the msb CA. So HTTPS to the allowed hosts works in a build step.

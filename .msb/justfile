@@ -85,7 +85,8 @@ github-login: _host-only
 build refresh='': _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | podman login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     podman build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} \
-      --build-arg SOURCE_DATE_EPOCH={{ image_epoch }} \
+      --timestamp {{ image_epoch }} \
+      --compression-format zstd --compression-level 9 --force-compression --rewrite-timestamp \
       {{ if refresh == 'refresh' { '--no-cache' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }}
     podman push {{ registry }}:{{ commit }} --compression-format zstd --digestfile /tmp/msb-digest
     podman logout {{ registry_host }}

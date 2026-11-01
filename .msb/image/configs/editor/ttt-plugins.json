@@ -11,5 +11,14 @@
       "editor.read": true
     },
     "grantsVersion": 2
+  },
+  {
+    "name": "lang-just",
+    "displayName": "Just Syntax Highlighting",
+    "repo": "https://github.com/eugenioenko/ttt-plugins",
+    "version": "0.1.0",
+    "enabled": true,
+    "permissions": {},
+    "grantsVersion": 2
   }
 ]

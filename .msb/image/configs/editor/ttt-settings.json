@@ -1,7 +1,12 @@
 {
   "version": 1,
+  "appearance": {
+    "icons": "nerd-font"
+  },
   "editor": {
-    "transparentBackground": true
+    "transparentBackground": true,
+    "bracketPairColorization": true,
+    "diffMode": "unified"
   },
   "terminal": {
     "shell": "/bin/bash",
