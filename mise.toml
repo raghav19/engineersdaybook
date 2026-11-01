@@ -16,3 +16,20 @@ ty = "0.0"
 k9s = "0.51"
 "aqua:superradcompany/microsandbox" = "0.7"  # msb, the CLI of the microsandbox sandbox (.msb/)
 qwen-code = "0.26"  # Qwen Code, the command qwen. It runs on node, which the host provides
+
+[hooks.enter]
+shell = "bash"
+script = """
+eval "$(just --completions bash 2>/dev/null)" 2>/dev/null || true
+eval "$(yq completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(kind completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(kubectl completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(kustomize completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(helm completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(flux completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(flate completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(flux-schema completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(uv generate-shell-completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(k9s completion bash 2>/dev/null)" 2>/dev/null || true
+eval "$(msb completion bash 2>/dev/null)" 2>/dev/null || true
+"""
