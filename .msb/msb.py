@@ -46,12 +46,9 @@ GITHUB_CALLBACK_PORT = 8765  # the callback address of the app is http://127.0.0
 GITHUB_TOKEN_FILE = Path.home() / ".config" / "msb" / "github-app.json"
 LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
-# So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
+# So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port.
 HOST_PORTS = {
     6443: "k3s API server",
-    6444: "kind API server",
-    18081: "SPIRE server",
-    19090: "Flux Operator web UI",
 }
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
