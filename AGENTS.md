@@ -110,6 +110,10 @@ Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
 Before you write or edit Python, read `docs/agents/python.md` in full.
 
+## 11. Simplified Technical English
+
+All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, invoke `/asd-ste100` for the rule set and worked examples.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
