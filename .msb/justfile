@@ -77,8 +77,10 @@ github-login: _host-only
 
 # The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `podman login`, so no variable holds it.
 # `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
-# No registry cache: in a test its export grew past 6 GB in 25 seconds. In full builds the container engine reached 6 GB of memory and 17 GB of swap, and systemd-oomd killed it.
-# The local BuildKit/Buildah cache already rebuilds only the stage that changed.
+# Registry cache: podman pushes each stage as a separate image to {{ registry }}-cache, tagged by content hash.
+# On a cache hit, only matching stages are pulled. On a miss, only changed stages are pushed.
+# This is different from buildx's monolithic cache export (which grew past 6 GB and caused OOM). Podman's per-stage cache is bounded.
+# If the cache registry is unreachable, --cache-from degrades gracefully (builds without cache), but --cache-to fails the build.
 # The digest comes from `podman push --digestfile`. yq writes it in vm/sandbox.yaml. The first run of yq removes the blank lines of the file.
 # `build refresh` rebuilds the whole image without cache, so claude and qwen are reinstalled at the newest version of their pin.
 # Build the image from image/ and push it to ghcr.io, tagged with the commit. Then pin its digest in vm/sandbox.yaml. `build refresh`: also update claude
@@ -87,6 +89,7 @@ build refresh='': _host-only
     podman build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} \
       --timestamp {{ image_epoch }} \
       --compression-format zstd --compression-level 9 --force-compression --rewrite-timestamp \
+      --cache-to {{ registry }}-cache --cache-from {{ registry }}-cache \
       {{ if refresh == 'refresh' { '--no-cache' } else if refresh == '' { '' } else { error('msb: build takes no argument, or: refresh') } }}
     podman push {{ registry }}:{{ commit }} --compression-format zstd --digestfile /tmp/msb-digest
     podman logout {{ registry_host }}
