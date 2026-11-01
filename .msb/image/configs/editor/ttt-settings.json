@@ -49,5 +49,14 @@
         "command": ["docker-language-server", "start", "--stdio"]
       }
     }
+  },
+  "formatters": {
+    "py": "ruff format --stdin-filename {file} -",
+    "tf": "terraform fmt -",
+    "yaml": "yamlfmt -",
+    "yml": "yamlfmt -",
+    "toml": "taplo fmt -",
+    "sh": "shfmt",
+    "bash": "shfmt"
   }
 }
