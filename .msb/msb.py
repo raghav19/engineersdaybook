@@ -48,6 +48,7 @@ LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
 # The ports of the host that the VM can reach, as host.microsandbox.internal:<port>. sandbox.yaml cannot express a rule for a port.
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port. The services are in the kind cluster (the SPIRE agent and kubectl need them).
 HOST_PORTS = {
+    6443: "k3s API server",
     6444: "kind API server",
     18081: "SPIRE server",
     19090: "Flux Operator web UI",
