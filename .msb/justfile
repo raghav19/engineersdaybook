@@ -120,7 +120,7 @@ allow-host $host: _host-only && run
 
 # A bash prompt in the VM, in the engineersdaybook workspace directory.
 shell: _host-only
-    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec sudo -u agent bash -l"
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec bash -l"
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
