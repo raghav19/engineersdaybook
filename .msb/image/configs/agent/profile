@@ -1,0 +1,5 @@
+# Debian /etc/profile resets PATH for login shells. Re-add mise shims.
+if [[ ":$PATH:" != *":/opt/mise/shims:"* ]]; then
+  PATH=/opt/mise/shims:$PATH
+fi
+export PATH

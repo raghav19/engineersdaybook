@@ -52,19 +52,24 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 FROM stage1-base AS stage8-ttt-plugins
-USER root
 ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
 RUN set -eu; \
     url="https://raw.githubusercontent.com/eugenioenko/ttt-plugins/${TTT_PLUGINS_REF}"; \
-    mkdir -p /plugins/markdown-preview /plugins/lang-just/syntaxes /plugins/omarchy-theme; \
-    curl -fsSL -o /plugins/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
-    curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
-    curl -fsSL -o /plugins/lang-just/plugin.ttt.json        "$url/lang-just/plugin.ttt.json"; \
-    curl -fsSL -o /plugins/lang-just/syntaxes/just.tmLanguage.json "$url/lang-just/syntaxes/just.tmLanguage.json"; \
-    curl -fsSL -o /plugins/omarchy-theme/init.lua           "$url/omarchy-theme/init.lua"; \
-    curl -fsSL -o /plugins/omarchy-theme/plugin.ttt.json    "$url/omarchy-theme/plugin.ttt.json"
+    mkdir -p /home/agent/.cache/ttt-plugins-build/markdown-preview /home/agent/.cache/ttt-plugins-build/lang-just/syntaxes /home/agent/.cache/ttt-plugins-build/omarchy-theme; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/plugin.ttt.json        "$url/lang-just/plugin.ttt.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/syntaxes/just.tmLanguage.json "$url/lang-just/syntaxes/just.tmLanguage.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/init.lua           "$url/omarchy-theme/init.lua"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/plugin.ttt.json    "$url/omarchy-theme/plugin.ttt.json"
 
-FROM stage1-base AS stage9-final
+FROM stage1-base AS stage9-token-economizer
+ARG TE_REF=main
+RUN git clone https://github.com/microsoft/TokenEconomizer.git /home/agent/token-economizer \
+ && cd /home/agent/token-economizer && git fetch origin ${TE_REF} && git checkout FETCH_HEAD \
+ && rm -rf .git tests experiments docs .github README.md SECURITY.md CLAUDE.md .gitattributes .gitignore
+
+FROM stage1-base AS stage10-final
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
 COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
@@ -79,36 +84,31 @@ RUN mise reshim && mise run sandbox:completions
 # Build-time proof that ttt runs. Prints version and exits. Shims not yet on PATH (ENV below adds them).
 RUN PATH=/opt/mise/shims:$PATH ttt --version
 
-USER root
-COPY configs/spire/spire-agent.conf /etc/spire/agent.conf
-COPY sandbox-boot /usr/local/bin/sandbox-boot
-
+# Agent-level configs.
 COPY --chown=agent:agent configs/editor/ttt-settings.json /home/agent/.config/ttt/settings.json
-COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
-COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/lang-just/ /home/agent/.config/ttt/plugins/lang-just/
-COPY --from=stage8-ttt-plugins --chown=agent:agent /plugins/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
+COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
+COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/lang-just/ /home/agent/.config/ttt/plugins/lang-just/
+COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
-# omarchy-theme writes ~/.config/ttt/themes/omarchy.json at runtime. The plugin cannot create directories, so it is made here.
-RUN mkdir -p /home/agent/.config/ttt/themes && chown agent:agent /home/agent/.config/ttt/themes
+COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spire/agent.conf
+COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
+COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
+COPY --chown=agent:agent configs/agent/gitconfig /home/agent/.gitconfig
+COPY --chown=agent:agent configs/agent/profile /home/agent/.profile
+RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers \
+ && touch /home/agent/.config/containers/nodocker
 
-# containers.conf adds the msb CA to each container's trust store. HTTPS to allowed hosts works.
-COPY configs/containers/containers.conf /etc/containers/containers.conf.d/10-sandbox.conf
-RUN touch /etc/containers/nodocker
+# Root-only: sandbox-boot, managed settings.
+USER root
+COPY sandbox-boot /usr/local/bin/sandbox-boot
+RUN chmod 0755 /usr/local/bin/sandbox-boot
 
-# claude code settings
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
 
-# qwen settings
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-# git settings
-RUN git config --system --add safe.directory '*' \
- && git config --system credential.https://github.com.helper '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
-# Debian /etc/profile resets PATH for login shells. This script re-adds the mise shims.
-RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/shims:$PATH ;; esac' 'export PATH' 'export EDITOR=nano' > /etc/profile.d/mise-shims.sh \
- && chmod 0755 /usr/local/bin/sandbox-boot
-
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    LANG=C.UTF-8
+    LANG=C.UTF-8 \
+    EDITOR=ttt
