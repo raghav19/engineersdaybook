@@ -60,8 +60,6 @@ RUN set -eu; \
     curl -fsSL -o /plugins/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
     curl -fsSL -o /plugins/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
     curl -fsSL -o /plugins/lang-just/plugin.ttt.json        "$url/lang-just/plugin.ttt.json"; \
-    curl -fsSL -o /plugins/lang-just/NOTICE                 "$url/lang-just/NOTICE"; \
-    curl -fsSL -o /plugins/lang-just/README.md              "$url/lang-just/README.md"; \
     curl -fsSL -o /plugins/lang-just/syntaxes/just.tmLanguage.json "$url/lang-just/syntaxes/just.tmLanguage.json"
 
 FROM stage1-base AS stage9-final
