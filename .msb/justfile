@@ -46,6 +46,10 @@ bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}"
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
+# External repository URLs (passed to Dockerfile as --build-arg)
+mise_installer_url := 'https://mise.run'
+ttt_plugins_url := 'https://raw.githubusercontent.com/eugenioenko/ttt-plugins/main'
+te_repo := 'https://github.com/microsoft/TokenEconomizer.git'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
 # ssh, not msb exec. msb exec stops output at 1 MB and freezes screen editors. ssh does not.
@@ -79,6 +83,9 @@ github-login: _host-only
 build refresh='': _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | podman login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     podman build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} \
+      --build-arg MISE_INSTALLER_URL={{ mise_installer_url }} \
+      --build-arg TTT_PLUGINS_URL={{ ttt_plugins_url }} \
+      --build-arg TE_REPO={{ te_repo }} \
       --timestamp {{ image_epoch }} \
       --compression-format zstd --compression-level 9 --force-compression --rewrite-timestamp \
       --cache-to {{ registry }}-cache --cache-from {{ registry }}-cache \

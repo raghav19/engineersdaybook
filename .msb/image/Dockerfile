@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM debian:trixie-slim AS stage1-base
-ARG MISE_VERSION=v2026.10.0
+ARG MISE_INSTALLER_URL=https://mise.run
 
 ENV MISE_DATA_DIR=/opt/mise \
     MISE_CACHE_DIR=/tmp/mise-cache \
@@ -19,7 +19,7 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
  && mkdir -p /opt/mise /home/agent/.cache/terraform-providers \
  && chown -R agent:agent /opt/mise /home/agent
 
-RUN curl -fsSL https://mise.run | MISE_VERSION=$MISE_VERSION sh
+RUN curl -fsSL $MISE_INSTALLER_URL | sh
 COPY mise.toml /etc/mise/conf.d/mise.toml
 USER agent
 
@@ -52,22 +52,20 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 FROM stage1-base AS stage8-ttt-plugins
-ARG TTT_PLUGINS_REF=2722887bdbd6080e1a8970fcdf4cb958b2089484
+ARG TTT_PLUGINS_URL=https://raw.githubusercontent.com/eugenioenko/ttt-plugins/main
 RUN set -eu; \
-    url="https://raw.githubusercontent.com/eugenioenko/ttt-plugins/${TTT_PLUGINS_REF}"; \
     mkdir -p /home/agent/.cache/ttt-plugins-build/markdown-preview /home/agent/.cache/ttt-plugins-build/lang-just/syntaxes /home/agent/.cache/ttt-plugins-build/omarchy-theme; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.lua      "$url/markdown-preview/plugin.lua"; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.ttt.json "$url/markdown-preview/plugin.ttt.json"; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/plugin.ttt.json        "$url/lang-just/plugin.ttt.json"; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/syntaxes/just.tmLanguage.json "$url/lang-just/syntaxes/just.tmLanguage.json"; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/init.lua           "$url/omarchy-theme/init.lua"; \
-    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/plugin.ttt.json    "$url/omarchy-theme/plugin.ttt.json"
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.lua      "$TTT_PLUGINS_URL/markdown-preview/plugin.lua"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/markdown-preview/plugin.ttt.json "$TTT_PLUGINS_URL/markdown-preview/plugin.ttt.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/plugin.ttt.json        "$TTT_PLUGINS_URL/lang-just/plugin.ttt.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/lang-just/syntaxes/just.tmLanguage.json "$TTT_PLUGINS_URL/lang-just/syntaxes/just.tmLanguage.json"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/init.lua           "$TTT_PLUGINS_URL/omarchy-theme/init.lua"; \
+    curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/plugin.ttt.json    "$TTT_PLUGINS_URL/omarchy-theme/plugin.ttt.json"
 
 FROM stage1-base AS stage9-token-economizer
-ARG TE_REF=main
-RUN git clone https://github.com/microsoft/TokenEconomizer.git /home/agent/token-economizer \
- && cd /home/agent/token-economizer && git fetch origin ${TE_REF} && git checkout FETCH_HEAD \
- && rm -rf .git tests experiments docs .github README.md SECURITY.md CLAUDE.md .gitattributes .gitignore
+ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
+RUN git clone $TE_REPO /home/agent/token-economizer \
+ && rm -rf /home/agent/token-economizer/.git /home/agent/token-economizer/tests /home/agent/token-economizer/experiments /home/agent/token-economizer/docs /home/agent/token-economizer/.github /home/agent/token-economizer/README.md /home/agent/token-economizer/SECURITY.md /home/agent/token-economizer/CLAUDE.md /home/agent/token-economizer/.gitattributes /home/agent/token-economizer/.gitignore
 
 FROM stage1-base AS stage10-final
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
