@@ -5,7 +5,7 @@
 
 image:
   # `just msb build` pushes the image and pins its digest here (@sha256:...)
-  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:d2593966698eb3ce7bd6a0e73c54d66adb84726e6a03e5fe9846d8915c22fff9
+  oci: ghcr.io/raghav19/engineersdaybook/dev-sbx@sha256:ee249a0098cf97827ab647aaef829799539f55b1ca0ae785e6e8f15d070968be
   upper_size: "20G"
 # msb pulls the private image from ghcr.io with this login. It reads the token from the environment: the Bitwarden key GITHUB_TOKEN, which `bws run` gives to `just msb run`.
 # `read:packages` is enough to pull. The key has `write:packages`, because `just msb build` pushes with it.
@@ -30,6 +30,7 @@ env:
   HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it.
 mounts:
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
+  - "${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude

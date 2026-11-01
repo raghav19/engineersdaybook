@@ -1,7 +1,14 @@
 {
   "version": 1,
+  "theme": "omarchy",
+  "appearance": {
+    "icons": "nerd-font"
+  },
   "editor": {
-    "transparentBackground": true
+    "transparentBackground": true,
+    "bracketPairColorization": true,
+    "diffMode": "unified",
+    "formatOnSave": true
   },
   "terminal": {
     "shell": "/bin/bash",
@@ -42,7 +49,19 @@
       },
       "dockerfile": {
         "command": ["docker-language-server", "start", "--stdio"]
+      },
+      "just": {
+        "command": ["just-lsp"]
       }
     }
+  },
+  "formatters": {
+    "py": "ruff format --stdin-filename {file} -",
+    "tf": "terraform fmt -",
+    "yaml": "yamlfmt -",
+    "yml": "yamlfmt -",
+    "toml": "taplo fmt -",
+    "sh": "shfmt",
+    "bash": "shfmt"
   }
 }

@@ -7,5 +7,6 @@ prek = "0.5"
 ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
+shfmt = "3.14"
 ty = "0.0.91"
 "github:eugenioenko/ttt" = { version = "1.10", asset_pattern = "ttt-linux-amd64", rename_exe = "ttt" }
