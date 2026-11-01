@@ -20,5 +20,20 @@
     "enabled": true,
     "permissions": {},
     "grantsVersion": 2
+  },
+  {
+    "name": "omarchy-theme",
+    "displayName": "Omarchy Theme",
+    "repo": "https://github.com/eugenioenko/ttt-plugins",
+    "version": "0.1.0",
+    "enabled": true,
+    "permissions": {
+      "fs.read": ["~/.local/state/omarchy"],
+      "fs.write": ["{config}/themes"],
+      "settings": true,
+      "settings_keys": ["theme"],
+      "commands": true
+    },
+    "grantsVersion": 2
   }
 ]

@@ -1,5 +1,6 @@
 {
   "version": 1,
+  "theme": "omarchy",
   "appearance": {
     "icons": "nerd-font"
   },

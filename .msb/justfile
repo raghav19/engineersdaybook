@@ -39,18 +39,16 @@ QWEN_API_KEY            := if in_bws == '' { '' } else { env('QWEN_API_KEY') }
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 volumes := 'claude-home terraform-providers podman-storage'
-# The Bitwarden access token, encrypted with a passphrase (`age -p`). Prerequisite 4 in README.md makes the file.
+# Bitwarden token encrypted with `age -p`. See README.md prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
-# `bws run` with the Bitwarden keys as variables in the environment of one command. It needs BWS_ACCESS_TOKEN.
-# If the environment has it (a CI job), use it. If not, `age -d` asks for your passphrase and decrypts the token_file. Nothing keeps the passphrase.
+# `bws run` injects Bitwarden keys into one command's environment. Uses BWS_ACCESS_TOKEN if set, else decrypts `token_file` with `age -d`. Passphrase is not stored.
 bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
 registry_host := 'ghcr.io'
 registry := registry_host + '/raghav19/engineersdaybook/dev-sbx'
 registry_user := 'raghav19'
 # `setup` authorizes this SSH public key. To use another key, set SANDBOX_SSH_PUBKEY.
 ssh_pubkey := env('SANDBOX_SSH_PUBKEY', home_directory() / '.ssh/id_ed25519.pub')
-# `shell` and `edit` connect with ssh and this file. It starts `msb ssh serve` as a ProxyCommand and logs in as the user `agent`.
-# They do not use `msb exec`: in msb 0.7.10 it stops passing output after about 1 MB, with or without a terminal, so a screen editor freezes. ssh does not.
+# ssh, not msb exec. msb exec stops output at 1 MB and freezes screen editors. ssh does not.
 ssh_config := source_directory() / 'vm' / 'ssh_config'
 # The tag of the image is the commit.
 commit := shell('git rev-parse HEAD')
@@ -65,25 +63,19 @@ help:
 _host-only:
     [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host. You are in the sbx sandbox $SANDBOX_NAME, and msb and Podman are on the host." >&2; exit 1; }
 
-# Once for each host (safe to run again): authorize your SSH key for `msb ssh`
+# Authorize your SSH key for `msb ssh`. Safe to run again.
 setup: _host-only
-    [ -r '{{ ssh_pubkey }}' ] || { echo "msb: there is no SSH public key at {{ ssh_pubkey }}. Make one with: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
+    [ -r '{{ ssh_pubkey }}' ] || { echo "msb: no SSH public key at {{ ssh_pubkey }}. Run: ssh-keygen -t ed25519. Or set SANDBOX_SSH_PUBKEY." >&2; exit 1; }
     msb ssh authorize --file '{{ ssh_pubkey }}'
 
-# The client secret comes from Bitwarden. The token goes to ~/.config/msb/github-app.json (mode 600). Copy it to the Bitwarden key GH_TOKEN, then delete the file. The VM never has it.
-# Log in to GitHub with the GitHub App. You approve it in the browser
+# GitHub App login. Client secret from Bitwarden. Token goes to ~/.config/msb/github-app.json (mode 600). Copy to GH_TOKEN, then delete. The VM never has it.
 github-login: _host-only
     {{ bws_run }} '{{ step }} github-login'
 
-# The token is the Bitwarden key GITHUB_TOKEN (scope write:packages). `bws run` pipes it to `podman login`, so no variable holds it.
-# `bws run` needs BWS_ACCESS_TOKEN (see `bws_run` at the top of this file).
-# Registry cache: podman pushes each stage as a separate image to {{ registry }}-cache, tagged by content hash.
-# On a cache hit, only matching stages are pulled. On a miss, only changed stages are pushed.
-# This is different from buildx's monolithic cache export (which grew past 6 GB and caused OOM). Podman's per-stage cache is bounded.
-# If the cache registry is unreachable, --cache-from degrades gracefully (builds without cache), but --cache-to fails the build.
-# The digest comes from `podman push --digestfile`. yq writes it in vm/sandbox.yaml. The first run of yq removes the blank lines of the file.
-# `build refresh` rebuilds the whole image without cache, so claude and qwen are reinstalled at the newest version of their pin.
-# Build the image from image/ and push it to ghcr.io, tagged with the commit. Then pin its digest in vm/sandbox.yaml. `build refresh`: also update claude
+# Build the image and push to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden via bws run.
+# Podman cache: each stage is a separate image in {{ registry }}-cache. --cache-from degrades if unreachable. --cache-to failure stops the build.
+# Digest from --digestfile, written to vm/sandbox.yaml by yq. Commit it.
+# `build refresh`: rebuild without cache to update prefix-pinned tools (claude, qwen).
 build refresh='': _host-only
     {{ bws_run }} 'printf %s "$GITHUB_TOKEN" | podman login {{ registry_host }} -u {{ registry_user }} --password-stdin'
     podman build {{ msb_dir }}/image -t {{ registry }}:{{ commit }} \
@@ -100,24 +92,19 @@ build refresh='': _host-only
 _vm:
     {{ step }} ensure-vm
 
-# The [env] lines give the git values that vm/sandbox.yaml names as ${NAME}.
-# They are the git directory to clone, the branch to start on, and the author of the commits in the VM. They apply to this recipe only.
+# The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
 # Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open the TTT editor in it
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
+[env('SANDBOX_OMARCHY_THEME', shell('printf %s "$HOME/.local/state/omarchy/current/theme"'))]
 run: _host-only
-    # Only this step runs under `bws run`. The Bitwarden keys are variables in its environment. The editor does not get them.
-    {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
+    {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'  # only this step has Bitwarden keys
     just --justfile {{ source_file() }} edit
 
-# Open the TTT editor on the clone in the running VM, in this terminal. Quit with Ctrl+Q and the shell comes back.
+# ssh, not msb exec (1 MB output limit freezes editors). COLORTERM gives TTT 24-bit color. VM outlives the session.
 edit: _host-only
-    # ssh, not `msb exec`: `msb exec` stops passing output after about 1 MB, and a screen editor then freezes (decision 14).
-    # COLORTERM is set here because ssh does not forward it. Without it TTT uses 256 colors, and the exact colors of its theme
-    # turn into the nearest of 256. The `.` argument names the clone. The VM outlives the session, because `run` starts it
-    # before ssh connects, so `msb ssh serve` attaches to it and does not own it.
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec ttt ."
 
 # Add a host to network.allow in vm/sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
