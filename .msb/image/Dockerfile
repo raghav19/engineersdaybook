@@ -113,6 +113,4 @@ RUN printf '%s\n' 'case ":$PATH:" in *:/opt/mise/shims:*) ;; *) PATH=/opt/mise/s
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8
 
-# Default to the agent user. sandbox-boot runs as root (msb overrides USER for it).
-# Everything else — the editor, the shell, the agents — runs as agent (uid 1000).
 USER agent
