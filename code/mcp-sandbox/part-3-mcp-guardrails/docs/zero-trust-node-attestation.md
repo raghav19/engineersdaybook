@@ -51,7 +51,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | SPIRE server | `spire-system` | Checks the node certificate with the `x509pop` plugin. |
 | `msb.py attest` | host | Signs the CSR of the VM and sends the files to the VM. |
 | `sandbox-boot` | microVM | Makes the node key and the CSR. |
-| SPIRE agent | microVM | Sends the certificate and signs the challenge. |
+| SPIRE agent | microVM | Sends the certificate and signs the challenge. It reaches the server at `host.microsandbox.internal`, on the NodePort 30081 of the host. |
 
 ### Stage A: setup, once
 
@@ -245,7 +245,7 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | 1 | The node CA (cert-manager) | planned |
 | 2 | trust-manager and the node CA bundle | planned |
 | 3 | `x509pop` on the SPIRE server, and the node entry | planned |
-| 4 | The node key and the CSR in the microVM, and the agent config | planned |
+| 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | planned |
 | 5 | `msb.py attest` on the host | planned |
 | 6 | Cleanup of the other pages | planned |
 
