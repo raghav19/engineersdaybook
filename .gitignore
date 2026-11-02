@@ -17,3 +17,8 @@ mise.local.toml
 
 # Python bytecode
 __pycache__/
+
+# Agent tool local state
+.qwen/
+.serena/
+.worktrees/
