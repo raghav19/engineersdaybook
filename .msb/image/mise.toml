@@ -28,10 +28,11 @@ PONYTAIL_DEFAULT_MODE = "full"
 
 [hooks.enter]
 # kubectl shorthand with completion
-bash = '''
+shell = "bash"
+script = """
 alias k=kubectl
 complete -F __start_kubectl k
-'''
+"""
 
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
 # If you run the task in the VM, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
