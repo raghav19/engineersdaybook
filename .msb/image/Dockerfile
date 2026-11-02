@@ -97,6 +97,7 @@ COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt
 COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spire/agent.conf
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
 COPY --chown=agent:agent configs/agents/herdr-config.toml /home/agent/.config/herdr/config.toml
+COPY --chown=agent:agent configs/agent/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/agent/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
@@ -118,3 +119,6 @@ RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
     EDITOR=ttt
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -sf http://127.0.0.1:8787/health || exit 1
