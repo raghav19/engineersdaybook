@@ -112,21 +112,23 @@ Before you write or edit Python, read `docs/agents/python.md` in full.
 
 ## 11. Git worktree workflow
 
-Always use git worktrees for agent work. Create worktrees **inside the project** at `.worktrees/<slug>`, not as sibling directories outside it.
+Always use git worktrees for agent work. Use Herdr's worktree commands to create and manage worktrees.
 
-**Why inside the project?**
-- Keeps all worktrees discoverable in one place (`.worktrees/`)
-- Easier to clean up: `rm -rf .worktrees/` removes all agent worktrees
-- Git metadata is in `.git/worktrees/` (standard git behavior)
-- Avoids cluttering the parent directory with `project-name-branch` siblings
+**Use Herdr, not raw git commands:**
+- Create: `herdr worktree create --branch <branch> --label <slug>`
+- List: `herdr worktree list`
+- Remove: `herdr worktree remove`
 
-**Usage:**
-```bash
-git worktree add .worktrees/<slug> -b <branch>
-# Work in the worktree
-# When done, commit and push from the worktree
-git worktree remove .worktrees/<slug>
-```
+**Why Herdr?**
+- Herdr tracks worktree state and integrates with the editor (TTT)
+- prefix+t opens TTT in the active worktree
+- Herdr manages the worktree lifecycle (creation, switching, cleanup)
+
+**Agent workflow:**
+1. User creates worktree via Herdr (or asks agent to run `herdr worktree create`)
+2. Agent works in the worktree directory (Herdr provides the path)
+3. When done, commit and push from the worktree
+4. User removes worktree via Herdr when work is complete
 
 ## 12. msb sandbox image
 
