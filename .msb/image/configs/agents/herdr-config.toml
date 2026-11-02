@@ -1,9 +1,7 @@
-# Herdr config — terminal theme inherits colours from the host terminal (foot/omarchy).
-# Herdr re-reads the palette on resize or SIGWINCH, so theme changes on the host
-# propagate without rebuilding the image.
+# Herdr config — tokyo-night theme for consistent dark appearance.
 
 [theme]
-name = "terminal"
+name = "tokyo-night"
 
 [terminal]
 default_shell = "/bin/bash"
