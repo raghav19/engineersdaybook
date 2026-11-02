@@ -30,8 +30,9 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | SPIRE agent | It runs on the node, here in the microVM. It attests the node, then the workloads on it. |
 | Node CA | A CA that signs node certificates only. It is not the CA of the SPIRE server. cert-manager makes it. |
 | CSR | A certificate signing request. The VM sends its public key and the name it asks for. The private key stays in the VM. |
-| Node certificate | The certificate that the node CA signs for the VM. It shows who the VM is. |
-| Proof of possession | The agent signs a random challenge with its private key. Only the holder of the key can do this. |
+| Node certificate | The certificate that the node CA signs for the VM. It holds the public key of the VM and the name. It shows who the VM is. |
+| Proof of possession | The agent signs a challenge with its private key. Only the holder of the key can do this. |
+| Nonce | A random 32-byte value. The server makes one and the agent makes one. The agent signs the hash of both. |
 | Node CA bundle | The certificate of the node CA. The SPIRE server uses it to check node certificates. |
 | SPIFFE trust bundle | The certificate of the SPIRE server. The agent uses it to trust the server. It is not the node CA bundle. |
 | Selector | A fact that the server learns about an attested node. Example: `x509pop:subject:cn:microvm-123`. |
@@ -78,37 +79,42 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
+    participant H as host (msb.py)
     participant M as microVM (sandbox-boot)
-    participant H as host (msb.py attest)
     participant K as cert-manager
     participant S as SPIRE server
     participant A as SPIRE agent (microVM)
 
-    Note over M: the node key and the CSR exist (made once)
+    H->>M: start the VM
+    Note over M: sandbox-boot makes the node key pair<br/>and a CSR that holds the public key
     H->>M: ssh: read the CSR
+    M-->>H: the CSR
     H->>H: check the name in the CSR
     H->>K: kubectl: CertificateRequest with the CSR, issuer node-ca
-    K-->>H: node certificate
+    K-->>H: node certificate, with the public key of the VM
     H->>S: kubectl exec: bundle show -format spiffe
     S-->>H: SPIFFE trust bundle
     H->>M: ssh: write the node certificate and the SPIFFE trust bundle
     H->>M: ssh: start the agent
     A->>S: attest: send the node certificate
-    Note over S: the chain must end at the node CA
-    S-->>A: challenge: a random value
-    A->>S: signature of the challenge, made with the node key
-    Note over S: the signature must match the certificate
+    Note over S: the chain must end at the node CA.<br/>The server takes the public key from the certificate.
+    S-->>A: challenge: a random 32-byte nonce
+    Note over A: the agent makes its own 32-byte nonce
+    A->>S: its nonce, and the signature of SHA-256 of both nonces
+    Note over S: the signature must match the public key of the certificate
     S-->>A: SVID of the agent, and SVID of the alias
 ```
 
-1. The VM makes its key and a CSR when no key exists. The key never leaves the VM.
-2. The host reads the CSR over ssh. It checks that the name in the CSR is the one it expects.
-3. The host applies a `CertificateRequest` with that CSR. cert-manager signs it and returns the node certificate.
+1. The host starts the VM. `sandbox-boot` makes the node key pair and a CSR when no key exists. The CSR holds the public key and the name. The private key never leaves the VM. The agent does not start yet, because it has no certificate.
+2. The host reads the CSR over ssh. It waits until the CSR file exists. It checks that the name in the CSR is the one it expects.
+3. The host applies a `CertificateRequest` with that CSR. cert-manager signs it with the node CA key and returns the node certificate. The certificate holds the public key of the VM.
 4. The host reads the SPIFFE trust bundle from the SPIRE server.
 5. The host writes the certificate and the bundle into the VM over ssh, then starts the agent.
-6. The agent sends the certificate to the server. The server checks the chain, then sends a challenge.
-7. The agent signs the challenge with its key. The server checks the signature.
-8. The server issues the SVID of the agent. A node entry that matches the selectors also gives the alias SVID.
+6. The agent sends the node certificate to the server. This is the first message. The server checks that the chain ends at the node CA. It takes the public key from the certificate.
+7. The server sends a challenge: a random 32-byte nonce. It sends the challenge only after the chain check passes.
+8. The agent makes its own 32-byte nonce. It signs the SHA-256 hash of both nonces with the node private key. It sends its nonce and the signature.
+9. The server makes the same hash from the two nonces. It checks the signature with the public key from step 6.
+10. The server issues the SVID of the agent. A node entry that matches the selectors also gives the alias SVID.
 
 ### Stage C: after the attestation
 
@@ -134,6 +140,20 @@ flowchart TD
 ```
 
 The agent ID has the SHA1 fingerprint of the certificate. It changes with each new certificate. This is why the workload entries use the alias as parent and not the agent ID.
+
+### The two signatures
+
+| | On the certificate | On the challenge |
+|---|---|---|
+| What the signature covers | The node certificate: the public key of the VM and the name | The SHA-256 hash of the server nonce and the agent nonce |
+| Signed by | The node CA key (cert-manager) | The node private key (the agent, in the VM) |
+| When | Once, when the host applies the `CertificateRequest` | At each attestation |
+| Checked with | The node CA certificate in `ca-bundle.pem` | The public key in the node certificate |
+| What it proves | The node CA agreed to link this public key to this name | The sender holds the private key now |
+
+The server first trusts the public key, because the node CA signed the certificate. Then it uses that key to check the signature of the challenge. Each check alone is not enough. A copy of the certificate fails the second check. A self-made certificate fails the first.
+
+The server needs no list of node certificates. The certificate comes in the first message of each attestation. Trust comes from the node CA, so a new VM needs no change on the server. The server never holds the node CA private key. Only cert-manager holds it.
 
 The selectors that the plugin gives (SPIRE v1.15.3):
 
