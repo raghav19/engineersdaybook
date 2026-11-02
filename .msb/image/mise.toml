@@ -26,6 +26,12 @@ HF_HUB_OFFLINE = "1"
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
+[hooks.enter]
+# Source bash aliases (k=kubectl with completion)
+bash = '''
+[ -f ~/.bash_aliases ] && source ~/.bash_aliases
+'''
+
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
 # If you run the task in the VM, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
 [tasks."sandbox:completions"]

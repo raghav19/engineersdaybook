@@ -14,4 +14,6 @@ Host sandbox-dev.msb
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   LogLevel ERROR
+  ServerAliveInterval 60
+  ServerAliveCountMax 9999
   ProxyCommand $HOME/.local/share/mise/installs/aqua-superradcompany-microsandbox/latest/msb ssh serve sandbox-dev --stdio

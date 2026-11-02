@@ -108,8 +108,7 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc \
- && echo '[ -f ~/.bash_aliases ] && source ~/.bash_aliases' >> /etc/bash.bashrc
+RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
