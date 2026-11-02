@@ -96,7 +96,7 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spire/agent.conf
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
-COPY --chown=agent:agent configs/agents/herdr-config.toml /home/agent/.config/herdr/config.toml
+COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
