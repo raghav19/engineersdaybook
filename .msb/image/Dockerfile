@@ -62,6 +62,15 @@ RUN set -eu; \
     curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/init.lua           "$TTT_PLUGINS_URL/omarchy-theme/init.lua"; \
     curl -fsSL -o /home/agent/.cache/ttt-plugins-build/omarchy-theme/plugin.ttt.json    "$TTT_PLUGINS_URL/omarchy-theme/plugin.ttt.json"
 
+FROM stage1-base AS stage8b-herdr-ttt-plugin
+ARG HERDR_TTT_PLUGIN_URL=https://raw.githubusercontent.com/eugenioenko/ttt/main/herdr-plugin
+RUN set -eu; \
+    mkdir -p /home/agent/.cache/herdr-ttt-plugin/scripts; \
+    curl -fsSL -o /home/agent/.cache/herdr-ttt-plugin/herdr-plugin.toml "$HERDR_TTT_PLUGIN_URL/herdr-plugin.toml"; \
+    curl -fsSL -o /home/agent/.cache/herdr-ttt-plugin/scripts/install.sh "$HERDR_TTT_PLUGIN_URL/scripts/install.sh"; \
+    curl -fsSL -o /home/agent/.cache/herdr-ttt-plugin/scripts/open-worktree.sh "$HERDR_TTT_PLUGIN_URL/scripts/open-worktree.sh"; \
+    chmod +x /home/agent/.cache/herdr-ttt-plugin/scripts/*.sh
+
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
 RUN git clone $TE_REPO /home/agent/token-economizer \
@@ -89,13 +98,14 @@ COPY --chown=agent:agent configs/editor/ttt-settings.json /home/agent/.config/tt
 COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
 COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/lang-just/ /home/agent/.config/ttt/plugins/lang-just/
 COPY --from=stage8-ttt-plugins --chown=agent:agent /home/agent/.cache/ttt-plugins-build/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
+COPY --from=stage8b-herdr-ttt-plugin --chown=agent:agent /home/agent/.cache/herdr-ttt-plugin/ /home/agent/.config/herdr/plugins/ttt-editor/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spire/agent.conf
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
 COPY --chown=agent:agent configs/agents/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/agent/gitconfig /home/agent/.gitconfig
-RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers \
+RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
  && touch /home/agent/.config/containers/nodocker
 
 # Validate: each LSP server command in ttt-settings.json is resolvable.

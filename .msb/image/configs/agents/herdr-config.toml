@@ -9,3 +9,10 @@ name = "terminal"
 default_shell = "/bin/bash"
 shell_mode = "login"
 new_cwd = "/home/agent/engineersdaybook"
+
+# Open TTT in the active worktree with prefix+t (Ctrl+b then t)
+[[keys.command]]
+key = "prefix+t"
+type = "shell"
+command = "herdr plugin pane open --plugin ttt.editor --entrypoint editor"
+description = "open TTT in worktree"
