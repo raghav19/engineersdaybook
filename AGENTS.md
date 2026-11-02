@@ -110,11 +110,15 @@ Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
 Before you write or edit Python, read `docs/agents/python.md` in full.
 
-## 11. msb sandbox image
+## 11. Git worktree workflow
+
+Always use `enter_worktree` for agent work. This creates worktrees inside the project at `.qwen/worktrees/<slug>`, not as sibling directories. See `docs/agents/worktree.md` in full.
+
+## 12. msb sandbox image
 
 Before you add or remove tools or LSP servers in `.msb/image/`, read `docs/agents/msb-image.md` in full.
 
-## 12. Simplified Technical English
+## 13. Simplified Technical English
 
 All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, invoke `/asd-ste100` for the rule set and worked examples.
 
