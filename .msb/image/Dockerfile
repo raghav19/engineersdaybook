@@ -93,6 +93,7 @@ COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/
 COPY --chown=agent:agent configs/agents/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/agent/gitconfig /home/agent/.gitconfig
+COPY --chown=agent:agent configs/agent/bash_aliases /home/agent/.bash_aliases
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers \
  && touch /home/agent/.config/containers/nodocker
 
@@ -107,7 +108,8 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
+RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc \
+ && echo '[ -f ~/.bash_aliases ] && source ~/.bash_aliases' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
