@@ -1,0 +1,20 @@
+# Turns on the Gateway API in the Traefik that k3s ships. k3s merges these values over its own Traefik values.
+# Do not edit the k3s file /var/lib/rancher/k3s/server/manifests/traefik.yaml. k3s replaces it at start.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true
+    # The chart makes the GatewayClass `traefik` and the Gateway `traefik-gateway` in kube-system.
+    # The listener `web` uses port 8000. That port must match the Traefik entry point `web`.
+    gateway:
+      listeners:
+        web:
+          # Without this, only routes in kube-system can attach. The apps live in other namespaces.
+          namespacePolicy:
+            from: All
