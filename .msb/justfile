@@ -125,8 +125,8 @@ shell: _host-only
 
 # Copy the k3s kubeconfig into the running VM and rewrite the server URL. Use after k3s reinstall without restarting the VM.
 sync-kubeconfig: _host-only
-    scp -F {{ ssh_config }} /etc/rancher/k3s/k3s.yaml $MSB_NAME.msb:/tmp/k3s.yaml
-    ssh -F {{ ssh_config }} $MSB_NAME.msb 'mkdir -p ~/.kube && cp /tmp/k3s.yaml ~/.kube/config && sed -i "s|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|" ~/.kube/config && rm /tmp/k3s.yaml && echo "kubeconfig synced"'
+    scp -q -F {{ ssh_config }} /etc/rancher/k3s/k3s.yaml $MSB_NAME.msb:/tmp/k3s.yaml || true
+    ssh -F {{ ssh_config }} $MSB_NAME.msb "sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' /tmp/k3s.yaml && mkdir -p ~/.kube && cp /tmp/k3s.yaml ~/.kube/config && rm /tmp/k3s.yaml && echo kubeconfig-synced"
 
 # Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
 rm *args: _host-only
