@@ -100,7 +100,7 @@ RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/a
 
 # Validate: each LSP server command in ttt-settings.json is resolvable.
 RUN PATH=/opt/mise/shims:$PATH; \
-    for cmd in ruff terraform-ls yaml-language-server vscode-json-language-server taplo marksman bash-language-server docker-language-server just-lsp; do \
+    for cmd in $(jq -r '.lsp.servers[].command[0]' /home/agent/.config/ttt/settings.json | sort -u); do \
       command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: missing LSP server: $cmd"; exit 1; }; \
     done
 
