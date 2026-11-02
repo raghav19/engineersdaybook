@@ -6,7 +6,7 @@
 
 Node attestation is the first proof in SPIRE. A node proves who it is to the SPIRE server. The server then issues an SVID to the SPIRE agent of that node.
 
-In part 3, the node is the sandbox microVM. The agent that runs in the microVM joins the SPIRE server of the kind cluster. It shows a certificate that a CA of this cluster signed. It also proves that it holds the private key of that certificate.
+In part 3, the node is the sandbox microVM. The agent that runs in the microVM joins the SPIRE server of the Kubernetes (k8s) cluster. It shows a certificate that a CA of this cluster signed. It also proves that it holds the private key of that certificate.
 
 Workload attestation comes after it. A process on the node asks the agent for an SVID, and the agent checks the process. This page covers only the node step.
 
@@ -26,7 +26,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 |---|---|
 | SPIFFE ID | A URI that names an identity. Example: `spiffe://mcp.local/spire/agent/x509pop/<fingerprint>`. |
 | SVID | A short-lived X.509 certificate that carries a SPIFFE ID. The SPIRE server signs it. |
-| SPIRE server | The CA of the trust domain `mcp.local`. It runs in the kind cluster, in the namespace `spire-system`. |
+| SPIRE server | The CA of the trust domain `mcp.local`. It runs in the k8s cluster, in the namespace `spire-system`. |
 | SPIRE agent | It runs on the node, here in the microVM. It attests the node, then the workloads on it. |
 | Node CA | A CA that signs node certificates only. It is not the CA of the SPIRE server. cert-manager makes it. |
 | CSR | A certificate signing request. The VM sends its public key and the name it asks for. The private key stays in the VM. |
