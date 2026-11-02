@@ -1,4 +1,7 @@
+[user]
+	name = Raghavender Nagarajan
+	email = raghavendern@hotmail.com
 [safe]
 	directory = *
 [credential "https://github.com"]
-	helper = !f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f
+	helper = "!f() { echo username=x-access-token; echo \"password=$GH_TOKEN\"; }; f"
