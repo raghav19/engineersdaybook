@@ -21,3 +21,4 @@ __pycache__/
 # Agent tool local state
 .qwen/
 .serena/
+.worktrees/

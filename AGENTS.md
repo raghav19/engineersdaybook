@@ -112,25 +112,25 @@ Before you write or edit Python, read `docs/agents/python.md` in full.
 
 ## 11. Git worktree workflow
 
-Always use git worktrees for agent work. Create worktrees **inside the project** at `.qwen/worktrees/<slug>`, not as sibling directories outside it.
+Always use git worktrees for agent work. Create worktrees **inside the project** at `.worktrees/<slug>`, not as sibling directories outside it.
 
 **Why inside the project?**
-- Keeps all worktrees discoverable in one place (`.qwen/worktrees/`)
-- Easier to clean up: `rm -rf .qwen/worktrees/` removes all agent worktrees
+- Keeps all worktrees discoverable in one place (`.worktrees/`)
+- Easier to clean up: `rm -rf .worktrees/` removes all agent worktrees
 - Git metadata is in `.git/worktrees/` (standard git behavior)
 - Avoids cluttering the parent directory with `project-name-branch` siblings
 
 **Usage:**
 ```bash
-git worktree add .qwen/worktrees/<slug> -b <branch>
+git worktree add .worktrees/<slug> -b <branch>
 # Work in the worktree
 # When done, commit and push from the worktree
-git worktree remove .qwen/worktrees/<slug>
+git worktree remove .worktrees/<slug>
 ```
 
 ## 12. msb sandbox image
 
-Before you add or remove tools or LSP servers in `.msb/image/`, read `docs/agents/msb-image.md` in full.
+Before you add or remove tools or LSP servers in `.msb/image/`, read `.msb/AGENTS.md` in full.
 
 ## 13. Simplified Technical English
 
