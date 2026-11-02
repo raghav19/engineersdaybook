@@ -105,8 +105,8 @@ sequenceDiagram
     S-->>A: SVID of the agent, and SVID of the alias
 ```
 
-1. The host starts the VM. `sandbox-boot` makes the node key pair and a CSR when no key exists. The CSR holds the public key and the name. The private key never leaves the VM. The agent does not start yet, because it has no certificate.
-2. The host reads the CSR over ssh. It waits until the CSR file exists. It checks that the name in the CSR is the one it expects.
+1. The host starts the VM. `sandbox-boot` makes the node key pair and a CSR when no key exists. The CSR holds the public key, the sandbox name as the CN, and the GitHub id as a URI SAN. The private key never leaves the VM. The agent does not start yet, because it has no certificate.
+2. The host reads the CSR over ssh. It waits until the CSR file exists. It checks that the CN is the sandbox name and that the SAN holds the GitHub id of the logged-in user. It rejects any other CSR.
 3. The host applies a `CertificateRequest` with that CSR. cert-manager signs it with the node CA key and returns the node certificate. The certificate holds the public key of the VM.
 4. The host reads the SPIFFE trust bundle from the SPIRE server.
 5. The host writes the certificate and the bundle into the VM over ssh, then starts the agent.
@@ -165,6 +165,15 @@ The selectors that the plugin gives (SPIRE v1.15.3):
 | `x509pop:serialnumber:<hex>` | The leaf certificate. | Serial number |
 
 The values are only as trustworthy as the rule that issues the certificate. See section 8.
+
+In this repo, the node certificate has two names:
+
+| Field | Value | Selector |
+|---|---|---|
+| CN | The sandbox name (`MSB_NAME`, `sandbox-dev` in the justfile) | `x509pop:subject:cn:sandbox-dev` |
+| URI SAN | `x509pop://mcp.local/github-id/<login>` | `x509pop:san:github-id:<login>` |
+
+A node entry that lists both selectors matches only a node that has both values. The SAN gives no part of the agent ID. The ID still comes from the fingerprint of the certificate.
 
 ## 6. Who holds what
 
