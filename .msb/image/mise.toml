@@ -26,6 +26,13 @@ HF_HUB_OFFLINE = "1"
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
+[hooks.enter]
+# kubectl shorthand with completion
+bash = '''
+alias k=kubectl
+complete -F __start_kubectl k
+'''
+
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
 # If you run the task in the VM, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
 [tasks."sandbox:completions"]
@@ -35,10 +42,15 @@ mkdir -p "$COMPLETIONS_DIR"
 kubectl completion bash > "$COMPLETIONS_DIR/kubectl"
 helm completion bash > "$COMPLETIONS_DIR/helm"
 kustomize completion bash > "$COMPLETIONS_DIR/kustomize"
+k9s completion bash > "$COMPLETIONS_DIR/k9s"
 fd --gen-completions bash > "$COMPLETIONS_DIR/fd"
 flux completion bash > "$COMPLETIONS_DIR/flux"
 just --completions bash > "$COMPLETIONS_DIR/just"
 yq shell-completion bash > "$COMPLETIONS_DIR/yq"
+herdr completion bash > "$COMPLETIONS_DIR/herdr"
+uv generate-shell-completion bash > "$COMPLETIONS_DIR/uv"
+gitleaks completion bash > "$COMPLETIONS_DIR/gitleaks"
+flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """

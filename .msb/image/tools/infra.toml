@@ -2,6 +2,8 @@
 kubectl = "1.37"
 helm = "4.3"
 kustomize = "5.8"
+k9s = "0.51"
+"github:dgunzy/flux9s" = { version = "1.5", asset_pattern = "flux9s-linux-x86_64-gnu.tar.gz" }
 terragrunt = "1.1"
 terraform = "1.16"
 flux2 = "2.10"
