@@ -100,23 +100,20 @@ _vm:
     {{ step }} ensure-vm
 
 # The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
-# Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it
+# Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it.
+# Use prefix+t in Herdr to open TTT in a worktree.
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
 [env('SANDBOX_BRANCH', shell('git branch --show-current'))]
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 [env('SANDBOX_OMARCHY_THEME', shell('printf %s "$HOME/.local/state/omarchy/current/theme"'))]
 run: _host-only
-    {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'  # only this step has Bitwarden keys
-    just --justfile {{ source_file() }} herdr
+    {{ bws_run }} 'MSB_IN_BWS=1 just --justfile {{ source_file() }} _vm'
+    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec herdr"
 
 # ssh, not msb exec (1 MB output limit freezes editors). COLORTERM gives TTT 24-bit color. VM outlives the session.
 edit: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec ttt ."
-
-# Open Herdr workspace manager in the VM. Use prefix+t to open TTT in a worktree.
-herdr: _host-only
-    ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec herdr"
 
 # Add a host to network.allow in vm/sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
