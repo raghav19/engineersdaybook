@@ -4,7 +4,7 @@ Guidance for agents working on `.msb/image/`.
 
 ## Tool/completion coupling
 
-When adding or removing tools in `image/tools/*.toml`, update the `sandbox:completions` task in `image/mise.toml`.
+When adding or removing tools in `.msb/image/tools/*.toml`, update the `sandbox:completions` task in `.msb/image/mise.toml`.
 
 Each tool has a different completion command. Check `<tool> --help` to find the correct syntax:
 - Most tools: `<tool> completion bash`
@@ -15,7 +15,7 @@ The build validates that each completion file is non-empty. A missing or wrong c
 
 ## LSP server coupling
 
-When adding a language server to `image/tools/lsp.toml`, also add it to `image/configs/editor/ttt-settings.json`:
+When adding a language server to `.msb/image/tools/lsp.toml`, also add it to `.msb/image/configs/editor/ttt-settings.json`:
 
 1. Add an entry under `lsp.servers` with the command and language mappings
 2. If the tool is also a formatter, add it under `formatters`

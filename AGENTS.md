@@ -110,7 +110,11 @@ Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
 Before you write or edit Python, read `docs/agents/python.md` in full.
 
-## 11. Simplified Technical English
+## 11. msb sandbox image
+
+Before you add or remove tools or LSP servers in `.msb/image/`, read `docs/agents/msb-image.md` in full.
+
+## 12. Simplified Technical English
 
 All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, invoke `/asd-ste100` for the rule set and worked examples.
 
