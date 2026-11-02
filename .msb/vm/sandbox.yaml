@@ -132,6 +132,5 @@ network:
     - owasp.org
     - fluxcd.control-plane.io
     - docs.microsandbox.dev
-    - docs.k3s.io
     # Other
     - crl.microsoft.com
