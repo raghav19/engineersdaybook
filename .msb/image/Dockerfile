@@ -93,7 +93,6 @@ COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/
 COPY --chown=agent:agent configs/agents/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/agent/gitconfig /home/agent/.gitconfig
-COPY --chown=agent:agent configs/agent/bash_aliases /home/agent/.bash_aliases
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers \
  && touch /home/agent/.config/containers/nodocker
 

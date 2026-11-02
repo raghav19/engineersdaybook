@@ -27,9 +27,10 @@ PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
 [hooks.enter]
-# Source bash aliases (k=kubectl with completion)
+# kubectl shorthand with completion
 bash = '''
-[ -f ~/.bash_aliases ] && source ~/.bash_aliases
+alias k=kubectl
+complete -F __start_kubectl k
 '''
 
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
