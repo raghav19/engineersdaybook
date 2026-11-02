@@ -112,7 +112,21 @@ Before you write or edit Python, read `docs/agents/python.md` in full.
 
 ## 11. Git worktree workflow
 
-Always use `enter_worktree` for agent work. This creates worktrees inside the project at `.qwen/worktrees/<slug>`, not as sibling directories. See `docs/agents/worktree.md` in full.
+Always use `enter_worktree` for agent work. This creates worktrees inside the project at `.qwen/worktrees/<slug>`, not as sibling directories outside it.
+
+**Why inside the project?**
+- Keeps all worktrees discoverable in one place (`.qwen/worktrees/`)
+- Easier to clean up: `rm -rf .qwen/worktrees/` removes all agent worktrees
+- Git metadata is in `.git/worktrees/` (standard git behavior)
+- Avoids cluttering the parent directory with `project-name-branch` siblings
+
+**Usage:**
+```
+enter_worktree slug=my-feature
+# Work in .qwen/worktrees/my-feature
+# When done, commit and push from the worktree
+exit_worktree
+```
 
 ## 12. msb sandbox image
 
