@@ -30,7 +30,7 @@ metadata:
 spec:
   interval: 10m
   retryInterval: 1m
-  timeout: 20m # spire, istio, istio-ingress (15m)
+  timeout: 25m # cert-manager, spire, istio, istio-ingress (20m)
   prune: true
   deletionPolicy: Orphan
   wait: true
