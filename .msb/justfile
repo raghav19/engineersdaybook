@@ -128,20 +128,7 @@ sync-kubeconfig: _host-only
     scp -q -F {{ ssh_config }} /etc/rancher/k3s/k3s.yaml $MSB_NAME.msb:/tmp/k3s.yaml || true
     ssh -F {{ ssh_config }} $MSB_NAME.msb "sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' /tmp/k3s.yaml && mkdir -p ~/.kube && cp /tmp/k3s.yaml ~/.kube/config && rm /tmp/k3s.yaml && echo kubeconfig-synced"
 
-# Remove the VM. The volumes stay. `--volumes` also removes all of them: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions.
-# `--volumes NAME...` removes only the volumes that you name, for example `just msb rm --volumes herdr`. A wrong name stops the recipe before it removes the VM.
-[script]
+# Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only
-    set -- {{ args }}
-    names=
-    if [ "${1:-}" = "--volumes" ]; then
-      shift
-      names=${*:-{{ volumes }}}
-      for volume in $names; do
-        case " {{ volumes }} " in *" $volume "*) ;; *) echo "msb: $volume is not a volume. The volumes are: {{ volumes }}" >&2; exit 1 ;; esac
-      done
-    elif [ $# -gt 0 ]; then
-      echo "msb: rm takes no argument, or: --volumes [NAME...]" >&2; exit 1
-    fi
     msb rm -f $MSB_NAME || true
-    if [ -n "$names" ]; then msb volume rm $names || true; fi
+    if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi
