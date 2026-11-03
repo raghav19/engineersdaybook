@@ -61,6 +61,10 @@ secrets:
   QWEN_API_KEY:
     allow: [token-plan.ap-southeast-1.maas.aliyuncs.com]
     passthrough: [api.anthropic.com]
+  # The push token of the packages of the platform (flux push in code/mcp-sandbox). It needs the scope write:packages.
+  GHCR_PUSH_TOKEN:
+    allow: [ghcr.io]
+    passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
 network:
   tls:
     enabled: true
