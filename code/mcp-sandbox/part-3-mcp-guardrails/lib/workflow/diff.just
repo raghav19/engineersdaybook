@@ -36,6 +36,6 @@ _baseline:
     echo "baseline: {{ registry }}/{{ name }}@$digest"
     flux pull artifact {{ registry }}/{{ name }}@$digest \
       -o {{ out }}/baseline \
-      --creds "$GHCR_CREDS" \
+      --creds "${GHCR_USER:-raghav19}:$GHCR_PUSH_TOKEN" \
       >/dev/null 2>&1 \
       || { echo "cannot pull the baseline" >&2; exit 1; }

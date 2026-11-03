@@ -16,7 +16,7 @@
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
 # The tag is that sha256, known before the push, so there is one push and one tag.
 
-# the settings and the variables: see lib/workflow/common.just (root, name, manifest, tools, registry, ghcr_user, ghcr_push_token and the ones of the components)
+# the settings and the variables: see lib/workflow/common.just (root, name, manifest, tools, registry and the ones of the components)
 import '../lib/workflow/common.just'
 
 # the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary
@@ -78,7 +78,7 @@ push tool=name: (build tool)
       --reproducible \
       --source {{ source }} \
       --revision binary@sha256:$sha \
-      --creds "$GHCR_CREDS" \
+      --creds "${GHCR_USER:-raghav19}:$GHCR_PUSH_TOKEN" \
       --output json \
       | jq -r .digest)
     touch {{ manifest }}
