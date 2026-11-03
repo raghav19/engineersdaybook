@@ -1,0 +1,21 @@
+# The owner of Online Boutique and the first user.
+# The user entity matches a GitHub login later, through the annotation github.com/user-id.
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: boutique-team
+  description: The team that owns Online Boutique.
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: raghav19
+  annotations:
+    github.com/user-id: "21075059"
+spec:
+  profile:
+    displayName: Raghavender Nagarajan
+  memberOf: [boutique-team]
