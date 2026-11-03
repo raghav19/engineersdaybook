@@ -124,6 +124,3 @@ RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
     EDITOR=ttt
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -sf http://127.0.0.1:8787/health || exit 1
