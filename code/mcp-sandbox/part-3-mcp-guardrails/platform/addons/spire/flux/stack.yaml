@@ -26,3 +26,5 @@ spec:
   wait: true # the server StatefulSet and the agent and CSI DaemonSets roll out. The CRDs and namespaces travel in this artifact.
   path: ./
   sourceRef: {kind: OCIRepository, name: spire}
+  dependsOn:
+    - name: cert-manager # the Issuer and Certificate kinds of the node CA, and the webhook that admits them
