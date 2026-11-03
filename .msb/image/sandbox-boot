@@ -66,16 +66,10 @@ as_agent sh -c "claude plugin marketplace add /home/agent/token-economizer; clau
   || echo "sandbox-boot: warning: the TokenEconomizer plugin is not installed" >&2
 
 # Herdr keeps its layout in ~/.config/herdr. The volume herdr (mounted at ~/.herdr-state) keeps session.json and session-snapshots, so that a new VM restores the panes.
-# Herdr writes through the links. A layout that the VM disk has already moves to the volume, unless the volume has one.
-as_agent mkdir -p "$home/.config/herdr"
-for item in session.json session-snapshots; do
-  link=$home/.config/herdr/$item
-  target=$home/.herdr-state/$item
-  [ -L "$link" ] && continue
-  if [ -e "$link" ] && [ ! -e "$target" ]; then as_agent mv "$link" "$target"; else as_agent rm -rf "$link"; fi
-  as_agent ln -s "$target" "$link"
-done
-as_agent mkdir -p "$home/.herdr-state/session-snapshots"
+# Herdr writes through the links. ln -sfn makes the same links at each boot.
+as_agent mkdir -p "$home/.config/herdr" "$home/.herdr-state/session-snapshots"
+as_agent ln -sfn "$home/.herdr-state/session.json" "$home/.config/herdr/session.json"
+as_agent ln -sfn "$home/.herdr-state/session-snapshots" "$home/.config/herdr/session-snapshots"
 
 # Herdr hooks for Claude Code and Qwen Code, so that Herdr shows their state. Claude writes to the claude-home volume. Qwen writes to ~/.qwen.
 # The command can run again without harm. A failure prints a warning and does not stop the script.
