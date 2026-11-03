@@ -7,8 +7,6 @@ flux_operator_chart := 'oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
 flux_operator_version := '0.61.0'
 flux_operator_timeout := env('FLUX_OPERATOR_TIMEOUT', '10m')
 
-# ghcr
-ghcr_user := env('GHCR_USER', 'raghav19')
 # prints one secret of the Bitwarden project by name, or the access token of the machine account (it asks for the token when BWS_ACCESS_TOKEN is empty)
 bws_secret := justfile_directory() / '../../lib/bws-secret.sh'
 
@@ -42,7 +40,7 @@ _seed: _host
       | kubectl --context {{ ctx }} apply -f -
     # its own line: a failed lookup inside the argument would not stop the script
     ghcr_token=$({{ bws_secret }} GITHUB_TOKEN)
-    kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username={{ ghcr_user }} \
+    kubectl --context {{ ctx }} -n flux-system create secret docker-registry ghcr-pull --docker-server=ghcr.io --docker-username="${GHCR_USER:-raghav19}" \
       --docker-password="$ghcr_token" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
 
