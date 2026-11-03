@@ -24,7 +24,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
 
 3. **Commit your work.** The VM clones the committed files only.
 
-4. **Set up Bitwarden.** The recipes `run`, `build` and `github-login` use `bws run`. It puts each key of the Bitwarden project in the environment of one command. The project needs six keys:
+4. **Set up Bitwarden.** The recipes `run`, `build` and `github-login` use `bws run`. It puts each key of the Bitwarden project in the environment of one command. The project needs five keys:
 
    | Key | Value |
    |---|---|
@@ -32,8 +32,7 @@ The VM holds no secrets, only placeholders. The host replaces a placeholder with
    | `CLAUDE_CODE_OAUTH_TOKEN` | the Claude token (prerequisite 6) |
    | `GITHUB_APP_CLIENT_SECRET` | the client secret of the GitHub App. `github-login` uses it |
    | `QWEN_API_KEY` | the key of the Qwen Token Plan, international (prerequisite 7) |
-   | `GITHUB_TOKEN` | a classic token with the scope `write:packages`. `build` pushes the image with it. `run` pulls the image with it |
-   | `GHCR_PUSH_TOKEN` | a classic token with the scope `write:packages`. `flux push` in the VM (`just <component>/publish-artifact` in `code/mcp-sandbox`) pushes the artifacts with it. The VM has only a placeholder. The host replaces it in requests to `ghcr.io` |
+   | `GITHUB_TOKEN` | a classic token with the scope `write:packages`. `build` pushes the image with it. `run` pulls the image with it, and gives it to the VM as the secret `GHCR_PUSH_TOKEN` (`flux push` in `code/mcp-sandbox` pushes the artifacts with it) |
 
    You keep one secret on the host: the Bitwarden access token. Encrypt it once with a passphrase. Use your own terminal, not an agent session:
 
