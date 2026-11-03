@@ -19,7 +19,6 @@ tools := root / 'out' / 'tools'
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 ghcr_user := env('GHCR_USER', 'raghav19')
-# The sbx proxy (git tag docker-sbx) replaced the default placeholder-ghcr.io. In the msb sandbox, vm/sandbox.yaml (.msb/) sets GHCR_PUSH_TOKEN as a placeholder that the host replaces in requests to ghcr.io
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component

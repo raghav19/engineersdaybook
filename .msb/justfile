@@ -100,7 +100,6 @@ _vm:
     {{ step }} ensure-vm
 
 # The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
-# The Bitwarden key GITHUB_TOKEN is also the secret GHCR_PUSH_TOKEN of the VM (flux push to ghcr.io), so the project needs no second key.
 # Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it.
 # Use prefix+t in Herdr to open TTT in a worktree.
 [env('SANDBOX_GIT_DIR', shell('git rev-parse --path-format=absolute --git-common-dir'))]
