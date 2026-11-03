@@ -73,6 +73,11 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
  && rm -rf /home/agent/token-economizer/.git /home/agent/token-economizer/tests /home/agent/token-economizer/experiments /home/agent/token-economizer/docs /home/agent/token-economizer/.github /home/agent/token-economizer/README.md /home/agent/token-economizer/SECURITY.md /home/agent/token-economizer/CLAUDE.md /home/agent/token-economizer/.gitattributes /home/agent/token-economizer/.gitignore
 
 FROM stage1-base AS stage10-final
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends binutils \
+ && rm -rf /var/lib/apt/lists/*
+USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
 COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
