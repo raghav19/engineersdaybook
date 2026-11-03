@@ -38,7 +38,7 @@ QWEN_API_KEY            := if in_bws == '' { '' } else { env('QWEN_API_KEY') }
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
-volumes := 'claude-home terraform-providers podman-storage'
+volumes := 'claude-home terraform-providers podman-storage herdr qwen-home'
 # Bitwarden token encrypted with `age -p`. See README.md prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` injects Bitwarden keys into one command's environment. Uses BWS_ACCESS_TOKEN if set, else decrypts `token_file` with `age -d`. Passphrase is not stored.
@@ -128,7 +128,7 @@ sync-kubeconfig: _host-only
     scp -q -F {{ ssh_config }} /etc/rancher/k3s/k3s.yaml $MSB_NAME.msb:/tmp/k3s.yaml || true
     ssh -F {{ ssh_config }} $MSB_NAME.msb "sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' /tmp/k3s.yaml && mkdir -p ~/.kube && cp /tmp/k3s.yaml ~/.kube/config && rm /tmp/k3s.yaml && echo kubeconfig-synced"
 
-# Remove the VM. `--volumes` also removes the Claude login and settings, and the Terraform provider cache and the podman images
+# Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only
     msb rm -f $MSB_NAME || true
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi
