@@ -19,7 +19,7 @@ tools := root / 'out' / 'tools'
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 ghcr_user := env('GHCR_USER', 'raghav19')
-ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
+ghcr_push_token := replace(env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io'), '$', '\$')
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component
 
