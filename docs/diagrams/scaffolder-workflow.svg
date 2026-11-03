@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="660" viewBox="0 0 1240 660"><rect width="1240" height="660" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#444444"/></marker></defs>
+<text x="20" y="28" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#333333">One Software Template run, end to end</text>
+<rect x="20" y="50" width="340" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="20" y1="76" x2="360" y2="76" stroke="#666666"/>
+<text x="30" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Developer</text>
+<rect x="380" y="50" width="420" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="380" y1="76" x2="800" y2="76" stroke="#666666"/>
+<text x="390" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Scaffolder backend</text>
+<rect x="820" y="50" width="400" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="820" y1="76" x2="1220" y2="76" stroke="#666666"/>
+<text x="830" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Outputs</text>
+<rect x="40" y="100" width="300" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="190" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Template entity</text>
+<text x="190" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">apiVersion scaffolder.backstage.io/v1beta3</text>
+<rect x="40" y="210" width="300" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="190" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Wizard</text>
+<text x="190" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">renders spec.parameters as a form</text>
+<rect x="400" y="100" width="380" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="590" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Task</text>
+<text x="590" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">runs the steps in series</text>
+<rect x="400" y="210" width="380" height="70" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="590" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Actions</text>
+<text x="590" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">fetch:template, publish:github, catalog:register, custom</text>
+<rect x="840" y="100" width="360" height="55" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1020" y="123.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">New repository</text>
+<text x="1020" y="140.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">publish:github creates it</text>
+<rect x="840" y="165" width="360" height="55" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="1020" y="188.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Pull request</text>
+<text x="1020" y="205.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">publish:github:pull-request opens it</text>
+<rect x="840" y="230" width="360" height="55" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1020" y="253.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Catalog entity</text>
+<text x="1020" y="270.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">catalog:register adds it</text>
+<rect x="20" y="340" width="700" height="120" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="32" y="368" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Custom action</text>
+<text font-style="italic" x="32" y="398" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">createTemplateAction defines the id, the zod schema and the handler.</text>
+<text font-style="italic" x="32" y="418" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">A scaffolder-backend-module registers the action in the backend.</text>
+<text font-style="italic" x="32" y="438" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">A template calls the action by its id in one step.</text>
+<rect x="20" y="490" width="1200" height="140" rx="10" fill="#ffffff" stroke="#666666"/>
+<text x="32" y="518" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Flow</text>
+<text font-style="italic" x="32" y="542" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">1  The developer opens a template in the catalog</text>
+<text font-style="italic" x="32" y="568" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">2  The wizard collects the values of spec.parameters</text>
+<text font-style="italic" x="32" y="594" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">3  The task runs each step in series</text>
+<text font-style="italic" x="472" y="542" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">4  An action creates the repository</text>
+<text font-style="italic" x="472" y="568" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">5  An action opens the pull request</text>
+<text font-style="italic" x="472" y="594" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">6  An action registers the new entity</text>
+<path d="M 190 170 L 190 210" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="182.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="190" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">1</text>
+<path d="M 340 245 L 358 245 Q 370 245 370 233 L 370 147 Q 370 135 382 135 L 400 135" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="362.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="370" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">2</text>
+<path d="M 590 170 L 590 210" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="582.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="590" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">3</text>
+<path d="M 780 231 L 798 231 Q 810 231 810 219 L 810 139.5 Q 810 127.5 822 127.5 L 840 127.5" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="802.9" y="169.75" width="14.2" height="19" fill="#ffffff"/>
+<text x="810" y="182.75" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">4</text>
+<path d="M 780 245 L 798 245 Q 810 245 810 233 L 810 204.5 Q 810 192.5 822 192.5 L 840 192.5" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="802.9" y="209.25" width="14.2" height="19" fill="#ffffff"/>
+<text x="810" y="222.25" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<path d="M 780 266 L 798 266 Q 810 266 810 254 L 810 269.5 Q 810 257.5 822 257.5 L 840 257.5" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="802.9" y="252.25" width="14.2" height="19" fill="#ffffff"/>
+<text x="810" y="265.25" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">6</text>
+</svg>

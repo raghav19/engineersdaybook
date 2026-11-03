@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="540" viewBox="0 0 1240 540"><rect width="1240" height="540" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#444444"/></marker></defs>
+<text x="20" y="28" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#333333">Life of a catalog entity</text>
+<rect x="20" y="50" width="360" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="20" y1="76" x2="380" y2="76" stroke="#666666"/>
+<text x="30" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Where descriptors live</text>
+<rect x="400" y="50" width="420" height="250" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="400" y1="76" x2="820" y2="76" stroke="#666666"/>
+<text x="410" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Catalog backend</text>
+<rect x="840" y="50" width="380" height="260" rx="8" fill="#f5f5f5" stroke="#666666"/>
+<line x1="840" y1="76" x2="1220" y2="76" stroke="#666666"/>
+<text x="850" y="68" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" text-anchor="start" fill="#333333">Who reads the catalog</text>
+<rect x="40" y="100" width="320" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="200" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Git repository</text>
+<text x="200" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">one catalog-info.yaml per service</text>
+<rect x="40" y="210" width="320" height="70" rx="10" fill="#f5f5f5" stroke="#666666"/>
+<text x="200" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Location entity</text>
+<text x="200" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">names the descriptor file to read</text>
+<rect x="420" y="100" width="180" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="510" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Processor</text>
+<text x="510" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">reads and validates a descriptor</text>
+<rect x="620" y="100" width="180" height="70" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="710" y="131" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Provider</text>
+<text x="710" y="148" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">pushes entities from outside</text>
+<rect x="420" y="210" width="380" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="610" y="241" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Entity store</text>
+<text x="610" y="258" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">kinds, relations, owner, lifecycle</text>
+<rect x="860" y="100" width="340" height="60" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="1030" y="126" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Catalog UI</text>
+<text x="1030" y="143" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">search and browse</text>
+<rect x="860" y="170" width="340" height="60" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1030" y="196" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Kubernetes plugin</text>
+<text x="1030" y="213" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">matches pods to components</text>
+<rect x="860" y="240" width="340" height="60" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1030" y="266" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#333333">Scaffolder</text>
+<text x="1030" y="283" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">registers the entities it creates</text>
+<rect x="20" y="350" width="1200" height="160" rx="10" fill="#ffffff" stroke="#666666"/>
+<text x="32" y="378" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="start" fill="#333333">Flow</text>
+<text font-style="italic" x="32" y="402" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">1  A Location names a descriptor file in a repository</text>
+<text font-style="italic" x="32" y="428" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">2  A processor reads the file and validates it</text>
+<text font-style="italic" x="32" y="454" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">3  A provider pushes entities the catalog cannot read itself</text>
+<text font-style="italic" x="32" y="480" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">4  The store keeps the kind, the relations and the owner</text>
+<text font-style="italic" x="472" y="402" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">5  Plugins read entities from the store</text>
+<text font-style="italic" x="472" y="428" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">6  The Kubernetes plugin matches pods to components</text>
+<text font-style="italic" x="472" y="454" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#333333">7  The Scaffolder writes the entities it creates back</text>
+<path d="M 200 210 L 200 170" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="192.9" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="200" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">1</text>
+<path d="M 360 135 L 420 135" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="382.9" y="125.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="390" y="138.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">2</text>
+<path d="M 710 170 L 710 178 Q 710 190 698 190 L 717 190 Q 705 190 705 202 L 705 210" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="700.4" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="707.5" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">3</text>
+<path d="M 510 170 L 510 178 Q 510 190 522 190 L 503 190 Q 515 190 515 202 L 515 210" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="505.4" y="180.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="512.5" y="193.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">4</text>
+<path d="M 800 224 L 818 224 Q 830 224 830 212 L 830 142 Q 830 130 842 130 L 860 130" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="822.9" y="167.5" width="14.2" height="19" fill="#ffffff"/>
+<text x="830" y="180.5" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<path d="M 800 245 L 818 245 Q 830 245 830 233 L 830 212 Q 830 200 842 200 L 860 200" fill="none" stroke="#444444" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="822.9" y="213" width="14.2" height="19" fill="#ffffff"/>
+<text x="830" y="226" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">6</text>
+<path d="M 860 270 L 800 269.5" fill="none" stroke="#444444" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<rect x="822.9" y="260.25" width="14.2" height="19" fill="#ffffff"/>
+<text x="830" y="273.25" font-family="Roboto, Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333333">7</text>
+</svg>
