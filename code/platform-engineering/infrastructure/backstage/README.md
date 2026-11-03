@@ -63,6 +63,8 @@ The log has one expected warning: `backend.baseUrl is set to a localhost URL`. I
 - `apps/boutique/catalog/catalog-info.yaml` holds the System, the 11 Components and the Resource.
 - `apps/boutique/catalog/org.yaml` holds the Group `boutique-team` and the User `raghav19`.
 
+The [README of the catalog](../../apps/boutique/catalog/README.md) explains how the entities link, with a diagram.
+
 The app team owns these files. Backstage reads them again at intervals. A change on `main` shows in Backstage without a new install. The org file needs the rule `allow: [User, Group]` on its location.
 
 The chart loads only the config it makes. It does not load the config file of the image. So `values.yaml` sets `catalog.rules`. Without it, Backstage rejects the kind `System`.

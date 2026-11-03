@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1930" height="810" viewBox="0 0 1930 810" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#333"/></marker></defs>
+<rect width="1930" height="810" fill="#ffffff"/>
+<text x="20" y="26" font-size="20" font-weight="bold">Catalog structure of Online Boutique in Backstage</text>
+<rect x="20" y="60" width="360" height="310" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="20" y1="86" x2="380" y2="86" stroke="#666666" stroke-width="1"/>
+<text x="30" y="78" font-size="14">org.yaml</text>
+<rect x="550" y="60" width="1350" height="730" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="550" y1="86" x2="1900" y2="86" stroke="#666666" stroke-width="1"/>
+<text x="560" y="78" font-size="14">catalog-info.yaml</text>
+<rect x="570" y="100" width="1310" height="674" rx="12" fill="#ffffff" stroke="#666666" stroke-width="1.5"/>
+<line x1="570" y1="126" x2="1880" y2="126" stroke="#666666" stroke-width="1"/>
+<text x="580" y="118" font-size="14">System: online-boutique  (every member has spec.owner = boutique-team and spec.system = online-boutique)</text>
+<rect x="40" y="110" width="320" height="72" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+<text x="200" y="134" font-size="12" text-anchor="middle" font-weight="bold">boutique-team</text>
+<text x="200" y="150" font-size="12" text-anchor="middle">Group, spec.type: team</text>
+<text x="200" y="166" font-size="12" text-anchor="middle">spec.children: []</text>
+<rect x="40" y="262" width="320" height="72" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="200" y="286" font-size="12" text-anchor="middle" font-weight="bold">raghav19</text>
+<text x="200" y="302" font-size="12" text-anchor="middle">User</text>
+<text x="200" y="318" font-size="12" text-anchor="middle">spec.memberOf: [boutique-team]</text>
+<rect x="910" y="150" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="985" y="173.5" font-size="12" text-anchor="middle" font-weight="bold">loadgenerator</text>
+<text x="985" y="190.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="910" y="286" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="985" y="309.5" font-size="12" text-anchor="middle" font-weight="bold">frontend</text>
+<text x="985" y="326.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1550" y="422" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1625" y="445.5" font-size="12" text-anchor="middle" font-weight="bold">checkoutservice</text>
+<text x="1625" y="462.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="590" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="665" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">adservice</text>
+<text x="665" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="750" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="825" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">recommendationservice</text>
+<text x="825" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="910" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="985" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">productcatalogservice</text>
+<text x="985" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1070" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1145" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">currencyservice</text>
+<text x="1145" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1230" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1305" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">cartservice</text>
+<text x="1305" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1390" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1465" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">shippingservice</text>
+<text x="1465" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1550" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1625" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">paymentservice</text>
+<text x="1625" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1710" y="558" width="150" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="1785" y="581.5" font-size="12" text-anchor="middle" font-weight="bold">emailservice</text>
+<text x="1785" y="598.5" font-size="12" text-anchor="middle">Component, service</text>
+<rect x="1230" y="694" width="150" height="56" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="1305" y="717.5" font-size="12" text-anchor="middle" font-weight="bold">redis-cart</text>
+<text x="1305" y="734.5" font-size="12" text-anchor="middle">Resource, cache</text>
+<path d="M200 262C200 230 200 214 200 182" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="164" y="213" width="72" height="18" fill="#ffffff"/>
+<text x="200" y="226" font-size="12" text-anchor="middle">memberOf</text>
+<path d="M570 145.832C485.933 145.832 444.067 146 360 146" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="433" y="136.916" width="64" height="18" fill="#ffffff"/>
+<text x="465" y="149.916" font-size="12" text-anchor="middle">ownedBy</text>
+<path d="M931.429 342C931.429 534.971 665 365.029 665 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1017.14 342C1017.14 533.543 1280 366.457 1280 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1060 314C1329.2 314 1625 152.8 1625 422" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M995.714 342C995.714 478.114 1120 421.886 1120 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M974.286 342C974.286 434.114 960 465.886 960 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M952.857 342C952.857 479.543 825 420.457 825 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1038.57 342C1038.57 588.971 1440 311.029 1440 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1305 614C1305 646 1305 662 1305 694" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1614.29 478C1614.29 623.714 1330 412.286 1330 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1592.86 478C1592.86 679.143 1170 356.857 1170 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1678.57 478C1678.57 552.571 1785 483.429 1785 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1657.14 478C1657.14 522.857 1625 513.143 1625 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1571.43 478C1571.43 734.571 1010 301.429 1010 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M1635.71 478C1635.71 568.286 1490 467.714 1490 558" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M825 614C825 654 985 654 985 614" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M985 206C985 238 985 254 985 286" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="945" y="237" width="80" height="18" fill="#ffffff"/>
+<text x="985" y="250" font-size="12" text-anchor="middle">dependsOn</text>
+</svg>

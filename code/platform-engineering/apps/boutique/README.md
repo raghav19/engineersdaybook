@@ -16,7 +16,7 @@ The release makes `frontend-external` a `LoadBalancer` on port 80. Traefik alrea
 
 ## Catalog
 
-The folder `catalog/` describes Online Boutique for Backstage. The setup is in [infrastructure/backstage](../../infrastructure/backstage/README.md).
+The folder `catalog/` describes Online Boutique for Backstage. Its [README](catalog/README.md) explains the structure with a diagram. The setup of Backstage is in [infrastructure/backstage](../../infrastructure/backstage/README.md).
 
 | File | Content |
 |---|---|
