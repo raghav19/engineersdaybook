@@ -20,6 +20,8 @@ tools := root / 'out' / 'tools'
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 ghcr_user := env('GHCR_USER', 'raghav19')
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
+# the user and token as a flux --creds value, in the environment of each recipe. A recipe must not paste the token into its script text: in the msb VM the token is the text `$MSB_GHCR_PUSH_TOKEN`, and bash expands that text as a variable
+export GHCR_CREDS := ghcr_user + ':' + ghcr_push_token
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component
 

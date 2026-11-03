@@ -23,7 +23,7 @@ _pipeline:
     [ -x {{ pipeline }} ] && [ "$(cat {{ pipeline }}.tag 2>/dev/null)" = "{{ tag }}" ] && exit 0
     mkdir -p {{ tools }}/platform-pipeline
     if ! flux pull artifact {{ registry }}/tools/platform-pipeline:{{ tag }} -o {{ tools }}/platform-pipeline \
-        --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" >/dev/null 2>&1; then
+        --creds "$GHCR_CREDS" >/dev/null 2>&1; then
       echo "platform-pipeline:{{ tag }} is not in the registry. On the host: just tools/platform-pipeline/push" >&2
       exit 1
     fi

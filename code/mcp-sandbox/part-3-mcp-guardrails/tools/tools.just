@@ -27,7 +27,6 @@ python := '3.13.15'
 #                   pretty_exceptions_enable=False, so typer never imports rich (about 3 MiB less). A function that turns rich on fails at runtime
 flags := '--onefile --noconfirm --log-level WARN --strip --exclude-module rich --exclude-module pygments --exclude-module markdown_it'
 source := 'https://github.com/raghav19/engineersdaybook'
-creds := ghcr_user + ':' + ghcr_push_token
 
 # PYTHONHASHSEED  Python gives strings a random hash on every start, which changes the order PyInstaller lists the modules in the bundle, so two
 #                 builds of one source differ. A fixed seed gives one order. The value itself does not matter. It is set here, not for every recipe.
@@ -79,7 +78,7 @@ push tool=name: (build tool)
       --reproducible \
       --source {{ source }} \
       --revision binary@sha256:$sha \
-      --creds {{ creds }} \
+      --creds "$GHCR_CREDS" \
       --output json \
       | jq -r .digest)
     touch {{ manifest }}
