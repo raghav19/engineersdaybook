@@ -61,6 +61,9 @@ secrets:
   QWEN_API_KEY:
     allow: [token-plan.ap-southeast-1.maas.aliyuncs.com]
     passthrough: [api.anthropic.com]
+  GHCR_PUSH_TOKEN:
+    allow: [ghcr.io]
+    passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
 network:
   tls:
     enabled: true
