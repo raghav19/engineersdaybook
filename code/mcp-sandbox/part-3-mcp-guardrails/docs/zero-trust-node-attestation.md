@@ -48,7 +48,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 |---|---|---|
 | cert-manager | `cert-manager` namespace | Makes the node CA, and signs a node certificate for each request. |
 | Node CA objects | `spire-system`, from git | An `Issuer`, a CA `Certificate` and the `Issuer` `node-ca`. |
-| trust-manager | `cert-manager` namespace | Copies the node CA certificate into a ConfigMap. |
+| trust-manager | `spire-system`, in the spire addon | Copies the node CA certificate into a ConfigMap. It reads Secrets only in `spire-system`, and it writes ConfigMaps only there. |
 | SPIRE server | `spire-system` | Checks the node certificate with the `x509pop` plugin. |
 | `msb.py attest` | host | Signs the CSR of the VM and sends the files to the VM. |
 | `sandbox-boot` | microVM | Makes the node key and the CSR. |
@@ -204,7 +204,7 @@ The research behind the choice is in [docs/research/spire-node-attestation.md](.
 ## 8. Limits
 
 - **The CA signs what the CSR asks for.** The host script checks the name in the CSR before it applies the `CertificateRequest`. A user who can create a `CertificateRequest` in `spire-system` skips this check. That user can ask for any name.
-- **The CA key is a Secret in `spire-system`.** A user who can read Secrets there can sign any node certificate.
+- **The CA key is a Secret in `spire-system`.** A user who can read Secrets there can sign any node certificate. The service account of trust-manager can read every Secret in `spire-system`, so it can read the key too.
 - **The GitHub id is a claim of the host.** The CA does not check it against GitHub. The host script reads it from the logged-in user.
 - **Evict does not block a node.** The node can attest again with the same certificate until it expires. A short certificate life limits this. A new node CA ends it for all nodes.
 - **The plugin docs list no revocation check.**
@@ -228,9 +228,10 @@ Expect `node-ca-selfsigned` and `node-ca` as `Ready`. Expect the subject `mcp.lo
 
 ```bash
 kubectl -n spire-system get configmap node-ca-bundle -o jsonpath='{.data.ca-bundle\.pem}' | openssl x509 -noout -subject
+kubectl -n spire-system get configmap node-ca-bundle -o yaml | grep -c "PRIVATE KEY"
 ```
 
-Expect the same subject as the CA.
+Expect the same subject as the CA. Expect `0` from the second command: the ConfigMap holds no private key.
 
 **Part 3: the server.**
 
