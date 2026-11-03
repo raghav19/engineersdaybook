@@ -1,5 +1,5 @@
 # Read-only access for the Kubernetes plugin of Backstage. The rules come from the Backstage docs (features/kubernetes/configuration).
-# The ServiceAccount `backstage` is made by the Helm chart (serviceAccount.create in values.yaml).
+# The Helm chart makes the ServiceAccount `backstage` (serviceAccount.create in values.yaml).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

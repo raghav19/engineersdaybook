@@ -29,9 +29,11 @@ backstage:
     - postgres
 
   appConfig:
-    # No HTTPRoute yet. Open Backstage with `kubectl port-forward` on port 7007.
+    # There is no HTTPRoute yet. Use `kubectl port-forward` on port 7007.
+
     app:
       baseUrl: http://localhost:7007
+    # The backend serves the frontend, so both use one address.
     backend:
       baseUrl: http://localhost:7007
       database:
@@ -43,10 +45,13 @@ backstage:
           password: ${POSTGRES_PASSWORD}
     auth:
       providers:
-        # The demo image has only the guest login. Guest is off outside development unless this flag is set.
+        # The demo image has only the guest login. Outside development, the guest login stays off unless you set this flag.
         guest:
           dangerouslyAllowOutsideDevelopment: true
     catalog:
+      # The chart loads only this file, not the app-config.yaml of the image. Without this rule, the kind System is not allowed.
+      rules:
+        - allow: [Component, System, Resource, API, Location]
       locations:
         - type: url
           target: https://github.com/raghav19/engineersdaybook/blob/main/code/platform-engineering/apps/boutique/catalog/catalog-info.yaml
