@@ -48,6 +48,15 @@ mounts:
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers
     create: ensure-exists
+  # The layout of Herdr (session.json and session-snapshots, linked by sandbox-boot). A new VM restores the panes of the last VM.
+  # Herdr saves about 7 seconds after a change. `just msb rm --volumes` removes the layout.
+  - named: herdr-state
+    target: /home/agent/.herdr-state
+    create: ensure-exists
+  # The sessions of Qwen Code, so that Herdr can resume a Qwen pane in a new VM. `just msb rm --volumes` removes them.
+  - named: qwen-home
+    target: /home/agent/.qwen
+    create: ensure-exists
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
