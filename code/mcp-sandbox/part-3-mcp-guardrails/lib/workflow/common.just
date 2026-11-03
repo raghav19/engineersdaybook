@@ -20,6 +20,8 @@ tools := root / 'out' / 'tools'
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
 ghcr_user := env('GHCR_USER', 'raghav19')
 ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
+# the --creds value of flux, quoted: bash must not expand the placeholder `$MSB_GHCR_PUSH_TOKEN` of the msb VM
+ghcr_creds := quote(ghcr_user + ':' + ghcr_push_token)
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component
 
