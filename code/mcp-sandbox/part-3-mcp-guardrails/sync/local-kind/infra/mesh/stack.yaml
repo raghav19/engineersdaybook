@@ -49,6 +49,8 @@ metadata:
   name: spire
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: cert-manager
   interval: 10m
   path: ./
   prune: true
@@ -95,8 +97,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:ff7253863551c74dffaf0d8e284bb1659c9b3b34080c5d7fc39e2ff37b56b469
-    tag: 0a989a01d8f5
+    digest: sha256:d8cd747ca71ce23d92596cecfef9868d1a0610432a0b9e44081f6f3db48f2fe9
+    tag: aaf421a02a3f
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/spire
