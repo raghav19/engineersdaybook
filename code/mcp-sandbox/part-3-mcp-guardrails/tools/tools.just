@@ -16,7 +16,7 @@
 # dependencies), so the same inputs give the same binary, on any checkout path, and the push (--reproducible) the same digest.
 # The tag is that sha256, known before the push, so there is one push and one tag.
 
-# the settings and the variables: see lib/workflow/common.just (root, name, manifest, tools, registry and the ones of the components)
+# the settings and the variables: see lib/workflow/common.just (root, name, manifest, tools, registry, ghcr_user, ghcr_push_token and the ones of the components)
 import '../lib/workflow/common.just'
 
 # the exact release, not 3.13: the interpreter is inside the binary, so another patch release is another binary
@@ -27,6 +27,7 @@ python := '3.13.15'
 #                   pretty_exceptions_enable=False, so typer never imports rich (about 3 MiB less). A function that turns rich on fails at runtime
 flags := '--onefile --noconfirm --log-level WARN --strip --exclude-module rich --exclude-module pygments --exclude-module markdown_it'
 source := 'https://github.com/raghav19/engineersdaybook'
+creds := ghcr_user + ':' + ghcr_push_token
 
 # PYTHONHASHSEED  Python gives strings a random hash on every start, which changes the order PyInstaller lists the modules in the bundle, so two
 #                 builds of one source differ. A fixed seed gives one order. The value itself does not matter. It is set here, not for every recipe.
@@ -78,7 +79,7 @@ push tool=name: (build tool)
       --reproducible \
       --source {{ source }} \
       --revision binary@sha256:$sha \
-      --creds "${GHCR_USER:-raghav19}:$GHCR_PUSH_TOKEN" \
+      --creds {{ creds }} \
       --output json \
       | jq -r .digest)
     touch {{ manifest }}

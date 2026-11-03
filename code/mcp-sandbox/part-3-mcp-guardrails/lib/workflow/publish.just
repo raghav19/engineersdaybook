@@ -13,7 +13,7 @@ publish-artifact: package-artifact
       --ignore-paths '/*,!/manifests.yaml' \
       --source "$(git remote get-url origin)" \
       --revision "${GITHUB_HEAD_REF:-$(git branch --show-current)}@sha1:$(git rev-parse HEAD)" \
-      --creds "${GHCR_USER:-raghav19}:$GHCR_PUSH_TOKEN" \
+      --creds "{{ ghcr_user }}:{{ ghcr_push_token }}" \
       --output json)
     digest=$(jq -r .digest <<<"$result")
     # one assignment: it adds the entry or replaces the one of the last publish. The file is created when it is not there.

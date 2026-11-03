@@ -18,8 +18,8 @@ tools := root / 'out' / 'tools'
 
 # registry
 registry := 'oci://ghcr.io/raghav19/mcp-guardrails'
-# the registry login of the flux recipes: the environment variables GHCR_USER (default raghav19) and GHCR_PUSH_TOKEN, read as "${GHCR_USER:-raghav19}:$GHCR_PUSH_TOKEN".
-# A recipe must not paste the token into its script text: in the msb VM the token is the text `$MSB_GHCR_PUSH_TOKEN`, and bash expands that text as a variable
+ghcr_user := env('GHCR_USER', 'raghav19')
+ghcr_push_token := env('GHCR_PUSH_TOKEN', 'placeholder-ghcr.io')
 
 # COMPONENT: the paths, the cluster and the filters of the recipes of a component
 
