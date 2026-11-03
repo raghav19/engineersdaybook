@@ -91,6 +91,8 @@ network:
     - registry-1.docker.io
     - auth.docker.io
     - "*.docker.com"
+    # GitHub Container Registry. The blobs redirect to pkg-containers.githubusercontent.com, which *.githubusercontent.com covers.
+    - ghcr.io
     # Tool downloads
     - releases.hashicorp.com
     - registry.terraform.io
