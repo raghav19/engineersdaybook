@@ -91,6 +91,9 @@ network:
     - registry-1.docker.io
     - auth.docker.io
     - "*.docker.com"
+    # GitHub Container Registry. ghcr.io serves the token and the manifests. It redirects the blobs to pkg-containers.githubusercontent.com.
+    - ghcr.io
+    - pkg-containers.githubusercontent.com
     # Tool downloads
     - releases.hashicorp.com
     - registry.terraform.io
