@@ -103,6 +103,7 @@ COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spir
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
+COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
