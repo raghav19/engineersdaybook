@@ -16,8 +16,8 @@ as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
 # msb sets NODE_EXTRA_CA_CERTS in `msb exec` to a file that does not exist. Node then prints a warning for each call.
 [ -e "${NODE_EXTRA_CA_CERTS:-}" ] || unset NODE_EXTRA_CA_CERTS
 
-mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr-state" "$home/.cache/terraform-providers" "$home/.local/share/containers"
-chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr-state" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
+mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.cache/terraform-providers" "$home/.local/share/containers"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
 
 # Podman runs as agent, without root. The kernel of the VM makes /dev/fuse and /dev/net/tun for root only.
 # fuse-overlayfs needs /dev/fuse. The network of a container (pasta) needs /dev/net/tun. The group agent can use both.
@@ -65,10 +65,10 @@ as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; cl
 as_agent sh -c "claude plugin marketplace add /home/agent/token-economizer; claude plugin install tokeneconomizer@tokeneconomizer" \
   || echo "sandbox-boot: warning: the TokenEconomizer plugin is not installed" >&2
 
-# Herdr keeps its layout in ~/.config/herdr. The volume herdr (mounted at ~/.herdr-state) keeps session.json and session-snapshots, so that a new VM restores the panes.
+# Herdr keeps its layout in ~/.config/herdr. The volume herdr (mounted at ~/.herdr) keeps session.json and session-snapshots, so that a new VM restores the panes.
 # Herdr writes through the links. ln -sfn makes the same links at each boot.
-as_agent mkdir -p "$home/.config/herdr" "$home/.herdr-state/session-snapshots"
-as_agent ln -sfn "$home/.herdr-state/session.json" "$home/.config/herdr/session.json"
-as_agent ln -sfn "$home/.herdr-state/session-snapshots" "$home/.config/herdr/session-snapshots"
+as_agent mkdir -p "$home/.config/herdr" "$home/.herdr/session-snapshots"
+as_agent ln -sfn "$home/.herdr/session.json" "$home/.config/herdr/session.json"
+as_agent ln -sfn "$home/.herdr/session-snapshots" "$home/.config/herdr/session-snapshots"
 
 echo "sandbox-boot: ready"
