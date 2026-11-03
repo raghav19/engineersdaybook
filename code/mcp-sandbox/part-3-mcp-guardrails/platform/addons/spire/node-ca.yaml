@@ -1,6 +1,7 @@
 # The CA of the node attestor x509pop. The SPIRE server trusts a node certificate only if this CA signed it. The CA is not the CA of SPIRE.
 # The CA lives in spire-system, the namespace of spire-server. A user who can read Secrets there can read the CA key.
 # The chain: a self-signed Issuer signs the CA Certificate, and the Issuer node-ca signs the node certificates.
+# The Bundle at the end publishes the CA certificate as a ConfigMap for the SPIRE server (trust-manager.yaml is the controller). The key stays in the Secret.
 # The lifetime is 10 years, so no renewal happens in practice. If one happens, rotationPolicy Never keeps the key, and the node certificates stay valid.
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -37,3 +38,21 @@ metadata:
 spec:
   ca:
     secretName: node-ca
+---
+# trust-manager copies tls.crt of the Secret node-ca (spire-system) into the ConfigMap node-ca-bundle, key ca-bundle.pem. The ConfigMap gets the name of the Bundle.
+# The target is spire-system only. The default is every namespace.
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: node-ca-bundle
+spec:
+  sources:
+    - secret:
+        name: node-ca
+        key: tls.crt
+  target:
+    configMap:
+      key: ca-bundle.pem
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: spire-system

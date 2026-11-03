@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # The SPIRE addon: its namespace, the CRD chart (crds.yaml) and the spire chart (spire.yaml), both installed by Flux as a HelmRelease.
-# It also holds the CA of the node attestor (node-ca.yaml), made by cert-manager, and trust-manager (trust-manager.yaml), which copies the CA certificate
-# into a ConfigMap (node-ca-bundle.yaml). One folder, one artifact.
+# It also holds the CA of the node attestor and the ConfigMap with its certificate (node-ca.yaml), made by cert-manager and trust-manager (trust-manager.yaml).
+# One folder, one artifact.
 resources:
   - namespace.yaml
   - crds.yaml
@@ -10,4 +10,3 @@ resources:
   - service.yaml
   - node-ca.yaml
   - trust-manager.yaml
-  - node-ca-bundle.yaml
