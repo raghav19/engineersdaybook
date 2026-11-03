@@ -20,7 +20,7 @@ metadata:
     app.kubernetes.io/part-of: mesh # the group of the stack: sync/<cluster>/infra/mesh/stack.yaml
 spec:
   interval: 10m
-  retryInterval: 1m # the controller-manager webhook can reject a custom resource of the first apply: the retry settles it
+  retryInterval: 1m # the controller-manager and trust-manager webhooks can reject a custom resource of the first apply: the retry settles it
   timeout: 5m
   prune: true
   wait: true # the server StatefulSet and the agent and CSI DaemonSets roll out. The CRDs and namespaces travel in this artifact.
