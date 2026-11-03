@@ -158,7 +158,7 @@ The `claude-home` volume keeps the Claude Code conversations, so they survive `j
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
 | Add another secret | Add it under `secrets:` in `vm/sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `# --- Required environment variables ---` in `.msb/justfile`, then `just msb rm && just msb run` |
 | Change a tool of the image | Edit a file in `image/`, commit, `just msb build`, commit the new digest, then `just msb rm && just msb run` |
-| Remove the VM | `just msb rm`. Add `--volumes` to remove the volumes too |
+| Remove the VM | `just msb rm`. The volumes stay. Add `--volumes` to remove all of them, or `--volumes herdr qwen-home` to remove only the volumes that you name |
 
 More commands: `msb ls` (state), `msb logs sandbox-dev`, `msb inspect sandbox-dev` and `msb <command> --help`.
 
