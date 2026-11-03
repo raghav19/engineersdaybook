@@ -48,6 +48,16 @@ mounts:
   - named: terraform-providers
     target: /home/agent/.cache/terraform-providers
     create: ensure-exists
+  # The layout of Herdr (session.json and session-snapshots, linked by sandbox-boot). A new VM restores the panes of the last VM.
+  # Herdr saves about 7 seconds after a change. The default worktree folder of Herdr (~/.herdr/worktrees) is in this volume too.
+  # `just msb rm --volumes` removes the layout and those worktrees.
+  - named: herdr
+    target: /home/agent/.herdr
+    create: ensure-exists
+  # The sessions of Qwen Code, so that `qwen --resume` finds them in a new VM. `just msb rm --volumes` removes them.
+  - named: qwen-home
+    target: /home/agent/.qwen
+    create: ensure-exists
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
@@ -61,6 +71,9 @@ secrets:
   QWEN_API_KEY:
     allow: [token-plan.ap-southeast-1.maas.aliyuncs.com]
     passthrough: [api.anthropic.com]
+  GHCR_PUSH_TOKEN:
+    allow: [ghcr.io]
+    passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
 network:
   tls:
     enabled: true
@@ -91,6 +104,9 @@ network:
     - registry-1.docker.io
     - auth.docker.io
     - "*.docker.com"
+    # GitHub Container Registry. ghcr.io serves the token and the manifests. It redirects the blobs to pkg-containers.githubusercontent.com.
+    - ghcr.io
+    - pkg-containers.githubusercontent.com
     # Tool downloads
     - releases.hashicorp.com
     - registry.terraform.io
