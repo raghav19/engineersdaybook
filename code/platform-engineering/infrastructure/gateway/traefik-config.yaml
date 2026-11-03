@@ -1,5 +1,6 @@
-# Turns on the Gateway API in the Traefik that k3s ships. k3s merges these values over its own Traefik values.
-# Do not edit the k3s file /var/lib/rancher/k3s/server/manifests/traefik.yaml. k3s replaces it at start.
+# k3s installs Traefik and the Gateway API CRDs (v1.6.1, standard channel). It does not turn on the Gateway API provider of Traefik.
+# This file turns it on. Without it, Traefik ignores Gateway API objects and no GatewayClass exists.
+# k3s merges these values over its own Traefik values. Do not edit /var/lib/rancher/k3s/server/manifests/traefik.yaml. k3s replaces it at start.
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
 metadata:
