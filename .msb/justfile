@@ -38,7 +38,7 @@ QWEN_API_KEY            := if in_bws == '' { '' } else { env('QWEN_API_KEY') }
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
-volumes := 'claude-home terraform-providers podman-storage herdr-state qwen-home'
+volumes := 'claude-home terraform-providers podman-storage herdr qwen-home'
 # Bitwarden token encrypted with `age -p`. See README.md prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` injects Bitwarden keys into one command's environment. Uses BWS_ACCESS_TOKEN if set, else decrypts `token_file` with `age -d`. Passphrase is not stored.

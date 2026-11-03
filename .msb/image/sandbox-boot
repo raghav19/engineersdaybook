@@ -65,7 +65,7 @@ as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; cl
 as_agent sh -c "claude plugin marketplace add /home/agent/token-economizer; claude plugin install tokeneconomizer@tokeneconomizer" \
   || echo "sandbox-boot: warning: the TokenEconomizer plugin is not installed" >&2
 
-# Herdr keeps its layout in ~/.config/herdr. The volume herdr-state keeps session.json and session-snapshots, so that a new VM restores the panes.
+# Herdr keeps its layout in ~/.config/herdr. The volume herdr (mounted at ~/.herdr-state) keeps session.json and session-snapshots, so that a new VM restores the panes.
 # Herdr writes through the links. A layout that the VM disk has already moves to the volume, unless the volume has one.
 as_agent mkdir -p "$home/.config/herdr"
 for item in session.json session-snapshots; do

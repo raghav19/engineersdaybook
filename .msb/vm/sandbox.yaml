@@ -50,7 +50,7 @@ mounts:
     create: ensure-exists
   # The layout of Herdr (session.json and session-snapshots, linked by sandbox-boot). A new VM restores the panes of the last VM.
   # Herdr saves about 7 seconds after a change. `just msb rm --volumes` removes the layout.
-  - named: herdr-state
+  - named: herdr
     target: /home/agent/.herdr-state
     create: ensure-exists
   # The sessions of Qwen Code, so that Herdr can resume a Qwen pane in a new VM. `just msb rm --volumes` removes them.
