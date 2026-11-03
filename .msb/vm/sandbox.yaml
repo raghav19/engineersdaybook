@@ -53,7 +53,7 @@ mounts:
   - named: herdr
     target: /home/agent/.herdr-state
     create: ensure-exists
-  # The sessions of Qwen Code, so that Herdr can resume a Qwen pane in a new VM. `just msb rm --volumes` removes them.
+  # The sessions of Qwen Code, so that `qwen --resume` finds them in a new VM. `just msb rm --volumes` removes them.
   - named: qwen-home
     target: /home/agent/.qwen
     create: ensure-exists
