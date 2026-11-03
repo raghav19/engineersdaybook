@@ -65,4 +65,10 @@ as_agent sh -c "claude plugin marketplace add DietrichGebert/ponytail#v5.3.2; cl
 as_agent sh -c "claude plugin marketplace add /home/agent/token-economizer; claude plugin install tokeneconomizer@tokeneconomizer" \
   || echo "sandbox-boot: warning: the TokenEconomizer plugin is not installed" >&2
 
+# Herdr hooks for Claude Code and Qwen Code, so that Herdr shows their state. Claude writes to the claude-home volume. Qwen writes to ~/.qwen.
+# The command can run again without harm. A failure prints a warning and does not stop the script.
+for agent in claude qwen; do
+  as_agent herdr integration install "$agent" >/dev/null || echo "sandbox-boot: warning: the Herdr integration for $agent is not installed" >&2
+done
+
 echo "sandbox-boot: ready"
