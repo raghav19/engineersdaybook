@@ -1,5 +1,5 @@
 # The trust-manager chart, installed by Flux (helm-controller) in spire-system. The version is the tag below, here only.
-# It copies the certificate of the node CA (node-ca.yaml) into the ConfigMap that the SPIRE server mounts (node-ca-bundle.yaml).
+# It copies the certificate of the node CA (node-ca.yaml) into the ConfigMap that the SPIRE server mounts (the Bundle in node-ca.yaml).
 # It lives in this addon, and not in a unit of its own, for the namespace: trust-manager reads source Secrets only from its trust namespace,
 # and the Secret node-ca is in spire-system. This artifact creates that namespace, so no unit waits for another unit. The CRD travels in this artifact.
 # Chart values: put them under spec.values. `just diff` shows what a value changes in the objects the chart renders.
