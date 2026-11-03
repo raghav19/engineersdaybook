@@ -24,7 +24,7 @@ push: build
       --reproducible \
       --source {{ source }} \
       --revision "binary@sha256:$(sha256sum "$binary" | cut -d' ' -f1)" \
-      --creds {{ creds }} \
+      --creds {{ ghcr_creds }} \
       --output json \
       | jq -r .digest)
     echo "platform-pipeline: {{ tag }} $digest"
