@@ -19,7 +19,7 @@ The chart runs the image that `npx @backstage/create-app` makes. You cannot add 
 | `namespace.yaml` | The namespace `backstage`. |
 | `postgres.yaml` | Postgres with the official image `postgres:17.11-alpine` and a 2Gi volume. |
 | `rbac.yaml` | A read-only `ClusterRole` and its binding to the ServiceAccount `backstage`. |
-| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin, and the `HTTPRoute` for `backstage.local`. |
+| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin, and the `HTTPRoute` for `backstage.localhost`. |
 
 ## Apply
 
@@ -50,15 +50,11 @@ kubectl get httproute backstage -n backstage -o jsonpath='{range .status.parents
 # ResolvedRefs=True
 ```
 
-The browser must resolve `backstage.local`. Add this line to `/etc/hosts` on the host. The address is the node address of k3s:
+The name `backstage.localhost` needs no entry in `/etc/hosts`. Browsers resolve every `*.localhost` name to the loopback address. Traefik answers on port 80 of the host, and the loopback address reaches it.
 
-```text
-192.168.178.188 backstage.local
-```
+A name without a matching route shows Online Boutique, because the route of the shop has no hostname. If you see the shop, check the host name in the address bar. It must be exactly `backstage.localhost`.
 
-Check it with `getent hosts backstage.local`. Standards reserve `.local` for mDNS. A normal setup reads `/etc/hosts` first. If the name does not resolve, check the host order in `/etc/nsswitch.conf`.
-
-Open `http://backstage.local` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
+Open `http://backstage.localhost` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
 
 1. **Catalog (`Home`):** set the filter `Owner` to `All`. The default is `Owned`, and the guest owns nothing, so the list is empty until you change it. You see the 11 Components. Set `Kind` to `System`, `Resource`, `Group` or `User` to see the others.
 2. **System `online-boutique`:** the cards `Has components` and `Has Resources`.
@@ -77,10 +73,19 @@ The [README of the catalog](../../apps/boutique/catalog/README.md) explains how 
 
 The app team owns these files. Backstage reads them again at intervals. A change on `main` shows in Backstage without a new install. The org file needs the rule `allow: [User, Group]` on its location.
 
-The chart loads only the config it makes. It does not load the config file of the image. So `values.yaml` sets two keys that the image config would set:
+## How the config files load
 
-- `catalog.rules`. Without it, Backstage rejects the kind `System`.
-- `app.packages: all`. The image holds the plugins for Kubernetes, org pages, the catalog graph, and more. The frontend code turns on these plugins only when the key is `all`. Without it, you see the catalog pages only, and the Kubernetes tab is missing.
+The image holds two config files: `app-config.yaml` and `app-config.production.yaml`. The chart passes its own ConfigMap as the only `--config` argument. That drops the image config. Three problems followed, one after the other:
+
+| Problem | Cause |
+|---|---|
+| Backstage rejected the kind `System`. | The rule `catalog.rules` of the image config was missing. |
+| The Kubernetes tab and the org pages were missing. | The key `app.packages: all` was missing. The frontend turns on the bundled plugins only with this key. |
+| The UI stopped with `Missing required config value at 'app.title'`. | The key `app.title` was missing. The frontend needs it, and the image config holds it. |
+
+`values.yaml` fixes all three with one setting: `backstage.args` loads `/app/app-config.yaml` first. The ConfigMap of the chart loads after it and overrides it. So the image gives the defaults: the title, the organization name, the plugin switch, and the rules. `values.yaml` holds only what is ours. That is the URLs, the database, the guest flag, the catalog locations, and the Kubernetes cluster.
+
+An array in a later file replaces the array of an earlier file. So our `catalog.locations` replaces the example entities of the image.
 
 ## How the Kubernetes tab works
 
@@ -91,7 +96,7 @@ The chart loads only the config it makes. It does not load the config file of th
 ## Security
 
 - The guest login is on outside development (`dangerouslyAllowOutsideDevelopment: true`). Anyone who reaches Backstage signs in as guest.
-- Traefik listens on port 80 of all network interfaces of the host. A machine on your LAN can send the header `Host: backstage.local` and reach Backstage. The hostname is a name, not a lock.
+- Traefik listens on port 80 of all network interfaces of the host. A machine on your LAN can send the header `Host: backstage.localhost` and reach Backstage. The hostname is a name, not a lock.
 - The Kubernetes plugin uses one account for all users. A guest sees what the role allows.
 - The role allows reading pods, Services, Deployments, ConfigMaps, and more in all namespaces.
 - The Kubernetes API of Backstage accepts only entities that exist in the catalog. A test with a forged entity for `kube-system` got the answer `403`. The permission policy of the image allows all actions. So I expect a guest can add an entity through the catalog API, with any namespace in its annotations. I did not test this.
