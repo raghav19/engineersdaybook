@@ -23,17 +23,24 @@
 <text x="860" y="173" font-size="14" text-anchor="middle" font-weight="bold">Component (11)</text>
 <text x="860" y="191" font-size="14" text-anchor="middle">frontend, checkoutservice, cartservice, and 8 more</text>
 <text x="860" y="209" font-size="14" text-anchor="middle">spec.type: service</text>
-<rect x="520" y="302" width="680" height="72" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
-<text x="860" y="325" font-size="14" text-anchor="middle" font-weight="bold">Resource</text>
-<text x="860" y="343" font-size="14" text-anchor="middle">redis-cart</text>
-<text x="860" y="361" font-size="14" text-anchor="middle">spec.type: cache</text>
+<rect x="520" y="302" width="330" height="72" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="685" y="325" font-size="14" text-anchor="middle" font-weight="bold">Resource</text>
+<text x="685" y="343" font-size="14" text-anchor="middle">redis-cart</text>
+<text x="685" y="361" font-size="14" text-anchor="middle">spec.type: cache</text>
+<rect x="870" y="302" width="330" height="72" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="1035" y="325" font-size="14" text-anchor="middle" font-weight="bold">API</text>
+<text x="1035" y="343" font-size="14" text-anchor="middle">online-boutique-grpc</text>
+<text x="1035" y="361" font-size="14" text-anchor="middle">spec.type: grpc</text>
 <path d="M185 262C185 230 185 214 185 182" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 <rect x="146" y="212" width="78" height="20" fill="#ffffff"/>
 <text x="185" y="227" font-size="13" text-anchor="middle">memberOf</text>
 <path d="M500 145.904C431.962 145.904 398.038 146 330 146" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
 <rect x="380.25" y="135.952" width="69.5" height="20" fill="#ffffff"/>
 <text x="415" y="150.952" font-size="13" text-anchor="middle">ownedBy</text>
-<path d="M860 222C860 254 860 270 860 302" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
-<rect x="816.75" y="252" width="86.5" height="20" fill="#ffffff"/>
-<text x="860" y="267" font-size="13" text-anchor="middle">dependsOn</text>
+<path d="M690 222C690 256 685 268 685 302" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="644.25" y="252" width="86.5" height="20" fill="#ffffff"/>
+<text x="687.5" y="267" font-size="13" text-anchor="middle">dependsOn</text>
+<path d="M1030 222C1030 256 1035 268 1035 302" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="912.75" y="252" width="239.5" height="20" fill="#ffffff"/>
+<text x="1032.5" y="267" font-size="13" text-anchor="middle">providesApis / consumesApis</text>
 </svg>
