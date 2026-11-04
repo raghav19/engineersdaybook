@@ -1,6 +1,11 @@
 # The catalog of Online Boutique. The pinned release is v0.10.7 (apps/boutique/kustomization.yaml).
 # Dependencies come from the *_ADDR environment variables in the release manifest.
 # Each Component finds its pods with a label selector. The Boutique pods carry the label `app: <name>`.
+# Each Component links to its source with backstage.io/source-location (a folder URL ends with a slash).
+# The API entity holds demo.proto. The file next to this one is a verbatim copy from microservices-demo v0.10.7 (commit 5b608cb).
+# Backstage reads a $text placeholder only from the same repository, so the copy must stay here.
+# A Component provides the API when demo.proto has a service of its name.
+# A Component consumes the API when it depends on a Component that provides it.
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
@@ -17,12 +22,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=frontend
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/frontend/
   tags: [go]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  consumesApis:
+    - api:default/online-boutique-grpc
   dependsOn:
     - component:default/adservice
     - component:default/cartservice
@@ -40,12 +48,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=cartservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/cartservice/
   tags: [csharp]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
   dependsOn:
     - resource:default/redis-cart
 ---
@@ -57,12 +68,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=productcatalogservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/productcatalogservice/
   tags: [go]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -72,12 +86,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=currencyservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/currencyservice/
   tags: [nodejs]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -87,12 +104,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=paymentservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/paymentservice/
   tags: [nodejs]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -102,12 +122,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=shippingservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/shippingservice/
   tags: [go]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -117,12 +140,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=emailservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/emailservice/
   tags: [python]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -132,12 +158,17 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=checkoutservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/checkoutservice/
   tags: [go]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
+  consumesApis:
+    - api:default/online-boutique-grpc
   dependsOn:
     - component:default/cartservice
     - component:default/currencyservice
@@ -154,12 +185,17 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=recommendationservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/recommendationservice/
   tags: [python]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
+  consumesApis:
+    - api:default/online-boutique-grpc
   dependsOn:
     - component:default/productcatalogservice
 ---
@@ -171,12 +207,15 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=adservice
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/adservice/
   tags: [java]
 spec:
   type: service
   lifecycle: experimental
   owner: group:default/boutique-team
   system: online-boutique
+  providesApis:
+    - api:default/online-boutique-grpc
 ---
 apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -186,6 +225,7 @@ metadata:
   annotations:
     backstage.io/kubernetes-namespace: boutique
     backstage.io/kubernetes-label-selector: app=loadgenerator
+    backstage.io/source-location: url:https://github.com/GoogleCloudPlatform/microservices-demo/tree/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/src/loadgenerator/
   tags: [python]
 spec:
   type: service
@@ -207,3 +247,17 @@ spec:
   type: cache
   owner: group:default/boutique-team
   system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: online-boutique-grpc
+  description: The gRPC interface of Online Boutique. One proto file defines the 9 gRPC services.
+  tags: [grpc]
+spec:
+  type: grpc
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  definition:
+    $text: ./demo.proto
