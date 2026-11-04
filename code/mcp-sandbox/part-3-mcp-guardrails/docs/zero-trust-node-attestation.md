@@ -239,7 +239,14 @@ Expect the same subject as the CA. Expect `0` from the second command: the Confi
 kubectl -n spire-system get configmap spire-server -o jsonpath='{.data.server\.conf}' | grep -A3 x509pop
 ```
 
-Expect `mode` `external_pki` and the path of the bundle.
+Expect `mode` `external_pki` and the path of the bundle. Then check the node entry:
+
+```bash
+kubectl get clusterstaticentry sandbox-node -o jsonpath='{.status}'
+kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/spire-server entry show -spiffeID spiffe://mcp.local/node/sandbox-dev
+```
+
+Expect the entry with the two selectors `x509pop:subject:cn:sandbox-dev` and `x509pop:san:github-id:raghav19`.
 
 **Parts 4 and 5: the agent.** In the microVM:
 
@@ -272,9 +279,9 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | # | Part | State |
 |---|---|---|
 | 0 | This page and the diagrams | done |
-| 1 | The node CA (cert-manager) | planned |
-| 2 | trust-manager and the node CA bundle | planned |
-| 3 | `x509pop` on the SPIRE server, and the node entry | planned |
+| 1 | The node CA (cert-manager) | done |
+| 2 | trust-manager and the node CA bundle | done |
+| 3 | `x509pop` on the SPIRE server, and the node entry | done |
 | 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | planned |
 | 5 | `msb.py attest` on the host | planned |
 | 6 | Cleanup of the other pages | planned |
