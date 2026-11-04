@@ -12,6 +12,13 @@ backstage:
   strategy:
     type: Recreate
 
+  # The chart adds the ConfigMap below as the only config file. That drops the config file of the image.
+  # Without the image config, the UI stops with "Missing required config value at app.title".
+  # This argument loads the image config first. The ConfigMap comes after it and overrides it.
+  args:
+    - --config
+    - /app/app-config.yaml
+
   resources:
     requests:
       cpu: 100m
@@ -32,9 +39,6 @@ backstage:
     # Users reach Backstage at http://backstage.localhost through the HTTPRoute below.
     app:
       baseUrl: http://backstage.localhost
-      # The image holds more plugins than the app code lists: Kubernetes, org, catalog graph, and others.
-      # The frontend turns them on only when this key is `all`.
-      packages: all
     # The backend serves the frontend, so both use one address.
     backend:
       baseUrl: http://backstage.localhost
@@ -51,9 +55,7 @@ backstage:
         guest:
           dangerouslyAllowOutsideDevelopment: true
     catalog:
-      # The chart loads only this file, not the app-config.yaml of the image. Without this rule, the kind System is not allowed.
-      rules:
-        - allow: [Component, System, Resource, API, Location]
+      # This list replaces the example entities of the image.
       locations:
         - type: url
           target: https://github.com/raghav19/engineersdaybook/blob/main/code/platform-engineering/apps/boutique/catalog/catalog-info.yaml

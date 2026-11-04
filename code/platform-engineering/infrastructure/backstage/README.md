@@ -73,10 +73,19 @@ The [README of the catalog](../../apps/boutique/catalog/README.md) explains how 
 
 The app team owns these files. Backstage reads them again at intervals. A change on `main` shows in Backstage without a new install. The org file needs the rule `allow: [User, Group]` on its location.
 
-The chart loads only the config it makes. It does not load the config file of the image. So `values.yaml` sets two keys that the image config would set:
+## How the config files load
 
-- `catalog.rules`. Without it, Backstage rejects the kind `System`.
-- `app.packages: all`. The image holds the plugins for Kubernetes, org pages, the catalog graph, and more. The frontend code turns on these plugins only when the key is `all`. Without it, you see the catalog pages only, and the Kubernetes tab is missing.
+The image holds two config files: `app-config.yaml` and `app-config.production.yaml`. The chart passes its own ConfigMap as the only `--config` argument. That drops the image config. Three problems followed, one after the other:
+
+| Problem | Cause |
+|---|---|
+| Backstage rejected the kind `System`. | The rule `catalog.rules` of the image config was missing. |
+| The Kubernetes tab and the org pages were missing. | The key `app.packages: all` was missing. The frontend turns on the bundled plugins only with this key. |
+| The UI stopped with `Missing required config value at 'app.title'`. | The key `app.title` was missing. The frontend needs it, and the image config holds it. |
+
+`values.yaml` fixes all three with one setting: `backstage.args` loads `/app/app-config.yaml` first. The ConfigMap of the chart loads after it and overrides it. So the image gives the defaults: the title, the organization name, the plugin switch, and the rules. `values.yaml` holds only what is ours. That is the URLs, the database, the guest flag, the catalog locations, and the Kubernetes cluster.
+
+An array in a later file replaces the array of an earlier file. So our `catalog.locations` replaces the example entities of the image.
 
 ## How the Kubernetes tab works
 
