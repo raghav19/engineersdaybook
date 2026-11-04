@@ -29,15 +29,15 @@ backstage:
     - postgres
 
   appConfig:
-    # Users reach Backstage at http://backstage.local through the HTTPRoute below.
+    # Users reach Backstage at http://backstage.localhost through the HTTPRoute below.
     app:
-      baseUrl: http://backstage.local
+      baseUrl: http://backstage.localhost
       # The image holds more plugins than the app code lists: Kubernetes, org, catalog graph, and others.
       # The frontend turns them on only when this key is `all`.
       packages: all
     # The backend serves the frontend, so both use one address.
     backend:
-      baseUrl: http://backstage.local
+      baseUrl: http://backstage.localhost
       database:
         client: pg
         connection:
@@ -82,7 +82,7 @@ httpRoute:
       namespace: kube-system
       sectionName: web
   hostnames:
-    - backstage.local
+    - backstage.localhost
 
 serviceAccount:
   create: true

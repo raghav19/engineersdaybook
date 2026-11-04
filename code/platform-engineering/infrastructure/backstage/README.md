@@ -19,7 +19,7 @@ The chart runs the image that `npx @backstage/create-app` makes. You cannot add 
 | `namespace.yaml` | The namespace `backstage`. |
 | `postgres.yaml` | Postgres with the official image `postgres:17.11-alpine` and a 2Gi volume. |
 | `rbac.yaml` | A read-only `ClusterRole` and its binding to the ServiceAccount `backstage`. |
-| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin, and the `HTTPRoute` for `backstage.local`. |
+| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin, and the `HTTPRoute` for `backstage.localhost`. |
 
 ## Apply
 
@@ -50,15 +50,11 @@ kubectl get httproute backstage -n backstage -o jsonpath='{range .status.parents
 # ResolvedRefs=True
 ```
 
-The browser must resolve `backstage.local`. Add this line to `/etc/hosts` on the host. The address is the node address of k3s:
+The name `backstage.localhost` needs no entry in `/etc/hosts`. Browsers resolve every `*.localhost` name to the loopback address. Traefik answers on port 80 of the host, and the loopback address reaches it.
 
-```text
-192.168.178.188 backstage.local
-```
+A name without a matching route shows Online Boutique, because the route of the shop has no hostname. If you see the shop, check the host name in the address bar. It must be exactly `backstage.localhost`.
 
-Check it with `getent hosts backstage.local`. Standards reserve `.local` for mDNS. A normal setup reads `/etc/hosts` first. If the name does not resolve, check the host order in `/etc/nsswitch.conf`.
-
-Open `http://backstage.local` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
+Open `http://backstage.localhost` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
 
 1. **Catalog (`Home`):** set the filter `Owner` to `All`. The default is `Owned`, and the guest owns nothing, so the list is empty until you change it. You see the 11 Components. Set `Kind` to `System`, `Resource`, `Group` or `User` to see the others.
 2. **System `online-boutique`:** the cards `Has components` and `Has Resources`.
@@ -91,7 +87,7 @@ The chart loads only the config it makes. It does not load the config file of th
 ## Security
 
 - The guest login is on outside development (`dangerouslyAllowOutsideDevelopment: true`). Anyone who reaches Backstage signs in as guest.
-- Traefik listens on port 80 of all network interfaces of the host. A machine on your LAN can send the header `Host: backstage.local` and reach Backstage. The hostname is a name, not a lock.
+- Traefik listens on port 80 of all network interfaces of the host. A machine on your LAN can send the header `Host: backstage.localhost` and reach Backstage. The hostname is a name, not a lock.
 - The Kubernetes plugin uses one account for all users. A guest sees what the role allows.
 - The role allows reading pods, Services, Deployments, ConfigMaps, and more in all namespaces.
 - The Kubernetes API of Backstage accepts only entities that exist in the catalog. A test with a forged entity for `kube-system` got the answer `403`. The permission policy of the image allows all actions. So I expect a guest can add an entity through the catalog API, with any namespace in its annotations. I did not test this.
