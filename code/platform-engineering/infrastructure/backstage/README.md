@@ -48,11 +48,13 @@ kubectl get pods -n backstage        # backstage and postgres-0, both 1/1 Runnin
 kubectl port-forward -n backstage svc/backstage 7007:7007
 ```
 
-Open `http://localhost:7007` in the browser. Choose the guest login. Then check these pages:
+Open `http://localhost:7007` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
 
-1. **Catalog:** 11 Components, 1 System (`online-boutique`), 1 Resource (`redis-cart`), 1 Group, 1 User.
-2. **Component `frontend`, tab Dependencies:** 7 services.
-3. **Component `frontend`, tab Kubernetes:** the pod, the Service, the Deployment and the ReplicaSet of `frontend`.
+1. **Catalog (`Home`):** set the filter `Owner` to `All`. The default is `Owned`, and the guest owns nothing, so the list is empty until you change it. You see the 11 Components. Set `Kind` to `System`, `Resource`, `Group` or `User` to see the others.
+2. **System `online-boutique`:** the cards `Has components` and `Has Resources`.
+3. **Component `frontend`:** the card `About` shows the owner and the system. The card `Relations` shows the links. Select `View graph` to open the Catalog Graph.
+4. **Component `frontend`, tab Kubernetes:** the pod, the Service, the Deployment and the ReplicaSet of `frontend`.
+5. **User `raghav19`:** set `Kind` to `User` and select `raghav19`. Toggle `Aggregated Relations` to see the entities that the user owns through the group.
 
 The log has one expected warning: `backend.baseUrl is set to a localhost URL`. It is true, because you reach Backstage through the port-forward.
 
@@ -67,7 +69,10 @@ The [README of the catalog](../../apps/boutique/catalog/README.md) explains how 
 
 The app team owns these files. Backstage reads them again at intervals. A change on `main` shows in Backstage without a new install. The org file needs the rule `allow: [User, Group]` on its location.
 
-The chart loads only the config it makes. It does not load the config file of the image. So `values.yaml` sets `catalog.rules`. Without it, Backstage rejects the kind `System`.
+The chart loads only the config it makes. It does not load the config file of the image. So `values.yaml` sets two keys that the image config would set:
+
+- `catalog.rules`. Without it, Backstage rejects the kind `System`.
+- `app.packages: all`. The image holds the plugins for Kubernetes, org pages, the catalog graph, and more. The frontend code turns on these plugins only when the key is `all`. Without it, you see the catalog pages only, and the Kubernetes tab is missing.
 
 ## How the Kubernetes tab works
 

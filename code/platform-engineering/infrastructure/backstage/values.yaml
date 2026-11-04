@@ -33,6 +33,9 @@ backstage:
 
     app:
       baseUrl: http://localhost:7007
+      # The image holds more plugins than the app code lists: Kubernetes, org, catalog graph, and others.
+      # The frontend turns them on only when this key is `all`.
+      packages: all
     # The backend serves the frontend, so both use one address.
     backend:
       baseUrl: http://localhost:7007
