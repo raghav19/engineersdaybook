@@ -12,9 +12,6 @@ backstage:
   strategy:
     type: Recreate
 
-  # The chart adds the ConfigMap below as the only config file. That drops the config file of the image.
-  # Without the image config, the UI stops with "Missing required config value at app.title".
-  # This argument loads the image config first. The ConfigMap comes after it and overrides it.
   args:
     - --config
     - /app/app-config.yaml
