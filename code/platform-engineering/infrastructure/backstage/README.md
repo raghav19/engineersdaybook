@@ -10,7 +10,7 @@ The chart runs the image that `npx @backstage/create-app` makes. You cannot add 
 
 - The image has the guest login only. It has no GitHub login. A GitHub login needs your own image.
 - The image has the Kubernetes plugin and the MCP actions plugin. I expect it has no `AiResource` catalog kind. Check this when you need it.
-- There is no `HTTPRoute` yet. You open Backstage with `kubectl port-forward`.
+- The route is open to every machine that can reach the host. See the section Security.
 
 ## Files
 
@@ -19,7 +19,7 @@ The chart runs the image that `npx @backstage/create-app` makes. You cannot add 
 | `namespace.yaml` | The namespace `backstage`. |
 | `postgres.yaml` | Postgres with the official image `postgres:17.11-alpine` and a 2Gi volume. |
 | `rbac.yaml` | A read-only `ClusterRole` and its binding to the ServiceAccount `backstage`. |
-| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin. |
+| `values.yaml` | The values for the Helm chart: image, database, login, catalog, Kubernetes plugin, and the `HTTPRoute` for `backstage.local`. |
 
 ## Apply
 
@@ -45,18 +45,26 @@ The chart repository `https://backstage.github.io/charts` also works on a host t
 
 ```bash
 kubectl get pods -n backstage        # backstage and postgres-0, both 1/1 Running
-kubectl port-forward -n backstage svc/backstage 7007:7007
+kubectl get httproute backstage -n backstage -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status}{"\n"}{end}'
+# Accepted=True
+# ResolvedRefs=True
 ```
 
-Open `http://localhost:7007` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
+The browser must resolve `backstage.local`. Add this line to `/etc/hosts` on the host. The address is the node address of k3s:
+
+```text
+192.168.178.188 backstage.local
+```
+
+Check it with `getent hosts backstage.local`. Standards reserve `.local` for mDNS. A normal setup reads `/etc/hosts` first. If the name does not resolve, check the host order in `/etc/nsswitch.conf`.
+
+Open `http://backstage.local` in the browser. Choose the guest login. Then check these pages. The page names come from the Backstage getting-started guide.
 
 1. **Catalog (`Home`):** set the filter `Owner` to `All`. The default is `Owned`, and the guest owns nothing, so the list is empty until you change it. You see the 11 Components. Set `Kind` to `System`, `Resource`, `Group` or `User` to see the others.
 2. **System `online-boutique`:** the cards `Has components` and `Has Resources`.
 3. **Component `frontend`:** the card `About` shows the owner and the system. The card `Relations` shows the links. Select `View graph` to open the Catalog Graph.
 4. **Component `frontend`, tab Kubernetes:** the pod, the Service, the Deployment and the ReplicaSet of `frontend`.
 5. **User `raghav19`:** set `Kind` to `User` and select `raghav19`. Toggle `Aggregated Relations` to see the entities that the user owns through the group.
-
-The log has one expected warning: `backend.baseUrl is set to a localhost URL`. It is true, because you reach Backstage through the port-forward.
 
 ## How the catalog gets the Boutique
 
@@ -82,9 +90,14 @@ The chart loads only the config it makes. It does not load the config file of th
 
 ## Security
 
-- The guest login is on outside development (`dangerouslyAllowOutsideDevelopment: true`). Anyone who reaches the port signs in as guest.
+- The guest login is on outside development (`dangerouslyAllowOutsideDevelopment: true`). Anyone who reaches Backstage signs in as guest.
+- Traefik listens on port 80 of all network interfaces of the host. A machine on your LAN can send the header `Host: backstage.local` and reach Backstage. The hostname is a name, not a lock.
 - The Kubernetes plugin uses one account for all users. A guest sees what the role allows.
-- So keep the access to the `kubectl port-forward` on your own machine. Do not add an `HTTPRoute` before the GitHub login exists.
+- The role allows reading pods, Services, Deployments, ConfigMaps, and more in all namespaces.
+- The Kubernetes API of Backstage accepts only entities that exist in the catalog. A test with a forged entity for `kube-system` got the answer `403`. The permission policy of the image allows all actions. So I expect a guest can add an entity through the catalog API, with any namespace in its annotations. I did not test this.
+- To close the gap, put the GitHub login in place. It needs your own image. Until then, use this setup on a trusted network only.
+
+To switch the route off, set `httpRoute.enabled: false` in `values.yaml`. Set both `baseUrl` values back to `http://localhost:7007`. Run the `helm upgrade` again. Then use `kubectl port-forward -n backstage svc/backstage 7007:7007`.
 
 ## Undo
 

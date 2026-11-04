@@ -29,16 +29,15 @@ backstage:
     - postgres
 
   appConfig:
-    # There is no HTTPRoute yet. Use `kubectl port-forward` on port 7007.
-
+    # Users reach Backstage at http://backstage.local through the HTTPRoute below.
     app:
-      baseUrl: http://localhost:7007
+      baseUrl: http://backstage.local
       # The image holds more plugins than the app code lists: Kubernetes, org, catalog graph, and others.
       # The frontend turns them on only when this key is `all`.
       packages: all
     # The backend serves the frontend, so both use one address.
     backend:
-      baseUrl: http://localhost:7007
+      baseUrl: http://backstage.local
       database:
         client: pg
         connection:
@@ -73,6 +72,17 @@ backstage:
               url: https://kubernetes.default.svc
               authProvider: serviceAccount
               caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+# The route of Backstage. The Gateway is traefik-gateway (infrastructure/gateway).
+# The hostname keeps it apart from the route of Online Boutique, which has no hostname.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: traefik-gateway
+      namespace: kube-system
+      sectionName: web
+  hostnames:
+    - backstage.local
 
 serviceAccount:
   create: true
