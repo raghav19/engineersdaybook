@@ -20,8 +20,9 @@ The folder `catalog/` describes Online Boutique for Backstage. Its [README](cata
 
 | File | Content |
 |---|---|
-| `catalog/catalog-info.yaml` | The System `online-boutique`, 11 Components, and the Resource `redis-cart`. |
+| `catalog/catalog-info.yaml` | The System `online-boutique`, 11 Components, the Resource `redis-cart`, and the API `online-boutique-grpc`. |
 | `catalog/org.yaml` | The Group `boutique-team` and the User `raghav19`. |
+| `catalog/demo.proto` | A verbatim copy of the gRPC definition of microservices-demo `v0.10.7`. The API entity reads it. |
 
 Each Component lists the services it calls in `dependsOn`. The list comes from the `*_ADDR` variables in the release manifest.
 

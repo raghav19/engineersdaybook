@@ -1,5 +1,5 @@
 # The owner of Online Boutique and the first user.
-# The user entity matches a GitHub login later, through the annotation github.com/user-id.
+# The user entity matches a GitHub login later. The annotation github.com/user-id holds the node ID of the GitHub user (not the number).
 apiVersion: backstage.io/v1alpha1
 kind: Group
 metadata:
@@ -14,7 +14,7 @@ kind: User
 metadata:
   name: raghav19
   annotations:
-    github.com/user-id: "21075059"
+    github.com/user-id: MDQ6VXNlcjIxMDc1MDU5
 spec:
   profile:
     displayName: Raghavender Nagarajan
