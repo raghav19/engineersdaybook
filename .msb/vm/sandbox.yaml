@@ -19,6 +19,8 @@ env:
   SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone. The justfile (MSB_WORKSPACE) has the same value.
   SANDBOX_BRANCH: ${SANDBOX_BRANCH} # the branch of the host checkout. The clone starts on it.
   REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone.
+  SANDBOX_NAME: ${MSB_NAME} # the CN of the node certificate request.
+  SANDBOX_GITHUB_LOGIN: ${SANDBOX_GITHUB_LOGIN} # the URI SAN of the node certificate request. msb.py reads it from GitHub with GH_TOKEN.
   GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME} # git reads the identity from these four variables. So the VM needs no git config for it.
   GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME}
   GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL}

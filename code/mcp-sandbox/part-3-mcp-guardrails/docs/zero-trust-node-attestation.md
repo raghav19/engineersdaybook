@@ -248,7 +248,17 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 
 Expect the entry with the two selectors `x509pop:subject:cn:sandbox-dev` and `x509pop:san:github-id:raghav19`.
 
-**Parts 4 and 5: the agent.** In the microVM:
+**Part 4: the key and the CSR.** In the microVM:
+
+```bash
+openssl req -in ~/.spire/node.csr -noout -subject
+openssl req -in ~/.spire/node.csr -noout -text | grep URI
+stat -c %a ~/.spire/node.key
+```
+
+Expect the CN `sandbox-dev` and the URI SAN `x509pop://mcp.local/github-id/<login>`. Expect `600` for the key.
+
+**Part 5: the agent.** In the microVM:
 
 ```bash
 spire-agent healthcheck -socketPath /home/agent/.spire/agent.sock
@@ -282,7 +292,7 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | 1 | The node CA (cert-manager) | done |
 | 2 | trust-manager and the node CA bundle | done |
 | 3 | `x509pop` on the SPIRE server, and the node entry | done |
-| 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | planned |
+| 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | done |
 | 5 | `msb.py attest` on the host | planned |
 | 6 | Cleanup of the other pages | planned |
 
