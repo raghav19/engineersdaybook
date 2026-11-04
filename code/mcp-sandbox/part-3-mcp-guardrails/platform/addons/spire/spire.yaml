@@ -2,7 +2,8 @@
 # The chart source is the HelmRepository in crds.yaml. Chart values: put them under spec.values; `just diff` shows what a value changes in the
 # objects the chart renders. The chart renders the server, the agents and the CSI driver into this release's namespace, spire-system.
 # Agents never sign: they attest to the server and hand out the SVIDs it issues. The agent that later runs in the microVM attests to this same
-# server with a join token (nodeAttestor.joinToken), so the server is the one CA of the stack.
+# server with a node certificate (nodeAttestor.x509POP), so the server is the one CA of the stack. The join token stays on until the last
+# part of the chain (docs/zero-trust-node-attestation.md) turns it off.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -36,6 +37,13 @@ spec:
         # k8s_psat (the node agents) is on by default; join_token is for the agent of a microVM.
         joinToken:
           enabled: true
+        # x509pop is the node proof of the microVM. The server trusts a node certificate only if the node CA signed it. The CA certificate comes
+        # from the ConfigMap node-ca-bundle (node-ca.yaml); the chart mounts it at ca_bundle_path. The pod waits for the ConfigMap.
+        x509POP:
+          enabled: true
+          mode: externalPKI
+          caBundle:
+            existingConfigMap: node-ca-bundle
       controllerManager:
         # The chart only reconciles a ClusterSPIFFEID whose spec.className is its own class (spire-system-spire). The ClusterSPIFFEIDs of the
         # components set none, so without this they are ignored: no registration entry, no status, and the proxy of the pod is refused an

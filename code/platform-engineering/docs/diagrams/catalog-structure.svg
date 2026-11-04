@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="440" viewBox="0 0 1260 440" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#333"/></marker></defs>
+<rect width="1260" height="440" fill="#ffffff"/>
+<text x="20" y="26" font-size="20" font-weight="bold">Backstage catalog of Online Boutique: the kinds and their links</text>
+<rect x="20" y="60" width="330" height="310" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="20" y1="86" x2="350" y2="86" stroke="#666666" stroke-width="1"/>
+<text x="30" y="78" font-size="14">org.yaml</text>
+<rect x="480" y="60" width="760" height="360" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="480" y1="86" x2="1240" y2="86" stroke="#666666" stroke-width="1"/>
+<text x="490" y="78" font-size="14">catalog-info.yaml</text>
+<rect x="500" y="100" width="720" height="304" rx="12" fill="#ffffff" stroke="#666666" stroke-width="1.5"/>
+<line x1="500" y1="126" x2="1220" y2="126" stroke="#666666" stroke-width="1"/>
+<text x="510" y="118" font-size="14">System: online-boutique  (every member: spec.system = online-boutique, spec.owner = boutique-team)</text>
+<rect x="40" y="110" width="290" height="72" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+<text x="185" y="133" font-size="14" text-anchor="middle" font-weight="bold">Group</text>
+<text x="185" y="151" font-size="14" text-anchor="middle">boutique-team</text>
+<text x="185" y="169" font-size="14" text-anchor="middle">spec.type: team</text>
+<rect x="40" y="262" width="290" height="72" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="185" y="285" font-size="14" text-anchor="middle" font-weight="bold">User</text>
+<text x="185" y="303" font-size="14" text-anchor="middle">raghav19</text>
+<text x="185" y="321" font-size="14" text-anchor="middle">spec.memberOf: [boutique-team]</text>
+<rect x="520" y="150" width="680" height="72" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="860" y="173" font-size="14" text-anchor="middle" font-weight="bold">Component (11)</text>
+<text x="860" y="191" font-size="14" text-anchor="middle">frontend, checkoutservice, cartservice, and 8 more</text>
+<text x="860" y="209" font-size="14" text-anchor="middle">spec.type: service</text>
+<rect x="520" y="302" width="680" height="72" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="860" y="325" font-size="14" text-anchor="middle" font-weight="bold">Resource</text>
+<text x="860" y="343" font-size="14" text-anchor="middle">redis-cart</text>
+<text x="860" y="361" font-size="14" text-anchor="middle">spec.type: cache</text>
+<path d="M185 262C185 230 185 214 185 182" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="146" y="212" width="78" height="20" fill="#ffffff"/>
+<text x="185" y="227" font-size="13" text-anchor="middle">memberOf</text>
+<path d="M500 145.904C431.962 145.904 398.038 146 330 146" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="380.25" y="135.952" width="69.5" height="20" fill="#ffffff"/>
+<text x="415" y="150.952" font-size="13" text-anchor="middle">ownedBy</text>
+<path d="M860 222C860 254 860 270 860 302" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="816.75" y="252" width="86.5" height="20" fill="#ffffff"/>
+<text x="860" y="267" font-size="13" text-anchor="middle">dependsOn</text>
+</svg>

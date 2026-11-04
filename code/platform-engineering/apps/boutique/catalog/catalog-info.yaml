@@ -1,0 +1,209 @@
+# The catalog of Online Boutique. The pinned release is v0.10.7 (apps/boutique/kustomization.yaml).
+# Dependencies come from the *_ADDR environment variables in the release manifest.
+# Each Component finds its pods with a label selector. The Boutique pods carry the label `app: <name>`.
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: online-boutique
+  description: A web shop where users browse items, add them to the cart, and buy them. It has 11 microservices that talk over gRPC.
+spec:
+  owner: group:default/boutique-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: frontend
+  description: Serves the website over HTTP. It needs no signup, and it makes a session ID for each user.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=frontend
+  tags: [go]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  dependsOn:
+    - component:default/adservice
+    - component:default/cartservice
+    - component:default/checkoutservice
+    - component:default/currencyservice
+    - component:default/productcatalogservice
+    - component:default/recommendationservice
+    - component:default/shippingservice
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cartservice
+  description: Stores the items of the shopping cart in Redis and reads them back.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=cartservice
+  tags: [csharp]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  dependsOn:
+    - resource:default/redis-cart
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: productcatalogservice
+  description: Gives the list of products from a JSON file. It searches products and returns one product.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=productcatalogservice
+  tags: [go]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: currencyservice
+  description: Converts an amount of money to another currency, with rates from the European Central Bank. It has the highest QPS.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=currencyservice
+  tags: [nodejs]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: paymentservice
+  description: Charges the given credit card (mock) and returns a transaction ID.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=paymentservice
+  tags: [nodejs]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: shippingservice
+  description: Estimates the shipping cost of a cart and ships the items (mock).
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=shippingservice
+  tags: [go]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: emailservice
+  description: Sends an order confirmation email (mock).
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=emailservice
+  tags: [python]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: checkoutservice
+  description: Reads the cart, prepares the order, and calls the payment, shipping and email services.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=checkoutservice
+  tags: [go]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  dependsOn:
+    - component:default/cartservice
+    - component:default/currencyservice
+    - component:default/emailservice
+    - component:default/paymentservice
+    - component:default/productcatalogservice
+    - component:default/shippingservice
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: recommendationservice
+  description: Recommends other products, based on the products in the cart.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=recommendationservice
+  tags: [python]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  dependsOn:
+    - component:default/productcatalogservice
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: adservice
+  description: Gives text ads for the given context words.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=adservice
+  tags: [java]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: loadgenerator
+  description: Sends steady requests to the frontend. It imitates the shopping flows of real users (Locust).
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=loadgenerator
+  tags: [python]
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:default/boutique-team
+  system: online-boutique
+  dependsOn:
+    - component:default/frontend
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: redis-cart
+  description: The Redis cache that holds the shopping carts.
+  annotations:
+    backstage.io/kubernetes-namespace: boutique
+    backstage.io/kubernetes-label-selector: app=redis-cart
+spec:
+  type: cache
+  owner: group:default/boutique-team
+  system: online-boutique

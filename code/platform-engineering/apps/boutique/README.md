@@ -14,6 +14,17 @@ This folder runs release `v0.10.7` in the namespace `boutique`. It adds one `HTT
 
 The release makes `frontend-external` a `LoadBalancer` on port 80. Traefik already holds node port 80 through ServiceLB. So the patch removes that Service, and the route is the only way in.
 
+## Catalog
+
+The folder `catalog/` describes Online Boutique for Backstage. Its [README](catalog/README.md) explains the structure with a diagram. The setup of Backstage is in [infrastructure/backstage](../../infrastructure/backstage/README.md).
+
+| File | Content |
+|---|---|
+| `catalog/catalog-info.yaml` | The System `online-boutique`, 11 Components, and the Resource `redis-cart`. |
+| `catalog/org.yaml` | The Group `boutique-team` and the User `raghav19`. |
+
+Each Component lists the services it calls in `dependsOn`. The list comes from the `*_ADDR` variables in the release manifest.
+
 ## Apply
 
 ```bash

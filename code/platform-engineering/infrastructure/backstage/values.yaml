@@ -1,0 +1,89 @@
+# Values for the official Backstage Helm chart (oci://ghcr.io/backstage/charts/backstage, version 2.10.2).
+# The chart runs a demo image: what `npx @backstage/create-app` makes. It has no GitHub login and no custom plugins.
+backstage:
+  image:
+    registry: ghcr.io
+    repository: backstage/backstage
+    # Version 1.55.2. The digest pins it, because `latest` moves.
+    tag: "1.55.2"
+    digest: sha256:68f2025a3f2774e04d58a65a948ccd04a93ddab7b7977be850e9df6d3beae6e3
+
+  # One pod at a time, because the plugins run database migrations at start.
+  strategy:
+    type: Recreate
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+  extraEnvVars:
+    - name: POSTGRES_HOST
+      value: postgres.backstage.svc.cluster.local
+    - name: POSTGRES_PORT
+      value: "5432"
+  # POSTGRES_USER and POSTGRES_PASSWORD come from the Secret `postgres`.
+  extraEnvVarsSecrets:
+    - postgres
+
+  appConfig:
+    # Users reach Backstage at http://backstage.local through the HTTPRoute below.
+    app:
+      baseUrl: http://backstage.local
+      # The image holds more plugins than the app code lists: Kubernetes, org, catalog graph, and others.
+      # The frontend turns them on only when this key is `all`.
+      packages: all
+    # The backend serves the frontend, so both use one address.
+    backend:
+      baseUrl: http://backstage.local
+      database:
+        client: pg
+        connection:
+          host: ${POSTGRES_HOST}
+          port: ${POSTGRES_PORT}
+          user: ${POSTGRES_USER}
+          password: ${POSTGRES_PASSWORD}
+    auth:
+      providers:
+        # The demo image has only the guest login. Outside development, the guest login stays off unless you set this flag.
+        guest:
+          dangerouslyAllowOutsideDevelopment: true
+    catalog:
+      # The chart loads only this file, not the app-config.yaml of the image. Without this rule, the kind System is not allowed.
+      rules:
+        - allow: [Component, System, Resource, API, Location]
+      locations:
+        - type: url
+          target: https://github.com/raghav19/engineersdaybook/blob/main/code/platform-engineering/apps/boutique/catalog/catalog-info.yaml
+        - type: url
+          target: https://github.com/raghav19/engineersdaybook/blob/main/code/platform-engineering/apps/boutique/catalog/org.yaml
+          rules:
+            - allow: [User, Group]
+    kubernetes:
+      serviceLocatorMethod:
+        type: multiTenant
+      clusterLocatorMethods:
+        - type: config
+          clusters:
+            # Backstage runs in this cluster. It uses the token of its own ServiceAccount.
+            - name: k3s
+              url: https://kubernetes.default.svc
+              authProvider: serviceAccount
+              caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+# The route of Backstage. The Gateway is traefik-gateway (infrastructure/gateway).
+# The hostname keeps it apart from the route of Online Boutique, which has no hostname.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: traefik-gateway
+      namespace: kube-system
+      sectionName: web
+  hostnames:
+    - backstage.local
+
+serviceAccount:
+  create: true
+  name: backstage
