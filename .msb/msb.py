@@ -190,7 +190,7 @@ def ensure_vm() -> None:
     if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
         # TODO: untested. msb 0.7.10 has no test for a secret on port 6443 or for these flags together with --conf. Check on a scratch VM:
-        # `kubectl get ns` works in the VM, `kubectl auth whoami` prints system:serviceaccount:sandbox-agent:sandbox-agent, and `curl -sk -H "Authorization: Bearer $MSB_K8S_TOKEN" https://host.microsandbox.internal:6443/version` works.
+        # `kubectl get ns` works in the VM, `kubectl auth whoami` prints system:serviceaccount:sandbox-agent:sandbox-agent, and `curl -sk -H 'Authorization: Bearer $MSB_K8S_TOKEN' https://host.microsandbox.internal:6443/version` works (single quotes: the placeholder is literal text).
         tls_args = [arg for port in TLS_INTERCEPT_PORTS for arg in ("--tls-intercept-port", str(port))]
         tls_args += ["--tls-upstream-ca-cert-for", f"host.microsandbox.internal={k3s_ca}"]
         done = subprocess.run(
