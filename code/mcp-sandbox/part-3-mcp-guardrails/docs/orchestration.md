@@ -29,19 +29,19 @@ The source is `diagrams/orchestration.drawio`. See [diagrams](diagrams/README.md
 Flux itself is not in the sync folder:
 
 ```text
-sync/local-kind/                   what Flux reconciles
+sync/local-k3s/                   what Flux reconciles
 ├── kustomization.yaml
 ├── apps.yaml                      the groups: secrets, mesh, gateway
 └── infra/
     ├── secrets/stack.yaml         3 units
     ├── mesh/stack.yaml            3 units
     └── gateway/stack.yaml         7 units
-clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
+clusters/k3s/flux-instance.yaml   Flux itself: applied only by the host
 ```
 
 - A merge cannot remove the `FluxInstance`. Deleting it uninstalls Flux. The workloads stay.
 - The `FluxInstance` has the annotation `kustomize.toolkit.fluxcd.io/prune: disabled`. A sync that once held it cannot prune it.
-- A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/kind/up` on the host.
+- A Flux upgrade is an edit of `distribution.version`. Then run `just clusters/k3s/up` on the host.
 - The cluster has three groups. A group holds the units of one chain: a CRD provider with the units that use it. `secrets` (`cert-manager`, `external-secrets`, `secret-store`), `mesh` (`spire`, `istio`, `istio-ingress`) and `gateway` (`gateway-api`, `agentgateway`, `mcp-servers`, `routes`, `authn-jwt`, `rate-limit`, `tool-rbac`).
 - The groups do not wait for each other. A unit names what it needs in its own `dependsOn`, also across the groups: `mcp-servers` in `gateway` waits for `secret-store` in `secrets`. This is the only edge between two groups.
 - A component joins a group with the label `app.kubernetes.io/part-of` on the `Kustomization` of its entry file. The folder under `platform/` does not decide it. The first real workload becomes a new group: add it to `apps.yaml`, add a folder next to `infra/`, and name what it needs in its units.
@@ -54,18 +54,18 @@ clusters/kind/flux-instance.yaml   Flux itself: applied only by the host
 sequenceDiagram
     autonumber
     participant H as host
-    participant K as kind cluster
+    participant K as k3s cluster
     participant O as Flux Operator
     participant S as source-controller
     participant C as kustomize-controller
 
     Note over H: host only: needs the Bitwarden access token (a prompt, or BWS_ACCESS_TOKEN)
-    H->>K: just clusters/kind/up: create the cluster
-    H->>K: install the Flux Operator
+    H->>K: just clusters/k3s/create: install k3s (once)
+    H->>K: just clusters/k3s/up: install the Flux Operator
     H->>K: create the Secrets ghcr-pull and bitwarden-access-token (the token comes from the prompt, ghcr-pull from Bitwarden)
-    H->>K: apply clusters/kind/flux-instance.yaml
+    H->>K: apply clusters/k3s/flux-instance.yaml
     O->>K: install the Flux controllers
-    O->>K: create the Kustomization flux-system (path sync/local-kind)
+    O->>K: create the Kustomization flux-system (path sync/local-k3s)
     S->>S: clone main from GitHub
     C->>K: apply the groups secrets, mesh and gateway, then the 13 units, each after its dependsOn
     Note over C,K: ESO then writes the other Secrets from Bitwarden, for example github-upstream
@@ -89,7 +89,7 @@ sequenceDiagram
     D->>G: open a pull request with the new pin
     Note over D,G: the diff shows the objects that change (the manifest-diff workflow hydrates, publishes and posts it in the pull request)
     G->>G: review and merge
-    S->>G: read sync/local-kind
+    S->>G: read sync/local-k3s
     C->>K: update the unit
     S->>R: pull the artifact at the new digest
     C->>K: apply the artifact, prune what it no longer holds

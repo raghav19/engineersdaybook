@@ -107,8 +107,8 @@ part-3-mcp-guardrails/
 │   ├── routes/           Gateway, AgentgatewayParameters, HTTPRoute
 │   ├── ext-mcp/          rules.py, tests, Dockerfile, deploy/
 │   └── policies/         authn-jwt, tool-rbac, rate-limit, ext-mcp-checks, ext-mcp-isolation, mcp-mtls
-├── clusters/kind/        cluster.yaml, kind-config.yaml, flux-instance.yaml, justfile (bring-up of the cluster and of Flux, and the two Secrets from the host)
-├── sync/local-kind/      what Flux reconciles for the cluster: apps.yaml (the groups secrets, mesh and gateway) and infra/<group>/stack.yaml (their units)
+├── clusters/k3s/        cluster.yaml, k3s-config.yaml, flux-instance.yaml, justfile (install or remove k3s, bring-up of Flux, and the two Secrets from the host)
+├── sync/local-k3s/      what Flux reconciles for the cluster: apps.yaml (the groups secrets, mesh and gateway) and infra/<group>/stack.yaml (their units)
 ├── tests/                attack cases, one folder per OWASP id
 └── out/                  build output, gitignored
 ```
@@ -121,7 +121,7 @@ part-3-mcp-guardrails/
 tools:                        # just tools/<name>/push
   stack-composer: { tag: sha256-3c91…, digest: 'sha256:51d0…' }
 components:                   # just <component>/publish-artifact
-  local-kind:                 # sync: of clusters/<cluster>/cluster.yaml
+  local-k3s:                 # sync: of clusters/<cluster>/cluster.yaml
     istio: { tag: 60b6d97d2498, digest: 'sha256:9f68…' }
 ```
 

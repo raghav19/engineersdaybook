@@ -12,20 +12,26 @@ ghcr_user := env('GHCR_USER', 'raghav19')
 # prints one secret of the Bitwarden project by name, or the access token of the machine account (it asks for the token when BWS_ACCESS_TOKEN is empty)
 bws_secret := justfile_directory() / '../../lib/bws-secret.sh'
 
-# misc
-name := `yq .name kind-config.yaml`
-ctx := 'kind-' + name
+# k3s: the version that runs on the host today, and the name of the kubectl context (k3s writes `default` in /etc/rancher/k3s/k3s.yaml)
+k3s_version := 'v1.37.1+k3s1'
+ctx := env('KUBE_CONTEXT', 'default')
 
 # RECIPES
+# Install k3s with k3s-config.yaml (host). The official install script runs as root. Run `destroy` first when k3s is already there.
+# TODO: untested. The host runs a k3s that this recipe did not install. Check on a fresh install that k3s.service starts and that `kubectl get nodes` shows Ready.
+create: _host
+    sudo install -D -m 0644 k3s-config.yaml /etc/rancher/k3s/config.yaml
+    curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION={{ k3s_version }} sh -
+    @echo "Copy the kubeconfig into the sandbox VM: just msb sync-kubeconfig"
+
+# The hand-over of the cluster to Flux (host). The Flux Operator Web UI has no login and `up` does not expose it. To open it:
+# kubectl --context default -n flux-system port-forward deploy/flux-operator 9080:9080, then http://127.0.0.1:9080
 up: _host
-    kind get clusters | grep -qx {{ name }} || kind create cluster --config kind-config.yaml
     kubectl --context {{ ctx }} wait --for=condition=Ready node --all --timeout=5m
-    kubectl --context {{ ctx }} -n kube-system rollout status daemonset/kube-proxy --timeout=5m
     kubectl --context {{ ctx }} create namespace flux-system --dry-run=client -o yaml | kubectl --context {{ ctx }} apply -f -
     helm upgrade --install flux-operator {{ flux_operator_chart }} --version {{ flux_operator_version }} \
       --kube-context {{ ctx }} --namespace flux-system --wait --timeout {{ flux_operator_timeout }}
     just --justfile {{ justfile() }} _seed
-    kubectl --context {{ ctx }} apply -f web-ui-service.yaml
     kubectl --context {{ ctx }} apply -f flux-instance.yaml
 
 # The two Secrets the cluster needs before ESO runs, created on the host. Everything else comes from Bitwarden through ESO (platform/secret-store).
@@ -46,11 +52,13 @@ _seed: _host
       --docker-password="$ghcr_token" --dry-run=client -o yaml \
       | kubectl --context {{ ctx }} apply -f -
 
-down: _host
-    kind delete cluster --name {{ name }}
+# Remove k3s and all its data (host). The script comes from the install script of `create`.
+[confirm('Remove k3s from this host with all its workloads and data?')]
+destroy: _host
+    sudo /usr/local/bin/k3s-uninstall.sh
 
 # delete the CRDs of the stack, and with them every custom resource of those kinds. Flux never prunes a CRD (the artifacts mark them), so this is
-# the explicit step. Run it after the stack is removed from Flux, otherwise the next reconcile applies them again. `down` needs none of this.
+# the explicit step. Run it after the stack is removed from Flux, otherwise the next reconcile applies them again. `destroy` needs none of this.
 [confirm('Delete the agentgateway, Gateway API, SPIRE, Istio, cert-manager and External Secrets CRDs and every custom resource of those kinds?')]
 delete-crds: _host
     kubectl --context {{ ctx }} get crd -o name | grep -E '\.(agentgateway\.dev|gateway\.networking\.k8s\.io|spiffe\.io|istio\.io|cert-manager\.io|external-secrets\.io)$' | xargs -r kubectl --context {{ ctx }} delete --wait

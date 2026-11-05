@@ -13,8 +13,8 @@ spec:
   listeners:
     - name: http
       protocol: HTTP
-      # Rootless Docker cannot publish a port below 1024. This is the default; `gateway_port` in config/ overrides it (setters.yaml).
-      # clusters/kind/kind-config.yaml (host port) and tests/justfile are not components: keep them equal by hand.
+      # This is the default; `gateway_port` in config/ overrides it (setters.yaml).
+      # tests/justfile is not a component: keep it equal by hand.
       port: 8080
       allowedRoutes:
         namespaces:

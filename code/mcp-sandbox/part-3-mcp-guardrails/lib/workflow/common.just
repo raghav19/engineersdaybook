@@ -29,8 +29,8 @@ out := root / 'out' / name
 # the config value that switches this component: istio-ingress -> istio_ingress_enabled (no value means enabled)
 flag := replace(name, '-', '_') + '_enabled'
 # the cluster that a run targets: CLUSTER=<name> just <component>/compose-stack. Its folder is clusters/<cluster>/ (bring-up, cluster.yaml)
-cluster := env('CLUSTER', 'kind')
-# the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-kind, later aws-dev-us-east-1)
+cluster := env('CLUSTER', 'k3s')
+# the sync folder of the cluster, sync/<full name>/: the name is `sync:` in clusters/<cluster>/cluster.yaml (local-k3s, later aws-dev-us-east-1)
 sync := 'sync/' + shell('yq .sync "$1"', root / 'clusters' / cluster / 'cluster.yaml')
 cluster_name := file_name(sync)
 # the group of this component: the label app.kubernetes.io/part-of on the Kustomization of its entry file (flux/stack.yaml). Empty for a folder that has none
