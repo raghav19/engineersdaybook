@@ -18,7 +18,7 @@ set script-interpreter := ['bash', '-euo', 'pipefail']
 export MSB_NAME := 'sandbox-dev'
 # The path of the clone in the VM. SANDBOX_WORKSPACE in vm/sandbox.yaml has the same value.
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
-# The node identity of the VM (key, certificate, trust bundle). `provision` fills it. vm/sandbox.yaml mounts it read-only in the VM.
+# The node identity of the VM (key, certificate, trust bundle). `node-cert` fills it. vm/sandbox.yaml mounts it read-only in the VM.
 export SANDBOX_NODE_DIR := home_directory() / '.config/msb/node'
 
 # --- Required tools ---
@@ -31,7 +31,6 @@ jq      := require("jq")
 yq      := require("yq")
 ssh     := require("ssh")
 kubectl := require("kubectl")
-openssl := require("openssl")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')
@@ -111,8 +110,7 @@ _vm:
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 [env('SANDBOX_OMARCHY_THEME', shell('printf %s "$HOME/.local/state/omarchy/current/theme"'))]
-run: _host-only
-    {{ step }} provision
+run: _host-only node-cert
     {{ bws_run }} 'MSB_IN_BWS=1 GHCR_PUSH_TOKEN="$GITHUB_TOKEN" just --justfile {{ source_file() }} _vm'
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec herdr"
 
@@ -120,11 +118,24 @@ run: _host-only
 edit: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec ttt ."
 
-# Make the node key, get a 90-day node certificate from the node CA of the cluster, and refresh the trust bundle, all in ~/.config/msb/node.
-# `run` does this first, so the VM does not start without it. kubectl uses the current context, or KUBE_CONTEXT.
-# To rotate the key or the certificate, delete node.key or node.crt in that folder and run this again.
+# The node identity of the VM: cert-manager makes the key pair and the 90-day certificate (the Certificate `sandbox-node` in the spire addon of part 3, signed by the node CA).
+# This recipe waits until the certificate is Ready, then copies the key, the certificate and the SPIFFE trust bundle into ~/.config/msb/node. The VM mounts that folder read-only.
+# `run` does this first, so the VM does not start without it. cert-manager renews the certificate 30 days before its end, and a new key comes with it. Run this recipe again to copy them.
+# To rotate the key at once (a leak), delete the Secret: kubectl -n spire-system delete secret sandbox-node-tls. cert-manager makes a new one. Run this recipe, then restart the agent.
+# kubectl uses the current context, or KUBE_CONTEXT.
+[script('bash')]
 node-cert: _host-only
-    {{ step }} provision
+    set -euo pipefail
+    k() { kubectl ${KUBE_CONTEXT:+--context "$KUBE_CONTEXT"} -n spire-system "$@"; }
+    k wait --for=condition=Ready certificate/sandbox-node --timeout=60s || { echo "msb: the Certificate sandbox-node is not Ready. Is the cluster up, with the spire addon applied?" >&2; exit 1; }
+    dir=$SANDBOX_NODE_DIR
+    mkdir -p "$dir" && chmod 700 "$dir"
+    k get secret sandbox-node-tls -o 'jsonpath={.data.tls\.key}' | base64 -d > "$dir/node.key.new"
+    k get secret sandbox-node-tls -o 'jsonpath={.data.tls\.crt}' | base64 -d > "$dir/node.crt.new"
+    k exec spire-server-0 -c spire-server -- /opt/spire/bin/spire-server bundle show -format spiffe > "$dir/bundle.json.new"
+    chmod 600 "$dir/node.key.new" && chmod 644 "$dir/node.crt.new" "$dir/bundle.json.new"
+    for file in node.key node.crt bundle.json; do mv "$dir/$file.new" "$dir/$file"; done
+    echo "The node identity is in $dir."
 
 # Add a host to network.allow in vm/sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run

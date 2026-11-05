@@ -50,7 +50,7 @@ host_ip=$(getent ahostsv4 host.microsandbox.internal | awk '{print $1; exit}')
 [ -n "$host_ip" ] || fail "could not find the address of host.microsandbox.internal"
 { grep -v '[[:space:]]spire\.localhost$' /etc/hosts || true; echo "$host_ip spire.localhost"; } > /tmp/hosts.new && cat /tmp/hosts.new > /etc/hosts && rm /tmp/hosts.new || fail "could not map spire.localhost in /etc/hosts"
 
-# The SPIRE agent attests the VM to the SPIRE server with the node key and certificate that the host makes (`msb.py provision`) and mounts read-only at /run/sandbox/node.
+# The SPIRE agent attests the VM to the SPIRE server with the node key and certificate that `just msb node-cert` copies from the cluster, and the VM mounts read-only at /run/sandbox/node.
 # It runs as root, because the key is a mode 600 file of the host, and the user agent must not read it. Its config, data folder, socket folder and log are owned by root for the same reason.
 # A running agent stays as it is: it attests again by itself each time its own SVID rotates. A new agent starts with an empty data folder, so it attests at each start.
 # If the agent is not healthy in 30 seconds, this script stops, and so does `just msb run`. The VM keeps running: `just msb shell` opens it.

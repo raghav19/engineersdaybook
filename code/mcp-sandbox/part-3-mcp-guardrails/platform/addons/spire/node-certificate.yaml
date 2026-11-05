@@ -1,0 +1,26 @@
+# The node certificate of the sandbox microVM. cert-manager makes the key pair and the certificate, and the node CA signs it (node-ca.yaml).
+# The Secret sandbox-node-tls holds tls.key and tls.crt. `just msb node-cert` (.msb/justfile) copies them to the host, and the VM mounts them read-only. The SPIRE agent in the VM attests with them.
+# cert-manager renews the certificate 30 days before its end. With rotationPolicy Always, a new key comes with each renewal. Delete the Secret to rotate the key at once.
+# The CN and the URI SAN are the two selectors of the node entry (node-entry.yaml): keep them equal. The usage `digital signature` is what the x509pop plugin needs.
+# shortcut: the trust domain mcp.local and the login raghav19 are written out here, as in node-entry.yaml. Change both files together.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: sandbox-node
+  namespace: spire-system
+spec:
+  secretName: sandbox-node-tls
+  commonName: sandbox-dev
+  uris:
+    - x509pop://mcp.local/github-id/raghav19
+  usages:
+    - digital signature
+  duration: 2160h
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    kind: Issuer
+    name: node-ca
