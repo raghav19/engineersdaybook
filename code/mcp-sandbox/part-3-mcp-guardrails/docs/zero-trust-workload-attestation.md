@@ -89,8 +89,8 @@ The list has the entry `spiffe://mcp.local/microvm/<github id>/envoy` with the s
 In the microVM, ask for the SVID as the user `envoy` and as the user `agent`. `sudo` drops the `PATH`, so use the full path of `spire-agent`:
 
 ```bash
-sudo -u envoy "$(command -v spire-agent)" api fetch x509 -socketPath /home/agent/.spire/agent.sock
-spire-agent api fetch x509 -socketPath /home/agent/.spire/agent.sock
+sudo -u envoy "$(command -v spire-agent)" api fetch x509 -socketPath /run/spire/agent.sock
+spire-agent api fetch x509 -socketPath /run/spire/agent.sock
 ```
 
 The first command returns the SVID of Envoy. The second returns `no identity issued`.

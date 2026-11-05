@@ -99,7 +99,7 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/herdr-ttt-plugin/ /home/agent/.config/herdr/plugins/ttt-editor/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
-COPY --chown=agent:agent configs/spire/spire-agent.conf /home/agent/.config/spire/agent.conf
+COPY configs/spire/spire-agent.conf /etc/spire/agent.conf
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
