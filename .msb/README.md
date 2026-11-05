@@ -155,6 +155,7 @@ The `claude-home` volume keeps the Claude Code conversations, so they survive `j
 | Start or repair the VM | `just msb run` |
 | Open a bash prompt in the VM | `just msb shell` |
 | Allow one more host | `just msb allow-host example.org`, then `just msb rm && just msb run`, then commit |
+| Attest the VM to the SPIRE server | `just msb attest` (the VM must run and the cluster must be up) |
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
 | Add another secret | Add it under `secrets:` in `vm/sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `# --- Required environment variables ---` in `.msb/justfile`, then `just msb rm && just msb run` |
 | Change a tool of the image | Edit a file in `image/`, commit, `just msb build`, commit the new digest, then `just msb rm && just msb run` |

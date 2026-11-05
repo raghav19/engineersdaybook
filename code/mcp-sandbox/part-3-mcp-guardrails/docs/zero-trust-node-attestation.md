@@ -301,7 +301,7 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | 2 | trust-manager and the node CA bundle | done |
 | 3 | `x509pop` on the SPIRE server, and the node entry | done |
 | 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | done |
-| 5 | `msb.py attest` on the host | planned |
+| 5 | `msb.py attest` on the host | done |
 | 6 | Cleanup of the other pages | planned |
 
 ## 11. Setup of the SPIRE server and agent

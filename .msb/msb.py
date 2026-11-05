@@ -13,15 +13,19 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
+attest           sign the node certificate of the VM with the node CA of the cluster, put it in the VM with the trust bundle, and start the SPIRE agent.
+                 It needs the VM and the cluster (kubectl on the host).
 allow-host       add one host to network.allow in vm/sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
+import base64
 import hashlib
 import json
 import os
 import re
 import secrets
+import shlex
 import socket
 import subprocess
 import sys
@@ -30,7 +34,7 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from pathlib import Path
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
@@ -51,6 +55,12 @@ HOST_PORTS = {
     6443: "k3s API server",
     443: "SPIRE server (gateway, TLS passthrough)",
 }
+SSH_CONFIG = MSB_DIR / "vm" / "ssh_config"
+# `attest`: the node CA (an Issuer in platform/addons/spire/node-ca.yaml), how long a node certificate lasts, and the socket of the agent (spire-agent.conf has the same path).
+SPIRE_NAMESPACE = "spire-system"
+NODE_ISSUER = "node-ca"
+NODE_CERT_DURATION = "24h"
+AGENT_SOCKET = "/home/agent/.spire/agent.sock"
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
 
@@ -131,6 +141,64 @@ def _github_callback() -> dict[str, list[str]]:
     return {}
 
 
+def _run(args: list[str], data: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a command and return the result. A failed command does not stop the step: the caller decides. `data` goes to stdin. Without it, stdin is /dev/null."""
+    return subprocess.run(
+        args, input=data, stdin=None if data is not None else subprocess.DEVNULL, capture_output=True, text=True, check=False
+    )
+
+
+def _ok(done: subprocess.CompletedProcess[str], what: str) -> str:
+    """Return the stdout of a command that must work. If it failed, stop with `what` and the start of its stderr."""
+    if done.returncode != 0:
+        _die(f"{what} failed: {done.stderr.strip()[:300]}")
+    return done.stdout
+
+
+def _kubectl(*args: str) -> list[str]:
+    """Return the kubectl command line. KUBE_CONTEXT picks the context, as in the recipes of part 3. Without it kubectl uses the current context."""
+    context = os.environ.get("KUBE_CONTEXT")
+    return ["kubectl", *(["--context", context] if context else []), *args]
+
+
+def _vm(command: str, data: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a shell command in the VM through ssh, as `just msb shell` does. `bash -lc` gives it the PATH of a login shell."""
+    return _run(
+        ["ssh", "-F", str(SSH_CONFIG), "-o", "BatchMode=yes", f"{os.environ['MSB_NAME']}.msb", f"bash -lc {shlex.quote(command)}"], data
+    )
+
+
+def _check_names(kind: str, pem: str, name: str, uri: str) -> None:
+    """Stop unless the CSR (kind `req`) or the certificate (kind `x509`) has exactly the CN `name` and the one URI SAN `uri`.
+
+    The VM makes the CSR, so the host checks it before the CA signs it. The CA signs what the CSR asks for. For a CSR, openssl also checks its signature.
+    The node entry of the SPIRE server (platform/addons/spire/node-entry.yaml) matches the same two values. The checks of the certificate catch a CA that changed them.
+    """
+    flags = ["-verify"] if kind == "req" else []
+    text = _ok(_run(["openssl", kind, "-noout", "-text", "-nameopt", "RFC2253", *flags], pem), f"openssl {kind}")
+    subject = re.search(r"^\s*Subject: (.*)$", text, re.MULTILINE)
+    alt = re.search(r"X509v3 Subject Alternative Name:[^\n]*\n\s*([^\n]*)", text)
+    if not subject or subject.group(1).strip() != f"CN={name}":
+        _die(f"the {kind} has the subject {subject.group(1).strip() if subject else 'none'!r}. Expected CN={name}.")
+    if not alt or [entry.strip() for entry in alt.group(1).split(",")] != [f"URI:{uri}"]:
+        _die(f"the {kind} has the SAN {alt.group(1).strip() if alt else 'none'!r}. Expected only URI:{uri}.")
+
+
+def _certificate_request(name: str, csr: str) -> dict[str, Any]:
+    """Return the cert-manager CertificateRequest for the CSR of the VM. The node CA must sign it with the key usage `digital signature`, which the x509pop plugin needs."""
+    return {
+        "apiVersion": "cert-manager.io/v1",
+        "kind": "CertificateRequest",
+        "metadata": {"generateName": f"node-{name}-"},
+        "spec": {
+            "request": base64.b64encode(csr.encode()).decode(),
+            "issuerRef": {"name": NODE_ISSUER, "kind": "Issuer", "group": "cert-manager.io"},
+            "usages": ["digital signature"],
+            "duration": NODE_CERT_DURATION,
+        },
+    }
+
+
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -195,6 +263,84 @@ def ensure_vm() -> None:
         )
 
 
+def attest() -> None:
+    """Sign the node certificate of the VM with the node CA of the cluster, put it in the VM with the trust bundle, and start the SPIRE agent.
+
+    Run it on the host, after `just msb run` (the VM) and with the cluster up. It does nothing when the agent in the VM is healthy.
+    1. Read the CSR that sandbox-boot made in the VM. Stop unless it has the CN of the VM and the one URI SAN of the fixed GitHub login (sandbox.yaml).
+    2. Make a CertificateRequest with the CSR for the Issuer `node-ca`, and wait until cert-manager signs it. Check the names of the certificate.
+    3. Read the SPIFFE trust bundle from the SPIRE server.
+    4. Write the certificate and the bundle in ~/.spire of the VM, then start the agent and wait until it is healthy.
+    The private key stays in the VM. The host sees only the CSR, the certificate and the bundle, and they are public.
+    """
+    name = os.environ["MSB_NAME"]
+    login = YAML(typ="safe").load(CONFIG)["env"]["SANDBOX_GITHUB_LOGIN"]
+    if not re.fullmatch(r"[A-Za-z0-9-]+", login):
+        _die(f"SANDBOX_GITHUB_LOGIN in {CONFIG.name} is {login!r}. It must be a GitHub login.")
+    uri = f"x509pop://mcp.local/github-id/{login}"
+    healthy = shlex.join(["spire-agent", "healthcheck", "-socketPath", AGENT_SOCKET])
+
+    if _vm(healthy).returncode == 0:
+        print("The SPIRE agent in the VM is healthy. Nothing to do.")
+        return
+
+    csr = _ok(_vm("cat ~/.spire/node.csr"), "reading ~/.spire/node.csr in the VM (is the image new, and did sandbox-boot run?)")
+    _check_names("req", csr, name, uri)
+
+    created = _ok(
+        _run(_kubectl("-n", SPIRE_NAMESPACE, "create", "-f", "-", "-o", "json"), json.dumps(_certificate_request(name, csr))),
+        "making the CertificateRequest",
+    )
+    request = json.loads(created)["metadata"]["name"]
+    signed = _run(_kubectl("-n", SPIRE_NAMESPACE, "wait", "--for=condition=Ready", f"certificaterequest/{request}", "--timeout=60s"))
+    if signed.returncode != 0:
+        conditions = _ok(
+            _run(_kubectl("-n", SPIRE_NAMESPACE, "get", f"certificaterequest/{request}", "-o", "jsonpath={.status.conditions}")),
+            "reading the conditions",
+        )
+        _die(f"cert-manager did not sign {request}: {conditions[:400]}")
+    issued = _ok(
+        _run(_kubectl("-n", SPIRE_NAMESPACE, "get", f"certificaterequest/{request}", "-o", "jsonpath={.status.certificate}")),
+        "reading the certificate",
+    )
+    certificate = base64.b64decode(issued).decode()
+    _check_names("x509", certificate, name, uri)
+
+    bundle = _ok(
+        _run(
+            _kubectl(
+                "-n",
+                SPIRE_NAMESPACE,
+                "exec",
+                "spire-server-0",
+                "-c",
+                "spire-server",
+                "--",
+                "/opt/spire/bin/spire-server",
+                "bundle",
+                "show",
+                "-format",
+                "spiffe",
+            )
+        ),
+        "reading the trust bundle of the SPIRE server",
+    )
+    for file, content in (("node.crt", certificate), ("bundle.json", bundle)):
+        _ok(_vm(f"umask 022 && cat > ~/.spire/{file}", content), f"writing ~/.spire/{file} in the VM")
+
+    _vm("pkill -x spire-agent || true")
+    _ok(
+        _vm("setsid nohup spire-agent run -config ~/.config/spire/agent.conf -logFile ~/.spire/agent.log >/dev/null 2>&1 </dev/null &"),
+        "starting the SPIRE agent",
+    )
+    for _ in range(15):
+        if _vm(healthy).returncode == 0:
+            print(f"The SPIRE agent in {name} attested with {request} and is healthy.")
+            return
+        time.sleep(2)
+    _die(f"the SPIRE agent is not healthy after 30 s. The end of its log:\n{_vm('tail -n 15 ~/.spire/agent.log').stdout}")
+
+
 def allow_host(host: str) -> None:
     """Add `host` to network.allow in vm/sandbox.yaml. The comments, the quotes and the order of the file stay as they are.
 
@@ -221,7 +367,7 @@ def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("github-login", "ensure-vm"):
+    for step in ("github-login", "ensure-vm", "attest"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -230,6 +376,8 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
+        case "attest":
+            attest()
         case "allow-host":
             allow_host(args.host)
 
