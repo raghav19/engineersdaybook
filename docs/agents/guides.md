@@ -1,6 +1,12 @@
-# READMEs and guides
+# Guides on one part of a system
 
-A README or a guide builds a correct picture of a system in the head of the reader. The reader finishes it and can explain the flow to another person.
+A guide on one part of a system builds a correct picture of that part in the head of the reader. The reader finishes it and can explain the flow to another person.
+
+## Scope
+
+This structure is for a guide that documents the details of one part. Examples: the node attestation of a VM, the rendered manifest pattern, the orchestration of Flux.
+
+A main README keeps its own shape. It says what the project is and how to start, and it links to the guides.
 
 ## Structure
 
