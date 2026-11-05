@@ -3,7 +3,9 @@ kind: Kustomization
 namespace: boutique
 resources:
   - namespace.yaml
-  - kubernetes-manifests.yaml
+  # Online Boutique v0.10.7, unchanged. The commit hash pins the file, because a tag can move.
+  # kustomize-controller fetches this URL on every reconcile, so the cluster needs access to raw.githubusercontent.com.
+  - https://raw.githubusercontent.com/GoogleCloudPlatform/microservices-demo/5b608cb1dfe317d05e4f1bb8c99b7618452fde87/release/kubernetes-manifests.yaml
   - httproute.yaml
 patches:
   # The release makes `frontend-external` a LoadBalancer on port 80. Traefik holds node port 80 through ServiceLB.
