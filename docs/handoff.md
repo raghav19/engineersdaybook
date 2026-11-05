@@ -11,6 +11,8 @@ A handoff document lets a fresh session continue a piece of work without the old
 
 ## The list
 
+- **2026-11-05. Ephemeral environments: status after the platform PRs.** The merged PRs (#242, #248, #249, #250 and #255), the user's decisions, the next steps, the open decisions and the traps in the sandbox VM. Nothing ran on a cluster yet.
+  Path: [`code/ephemeral-env/docs/handoff/ephemeral-env-status.md`](../code/ephemeral-env/docs/handoff/ephemeral-env-status.md). Status: active. The design entry below holds the details of the next steps.
 - **2026-11-05. Node attestation of the msb sandbox microVM.** The microVM attests to the SPIRE server on k3s with `x509pop`. The guide and the diagram are on `main`. Open: the second attestation, the failing `github-upstream` ExternalSecret and the workload entry.
   Path: [`code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md`](../code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md). Status: active.
 - **2026-11-05. Ephemeral environments with Istio, Gateway API and Flux ResourceSet.** Research and design of one baseline and sandboxes for the changed services.
