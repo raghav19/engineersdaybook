@@ -1,12 +1,14 @@
-# Guides on one part of a system
+# Docs of a project
 
-A guide on one part of a system builds a correct picture of that part in the head of the reader. The reader finishes it and can explain the flow to another person.
+Each project has a README and a `docs/` folder. The README says what the project is, how to start, and where the docs are. The docs go into the detail, one topic in each file.
+
+A topic doc builds a correct picture of its topic in the head of the reader. The reader finishes it and can explain the flow to another person.
 
 ## Scope
 
-This structure is for a guide that documents the details of one part. Examples: the node attestation of a VM, the rendered manifest pattern, the orchestration of Flux.
+This structure is for a topic doc in the `docs/` folder of a project. Examples: the node attestation of a VM, the rendered manifest pattern, the orchestration of Flux.
 
-A main README keeps its own shape. It says what the project is and how to start, and it links to the guides.
+The README keeps its own shape and links to the docs. ADRs, research notes and diagrams follow their own rules.
 
 ## Structure
 
