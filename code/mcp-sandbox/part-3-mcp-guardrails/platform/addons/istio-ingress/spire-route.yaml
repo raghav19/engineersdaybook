@@ -1,0 +1,48 @@
+# The route of the SPIRE server through the Istio ingress gateway. The sandbox microVM is outside the cluster: its SPIRE agent dials spire.localhost on the
+# host port 443 (k3s ServiceLB opens it for the Service of the gateway). The gateway passes the TLS through: it reads only the SNI name and sends the bytes
+# to the server. The agent keeps its own TLS with the server, so the agent checks the SVID of the server against the trust bundle, and the server reads the
+# SVID of the agent from the handshake. A gateway that ends the TLS would break both. The route is in this component, not in `spire`, because `spire` must
+# be Ready before this component starts (the ClusterSPIFFEID kind and the CSI driver), and the kinds below come from `istio`.
+#
+# The Gateway uses the protocol HTTPS with tls.mode PASSTHROUGH, as in the Istio task "Ingress Gateway without TLS Termination".
+# TODO: use a Gateway API TLSRoute instead, when Istio serves it from the standard CRDs. Istio 1.31 needs the experimental CRDs and PILOT_ENABLE_ALPHA_GATEWAY_API
+# for it. The check: a TLSRoute (v1) on a listener with protocol TLS and mode Passthrough is Accepted, and `openssl s_client -connect <host>:443 -servername spire.localhost`
+# shows the SVID of the SPIRE server.
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: spire
+  namespace: istio-ingress
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: tls-spire
+        protocol: HTTPS
+      hosts:
+        - spire.localhost
+      tls:
+        mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: spire
+  namespace: istio-ingress
+spec:
+  hosts:
+    - spire.localhost
+  gateways:
+    - spire
+  tls:
+    - match:
+        - port: 443
+          sniHosts:
+            - spire.localhost
+      route:
+        - destination:
+            host: spire-server.spire-system.svc.cluster.local
+            port:
+              number: 8081

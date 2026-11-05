@@ -2,8 +2,9 @@
 # The chart source is the HelmRepository in repository.yaml, in this namespace. This component waits for `istio` in infra/mesh/stack.yaml: the
 # injection webhook of istiod must be serving when the gateway pod is created, or the pod keeps the placeholder image `auto`.
 #
-# It is the L4 front door of the stack: a later change (the routes) moves the host port 30080 from the agentgateway Service to this one,
-# and the gateway hands the connection to agentgateway as mTLS. Until then it receives no traffic: the Service is ClusterIP.
+# It is the L4 front door of the stack. The Service is a LoadBalancer: k3s ServiceLB opens the host port 443 for it. It carries one route today,
+# the SPIRE server with TLS passthrough (spire-route.yaml). A later change (the routes) sends the MCP traffic through it too,
+# and the gateway hands the connection to agentgateway as mTLS.
 #
 # Its identity comes from SPIRE, like every proxy of this mesh: the CSI driver mounts the Workload API socket into istio-proxy, and the
 # ClusterSPIFFEID in clusterspiffeid.yaml selects the pod. The gateway needs no `spire` template: the chart is the pod spec.
@@ -25,7 +26,13 @@ spec:
     mode: enabled
   values:
     service:
-      type: ClusterIP
+      type: LoadBalancer
+      # Only the port of the SPIRE route. ServiceLB opens a host port for each port of the Service, so the ports 15021 and 80 of the chart stay closed.
+      ports:
+        - name: https
+          port: 443
+          protocol: TCP
+          targetPort: 443
     # One replica, no HPA: the cluster has one node.
     autoscaling:
       enabled: false
