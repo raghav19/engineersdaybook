@@ -1,0 +1,7 @@
+# The namespace of istiod and the base chart. Flux must never prune it: deleting a namespace deletes everything in it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

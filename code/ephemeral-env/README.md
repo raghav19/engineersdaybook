@@ -67,8 +67,23 @@ kubectl delete -f clusters/k3s/traefik-config.yaml  # Traefik returns to the k3s
 
 Delete the old tags in the registry on the GitHub packages page.
 
+## Istio (PR 2)
+
+`platform/addons/istio/` holds the namespace `istio-system`, the Istio `base` chart (the CRDs) and `istiod`. All three use Istio 1.31.1. The mesh is in sidecar mode and `istiod` is its CA. No SPIRE and no ingress gateway are in the project, because Traefik stays the ingress. Flux installs the charts after the artifact reaches the cluster. This PR changes no host step.
+
+Checks, after you publish and Flux reconciles:
+
+```sh
+kubectl -n istio-system get helmrelease                 # istio-base and istiod, READY True
+kubectl -n istio-system get deploy istiod                # 1/1 available
+kubectl get crd | grep -c istio.io                       # more than 0
+```
+
+Undo: delete `addons/istio` from `platform/kustomization.yaml`, publish, and let Flux uninstall both releases. Flux never prunes the namespace or the CRDs. To delete them, run `kubectl delete ns istio-system` and delete the `istio.io` CRDs by hand. Deleting a CRD deletes every custom resource of its kind.
+
 ## Not tested
 
 - The Flux Operator 0.62.1 with Flux 2.10.0 on this cluster. `just check` tests only the schemas. No command here ran against a cluster.
 - The k3s Traefik chart accepts the `HelmChartConfig` values on a fresh install. The idea comes from `code/platform-engineering/infrastructure/gateway/traefik-config.yaml`, which works on the current cluster.
 - `flux push artifact` with `--creds` against GHCR, and the size of the GHCR rate limit.
+- The Istio 1.31.1 charts on k3s 1.37, and the redirect from `blob.istio.io` that the `HelmRepository` follows. The chart index lists 1.31.1 for `base` and `istiod`.
