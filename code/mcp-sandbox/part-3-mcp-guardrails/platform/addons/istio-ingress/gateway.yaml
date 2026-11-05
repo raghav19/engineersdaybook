@@ -26,7 +26,7 @@ spec:
   values:
     service:
       type: ClusterIP
-    # One replica, no HPA: kind has no metrics-server.
+    # One replica, no HPA: the cluster has one node.
     autoscaling:
       enabled: false
     replicaCount: 1

@@ -1,0 +1,2 @@
+# What differs for the local k3s cluster. The name SPIRE gives this cluster. k3s has no name of its own for a cluster, so this value is the name.
+cluster_name: mcp-guardrails

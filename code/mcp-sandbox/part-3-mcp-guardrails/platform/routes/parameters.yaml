@@ -6,10 +6,10 @@ metadata:
 spec:
   service:
     spec:
-      # No load balancer provider on kind (cloud-provider-kind does not work on rootless Docker, see kind-config.yaml), so the gateway is a NodePort.
+      # The gateway is a NodePort. On k3s the node is the host, so the nodePort is a host port.
       type: NodePort
       ports:
         # Strategic merge on `port`: the generated listener port gets a fixed nodePort. The port is the default of `gateway_port` in config/ (setters.yaml).
-        # kind-config.yaml maps host 127.0.0.1:8080 to this nodePort, so keep the two equal.
+        # tests/justfile (gateway_url) uses this nodePort, so keep the two equal.
         - port: 8080
           nodePort: 30080

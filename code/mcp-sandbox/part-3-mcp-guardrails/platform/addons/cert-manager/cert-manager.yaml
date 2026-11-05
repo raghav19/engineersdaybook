@@ -41,7 +41,7 @@ spec:
     startupapicheck:
       enabled: false
   # The artifact holds the rendered CRDs. Flux must never prune one: deleting a CRD deletes every custom resource of its kind.
-  # Delete them explicitly: `just clusters/kind/delete-crds`.
+  # Delete them explicitly: `just clusters/k3s/delete-crds`.
   postRenderers:
     - kustomize:
         patches:
