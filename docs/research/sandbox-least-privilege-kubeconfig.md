@@ -132,7 +132,7 @@ Options, in the order that we recommend:
 | Option | What the VM holds | Status |
 |---|---|---|
 | A. Token file with `tokenFile`, lifetime 1 hour, refreshed from the host | A token that works for at most 1 hour | Not used. The user decided that the host must always replace the token. |
-| B. Secret placeholder `K8S_TOKEN`, host replaces it at port 6443 | A placeholder only | Chosen. Source supports it. Nobody tested it. Implemented in `.msb/msb.py`, `.msb/vm/sandbox.yaml` and `.msb/image/sandbox-boot`. |
+| B. Secret placeholder `K8S_TOKEN`, host replaces it at port 6443 | A placeholder only | Chosen. Source supports it. Nobody tested it. Implemented in `.msb/justfile`, `.msb/msb.py`, `.msb/vm/sandbox.yaml` and `.msb/image/sandbox-boot`. |
 | C. CSR client certificate | A private key and a certificate (up to the signer limit) | Not injectable. No revocation. Use only if A and B fail. |
 | D. Admin kubeconfig mount (today) | The admin identity | Remove. |
 
@@ -421,7 +421,7 @@ EOF
 #    then apply the manifests again. Old tokens fail (--service-account-lookup).
 ```
 
-Step 3 shows the token-file path (option A). We do not use it. The implementation uses option B: `msb.py` makes the token with `kubectl create token` and gives it to msb in the environment, and `sandbox-boot` writes a kubeconfig that holds the placeholder `$MSB_K8S_TOKEN`. The VM never holds the token, and `just msb sync-kubeconfig` keeps its name: it now applies the RBAC file and gives the running VM a new token.
+Step 3 shows the token-file path (option A). We do not use it. The implementation uses option B: the justfile makes the token with `kubectl create token` and puts it in the environment of msb, and `sandbox-boot` writes a kubeconfig that holds the placeholder `$MSB_K8S_TOKEN`. The VM never holds the token, and `just msb sync-kubeconfig` keeps its name: it now applies the RBAC file and gives the running VM a new token.
 
 ### VM changes (for the implementer)
 

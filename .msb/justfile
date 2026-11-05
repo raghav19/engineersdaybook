@@ -40,6 +40,12 @@ QWEN_API_KEY            := if in_bws == '' { '' } else { env('QWEN_API_KEY') }
 
 msb_dir := source_directory()
 step := msb_dir / 'msb.py'
+# The agent in the VM reaches the k3s API server with the token of the ServiceAccount sandbox-agent (k3s/sandbox-agent-rbac.yaml).
+# The token stays on the host and in msb. The VM holds the placeholder $MSB_K8S_TOKEN. The token lasts one year and is not rotated.
+# kube_ctx is the kubectl context of the host. k3s names it `default`. msb.py reads K8S_CA_FILE, the public CA of k3s that msb trusts for the API server.
+kube_ctx := env('KUBE_CONTEXT', 'default')
+export K8S_CA_FILE := home_directory() / '.config/msb/k3s-ca.crt'
+k8s_token := 'kubectl --context ' + kube_ctx + ' -n sandbox-agent create token sandbox-agent --duration 8760h'
 volumes := 'claude-home terraform-providers podman-storage herdr qwen-home'
 # Bitwarden token encrypted with `age -p`. See README.md prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
@@ -98,8 +104,15 @@ build refresh='': _host-only
       && yq -i ".image.oci = \"{{ registry }}@$digest\"" {{ msb_dir }}/vm/sandbox.yaml \
       && echo "vm/sandbox.yaml pins {{ registry }}@$digest. Commit it. Then run: just msb rm && just msb run"
 
-_vm:
-    {{ step }} ensure-vm
+# `token=$(...) && ...` stops if kubectl fails. Without a token no VM starts, so the VM never gets another credential.
+_vm: _k8s-ca
+    token=$({{ k8s_token }}) || { echo "msb: no token. Run first: just msb sync-kubeconfig" >&2; exit 1; } && K8S_TOKEN="$token" {{ step }} ensure-vm
+
+# Write the public CA of k3s from the kubeconfig of the host. A new k3s cluster has a new CA.
+_k8s-ca:
+    mkdir -p "$(dirname {{ K8S_CA_FILE }})"
+    kubectl --context {{ kube_ctx }} config view --raw --minify -o 'jsonpath={.clusters[0].cluster.certificate-authority-data}' | base64 -d > {{ K8S_CA_FILE }}
+    [ -s {{ K8S_CA_FILE }} ] || { echo "msb: the kubectl context {{ kube_ctx }} has no certificate-authority-data" >&2; exit 1; }
 
 # The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
 # Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it.
@@ -125,11 +138,16 @@ allow-host $host: _host-only && run
 shell: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec bash -l"
 
-# Make the ServiceAccount of the sandbox agent and its read-only rights in the k3s cluster of the host (k3s/sandbox-agent-rbac.yaml). Run it before the first `run`.
-# If the VM runs, it also gives the VM a new token of that account. Use it after a new k3s cluster or when the token ends (one year).
+# Make the ServiceAccount of the sandbox agent and its read-only rights in k3s. Run it before the first `run`.
+# If the VM runs, it also gives the VM a new token. Use it after a new k3s cluster (then `rm` and `run`) or when the token ends.
 # To revoke the token at once, delete the ServiceAccount (kubectl -n sandbox-agent delete serviceaccount sandbox-agent), then run this recipe.
-sync-kubeconfig: _host-only
-    {{ step }} sync-kubeconfig
+[script]
+sync-kubeconfig: _host-only _k8s-ca
+    kubectl --context {{ kube_ctx }} apply -f {{ msb_dir }}/k3s/sandbox-agent-rbac.yaml
+    status=$(msb inspect $MSB_NAME --format json 2>/dev/null | jq -r '.status | ascii_downcase' || true)
+    [ "$status" = running ] || { echo "No VM runs. 'just msb run' gives the VM its token."; exit 0; }
+    token=$({{ k8s_token }})
+    K8S_TOKEN="$token" msb modify $MSB_NAME --secret K8S_TOKEN@host.microsandbox.internal
 
 # Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only

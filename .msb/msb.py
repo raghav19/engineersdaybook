@@ -13,12 +13,10 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-sync-kubeconfig  make the ServiceAccount of the sandbox agent in k3s (k3s/sandbox-agent-rbac.yaml). If the VM runs, give it a new token of that account.
 allow-host       add one host to network.allow in vm/sandbox.yaml. The comments and the layout of the file stay.
 """
 
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -53,18 +51,9 @@ HOST_PORTS = {
     6443: "k3s API server",
     443: "SPIRE server (gateway, TLS passthrough)",
 }
-# The agent in the VM calls the k3s API server with the token of the ServiceAccount sandbox-agent (k3s/sandbox-agent-rbac.yaml).
-# The VM never holds the token. It holds the placeholder $MSB_K8S_TOKEN, and the host replaces it in requests to host.microsandbox.internal.
-# The host makes the token with the kubectl context of the host (default `default`, the name that k3s writes in its kubeconfig).
-KUBE_CONTEXT = os.environ.get("KUBE_CONTEXT", "default")
-# One year. The token stays on the host and in msb, never in the VM, and there is no rotation. When it ends, or after a new k3s cluster, run `just msb sync-kubeconfig`.
-# To revoke it before, delete the ServiceAccount.
-K8S_TOKEN_DURATION = "8760h"
-RBAC_FILE = MSB_DIR / "k3s" / "sandbox-agent-rbac.yaml"
-# The public CA of k3s. The proxy of msb trusts it for the API server. It is not a secret.
-K8S_CA_FILE = Path.home() / ".config" / "msb" / "k3s-ca.crt"
-# Port 6443 needs TLS interception, because the host can replace the placeholder only in a request that it can read.
-# msb replaces its default list ([443]) when it gets any port, so the list names 443 again.
+# The agent in the VM calls the k3s API server with the placeholder $MSB_K8S_TOKEN. The host replaces it, so the VM never holds the token.
+# The replacement needs TLS interception on port 6443. msb replaces its default list ([443]) when it gets any port, so the list names 443 again.
+# The justfile makes the token (K8S_TOKEN) and the public CA file of k3s (K8S_CA_FILE) and puts both in the environment.
 TLS_INTERCEPT_PORTS = (443, 6443)
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
@@ -94,47 +83,6 @@ def _fingerprint(k3s_ca: str) -> str:
         k3s_ca,
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
-
-
-def _kubectl(*args: str) -> str:
-    """Run `kubectl --context KUBE_CONTEXT <args>` on the host. Return its output. Stop if it fails.
-
-    The output can hold a token, so this helper never prints it. The message of a failure shows the error text of kubectl only.
-    """
-    done = subprocess.run(["kubectl", "--context", KUBE_CONTEXT, *args], capture_output=True, text=True, check=False)
-    if done.returncode != 0:
-        _die(
-            f"`kubectl {args[0]}` failed: {done.stderr.strip()[:300]}. Is the cluster up and the ServiceAccount made? Run: just msb sync-kubeconfig"
-        )
-    return done.stdout.strip()
-
-
-def _k8s_token() -> str:
-    """Return a new token of the ServiceAccount sandbox-agent. It lasts K8S_TOKEN_DURATION. Only this process and msb see it."""
-    return _kubectl("-n", "sandbox-agent", "create", "token", "sandbox-agent", "--duration", K8S_TOKEN_DURATION)
-
-
-def _k3s_ca() -> str:
-    """Write the public CA certificate of k3s to K8S_CA_FILE. Return its text.
-
-    The CA comes from the kubeconfig of the host. msb passes the file to its proxy, which uses it to check the certificate of the API server.
-    """
-    data = _kubectl("config", "view", "--raw", "--minify", "-o", "jsonpath={.clusters[0].cluster.certificate-authority-data}")
-    if not data:
-        _die(f"the kubectl context {KUBE_CONTEXT} has no certificate-authority-data. msb cannot check the certificate of the API server.")
-    pem = base64.b64decode(data).decode()
-    K8S_CA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    K8S_CA_FILE.write_text(pem)
-    return pem
-
-
-def _inspect_vm(name: str) -> dict | None:
-    """Return what `msb inspect` knows about the VM `name`, or None if no VM exists. Stop on any other error."""
-    found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
-    # Only "sandbox not found" means that no VM exists.
-    if found.returncode != 0 and "sandbox not found" not in found.stderr:
-        _die(f"`msb inspect {name}` failed: {found.stderr.strip()[:300]}")
-    return json.loads(found.stdout) if found.returncode == 0 else None
 
 
 def _github_exchange(**data: str) -> str:
@@ -221,16 +169,20 @@ def ensure_vm() -> None:
     msb keeps the fingerprint (_fingerprint) in the label `config-sha` of the VM.
     1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
-       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
-       This step also makes K8S_TOKEN, a token of the ServiceAccount sandbox-agent. Without it, the step stops and no VM starts.
-       A running VM does not read a changed secret. To change one, stop the VM (`msb stop`) and run this step again.
+       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, the other Bitwarden keys, and K8S_TOKEN from the justfile).
+       A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
-    wanted = _fingerprint(_k3s_ca())
+    k3s_ca = Path(os.environ["K8S_CA_FILE"])
+    wanted = _fingerprint(k3s_ca.read_text())
 
-    vm = _inspect_vm(name)
+    found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
+    # Only "sandbox not found" means that no VM exists. Stop on any other error.
+    if found.returncode != 0 and "sandbox not found" not in found.stderr:
+        _die(f"`msb inspect {name}` failed: {found.stderr.strip()[:300]}")
+    vm = json.loads(found.stdout) if found.returncode == 0 else None
     if vm and vm["config"]["labels"].get("config-sha") != wanted:
         # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
         print(f"msb: {name} does not match the configuration now. vm/sandbox.yaml or a host value changed.", file=sys.stderr)
@@ -240,10 +192,9 @@ def ensure_vm() -> None:
         # TODO: untested. msb 0.7.10 has no test for a secret on port 6443 or for these flags together with --conf. Check on a scratch VM:
         # `kubectl get ns` works in the VM, `kubectl auth whoami` prints system:serviceaccount:sandbox-agent:sandbox-agent, and `curl -sk -H "Authorization: Bearer $MSB_K8S_TOKEN" https://host.microsandbox.internal:6443/version` works.
         tls_args = [arg for port in TLS_INTERCEPT_PORTS for arg in ("--tls-intercept-port", str(port))]
-        tls_args += ["--tls-upstream-ca-cert-for", f"host.microsandbox.internal={K8S_CA_FILE}"]
+        tls_args += ["--tls-upstream-ca-cert-for", f"host.microsandbox.internal={k3s_ca}"]
         done = subprocess.run(
             ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules, *tls_args],
-            env={**os.environ, "K8S_TOKEN": _k8s_token()},
             check=False,
         )
         if done.returncode != 0:
@@ -255,30 +206,6 @@ def ensure_vm() -> None:
         _die(
             "sandbox-boot failed (its message is above). If the cause is in vm/sandbox.yaml or a host value, make a new VM: just msb rm && just msb run"
         )
-
-
-def sync_kubeconfig() -> None:
-    """Make the ServiceAccount of the sandbox agent and its rights in k3s. Give the running VM a token of that account (`just msb sync-kubeconfig`).
-
-    1. Apply k3s/sandbox-agent-rbac.yaml with the kubectl context of the host. `run` needs the ServiceAccount, because it makes the token from it.
-    2. No VM runs: stop here. The next `run` gives the VM a token.
-    3. The VM runs: give it a new token with `msb modify`. msb reads the token from the environment, so it is not in the arguments of the command.
-       The new value applies to connections that the VM opens after this call. A connection that is open keeps the old token until it closes.
-    """
-    print(_kubectl("apply", "-f", str(RBAC_FILE)))
-    name = os.environ["MSB_NAME"]
-    vm = _inspect_vm(name)
-    if not vm or vm["status"].lower() != "running":
-        print("No VM runs. `just msb run` gives the VM its token.")
-        return
-    done = subprocess.run(
-        ["msb", "modify", name, "--secret", "K8S_TOKEN@host.microsandbox.internal"],
-        env={**os.environ, "K8S_TOKEN": _k8s_token()},
-        check=False,
-    )
-    if done.returncode != 0:
-        _die("msb could not give the new Kubernetes token to the VM (its message is above).")
-    print("The VM has a new Kubernetes token.")
 
 
 def allow_host(host: str) -> None:
@@ -307,7 +234,7 @@ def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("github-login", "ensure-vm", "sync-kubeconfig"):
+    for step in ("github-login", "ensure-vm"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -316,8 +243,6 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
-        case "sync-kubeconfig":
-            sync_kubeconfig()
         case "allow-host":
             allow_host(args.host)
 

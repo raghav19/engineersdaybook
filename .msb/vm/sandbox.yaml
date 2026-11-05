@@ -75,8 +75,8 @@ secrets:
   GHCR_PUSH_TOKEN:
     allow: [ghcr.io]
     passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
-  # A token of the ServiceAccount sandbox-agent (read-only in the cluster). msb.py makes it on the host and msb reads it from the environment. It never enters the VM.
-  # The host replaces the placeholder in requests to the k3s API server. That needs TLS interception on port 6443, so msb.py passes --tls-intercept-port and the CA of k3s.
+  # A token of the ServiceAccount sandbox-agent (read-only in the cluster). The justfile makes it on the host (`kubectl create token`) and msb reads it from the environment. It never enters the VM.
+  # The host replaces the placeholder in requests to the k3s API server. That needs TLS interception on port 6443, so msb.py passes --tls-intercept-port and the CA of k3s (the justfile writes the CA file).
   # Without the token, `msb run` fails. So the VM never falls back to another credential.
   K8S_TOKEN:
     allow: [host.microsandbox.internal]
