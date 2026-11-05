@@ -50,6 +50,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | Node CA objects | `spire-system`, from git | An `Issuer`, a CA `Certificate` and the `Issuer` `node-ca`. |
 | trust-manager | `spire-system`, in the spire addon | Copies the node CA certificate into a ConfigMap. It reads Secrets only in `spire-system`, and it writes ConfigMaps only there. |
 | SPIRE server | `spire-system` | Checks the node certificate with the `x509pop` plugin. |
+| Istio ingress gateway | `istio-ingress` | Passes the TLS of the agent through to the SPIRE server. It reads only the SNI name `spire.localhost`. The host port is 443. |
 | `msb.py attest` | host | Signs the CSR of the VM and sends the files to the VM. |
 | `sandbox-boot` | microVM | Makes the node key and the CSR. |
 | SPIRE agent | microVM | Sends the certificate and signs the challenge. It reaches the server at `spire.localhost`, on port 443 of the host. The gateway of the host passes the TLS through to the server. |
@@ -239,7 +240,14 @@ Expect the same subject as the CA. Expect `0` from the second command: the Confi
 kubectl -n spire-system get configmap spire-server -o jsonpath='{.data.server\.conf}' | grep -A3 x509pop
 ```
 
-Expect `mode` `external_pki` and the path of the bundle. Then check the node entry:
+Expect `mode` `external_pki` and the path of the bundle. Then check the route through the gateway:
+
+```bash
+kubectl -n istio-ingress get gateway,tlsroute spire
+echo | openssl s_client -connect 127.0.0.1:443 -servername spire.localhost 2>/dev/null | openssl x509 -noout -ext subjectAltName
+```
+
+Expect the URI SAN `spiffe://mcp.local/spire/server`. A certificate from another CA means that a proxy ended the TLS before the server. Then check the node entry:
 
 ```bash
 kubectl get clusterstaticentry sandbox-node -o jsonpath='{.status}'

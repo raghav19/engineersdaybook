@@ -19,7 +19,7 @@ spec:
   prune: true
   deletionPolicy: Orphan
   wait: true
-  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/secrets
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-k3s/infra/secrets
   sourceRef: {kind: GitRepository, name: flux-system}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -34,7 +34,7 @@ spec:
   prune: true
   deletionPolicy: Orphan
   wait: true
-  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/mesh
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-k3s/infra/mesh
   sourceRef: {kind: GitRepository, name: flux-system}
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -49,5 +49,5 @@ spec:
   prune: true
   deletionPolicy: Orphan
   wait: true
-  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-kind/infra/gateway
+  path: ./code/mcp-sandbox/part-3-mcp-guardrails/sync/local-k3s/infra/gateway
   sourceRef: {kind: GitRepository, name: flux-system}

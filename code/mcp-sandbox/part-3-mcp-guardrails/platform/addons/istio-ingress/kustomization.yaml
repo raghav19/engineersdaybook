@@ -8,3 +8,4 @@ resources:
   - repository.yaml
   - gateway.yaml
   - clusterspiffeid.yaml
+  - spire-route.yaml

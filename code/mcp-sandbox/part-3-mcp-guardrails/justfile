@@ -1,4 +1,4 @@
-# Part 3: agentgateway guardrails on kind, delivered by Flux. Run `just` to see the commands.
+# Part 3: agentgateway guardrails on k3s, delivered by Flux. Run `just` to see the commands.
 
 set quiet
 
@@ -19,8 +19,9 @@ help:
       just <component>/publish-artifact    package-artifact, then push the artifact to the registry (host)
       just <component>/compose-stack       compose the stack of its group (sync/<cluster>/infra/<group>/stack.yaml): the published tag and digest
 
-      just clusters/kind/up | down                 the kind cluster and the hand-over to Flux, asks for the Bitwarden access token (host)
-      just clusters/kind/delete-crds               remove the CRDs of the stack, explicitly (host)
+      just clusters/k3s/create | destroy          install or remove k3s on the host (host)
+      just clusters/k3s/up                        the hand-over to Flux, asks for the Bitwarden access token (host)
+      just clusters/k3s/delete-crds               remove the CRDs of the stack, explicitly (host)
       just tests/run                               the attack cases against the gateway
 
     Everything a component writes is in out/<component>/ (gitignored). What goes where: lib/workflow/workflow.just.

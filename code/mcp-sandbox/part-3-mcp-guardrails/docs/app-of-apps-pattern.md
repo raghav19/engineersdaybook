@@ -50,10 +50,10 @@ The two work at different levels, and one setup can use both. A group of an app 
 
 ### The structure
 
-Flux reconciles the folder `sync/local-kind`:
+Flux reconciles the folder `sync/local-k3s`:
 
 ```text
-sync/local-kind/
+sync/local-k3s/
 ├── kustomization.yaml
 ├── apps.yaml   # the three groups: mesh, secrets and gateway
 └── infra/
@@ -73,7 +73,7 @@ sync/local-kind/
 Run this command on the host:
 
 ```shell
-flux tree kustomization flux-system -n flux-system --context kind-mcp-guardrails
+flux tree kustomization flux-system -n flux-system --context default
 ```
 
 ### Screenshots
