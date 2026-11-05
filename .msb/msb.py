@@ -13,7 +13,7 @@ github-login     log in to GitHub with the GitHub App (web flow). The tokens go 
                  The recipe runs this step under `bws run`, which gives it the client secret.
 ensure-vm        make or start the VM, then run sandbox-boot in it. If the VM has another configuration, stop.
                  The recipe runs this step under `bws run`, so the Bitwarden secrets are in its environment.
-rotate-kube-token  make a new token of the ServiceAccount sandbox-agent and give it to the running VM. The token lasts K8S_TOKEN_DURATION.
+sync-kubeconfig  make the ServiceAccount of the sandbox agent in k3s (k3s/sandbox-agent-rbac.yaml). If the VM runs, give it a new token of that account.
 allow-host       add one host to network.allow in vm/sandbox.yaml. The comments and the layout of the file stay.
 """
 
@@ -57,7 +57,10 @@ HOST_PORTS = {
 # The VM never holds the token. It holds the placeholder $MSB_K8S_TOKEN, and the host replaces it in requests to host.microsandbox.internal.
 # The host makes the token with the kubectl context of the host (default `default`, the name that k3s writes in its kubeconfig).
 KUBE_CONTEXT = os.environ.get("KUBE_CONTEXT", "default")
-K8S_TOKEN_DURATION = "24h"  # `just msb run` makes a new token each day. `just msb rotate-kube-token` makes one for a VM that runs longer.
+# One year. The token stays on the host and in msb, never in the VM, and there is no rotation. When it ends, or after a new k3s cluster, run `just msb sync-kubeconfig`.
+# To revoke it before, delete the ServiceAccount.
+K8S_TOKEN_DURATION = "8760h"
+RBAC_FILE = MSB_DIR / "k3s" / "sandbox-agent-rbac.yaml"
 # The public CA of k3s. The proxy of msb trusts it for the API server. It is not a secret.
 K8S_CA_FILE = Path.home() / ".config" / "msb" / "k3s-ca.crt"
 # Port 6443 needs TLS interception, because the host can replace the placeholder only in a request that it can read.
@@ -101,7 +104,7 @@ def _kubectl(*args: str) -> str:
     done = subprocess.run(["kubectl", "--context", KUBE_CONTEXT, *args], capture_output=True, text=True, check=False)
     if done.returncode != 0:
         _die(
-            f"`kubectl {args[0]}` failed: {done.stderr.strip()[:300]}. Is the cluster up and the ServiceAccount made? Run: just msb k3s-access"
+            f"`kubectl {args[0]}` failed: {done.stderr.strip()[:300]}. Is the cluster up and the ServiceAccount made? Run: just msb sync-kubeconfig"
         )
     return done.stdout.strip()
 
@@ -125,18 +128,13 @@ def _k3s_ca() -> str:
     return pem
 
 
-def _rotate_kube_token(name: str) -> None:
-    """Give a new token to the running VM `name`. msb reads the token from the environment, so it is not in the arguments of the command.
-
-    The new value applies to connections that the VM opens after this call. A connection that is open keeps the old token until it closes.
-    """
-    done = subprocess.run(
-        ["msb", "modify", name, "--secret", "K8S_TOKEN@host.microsandbox.internal"],
-        env={**os.environ, "K8S_TOKEN": _k8s_token()},
-        check=False,
-    )
-    if done.returncode != 0:
-        _die("msb could not give the new Kubernetes token to the VM (its message is above).")
+def _inspect_vm(name: str) -> dict | None:
+    """Return what `msb inspect` knows about the VM `name`, or None if no VM exists. Stop on any other error."""
+    found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
+    # Only "sandbox not found" means that no VM exists.
+    if found.returncode != 0 and "sandbox not found" not in found.stderr:
+        _die(f"`msb inspect {name}` failed: {found.stderr.strip()[:300]}")
+    return json.loads(found.stdout) if found.returncode == 0 else None
 
 
 def _github_exchange(**data: str) -> str:
@@ -224,19 +222,15 @@ def ensure_vm() -> None:
     1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
        msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
-       This step also makes K8S_TOKEN, a new token of the ServiceAccount sandbox-agent. Without it, the step stops and no VM starts.
-       A VM that runs gets a new K8S_TOKEN with `msb modify`. The other secrets stay: to change one, stop the VM (`msb stop`) and run this step again.
+       This step also makes K8S_TOKEN, a token of the ServiceAccount sandbox-agent. Without it, the step stops and no VM starts.
+       A running VM does not read a changed secret. To change one, stop the VM (`msb stop`) and run this step again.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
     wanted = _fingerprint(_k3s_ca())
 
-    found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
-    # Only "sandbox not found" means that no VM exists. Stop on any other error.
-    if found.returncode != 0 and "sandbox not found" not in found.stderr:
-        _die(f"`msb inspect {name}` failed: {found.stderr.strip()[:300]}")
-    vm = json.loads(found.stdout) if found.returncode == 0 else None
+    vm = _inspect_vm(name)
     if vm and vm["config"]["labels"].get("config-sha") != wanted:
         # msb fixes the config of a VM when it makes the VM. If you remove the VM, you remove its clone, so you decide.
         print(f"msb: {name} does not match the configuration now. vm/sandbox.yaml or a host value changed.", file=sys.stderr)
@@ -254,9 +248,6 @@ def ensure_vm() -> None:
         )
         if done.returncode != 0:
             _die("msb could not make or start the VM (its message is above).")
-    else:
-        # The VM runs, and the token of its last start can end soon. Give it a new token.
-        _rotate_kube_token(name)
     # The VM has no command of its own. So each run does the work of sandbox-boot here, for a new VM and for an old VM.
     # stdin is /dev/null. With your terminal as stdin, msb 0.7.10 does not return after the script ends, and the recipe never goes on.
     done = subprocess.run(["msb", "exec", name, "--", "/usr/local/bin/sandbox-boot"], stdin=subprocess.DEVNULL, check=False)
@@ -266,9 +257,27 @@ def ensure_vm() -> None:
         )
 
 
-def rotate_kube_token() -> None:
-    """Give a new Kubernetes token to the running VM (`just msb rotate-kube-token`). Use it when the VM runs for longer than K8S_TOKEN_DURATION."""
-    _rotate_kube_token(os.environ["MSB_NAME"])
+def sync_kubeconfig() -> None:
+    """Make the ServiceAccount of the sandbox agent and its rights in k3s. Give the running VM a token of that account (`just msb sync-kubeconfig`).
+
+    1. Apply k3s/sandbox-agent-rbac.yaml with the kubectl context of the host. `run` needs the ServiceAccount, because it makes the token from it.
+    2. No VM runs: stop here. The next `run` gives the VM a token.
+    3. The VM runs: give it a new token with `msb modify`. msb reads the token from the environment, so it is not in the arguments of the command.
+       The new value applies to connections that the VM opens after this call. A connection that is open keeps the old token until it closes.
+    """
+    print(_kubectl("apply", "-f", str(RBAC_FILE)))
+    name = os.environ["MSB_NAME"]
+    vm = _inspect_vm(name)
+    if not vm or vm["status"].lower() != "running":
+        print("No VM runs. `just msb run` gives the VM its token.")
+        return
+    done = subprocess.run(
+        ["msb", "modify", name, "--secret", "K8S_TOKEN@host.microsandbox.internal"],
+        env={**os.environ, "K8S_TOKEN": _k8s_token()},
+        check=False,
+    )
+    if done.returncode != 0:
+        _die("msb could not give the new Kubernetes token to the VM (its message is above).")
     print("The VM has a new Kubernetes token.")
 
 
@@ -298,7 +307,7 @@ def main() -> None:
     """Read the step from the command line and call its function. The steps have the same order here, in the module docstring and in this file."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     steps = parser.add_subparsers(dest="step", required=True)
-    for step in ("github-login", "ensure-vm", "rotate-kube-token"):
+    for step in ("github-login", "ensure-vm", "sync-kubeconfig"):
         steps.add_parser(step)
     steps.add_parser("allow-host").add_argument("host")
     args = parser.parse_args()
@@ -307,8 +316,8 @@ def main() -> None:
             github_login()
         case "ensure-vm":
             ensure_vm()
-        case "rotate-kube-token":
-            rotate_kube_token()
+        case "sync-kubeconfig":
+            sync_kubeconfig()
         case "allow-host":
             allow_host(args.host)
 

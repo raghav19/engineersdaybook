@@ -7,7 +7,7 @@
 #   just msb run            every day: make or start the VM, prepare it, then open the TTT editor in it.
 #   just msb edit           open the TTT editor in the running VM, in this terminal. Quit with Ctrl+Q.
 #   just msb allow-host     allow one more host for the VM.
-#   just msb k3s-access     make the read-only ServiceAccount of the agent in the k3s cluster (before the first run).
+#   just msb sync-kubeconfig  make the read-only ServiceAccount of the agent in k3s (before the first run), and give the running VM a token of it.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of image/, push it to ghcr.io, and pin its digest in vm/sandbox.yaml.
 
@@ -125,14 +125,11 @@ allow-host $host: _host-only && run
 shell: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec bash -l"
 
-# Make the ServiceAccount of the sandbox agent and its read-only rights in the k3s cluster of the host. `run` needs it: the host makes the token of the VM from this ServiceAccount.
-# Run it again after you change k3s/sandbox-agent-rbac.yaml. To revoke the token at once, delete the ServiceAccount (kubectl -n sandbox-agent delete serviceaccount sandbox-agent), then run this recipe.
-k3s-access: _host-only
-    kubectl --context "${KUBE_CONTEXT:-default}" apply -f {{ msb_dir }}/k3s/sandbox-agent-rbac.yaml
-
-# Give the running VM a new Kubernetes token. `run` does this at each start. Use it when the VM runs for longer than the token lasts (24 hours).
-rotate-kube-token: _host-only
-    {{ step }} rotate-kube-token
+# Make the ServiceAccount of the sandbox agent and its read-only rights in the k3s cluster of the host (k3s/sandbox-agent-rbac.yaml). Run it before the first `run`.
+# If the VM runs, it also gives the VM a new token of that account. Use it after a new k3s cluster or when the token ends (one year).
+# To revoke the token at once, delete the ServiceAccount (kubectl -n sandbox-agent delete serviceaccount sandbox-agent), then run this recipe.
+sync-kubeconfig: _host-only
+    {{ step }} sync-kubeconfig
 
 # Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only

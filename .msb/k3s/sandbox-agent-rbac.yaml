@@ -1,4 +1,4 @@
-# The identity of the agent in the msb sandbox VM, and its rights. The host applies this file: `just msb k3s-access`.
+# The identity of the agent in the msb sandbox VM, and its rights. The host applies this file: `just msb sync-kubeconfig`.
 # Flux must not apply this file. The agent opens pull requests, and a pull request could change its own rights.
 # Why each rule is here and what it leaves out: docs/research/sandbox-least-privilege-kubeconfig.md
 apiVersion: v1

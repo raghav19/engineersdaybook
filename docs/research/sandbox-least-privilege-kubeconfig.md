@@ -421,13 +421,13 @@ EOF
 #    then apply the manifests again. Old tokens fail (--service-account-lookup).
 ```
 
-Step 3 shows the token-file path (option A). We do not use it. The implementation uses option B: `msb.py` makes the token with `kubectl create token` and gives it to msb in the environment, and `sandbox-boot` writes a kubeconfig that holds the placeholder `$MSB_K8S_TOKEN`. The VM never holds the token, and `sync-kubeconfig` is gone (`just msb rotate-kube-token` replaces it).
+Step 3 shows the token-file path (option A). We do not use it. The implementation uses option B: `msb.py` makes the token with `kubectl create token` and gives it to msb in the environment, and `sandbox-boot` writes a kubeconfig that holds the placeholder `$MSB_K8S_TOKEN`. The VM never holds the token, and `just msb sync-kubeconfig` keeps its name: it now applies the RBAC file and gives the running VM a new token.
 
 ### VM changes (for the implementer)
 
 1. Delete the mount `/etc/rancher/k3s/k3s.yaml:/run/sandbox/kubeconfig/k3s.yaml:ro` from `.msb/vm/sandbox.yaml`.
 2. Delete the kubeconfig block of `.msb/image/sandbox-boot` (the `src_kube` lines). Keep `KUBECONFIG=/home/agent/.kube/config` in `sandbox.yaml`.
-3. Replace `sync-kubeconfig` with `rotate-kube-token`. Step 3 above is not used (see the note under it).
+3. Keep the recipe name `sync-kubeconfig`. It applies the RBAC file and gives the running VM a token. Step 3 above is not used (see the note under it). The token lasts one year and is not rotated, because the VM never holds it and the host is a local development machine.
 4. Update the "Ports of the host" bullet in `.msb/README.md`. Keep port 6443 in `HOST_PORTS`.
 5. Treat the admin credential that the VM already holds as exposed. It stays valid until it expires. The only revocation is a replacement of the cluster CA (`k3s-docs/cli/certificate.md`). For a single-user host cluster you can decide to accept that risk until the next certificate rotation.
 
