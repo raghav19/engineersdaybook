@@ -11,9 +11,11 @@
 
 ## The picture
 
-![The target state of the ephemeral environments](diagrams/architecture.svg)
+![Ephemeral environments](diagrams/architecture.svg)
 
-The picture shows the target state. The solid boxes exist in this repo. The dashed boxes are the sandbox flow, which is not built yet. A sandbox request carries a `baggage` header. The baseline route sends the call to the sandbox service, and the sandbox service calls the baseline peers.
+The solid boxes exist in this repo. The dashed boxes are the sandbox flow, which is not built yet.
+
+The header is the main idea. A client sends `baggage: sandbox=pr-123`. Traefik is the gateway at the edge and forwards the header unchanged. The baseline frontend passes it on to its next call. The baseline route reads the header and sends the call to the sandbox `checkoutservice`. Each service passes the header on, so every hop sees the same value. A call to a service that the sandbox does not run goes out of the sandbox to the baseline Service. It carries the same header.
 
 ## The cast
 
@@ -141,6 +143,7 @@ CI lists the files that the pull request changes. A path-to-service map turns ea
 - **The `FluxInstance` and the Traefik config are not in the artifact.** An artifact cannot then delete Flux.
 - **Child Kustomizations with `dependsOn` and `wait`.** The Boutique needs `istiod` before its pods start.
 - **`istiod` is the CA, with no SPIRE.** The Boutique pods then need no extra annotation.
+- **A `baggage` header is the routing key.** The Go services copy it from each incoming call to each outgoing call, so it reaches every hop without a code change.
 - **Traefik stays the ingress.** k3s already ships it. The only change is the `HelmChartConfig` that turns on the Gateway provider.
 - **Kiali is view-only and has a host name.** The sample Kiali login is anonymous and its role can change Istio objects. The route matches only `kiali.localhost`.
 - **Flux reads the Boutique release from its pinned URL.** The baseline is the unchanged upstream app. This is the one place where the cluster reads something outside the registry.
