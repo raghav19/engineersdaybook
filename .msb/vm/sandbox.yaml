@@ -28,6 +28,7 @@ env:
   CLAUDE_CONFIG_DIR: /home/agent/.claude # the claude-home volume holds the settings.
   DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
   HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it.
+  HEADROOM_HARD_WATCHDOG_SECS: "0" # 0 turns off the Headroom watchdog. The watchdog stops Headroom after the host suspends the VM for more than 90 seconds. Nothing starts Headroom again until the next `just msb run`.
   KUBECONFIG: /home/agent/.kube/config # the k3s kubeconfig. sandbox-boot copies it from the mount and rewrites the server URL.
 mounts:
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
