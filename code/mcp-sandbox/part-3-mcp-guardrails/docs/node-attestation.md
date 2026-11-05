@@ -1,6 +1,6 @@
-# Primer: node attestation of the microVM
+# Node attestation of the microVM
 
-This primer explains the model and the architecture behind the node attestation of the sandbox microVM. Read it first. Then read [Zero trust: node attestation](zero-trust-node-attestation.md) for the detail.
+This guide explains the model and the architecture behind the node attestation of the sandbox microVM. Read it first. Then read [Zero trust: node attestation](zero-trust-node-attestation.md) for the detail.
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
