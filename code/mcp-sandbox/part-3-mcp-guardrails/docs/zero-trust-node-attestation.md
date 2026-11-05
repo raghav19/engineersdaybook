@@ -200,7 +200,7 @@ A node entry that lists both selectors matches only a node that has both values.
 
 `sshpop` is a built-in plugin of SPIRE, but the chart cannot turn it on. The chart option `customPlugins` accepts only external plugin binaries. `x509pop` has a chart switch and it gives selectors, so it fits this repo.
 
-The research on the node attestation flow is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md).
+A primer on the model behind the node attestation is in [node-attestation-primer.md](node-attestation-primer.md).
 
 ## 8. Limits
 
