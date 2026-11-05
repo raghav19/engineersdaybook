@@ -99,8 +99,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:8ebbebee392e9b3ec39b655008fec4313b346faa0c86b43682ea273f941a8040
-    tag: a14dfdba4ef1
+    digest: sha256:ed0f5f43f793147feb83fcd3ff6ca3446d9b8df6d725f121b3e214c28fae4baf
+    tag: "023701016354"
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/spire

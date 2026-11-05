@@ -50,21 +50,23 @@ host_ip=$(getent ahostsv4 host.microsandbox.internal | awk '{print $1; exit}')
 [ -n "$host_ip" ] || fail "could not find the address of host.microsandbox.internal"
 { grep -v '[[:space:]]spire\.localhost$' /etc/hosts || true; echo "$host_ip spire.localhost"; } > /tmp/hosts.new && cat /tmp/hosts.new > /etc/hosts && rm /tmp/hosts.new || fail "could not map spire.localhost in /etc/hosts"
 
-# This step makes the node key and the CSR for the x509pop node attestor. The key never leaves the VM. The host signs only the CSR.
-# The CN is the sandbox name and the URI SAN has the GitHub login. The host checks both before it issues the certificate.
-# The key stays across boots, so the agent keeps the same key. An empty key file (a stopped boot) counts as no key, so this step makes the key again.
-# This step makes a new CSR at each boot, so the CSR has the current name and login.
-# The names go in as arguments of sh, and not into the script text, so a strange value cannot change the command.
-name=${SANDBOX_NAME:?SANDBOX_NAME is not set}
-login=${SANDBOX_GITHUB_LOGIN:?SANDBOX_GITHUB_LOGIN is not set}
-as_agent mkdir -p "$home/.spire"
-as_agent sh -c '
-  umask 077
-  cd "$HOME/.spire" || exit 1
-  [ -s node.key ] || openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out node.key || exit 1
-  openssl req -new -key node.key -subj "/CN=$1" -addext "subjectAltName=URI:x509pop://mcp.local/github-id/$2" -out node.csr || exit 1
-  chmod 644 node.csr
-' sh "$name" "$login" || fail "could not make the node key and the CSR in $home/.spire"
+# The SPIRE agent attests the VM to the SPIRE server with the node key and certificate that `just msb node-cert` copies from the cluster, and the VM mounts read-only at /run/sandbox/node.
+# It runs as root, because the key is a mode 600 file of the host, and the user agent must not read it. Its config, data folder, socket folder and log are owned by root for the same reason.
+# A running agent stays as it is: it attests again by itself each time its own SVID rotates. A new agent starts with an empty data folder, so it attests at each start.
+# If the agent is not healthy in 30 seconds, this script stops, and so does `just msb run`. The VM keeps running: `just msb shell` opens it.
+command -v spire-agent >/dev/null || fail "spire-agent is not in the PATH of the VM"
+mkdir -p /run/spire /var/lib/spire-agent
+agent_healthy() { spire-agent healthcheck -socketPath /run/spire/agent.sock >/dev/null 2>&1; }
+if ! agent_healthy; then
+  pkill -x spire-agent || true
+  rm -rf /var/lib/spire-agent/*
+  setsid nohup spire-agent run -config /etc/spire/agent.conf -logFile /var/log/spire-agent.log >/dev/null 2>&1 </dev/null &
+  for _ in $(seq 30); do
+    agent_healthy && break
+    sleep 1
+  done
+  agent_healthy || { tail -n 20 /var/log/spire-agent.log >&2; fail "the SPIRE agent did not attest in 30 seconds (its log is above)"; }
+fi
 
 # The editor (TTT) has no workspace trust gate, so nothing here pre-answers one. It starts a language server as soon as
 # a file matches an entry of lsp.servers, with no prompt. See decision 15 in README.md for what that costs.

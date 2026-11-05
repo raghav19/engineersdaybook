@@ -1,6 +1,6 @@
 # The node entry (alias) of the microVM. An agent that attested with x509pop and has both selectors below also gets this SPIFFE ID.
 # The agent ID itself has the fingerprint of the node certificate, so it changes with each new certificate. Workload entries use this alias as parent.
-# The selectors come from the node certificate: the CN is the sandbox name (MSB_NAME) and the URI SAN is x509pop://mcp.local/github-id/<login>.
+# The selectors come from the node certificate (node-certificate.yaml): the CN is the sandbox name (MSB_NAME) and the URI SAN is x509pop://mcp.local/github-id/<login>.
 # A node without both values still attests, but it does not get this alias.
 # shortcut: the trust domain mcp.local is written out here (a setter replaces a whole value, and these IDs are full URIs), change it with trust_domain in config/.
 apiVersion: spire.spiffe.io/v1alpha1
