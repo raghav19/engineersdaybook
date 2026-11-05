@@ -7,6 +7,7 @@
 #   just msb run            every day: make or start the VM, prepare it, then open the TTT editor in it.
 #   just msb edit           open the TTT editor in the running VM, in this terminal. Quit with Ctrl+Q.
 #   just msb allow-host     allow one more host for the VM.
+#   just msb k3s-access     make the read-only ServiceAccount of the agent in the k3s cluster (before the first run).
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb build          build the image after you change a file of image/, push it to ghcr.io, and pin its digest in vm/sandbox.yaml.
 
@@ -28,6 +29,7 @@ podman  := require("podman")
 jq      := require("jq")
 yq      := require("yq")
 ssh     := require("ssh")
+kubectl := require("kubectl")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')
@@ -122,6 +124,11 @@ allow-host $host: _host-only && run
 # A bash prompt in the VM, in the engineersdaybook workspace directory.
 shell: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec bash -l"
+
+# Make the ServiceAccount of the sandbox agent and its read-only rights in the k3s cluster of the host. `run` needs it: the host makes the token of the VM from this ServiceAccount.
+# Run it again after you change k3s/sandbox-agent-rbac.yaml. To revoke the token at once, delete the ServiceAccount (kubectl -n sandbox-agent delete serviceaccount sandbox-agent), then run this recipe.
+k3s-access: _host-only
+    kubectl --context "${KUBE_CONTEXT:-default}" apply -f {{ msb_dir }}/k3s/sandbox-agent-rbac.yaml
 
 # Give the running VM a new Kubernetes token. `run` does this at each start. Use it when the VM runs for longer than the token lasts (24 hours).
 rotate-kube-token: _host-only

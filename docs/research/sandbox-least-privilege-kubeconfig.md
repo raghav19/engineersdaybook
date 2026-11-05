@@ -339,7 +339,7 @@ subjects:
     namespace: sandbox-agent
 ```
 
-Rules for `sandbox-dev`: keep no Secret and no other ServiceAccount in it. A Pod there can run as any ServiceAccount of the namespace. A user who can create a Pod can read the Secrets that it mounts (`rbac-good-practices.md`, `secrets-good-practices.md`). Put these manifests in a file that only the host applies, for example `clusters/k3s/sandbox-agent-rbac.yaml`. Do not put them in the Flux sync folder, because the agent can open pull requests that change that folder.
+Rules for `sandbox-dev`: keep no Secret and no other ServiceAccount in it. A Pod there can run as any ServiceAccount of the namespace. A user who can create a Pod can read the Secrets that it mounts (`rbac-good-practices.md`, `secrets-good-practices.md`). Put these manifests in a file that only the host applies, for example `.msb/k3s/sandbox-agent-rbac.yaml`. Do not put them in the Flux sync folder, because the agent can open pull requests that change that folder.
 
 ### k3s changes (host)
 
@@ -374,7 +374,7 @@ All commands run on the host. The agent in the VM does not run them. `ctx` is `d
 
 ```bash
 # 1. Apply the identity and the rights (admin kubeconfig, host only).
-kubectl --context default apply -f clusters/k3s/sandbox-agent-rbac.yaml
+kubectl --context default apply -f .msb/k3s/sandbox-agent-rbac.yaml
 
 # 2. Check the rights before the VM gets a token. Expected result in the comment.
 as=system:serviceaccount:sandbox-agent:sandbox-agent

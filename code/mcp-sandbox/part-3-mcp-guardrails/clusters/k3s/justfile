@@ -19,18 +19,10 @@ ctx := env('KUBE_CONTEXT', 'default')
 # RECIPES
 # Install k3s with k3s-config.yaml (host). The official install script runs as root. Run `destroy` first when k3s is already there.
 # TODO: untested. The host runs a k3s that this recipe did not install. Check on a fresh install that k3s.service starts and that `kubectl get nodes` shows Ready.
-# TODO: untested. The audit log folder and policy file are new. Check on a fresh install that the API server starts and that /var/lib/rancher/k3s/server/logs/audit.log fills.
 create: _host
     sudo install -D -m 0644 k3s-config.yaml /etc/rancher/k3s/config.yaml
-    sudo install -D -m 0644 audit-policy.yaml /var/lib/rancher/k3s/server/audit.yaml
-    sudo install -d -m 0700 /var/lib/rancher/k3s/server/logs
     curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION={{ k3s_version }} sh -
-    @echo "Make the identity of the sandbox agent: just clusters/k3s/sandbox-agent. Then start the VM: just msb run"
-
-# Make the ServiceAccount of the sandbox agent and its read-only rights (host). `just msb run` needs it: the host makes the token of the VM from this ServiceAccount.
-# Run it again after you change sandbox-agent-rbac.yaml. To revoke the token of the VM at once: kubectl --context default -n sandbox-agent delete serviceaccount sandbox-agent, then run this recipe again.
-sandbox-agent: _host
-    kubectl --context {{ ctx }} apply -f sandbox-agent-rbac.yaml
+    @echo "Copy the kubeconfig into the sandbox VM: just msb sync-kubeconfig"
 
 # The hand-over of the cluster to Flux (host). The Flux Operator Web UI has no login and `up` does not expose it. To open it:
 # kubectl --context default -n flux-system port-forward deploy/flux-operator 9080:9080, then http://127.0.0.1:9080

@@ -53,9 +53,9 @@ HOST_PORTS = {
     6443: "k3s API server",
     443: "SPIRE server (gateway, TLS passthrough)",
 }
-# The agent in the VM calls the k3s API server with the token of the ServiceAccount sandbox-agent (clusters/k3s/sandbox-agent-rbac.yaml).
+# The agent in the VM calls the k3s API server with the token of the ServiceAccount sandbox-agent (k3s/sandbox-agent-rbac.yaml).
 # The VM never holds the token. It holds the placeholder $MSB_K8S_TOKEN, and the host replaces it in requests to host.microsandbox.internal.
-# The host makes the token with the kubectl context of the host. clusters/k3s/justfile uses the same variable and default.
+# The host makes the token with the kubectl context of the host (default `default`, the name that k3s writes in its kubeconfig).
 KUBE_CONTEXT = os.environ.get("KUBE_CONTEXT", "default")
 K8S_TOKEN_DURATION = "24h"  # `just msb run` makes a new token each day. `just msb rotate-kube-token` makes one for a VM that runs longer.
 # The public CA of k3s. The proxy of msb trusts it for the API server. It is not a secret.
@@ -101,7 +101,7 @@ def _kubectl(*args: str) -> str:
     done = subprocess.run(["kubectl", "--context", KUBE_CONTEXT, *args], capture_output=True, text=True, check=False)
     if done.returncode != 0:
         _die(
-            f"`kubectl {args[0]}` failed: {done.stderr.strip()[:300]}. Is the cluster up and the ServiceAccount made? Run: just clusters/k3s/sandbox-agent"
+            f"`kubectl {args[0]}` failed: {done.stderr.strip()[:300]}. Is the cluster up and the ServiceAccount made? Run: just msb k3s-access"
         )
     return done.stdout.strip()
 
