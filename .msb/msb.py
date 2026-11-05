@@ -64,7 +64,6 @@ def _fingerprint() -> str:
     """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values and the host ports. `ensure-vm` calls this.
 
     The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, SANDBOX_OMARCHY_THEME, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
-    `ensure-vm` adds SANDBOX_GITHUB_LOGIN. The login is in the fingerprint: another login is another VM, because the VM keeps it in its environment.
     The tokens and the branch are not in the fingerprint. SANDBOX_OMARCHY_THEME is not in it either. It names a read-only mount
     of the theme folder of the host, and that path changes only with $HOME.
     """
@@ -73,7 +72,6 @@ def _fingerprint() -> str:
         os.environ["SANDBOX_GIT_DIR"],
         os.environ["GIT_AUTHOR_NAME"],
         os.environ["GIT_AUTHOR_EMAIL"],
-        os.environ["SANDBOX_GITHUB_LOGIN"],
         str(HOST_PORTS),
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
@@ -136,25 +134,6 @@ def _github_callback() -> dict[str, list[str]]:
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
-def _token_owner() -> str:
-    """Return the GitHub login of the owner of GH_TOKEN. The login goes in the URI SAN of the node certificate request.
-
-    GitHub names the owner of the token, so the login is the OAuth identity and not a value that someone types. Stop if GitHub does not answer.
-    """
-    token = os.environ.get("GH_TOKEN") or _die("GH_TOKEN is not set. Run this through `just msb run`.")
-    request = urllib.request.Request(
-        "https://api.github.com/user", headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            login = json.load(response).get("login")
-    except (OSError, ValueError) as error:
-        _die(f"could not read the GitHub login with GH_TOKEN ({error}). Run: just msb github-login")
-    if not isinstance(login, str) or not re.fullmatch(r"[A-Za-z0-9-]+", login):
-        _die("GitHub gave no valid login for GH_TOKEN. Run: just msb github-login")
-    return login
-
-
 def github_login() -> None:
     """Log in to GitHub with the web flow of the GitHub App (`just msb github-login`). It writes the token file.
 
@@ -188,8 +167,6 @@ def ensure_vm() -> None:
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
-    # sandbox.yaml names ${SANDBOX_GITHUB_LOGIN}, and the fingerprint reads it.
-    os.environ["SANDBOX_GITHUB_LOGIN"] = _token_owner()
     wanted = _fingerprint()
 
     found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)

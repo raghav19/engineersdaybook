@@ -45,7 +45,8 @@ fi
 
 # This step makes the node key and the CSR for the x509pop node attestor. The key never leaves the VM. The host signs only the CSR.
 # The CN is the sandbox name and the URI SAN has the GitHub login. The host checks both before it issues the certificate.
-# The key stays across boots, so the agent keeps the same key. This step makes a new CSR at each boot, so the CSR has the current name and login.
+# The key stays across boots, so the agent keeps the same key. An empty key file (a stopped boot) counts as no key, so this step makes the key again.
+# This step makes a new CSR at each boot, so the CSR has the current name and login.
 # The names go in as arguments of sh, and not into the script text, so a strange value cannot change the command.
 name=${SANDBOX_NAME:?SANDBOX_NAME is not set}
 login=${SANDBOX_GITHUB_LOGIN:?SANDBOX_GITHUB_LOGIN is not set}
@@ -53,7 +54,7 @@ as_agent mkdir -p "$home/.spire"
 as_agent sh -c '
   umask 077
   cd "$HOME/.spire" || exit 1
-  [ -e node.key ] || openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out node.key || exit 1
+  [ -s node.key ] || openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out node.key || exit 1
   openssl req -new -key node.key -subj "/CN=$1" -addext "subjectAltName=URI:x509pop://mcp.local/github-id/$2" -out node.csr || exit 1
   chmod 644 node.csr
 ' sh "$name" "$login" || fail "could not make the node key and the CSR in $home/.spire"
