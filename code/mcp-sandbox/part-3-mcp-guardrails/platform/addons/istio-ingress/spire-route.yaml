@@ -47,7 +47,7 @@ spec:
     - backendRefs:
         - name: spire-server
           namespace: spire-system
-          port: 8081
+          port: 443 # The port of the Service. Its targetPort is the grpc port 8081 of the pod. Do not use the port of the pod.
 ---
 # The backend is in another namespace: the owner of spire-system allows this one route, and only to this Service.
 apiVersion: gateway.networking.k8s.io/v1
