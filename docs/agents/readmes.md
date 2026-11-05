@@ -8,8 +8,8 @@ Write the sections in this order. Skip a section only if the system has nothing 
 
 1. **Title.** Name the subject, for example `Node attestation of the microVM`.
 2. **The idea.** Give the problem and the model in 3 to 5 short points. Write them before any name of a part.
-3. **The cast.** Name each part once. Give its job in one line. Group the parts by where they run (cluster, host, VM).
-4. **The picture.** Add the diagram of the system. Follow `docs/agents/diagrams.md`.
+3. **The picture.** Add the diagram of the system. Follow `docs/agents/diagrams.md`.
+4. **The cast.** Name each part once. Give its job in one line. Group the parts by where they run (cluster, host, VM).
 5. **The flow in phases.** Split the flow by time: the prerequisites (once), each run, and while the system runs. Draw each phase in mermaid. Use `flowchart` for a setup and `sequenceDiagram` for a run. Add 2 or 3 sentences below each diagram.
 6. **Lifetimes.** List what lives how long (certificates, tokens, caches) and what renews it.
 7. **Why the design looks like this.** Give one line per choice, with its reason.
