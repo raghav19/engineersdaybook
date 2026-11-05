@@ -42,9 +42,9 @@ msb_dir := source_directory()
 step := msb_dir / 'msb.py'
 # The agent in the VM reaches the k3s API server with the token of the ServiceAccount sandbox-agent (k3s/sandbox-agent-rbac.yaml).
 # The token stays on the host and in msb. The VM holds the placeholder $MSB_K8S_TOKEN. The token lasts one year and is not rotated.
-# kube_ctx is the kubectl context of the host. k3s names it `default`. msb.py reads K8S_CA_FILE, the public CA of k3s that msb trusts for the API server.
+# kube_ctx is the kubectl context of the host. k3s names it `default`. k8s_ca_file is the public CA of k3s. msb trusts it for the API server. `_vm` gives it to msb.py.
 kube_ctx := env('KUBE_CONTEXT', 'default')
-export K8S_CA_FILE := home_directory() / '.config/msb/k3s-ca.crt'
+k8s_ca_file := home_directory() / '.config/msb/k3s-ca.crt'
 k8s_token := 'kubectl --context ' + kube_ctx + ' -n sandbox-agent create token sandbox-agent --duration 8760h'
 volumes := 'claude-home terraform-providers podman-storage herdr qwen-home'
 # Bitwarden token encrypted with `age -p`. See README.md prerequisite 4.
@@ -106,13 +106,13 @@ build refresh='': _host-only
 
 # `token=$(...) && ...` stops if kubectl fails. Without a token no VM starts, so the VM never gets another credential.
 _vm: _k8s-ca
-    token=$({{ k8s_token }}) || { echo "msb: no token. Run first: just msb sync-kubeconfig" >&2; exit 1; } && K8S_TOKEN="$token" {{ step }} ensure-vm
+    token=$({{ k8s_token }}) || { echo "msb: no token. Run first: just msb sync-kubeconfig" >&2; exit 1; } && K8S_TOKEN="$token" K8S_CA_FILE={{ k8s_ca_file }} {{ step }} ensure-vm
 
 # Write the public CA of k3s from the kubeconfig of the host. A new k3s cluster has a new CA.
 _k8s-ca:
-    mkdir -p "$(dirname {{ K8S_CA_FILE }})"
-    kubectl --context {{ kube_ctx }} config view --raw --minify -o 'jsonpath={.clusters[0].cluster.certificate-authority-data}' | base64 -d > {{ K8S_CA_FILE }}
-    [ -s {{ K8S_CA_FILE }} ] || { echo "msb: the kubectl context {{ kube_ctx }} has no certificate-authority-data" >&2; exit 1; }
+    mkdir -p "$(dirname {{ k8s_ca_file }})"
+    kubectl --context {{ kube_ctx }} config view --raw --minify -o 'jsonpath={.clusters[0].cluster.certificate-authority-data}' | base64 -d > {{ k8s_ca_file }}
+    [ -s {{ k8s_ca_file }} ] || { echo "msb: the kubectl context {{ kube_ctx }} has no certificate-authority-data" >&2; exit 1; }
 
 # The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
 # Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it.

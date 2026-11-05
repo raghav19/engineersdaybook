@@ -53,7 +53,7 @@ HOST_PORTS = {
 }
 # The agent in the VM calls the k3s API server with the placeholder $MSB_K8S_TOKEN. The host replaces it, so the VM never holds the token.
 # The replacement needs TLS interception on port 6443. msb replaces its default list ([443]) when it gets any port, so the list names 443 again.
-# The justfile makes the token (K8S_TOKEN) and the public CA file of k3s (K8S_CA_FILE) and puts both in the environment.
+# The recipe `_vm` in the justfile puts the token (K8S_TOKEN) and the path of the public CA file of k3s (K8S_CA_FILE) in the environment of `ensure-vm`.
 TLS_INTERCEPT_PORTS = (443, 6443)
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
