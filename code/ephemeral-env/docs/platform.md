@@ -3,6 +3,7 @@
 ## The idea
 
 - A pull request that changes one or two Online Boutique services gets its own short-lived sandbox. The sandbox runs only the changed services. All other services come from a shared baseline.
+- CI finds the affected services from the diff of the pull request and builds only those.
 - Istio carries the calls between the baseline and a sandbox. Kiali draws them.
 - The platform under this idea is a fresh k3s cluster. It has Traefik as ingress, Istio as the mesh, Prometheus and Kiali for the graph, and the Boutique as the baseline.
 - Flux delivers the platform from one OCI artifact in a private registry. Git holds the source. The cluster never reads Git. This is the gitless model.
@@ -12,7 +13,7 @@
 
 ![The target state of the ephemeral environments](diagrams/architecture.svg)
 
-The picture shows the target state. The solid boxes exist in this repo. The dashed boxes are the sandbox flow, which is not built yet. A sandbox request enters through Traefik with a `baggage` header. The baseline route sends the call to the sandbox service, and the sandbox service calls the baseline peers.
+The picture shows the target state. The solid boxes exist in this repo. The dashed boxes are the sandbox flow, which is not built yet. A sandbox request carries a `baggage` header. The baseline route sends the call to the sandbox service, and the sandbox service calls the baseline peers.
 
 ## The cast
 
@@ -21,8 +22,12 @@ On the host (your machine):
 - `flux push artifact`: pushes `platform/` to the registry. `just publish` calls it.
 - A browser: opens the shop and Kiali.
 
+On GitHub (planned):
+- GitHub Actions: lists the files that a pull request changes, finds the affected services, builds them and pushes the sandbox artifact.
+
 In the registry `ghcr.io` (private):
 - The artifact `ghcr.io/raghav19/ephemeral-env/platform`. It holds a copy of `platform/` and the Git revision that it came from.
+- The service images and one sandbox artifact for each pull request (planned).
 
 In the cluster, by namespace:
 - `kube-system`: Traefik, with the Gateway `traefik-gateway`. k3s installs both.
@@ -101,12 +106,32 @@ sequenceDiagram
 
 The `loadgenerator` pod sends requests to the frontend all the time, so the Kiali graph of the namespace `boutique` has traffic without a browser. Flux checks the artifact tag and re-applies the platform on its own timers (see "Lifetimes").
 
+### Phase 5: each pull request (planned, not built yet)
+
+```mermaid
+sequenceDiagram
+    actor Dev
+    participant CI as GitHub Actions
+    participant GHCR as ghcr.io
+    participant Flux as ResourceSet in the cluster
+    Dev->>CI: open or update the pull request
+    CI->>CI: list the files that the PR changes (base and head)
+    CI->>CI: map each file to a service (path-to-service map)
+    CI->>GHCR: push eph-NAME:SHA for each affected service
+    CI->>GHCR: push the artifact pr-N (name + image for each service)
+    Flux->>GHCR: list the pr-N tags
+    Flux->>Flux: build the namespace boutique-pr-N
+```
+
+CI lists the files that the pull request changes. A path-to-service map turns each file into a service folder under `services/`. A change in a shared file, such as `protos/demo.proto`, adds every service that uses it. Only the affected services build. The sandbox artifact lists each one with its image, and the `ResourceSet` builds one sandbox from that list.
+
 ## Lifetimes
 
 - **`GHCR_TOKEN`**: lives in your shell. You make it and you revoke it.
 - **`GHCR_PULL_TOKEN`**: lives in the cluster Secret `ghcr-pull` until you delete the namespace `flux-system`.
 - **A tag `<branch>-<sha8>`**: stays in the registry until you delete it. `latest` moves each time you publish from `main`.
 - **The sync**: Flux checks the artifact tag every minute (the default of the `FluxInstance` sync). The three child Kustomizations reconcile every 10 minutes.
+- **A sandbox tag `pr-N` (planned)**: lives until the pull request closes. A scheduled sweep deletes tags that no open pull request owns.
 - **Prometheus data**: lives in an `emptyDir`. A pod restart loses it.
 - **The Istio CRDs and the namespace `istio-system`**: Flux never prunes them.
 
@@ -127,6 +152,8 @@ The `loadgenerator` pod sends requests to the frontend all the time, so the Kial
 - **host**: the machine that runs k3s and the recipes. A sandbox VM is not the host.
 - **baseline**: the Boutique in the namespace `boutique`.
 - **sandbox**: the short-lived environment of one pull request. It is not built yet.
+- **affected service**: a service whose files the pull request changes, or that uses a changed shared file.
+- **path-to-service map**: the list that tells CI which service owns which path.
 - **`latest`**: the tag that `FluxInstance.spec.sync.ref` follows by default.
 - **`ghcr-pull`**: the Secret that Flux uses to pull from the private registry.
 - **`kiali.localhost`**: the host name of the Kiali route. A browser resolves it to the loopback address.

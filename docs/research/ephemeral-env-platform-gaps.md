@@ -36,4 +36,5 @@ Source: the files in `code/ephemeral-env`, the Flux docs for the controller opti
 
 - **The result check of a sandbox.** The cluster runs on a laptop. A GitHub-hosted runner cannot reach it. The two options are a self-hosted runner (a risk on a public repo) and a Flux commit status.
 - **Central config.** The user wants versions and settings in one config with setters, as in part 3. Part 3 does this with a Python tool and many recipes. The choice is to reuse those tools or to write a small `kustomize` setter.
+- **The changed-file step.** No workflow exists. The way that CI lists the changed files (a `git diff` or the GitHub API) and the path-to-service map are a design only.
 - **Pull of sandbox images.** The plan is a k3s `registries.yaml`. It comes from memory and nobody checked it.

@@ -1,107 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1640" height="950" viewBox="0 0 1640 950" font-family="Helvetica, Arial, sans-serif">
-<rect width="1640" height="950" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="940" viewBox="0 0 1560 940" font-family="Helvetica, Arial, sans-serif">
+<rect width="1560" height="940" fill="#ffffff"/>
 <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#000000"/></marker></defs>
-<text x="20" y="20" font-size="20" font-weight="bold" dominant-baseline="middle">Ephemeral environments: the target state (dashed boxes are not built yet)</text>
-<rect x="20" y="60" width="260" height="330" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="30" y="73" font-size="14" dominant-baseline="middle">GitHub</text>
-<rect x="330" y="60" width="260" height="440" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="340" y="73" font-size="14" dominant-baseline="middle">ghcr.io (private)</text>
-<rect x="20" y="782" width="260" height="160" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="30" y="795" font-size="14" dominant-baseline="middle">Host (your machine)</text>
-<rect x="640" y="60" width="980" height="870" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="650" y="73" font-size="14" dominant-baseline="middle">k3s cluster</text>
-<rect x="660" y="100" width="250" height="440" rx="12" fill="#ffffff" stroke="#666666"/><text x="670" y="113" font-size="14" dominant-baseline="middle">flux-system</text>
-<rect x="990" y="100" width="230" height="440" rx="12" fill="#ffffff" stroke="#666666" stroke-dasharray="6,4"/><text x="1000" y="113" font-size="14" dominant-baseline="middle">boutique-pr-123 (sandbox)</text>
-<rect x="1300" y="100" width="300" height="440" rx="12" fill="#ffffff" stroke="#666666"/><text x="1310" y="113" font-size="14" dominant-baseline="middle">boutique (baseline)</text>
-<rect x="660" y="620" width="560" height="110" rx="12" fill="#ffffff" stroke="#666666"/><text x="670" y="633" font-size="14" dominant-baseline="middle">istio-system</text>
-<rect x="660" y="810" width="940" height="100" rx="12" fill="#ffffff" stroke="#666666"/><text x="670" y="823" font-size="14" dominant-baseline="middle">kube-system</text>
-<rect x="40" y="110" width="220" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
-<text x="150.0" y="127.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Pull request</text>
-<text x="150.0" y="145.0" font-size="14" text-anchor="middle" dominant-baseline="middle">changes one or two</text>
-<text x="150.0" y="163.0" font-size="14" text-anchor="middle" dominant-baseline="middle">service folders</text>
-<rect x="40" y="260" width="220" height="100" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
-<text x="150.0" y="283.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">GitHub Actions</text>
-<text x="150.0" y="301.0" font-size="14" text-anchor="middle" dominant-baseline="middle">builds the changed services</text>
-<text x="150.0" y="319.0" font-size="14" text-anchor="middle" dominant-baseline="middle">pushes the images and</text>
-<text x="150.0" y="337.0" font-size="14" text-anchor="middle" dominant-baseline="middle">the pr-&lt;n&gt; artifact</text>
-<rect x="350" y="110" width="220" height="70" rx="10" fill="#d5e8d4" stroke="#82b366"/>
-<text x="460.0" y="136.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Platform artifact</text>
-<text x="460.0" y="154.0" font-size="14" text-anchor="middle" dominant-baseline="middle">ephemeral-env/platform</text>
-<rect x="350" y="260" width="220" height="70" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
-<text x="460.0" y="286.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Sandbox artifact</text>
-<text x="460.0" y="304.0" font-size="14" text-anchor="middle" dominant-baseline="middle">pr-&lt;n&gt;: name + image</text>
-<rect x="350" y="410" width="220" height="70" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
-<text x="460.0" y="436.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Service images</text>
-<text x="460.0" y="454.0" font-size="14" text-anchor="middle" dominant-baseline="middle">eph-&lt;name&gt;:&lt;sha&gt;</text>
-<rect x="40" y="822" width="220" height="100" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
-<text x="150.0" y="854.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Browser or curl</text>
-<text x="150.0" y="872.0" font-size="14" text-anchor="middle" dominant-baseline="middle">header baggage:</text>
-<text x="150.0" y="890.0" font-size="14" text-anchor="middle" dominant-baseline="middle">sandbox=pr-123</text>
-<rect x="680" y="140" width="210" height="80" rx="10" fill="#fff2cc" stroke="#d6b656"/>
-<text x="785.0" y="162.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Flux Operator</text>
-<text x="785.0" y="180.0" font-size="14" text-anchor="middle" dominant-baseline="middle">and controllers</text>
-<text x="785.0" y="198.0" font-size="14" text-anchor="middle" dominant-baseline="middle">apply the platform</text>
-<rect x="680" y="300" width="210" height="80" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
-<text x="785.0" y="331.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">ResourceSetInputProvider</text>
-<text x="785.0" y="349.0" font-size="14" text-anchor="middle" dominant-baseline="middle">reads the pr-&lt;n&gt; tags</text>
-<rect x="680" y="460" width="210" height="60" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
-<text x="785.0" y="481.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">ResourceSet</text>
-<text x="785.0" y="499.0" font-size="14" text-anchor="middle" dominant-baseline="middle">one sandbox for each tag</text>
-<rect x="1010" y="140" width="190" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
-<text x="1105.0" y="163.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">productcatalogservice</text>
-<text x="1105.0" y="181.0" font-size="14" text-anchor="middle" dominant-baseline="middle">PR build</text>
-<rect x="1010" y="284" width="190" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
-<text x="1105.0" y="307.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">checkoutservice</text>
-<text x="1105.0" y="325.0" font-size="14" text-anchor="middle" dominant-baseline="middle">PR build</text>
-<rect x="1010" y="428" width="190" height="64" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
-<text x="1105.0" y="451.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Smoke Job</text>
-<text x="1105.0" y="469.0" font-size="14" text-anchor="middle" dominant-baseline="middle">calls with the header</text>
-<rect x="1320" y="140" width="260" height="90" rx="10" fill="#d5e8d4" stroke="#82b366"/>
-<text x="1450.0" y="167.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Other Boutique pods</text>
-<text x="1450.0" y="185.0" font-size="14" text-anchor="middle" dominant-baseline="middle">with Istio sidecars</text>
-<text x="1450.0" y="203.0" font-size="14" text-anchor="middle" dominant-baseline="middle">cart, shipping and more</text>
-<rect x="1320" y="284" width="260" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="6,4"/>
-<text x="1450.0" y="310.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">HTTPRoute for each sandbox</text>
-<text x="1450.0" y="328.0" font-size="14" text-anchor="middle" dominant-baseline="middle">matches baggage sandbox=pr-123</text>
-<rect x="1320" y="428" width="260" height="64" rx="10" fill="#d5e8d4" stroke="#82b366"/>
-<text x="1450.0" y="451.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">frontend + Istio sidecar</text>
-<text x="1450.0" y="469.0" font-size="14" text-anchor="middle" dominant-baseline="middle">checks the JWT</text>
-<rect x="680" y="660" width="160" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
-<text x="760.0" y="679.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">istiod</text>
-<text x="760.0" y="697.0" font-size="14" text-anchor="middle" dominant-baseline="middle">sidecar mode, own CA</text>
-<rect x="860" y="660" width="160" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
-<text x="940.0" y="688.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Prometheus</text>
-<rect x="1040" y="660" width="160" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
-<text x="1120.0" y="679.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Kiali</text>
-<text x="1120.0" y="697.0" font-size="14" text-anchor="middle" dominant-baseline="middle">view-only</text>
-<rect x="680" y="850" width="900" height="44" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
-<text x="1130.0" y="872.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Traefik, Gateway traefik-gateway</text>
-<path d="M150.0,180 C150.0,220 150.0,220 150.0,260" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M260,320.0 C300,320.0 310,295.0 350,295.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M260,350.0 C312.34500931320963,350.0 297.65499068679037,445.0 350,445.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M680,180.0 C633.8264144775392,180.0 616.1735855224608,145.0 570,145.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M680,340.0 C632.4605427039811,340.0 617.5394572960189,295.0 570,295.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M785.0,380 C785.0,420 785.0,420 785.0,460" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M890,490.0 C930.0719353163782,490.0 949.9280646836218,496.0 990,496.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1320,319.0 C1271.9850023430179,319.0 1248.0149976569821,316.0 1200,316.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1450.0,428 C1450.0,388 1450.0,394 1450.0,354" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1105.0,284 C1105.0,244 1105.0,244 1105.0,204" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1200,172.0 C1248.2808450630268,172.0 1271.7191549369732,185.0 1320,185.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1200,460.0 C1248.0,460.0 1272.0,460.0 1320,460.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1040,688.0 C1000,688.0 1060,688.0 1020,688.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M260,872.0 C428.0,872.0 512.0,872.0 680,872.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1472.0,850 C1472.0,706.5298637346434 1450.0,635.4701362653566 1450.0,492" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<path d="M1085.0,850 C1085.0,794.6018050835589 1120.0,771.3981949164411 1120.0,716" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
-<rect x="123.0" y="211.0" width="54.0" height="18" fill="#ffffff"/><text x="150.0" y="220.0" font-size="13" text-anchor="middle" dominant-baseline="middle">triggers</text>
-<rect x="258.25" y="298.5" width="93.5" height="18" fill="#ffffff"/><text x="305.0" y="307.5" font-size="13" text-anchor="middle" dominant-baseline="middle">pushes pr-&lt;n&gt;</text>
-<rect x="256.5" y="388.5" width="97.0" height="18" fill="#ffffff"/><text x="305.0" y="397.5" font-size="13" text-anchor="middle" dominant-baseline="middle">pushes images</text>
-<rect x="606.5" y="153.5" width="37.0" height="18" fill="#ffffff"/><text x="625.0" y="162.5" font-size="13" text-anchor="middle" dominant-baseline="middle">pulls</text>
-<rect x="583.75" y="308.5" width="82.5" height="18" fill="#ffffff"/><text x="625.0" y="317.5" font-size="13" text-anchor="middle" dominant-baseline="middle">lists the tags</text>
-<rect x="762.25" y="411.0" width="45.5" height="18" fill="#ffffff"/><text x="785.0" y="420.0" font-size="13" text-anchor="middle" dominant-baseline="middle">inputs</text>
-<rect x="914.0" y="484.0" width="52.0" height="18" fill="#ffffff"/><text x="940.0" y="493.0" font-size="13" text-anchor="middle" dominant-baseline="middle">creates</text>
-<rect x="1209.0" y="308.5" width="102.0" height="18" fill="#ffffff"/><text x="1260.0" y="317.5" font-size="13" text-anchor="middle" dominant-baseline="middle">baggage match</text>
-<rect x="1398.5" y="382.0" width="103.0" height="18" fill="#ffffff"/><text x="1450.0" y="391.0" font-size="13" text-anchor="middle" dominant-baseline="middle">call with header</text>
-<rect x="1087.5" y="235.0" width="35.0" height="18" fill="#ffffff"/><text x="1105.0" y="244.0" font-size="13" text-anchor="middle" dominant-baseline="middle">calls</text>
-<rect x="1204.5" y="169.5" width="111.0" height="18" fill="#ffffff"/><text x="1260.0" y="178.5" font-size="13" text-anchor="middle" dominant-baseline="middle">peers by *_ADDR</text>
-<rect x="1223.75" y="451.0" width="72.5" height="18" fill="#ffffff"/><text x="1260.0" y="460.0" font-size="13" text-anchor="middle" dominant-baseline="middle">smoke test</text>
-<rect x="1009.5" y="679.0" width="41.0" height="18" fill="#ffffff"/><text x="1030.0" y="688.0" font-size="13" text-anchor="middle" dominant-baseline="middle">reads</text>
-<rect x="426.5" y="863.0" width="87.0" height="18" fill="#ffffff"/><text x="470.0" y="872.0" font-size="13" text-anchor="middle" dominant-baseline="middle">HTTP port 80</text>
-<rect x="1437.5" y="662.0" width="47.0" height="18" fill="#ffffff"/><text x="1461.0" y="671.0" font-size="13" text-anchor="middle" dominant-baseline="middle">route /</text>
-<rect x="1040.75" y="774.0" width="123.5" height="18" fill="#ffffff"/><text x="1102.5" y="783.0" font-size="13" text-anchor="middle" dominant-baseline="middle">route kiali.localhost</text>
+<text x="20" y="20" font-size="20" font-weight="bold" dominant-baseline="middle">Ephemeral environments: the target state</text>
+<rect x="20" y="60" width="320" height="730" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="30" y="73" font-size="14" dominant-baseline="middle">GitHub</text>
+<rect x="420" y="480" width="280" height="300" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="430" y="493" font-size="14" dominant-baseline="middle">ghcr.io (private)</text>
+<rect x="420" y="60" width="280" height="140" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="430" y="73" font-size="14" dominant-baseline="middle">Host (your machine)</text>
+<rect x="780" y="60" width="760" height="840" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="790" y="73" font-size="14" dominant-baseline="middle">k3s cluster</text>
+<rect x="800" y="100" width="320" height="420" rx="12" fill="#ffffff" stroke="#666666"/><text x="810" y="113" font-size="14" dominant-baseline="middle">boutique (baseline)</text>
+<rect x="1220" y="200" width="300" height="320" rx="12" fill="#ffffff" stroke="#666666" stroke-dasharray="6,4"/><text x="1230" y="213" font-size="14" dominant-baseline="middle">boutique-pr-123 (sandbox)</text>
+<rect x="800" y="600" width="720" height="120" rx="12" fill="#ffffff" stroke="#666666" stroke-dasharray="6,4"/><text x="810" y="613" font-size="14" dominant-baseline="middle">ResourceSet</text>
+<rect x="800" y="770" width="720" height="110" rx="12" fill="#ffffff" stroke="#666666"/><text x="810" y="783" font-size="14" dominant-baseline="middle">Platform add-ons</text>
+<rect x="40" y="110" width="280" height="56" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="180.0" y="129.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Pull request</text>
+<text x="180.0" y="147.0" font-size="14" text-anchor="middle" dominant-baseline="middle">opened or updated</text>
+<rect x="40" y="246" width="280" height="64" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="180.0" y="269.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">1. List the changed files</text>
+<text x="180.0" y="287.0" font-size="14" text-anchor="middle" dominant-baseline="middle">diff of the PR base and head</text>
+<rect x="40" y="390" width="280" height="72" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="180.0" y="408.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">2. Map the files to services</text>
+<text x="180.0" y="426.0" font-size="14" text-anchor="middle" dominant-baseline="middle">path-to-service map</text>
+<text x="180.0" y="444.0" font-size="14" text-anchor="middle" dominant-baseline="middle">a shared file adds all consumers</text>
+<rect x="40" y="542" width="280" height="64" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="180.0" y="565.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3. Build each affected service</text>
+<text x="180.0" y="583.0" font-size="14" text-anchor="middle" dominant-baseline="middle">push eph-&lt;name&gt;:&lt;sha&gt;</text>
+<rect x="40" y="686" width="280" height="72" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="180.0" y="704.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">4. Push the sandbox artifact</text>
+<text x="180.0" y="722.0" font-size="14" text-anchor="middle" dominant-baseline="middle">pr-&lt;n&gt;: name + image</text>
+<text x="180.0" y="740.0" font-size="14" text-anchor="middle" dominant-baseline="middle">for each affected service</text>
+<rect x="440" y="542" width="240" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
+<text x="560.0" y="565.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Service images</text>
+<text x="560.0" y="583.0" font-size="14" text-anchor="middle" dominant-baseline="middle">eph-&lt;name&gt;:&lt;sha&gt;</text>
+<rect x="440" y="686" width="240" height="72" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
+<text x="560.0" y="704.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Sandbox artifact</text>
+<text x="560.0" y="722.0" font-size="14" text-anchor="middle" dominant-baseline="middle">pr-&lt;n&gt;: name + image</text>
+<text x="560.0" y="740.0" font-size="14" text-anchor="middle" dominant-baseline="middle">for each service</text>
+<rect x="440" y="100" width="240" height="80" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="560.0" y="122.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Browser or curl</text>
+<text x="560.0" y="140.0" font-size="14" text-anchor="middle" dominant-baseline="middle">header baggage:</text>
+<text x="560.0" y="158.0" font-size="14" text-anchor="middle" dominant-baseline="middle">sandbox=pr-123</text>
+<rect x="820" y="140" width="280" height="64" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="960.0" y="163.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">frontend</text>
+<text x="960.0" y="181.0" font-size="14" text-anchor="middle" dominant-baseline="middle">Istio sidecar</text>
+<rect x="820" y="284" width="280" height="64" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-dasharray="6,4"/>
+<text x="960.0" y="307.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">HTTPRoute for each sandbox</text>
+<text x="960.0" y="325.0" font-size="14" text-anchor="middle" dominant-baseline="middle">matches baggage sandbox=pr-123</text>
+<rect x="820" y="428" width="280" height="64" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="960.0" y="451.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Other Boutique pods</text>
+<text x="960.0" y="469.0" font-size="14" text-anchor="middle" dominant-baseline="middle">cart, shipping and more</text>
+<rect x="1240" y="284" width="260" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
+<text x="1370.0" y="307.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">checkoutservice</text>
+<text x="1370.0" y="325.0" font-size="14" text-anchor="middle" dominant-baseline="middle">PR build</text>
+<rect x="1240" y="428" width="260" height="64" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-dasharray="6,4"/>
+<text x="1370.0" y="451.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">productcatalogservice</text>
+<text x="1370.0" y="469.0" font-size="14" text-anchor="middle" dominant-baseline="middle">PR build</text>
+<rect x="820" y="640" width="290" height="56" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="965.0" y="659.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">ResourceSetInputProvider</text>
+<text x="965.0" y="677.0" font-size="14" text-anchor="middle" dominant-baseline="middle">reads the pr-&lt;n&gt; tags</text>
+<rect x="1225" y="640" width="290" height="56" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-dasharray="6,4"/>
+<text x="1370.0" y="659.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">ResourceSet</text>
+<text x="1370.0" y="677.0" font-size="14" text-anchor="middle" dominant-baseline="middle">builds one sandbox for each tag</text>
+<rect x="820" y="816" width="120" height="44" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="880.0" y="838.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Flux Operator</text>
+<rect x="960" y="816" width="120" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="1020.0" y="838.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">istiod</text>
+<rect x="1100" y="816" width="120" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="1160.0" y="838.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Prometheus</text>
+<rect x="1240" y="816" width="120" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="1300.0" y="838.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Kiali</text>
+<rect x="1380" y="816" width="120" height="44" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="1440.0" y="838.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Traefik</text>
+<path d="M180.0,166 C180.0,206 180.0,206 180.0,246" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M180.0,310 C180.0,350 180.0,350 180.0,390" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M180.0,462 C180.0,502 180.0,502 180.0,542" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M180.0,606 C180.0,646 180.0,646 180.0,686" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M320,574.0 C368.0,574.0 392.0,574.0 440,574.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M320,722.0 C368.0,722.0 392.0,722.0 440,722.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M820,668.0 C759.9786704579113,668.0 740.0213295420887,722.0 680,722.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1110,668.0 C1156.0,668.0 1179.0,668.0 1225,668.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1370.0,640 C1370.0,592.0 1370.0,568.0 1370.0,520" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M680,140.0 C737.444233827252,140.0 762.555766172748,172.0 820,172.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M960.0,204 C960.0,244 960.0,244 960.0,284" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1100,316.0 C1156.0,316.0 1184.0,316.0 1240,316.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1370.0,348 C1370.0,388 1370.0,388 1370.0,428" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1240,460.0 C1184.0,460.0 1156.0,460.0 1100,460.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<rect x="153.0" y="197.0" width="54.0" height="18" fill="#ffffff"/><text x="180.0" y="206.0" font-size="13" text-anchor="middle" dominant-baseline="middle">triggers</text>
+<rect x="135.5" y="341.0" width="89.0" height="18" fill="#ffffff"/><text x="180.0" y="350.0" font-size="13" text-anchor="middle" dominant-baseline="middle">changed files</text>
+<rect x="125.25" y="493.0" width="109.5" height="18" fill="#ffffff"/><text x="180.0" y="502.0" font-size="13" text-anchor="middle" dominant-baseline="middle">affected services</text>
+<rect x="139.75" y="637.0" width="80.5" height="18" fill="#ffffff"/><text x="180.0" y="646.0" font-size="13" text-anchor="middle" dominant-baseline="middle">images built</text>
+<rect x="331.5" y="565.0" width="97.0" height="18" fill="#ffffff"/><text x="380.0" y="574.0" font-size="13" text-anchor="middle" dominant-baseline="middle">pushes images</text>
+<rect x="333.25" y="713.0" width="93.5" height="18" fill="#ffffff"/><text x="380.0" y="722.0" font-size="13" text-anchor="middle" dominant-baseline="middle">pushes pr-&lt;n&gt;</text>
+<rect x="708.75" y="686.0" width="82.5" height="18" fill="#ffffff"/><text x="750.0" y="695.0" font-size="13" text-anchor="middle" dominant-baseline="middle">lists the tags</text>
+<rect x="1144.75" y="659.0" width="45.5" height="18" fill="#ffffff"/><text x="1167.5" y="668.0" font-size="13" text-anchor="middle" dominant-baseline="middle">inputs</text>
+<rect x="1344.0" y="571.0" width="52.0" height="18" fill="#ffffff"/><text x="1370.0" y="580.0" font-size="13" text-anchor="middle" dominant-baseline="middle">creates</text>
+<rect x="701.25" y="147.0" width="97.5" height="18" fill="#ffffff"/><text x="750.0" y="156.0" font-size="13" text-anchor="middle" dominant-baseline="middle">HTTP + header</text>
+<rect x="908.5" y="235.0" width="103.0" height="18" fill="#ffffff"/><text x="960.0" y="244.0" font-size="13" text-anchor="middle" dominant-baseline="middle">call with header</text>
+<rect x="1119.0" y="307.0" width="102.0" height="18" fill="#ffffff"/><text x="1170.0" y="316.0" font-size="13" text-anchor="middle" dominant-baseline="middle">baggage match</text>
+<rect x="1352.5" y="379.0" width="35.0" height="18" fill="#ffffff"/><text x="1370.0" y="388.0" font-size="13" text-anchor="middle" dominant-baseline="middle">calls</text>
+<rect x="1114.5" y="451.0" width="111.0" height="18" fill="#ffffff"/><text x="1170.0" y="460.0" font-size="13" text-anchor="middle" dominant-baseline="middle">peers by *_ADDR</text>
 </svg>
