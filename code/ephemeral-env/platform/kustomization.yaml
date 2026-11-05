@@ -1,7 +1,7 @@
-# The root of the OCI artifact. `just publish` pushes this folder. Later PRs add addons/, apps/ and sandboxes/.
+# The root of the OCI artifact. `just publish` pushes this folder. The root applies the namespace and the Flux Kustomizations in sync.yaml.
+# Each of those applies its own folder. Later PRs add folders to addons/, apps/ and sandboxes/.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
-  - addons/istio
-  - addons/observability
+  - sync.yaml

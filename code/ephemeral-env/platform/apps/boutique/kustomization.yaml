@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: boutique
+resources:
+  - namespace.yaml
+  - kubernetes-manifests.yaml
+  - httproute.yaml
+patches:
+  # The release makes `frontend-external` a LoadBalancer on port 80. Traefik holds node port 80 through ServiceLB.
+  # Users reach the shop through the HTTPRoute, so this Service is not needed.
+  - target:
+      kind: Service
+      name: frontend-external
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: frontend-external

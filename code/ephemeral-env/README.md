@@ -15,7 +15,7 @@ The project grows in small PRs. This is PR 1, the foundation. It installs Flux, 
 
 | Path | Purpose |
 |---|---|
-| `platform/` | Everything in the OCI artifact. Later PRs add `addons/`, `apps/` and `sandboxes/`. |
+| `platform/` | Everything in the OCI artifact. `sync.yaml` holds the Flux Kustomizations that apply `addons/` and `apps/` in order. A later PR adds `sandboxes/`. |
 | `clusters/k3s/` | Files that you apply from the host. They are not in the artifact. A bad artifact cannot delete Flux. |
 | `justfile` | `check` and `publish`. |
 | `clusters/k3s/justfile` | `up`. |
@@ -79,7 +79,7 @@ kubectl -n istio-system get deploy istiod                # 1/1 available
 kubectl get crd | grep -c istio.io                       # more than 0
 ```
 
-Undo: delete `addons/istio` from `platform/kustomization.yaml`, publish, and let Flux uninstall both releases. Flux never prunes the namespace or the CRDs. To delete them, run `kubectl delete ns istio-system` and delete the `istio.io` CRDs by hand. Deleting a CRD deletes every custom resource of its kind.
+Undo: delete the Kustomization `addons-istio` from `platform/sync.yaml`, publish, and let Flux uninstall both releases. Flux never prunes the namespace or the CRDs. To delete them, run `kubectl delete ns istio-system` and delete the `istio.io` CRDs by hand. Deleting a CRD deletes every custom resource of its kind.
 
 ## Observability (PR 3)
 
@@ -100,7 +100,27 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: kiali.localhost' http://127.0
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/kiali/api/status                               # 404
 ```
 
-Undo: delete `addons/observability` from `platform/kustomization.yaml` and publish. Flux deletes both deployments, the route and the cluster roles.
+Undo: delete the Kustomization `addons-observability` from `platform/sync.yaml` and publish. Flux deletes both deployments, the route and the cluster roles.
+
+## Baseline (PR 4)
+
+`platform/apps/boutique/` runs Online Boutique v0.10.7 in the namespace `boutique`. The file `kubernetes-manifests.yaml` is the vendored release, pinned by commit hash. The namespace has the label `istio-injection=enabled` from its creation, so every pod starts with its sidecar. The `HTTPRoute` `frontend` sends `/` from the Traefik Gateway to the Service `frontend`. The release includes a `loadgenerator`, so the Kiali graph shows traffic without a browser. A kustomize patch deletes the Service `frontend-external`, because Traefik holds node port 80.
+
+**The order of the platform changed.** `platform/sync.yaml` holds three Flux Kustomizations: `addons-istio`, `addons-observability` and `apps-boutique`. Both of the last two wait for `addons-istio` to be Ready. `wait: true` makes "Ready" mean that the HelmReleases and the Deployments are healthy. Without this order, Boutique pods can start before the injection webhook exists. Such a pod runs without a sidecar, and I found no report of it. `just check` now builds every folder under `addons/` and `apps/`.
+
+Checks, after you publish and Flux reconciles:
+
+```sh
+kubectl -n flux-system get kustomization                         # three Kustomizations, READY True
+kubectl -n boutique get pods                                      # 12 pods, all Running
+kubectl -n boutique get pods -o json | jq -r '.items[] | select([.spec.containers[].name, (.spec.initContainers // [])[].name] | index("istio-proxy") | not) | .metadata.name'   # prints nothing: every pod has a sidecar
+kubectl -n boutique get httproute frontend                        # Accepted True
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/        # 200, the shop
+```
+
+In Kiali (`http://kiali.localhost/kiali`), the graph for the namespace `boutique` shows the calls between the services.
+
+Undo: delete the Kustomization `apps-boutique` from `platform/sync.yaml` and publish. Flux deletes the namespace `boutique` and everything in it.
 
 ## Not tested
 
@@ -109,3 +129,4 @@ Undo: delete `addons/observability` from `platform/kustomization.yaml` and publi
 - `flux push artifact` with `--creds` against GHCR, and the size of the GHCR rate limit.
 - The Istio 1.31.1 charts on k3s 1.37, and the redirect from `blob.istio.io` that the `HelmRepository` follows. The chart index lists 1.31.1 for `base` and `istiod`.
 - Kiali and Prometheus from the Istio 1.31.1 samples on k3s 1.37. Whether `view_only_mode` hides every write action of the Kiali UI. The Kiali version is v2.31.
+- Boutique v0.10.7 with Istio 1.31.1 sidecars. The `loadgenerator` init container `frontend-check` needs the network before the main containers start. It works only if Istio injects the sidecar as a native sidecar. The cluster pulls the images from `us-central1-docker.pkg.dev` and `docker.io`. The memory of one node for 12 pods with sidecars is not measured.
