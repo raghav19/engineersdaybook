@@ -4,7 +4,7 @@ This sandbox is a VM for Claude Code and the [TTT](https://github.com/eugenioenk
 
 The VM holds no secrets, only placeholders. The host replaces a placeholder with the real value when the VM calls an allowed host. The "Decision records" at the end explain why the sandbox works this way.
 
-**Not ported yet:** the SPIRE agent, Envoy and the kind kubeconfig.
+**Not ported yet:** Envoy and the kind kubeconfig.
 
 ## Prerequisites
 
@@ -156,6 +156,7 @@ The `claude-home` volume keeps the Claude Code conversations, so they survive `j
 | Open a bash prompt in the VM | `just msb shell` |
 | Allow one more host | `just msb allow-host example.org`, then `just msb rm && just msb run`, then commit |
 | Make the Kubernetes access of the agent, or renew its token | `just msb sync-kubeconfig` |
+| Copy the node identity of the SPIRE agent from the cluster | `just msb node-cert` (`run` does it first). To rotate the key, run `kubectl -n spire-system delete secret sandbox-node-tls`, then this recipe, then restart the agent |
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
 | Add another secret | Add it under `secrets:` in `vm/sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `# --- Required environment variables ---` in `.msb/justfile`, then `just msb rm && just msb run` |
 | Change a tool of the image | Edit a file in `image/`, commit, `just msb build`, commit the new digest, then `just msb rm && just msb run` |

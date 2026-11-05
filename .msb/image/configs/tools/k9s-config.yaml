@@ -1,3 +1,4 @@
 k9s:
   ui:
-    skin: tokyo-night
+    # Skins are in ~/.config/k9s/skins. Set skin to catppuccin-mocha or tokyo-night.
+    skin: catppuccin-mocha

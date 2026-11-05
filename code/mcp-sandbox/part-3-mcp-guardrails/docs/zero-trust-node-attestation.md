@@ -29,12 +29,12 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | SPIRE server | The CA of the trust domain `mcp.local`. It runs in the k8s cluster, in the namespace `spire-system`. |
 | SPIRE agent | It runs on the node, here in the microVM. It attests the node, then the workloads on it. |
 | Node CA | A CA that signs node certificates only. It is not the CA of the SPIRE server. cert-manager makes it. |
-| CSR | A certificate signing request. The VM sends its public key and the name it asks for. The private key stays in the VM. |
-| Node certificate | The certificate that the node CA signs for the VM. It holds the public key of the VM and the name. It shows who the VM is. |
+| CSR | cert-manager | Inside cert-manager, and a copy in the `CertificateRequest` | Public |
+| Node certificate | cert-manager | The same Secret, the same folder, and the `CertificateRequest` | Public. It is useless without the key. |
 | Proof of possession | The agent signs a challenge with its private key. Only the holder of the key can do this. |
 | Nonce | A random 32-byte value. The server makes one and the agent makes one. The agent signs the hash of both. |
 | Node CA bundle | The certificate of the node CA. The SPIRE server uses it to check node certificates. |
-| SPIFFE trust bundle | The certificate of the SPIRE server. The agent uses it to trust the server. It is not the node CA bundle. |
+| SPIFFE trust bundle | The SPIRE server | `~/.config/msb/node` on the host, and the read-only mount in the microVM | Public |
 | Selector | A fact that the server learns about an attested node. Example: `x509pop:subject:cn:microvm-123`. |
 | Node entry (alias) | A registration entry that gives a node a fixed SPIFFE ID. The server picks the node by its selectors. Workload entries use it as parent. |
 
@@ -51,9 +51,10 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | trust-manager | `spire-system`, in the spire addon | Copies the node CA certificate into a ConfigMap. It reads Secrets only in `spire-system`, and it writes ConfigMaps only there. |
 | SPIRE server | `spire-system` | Checks the node certificate with the `x509pop` plugin. |
 | Istio ingress gateway | `istio-ingress` | Passes the TLS of the agent through to the SPIRE server. It reads only the SNI name `spire.localhost`. The host port is 443. |
-| `msb.py attest` | host | Signs the CSR of the VM and sends the files to the VM. |
-| `sandbox-boot` | microVM | Makes the node key and the CSR. |
-| SPIRE agent | microVM | Sends the certificate and signs the challenge. It reaches the server at `spire.localhost`, on port 443 of the host. The gateway of the host passes the TLS through to the server. |
+| Certificate `sandbox-node` | `spire-system`, from git | Asks cert-manager for the key pair and the 90-day node certificate of the microVM. The node CA signs it. cert-manager renews it 30 days before its end. |
+| `just msb node-cert` | host | Before the VM starts, it waits until the node certificate is Ready. Then it copies the key, the certificate and the trust bundle into `~/.config/msb/node`. |
+| `sandbox-boot` | microVM | Starts the SPIRE agent as root and waits until it is healthy. |
+| SPIRE agent | microVM | Reads the key and the certificate from the read-only mount `/run/sandbox/node`. Sends the certificate and signs the challenge. It reaches the server at `spire.localhost`, on port 443 of the host. The gateway of the host passes the TLS through to the server. |
 
 ### Stage A: setup, once
 
@@ -74,29 +75,27 @@ flowchart LR
 2. The `Issuer` `node-ca` uses that Secret to sign other certificates.
 3. A trust-manager `Bundle` copies the CA certificate (not the key) into the ConfigMap `node-ca-bundle`.
 4. The SPIRE server mounts the ConfigMap. Its `x509pop` plugin reads it as `ca_bundle_path`.
+5. Flux applies `node-certificate.yaml`. cert-manager makes an ECDSA P-256 key pair and a CSR for the microVM. The Issuer `node-ca` signs it. The key and the 90-day certificate are in the Secret `sandbox-node-tls`. The CN is the sandbox name and the URI SAN has the GitHub login.
 
 ### Stage B: each VM start
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant H as host (msb.py)
-    participant M as microVM (sandbox-boot)
+    participant H as host (just msb node-cert)
     participant K as cert-manager
     participant S as SPIRE server
+    participant M as microVM (sandbox-boot)
     participant A as SPIRE agent (microVM)
 
-    H->>M: start the VM
-    Note over M: sandbox-boot makes the node key pair<br/>and a CSR that holds the public key
-    H->>M: ssh: read the CSR
-    M-->>H: the CSR
-    H->>H: check the name in the CSR
-    H->>K: kubectl: CertificateRequest with the CSR, issuer node-ca
-    K-->>H: node certificate, with the public key of the VM
+    Note over K: from git: the Certificate sandbox-node.<br/>cert-manager made the key pair and the node certificate.
+    H->>K: kubectl wait: the Certificate is Ready
+    H->>K: kubectl get secret: the key and the certificate
     H->>S: kubectl exec: bundle show -format spiffe
     S-->>H: SPIFFE trust bundle
-    H->>M: ssh: write the node certificate and the SPIFFE trust bundle
-    H->>M: ssh: start the agent
+    H->>H: write the three files in ~/.config/msb/node
+    H->>M: start the VM, with that folder mounted read-only
+    M->>A: start the agent as root, wait until it is healthy
     A->>S: attest: send the node certificate
     Note over S: the chain must end at the node CA.<br/>The server takes the public key from the certificate.
     S-->>A: challenge: a random 32-byte nonce
@@ -106,22 +105,23 @@ sequenceDiagram
     S-->>A: SVID of the agent, and SVID of the alias
 ```
 
-1. The host starts the VM. `sandbox-boot` makes the node key pair and a CSR when no key exists. The CSR holds the public key, the sandbox name as the CN, and the GitHub id as a URI SAN. The private key never leaves the VM. The agent does not start yet, because it has no certificate.
-2. The host reads the CSR over ssh. It waits until the CSR file exists. It checks that the CN is the sandbox name and that the SAN holds the GitHub id of the logged-in user. It rejects any other CSR.
-3. The host applies a `CertificateRequest` with that CSR. cert-manager signs it with the node CA key and returns the node certificate. The certificate holds the public key of the VM.
-4. The host reads the SPIFFE trust bundle from the SPIRE server.
-5. The host writes the certificate and the bundle into the VM over ssh, then starts the agent.
-6. The agent sends the node certificate to the server. This is the first message. The server checks that the chain ends at the node CA. It takes the public key from the certificate.
-7. The server sends a challenge: a random 32-byte nonce. It sends the challenge only after the chain check passes.
-8. The agent makes its own 32-byte nonce. It signs the SHA-256 hash of both nonces with the node private key. It sends its nonce and the signature.
-9. The server makes the same hash from the two nonces. It checks the signature with the public key from step 6.
-10. The server issues the SVID of the agent. A node entry that matches the selectors also gives the alias SVID.
+1. Before the VM starts, `just msb node-cert` runs on the host. It waits until the `Certificate` `sandbox-node` is Ready. If it is not, the VM does not start.
+2. The host copies the key and the certificate from the Secret `sandbox-node-tls`. It reads the SPIFFE trust bundle from the SPIRE server. It writes the three files in `~/.config/msb/node` (the key has mode 600).
+3. The host starts the VM. The VM mounts the folder read-only at `/run/sandbox/node`.
+4. `sandbox-boot` starts the SPIRE agent as root and waits 30 seconds until the agent is healthy. If it is not healthy, `just msb run` stops.
+5. The agent reads the key and the certificate. It sends the node certificate to the server. This is the first message. The server checks that the chain ends at the node CA. It takes the public key from the certificate.
+6. The server sends a challenge: a random 32-byte nonce. It sends the challenge only after the chain check passes.
+7. The agent makes its own 32-byte nonce. It signs the SHA-256 hash of both nonces with the node private key. It sends its nonce and the signature.
+8. The server makes the same hash from the two nonces. It checks the signature with the public key from step 5.
+9. The server issues the SVID of the agent. A node entry that matches the selectors also gives the alias SVID.
 
 ### Stage C: after the attestation
 
-- The agent renews its SVIDs by itself. It needs no new certificate for this.
-- The node certificate is short-lived. A restart of the agent after expiry needs a new certificate. The next `just msb run` signs one.
-- The old agent IDs stay in the server until they expire or you evict them.
+- The agent attests again by itself. Its own SVID is valid for 1 hour by default. About half-way, the agent rotates it. The `x509pop` plugin allows re-attestation, so the rotation runs the full attestation again (steps 5 to 9). The agent reads the key and the certificate from the folder each time.
+- So the node certificate must be valid at all times, not only at the start. If it expires, the rotation fails. When the SVID of the agent then expires, the agent has no identity.
+- cert-manager renews the certificate when 30 days remain, and a new key comes with it. `just msb node-cert` copies the new files at each `just msb run`. For a VM that runs more than 60 days without `run`, run `just msb node-cert` on the host.
+- A running agent stays as it is. A new agent starts with an empty data folder, so it attests at each start.
+- The agent ID has the SHA1 fingerprint of the certificate. A renewed certificate gives a new agent ID. The old agent IDs stay in the server until they expire or you evict them.
 
 ## 5. What the server checks
 
@@ -182,11 +182,11 @@ A node entry that lists both selectors matches only a node that has both values.
 |---|---|---|---|
 | Node CA key | cert-manager | Secret `node-ca` in `spire-system` | cert-manager, and every user who can read Secrets in `spire-system` |
 | Node CA certificate | cert-manager | The Secret, and the ConfigMap `node-ca-bundle` | Public |
-| Node private key | The microVM | The microVM only | The user `agent` in the microVM |
-| CSR | The microVM | The microVM, and a copy in the `CertificateRequest` | Public |
-| Node certificate | cert-manager | The microVM, and the `CertificateRequest` | Public. It is useless without the key. |
-| SPIFFE trust bundle | The SPIRE server | The microVM | Public |
-| SVID of the agent, and its key | The SPIRE agent | The data folder of the agent in the microVM | The user `agent` in the microVM |
+| Node private key | cert-manager | The Secret `sandbox-node-tls` in `spire-system`, a copy in `~/.config/msb/node` on the host, and a read-only mount in the microVM | cert-manager, every user who can read Secrets in `spire-system`, the user of the host, and root in the microVM |
+| CSR | The host | Only in memory, and a copy in the `CertificateRequest` | Public |
+| Node certificate | cert-manager | The same folder, and the `CertificateRequest` | Public. It is useless without the key. |
+| SPIFFE trust bundle | The SPIRE server | The same folder | Public |
+| SVID of the agent, and its key | The SPIRE agent | The data folder of the agent in the microVM, owned by root | Root in the microVM |
 
 ## 7. Why x509pop
 
@@ -204,10 +204,12 @@ The research behind the choice is in [docs/research/spire-node-attestation.md](.
 
 ## 8. Limits
 
-- **The CA signs what the CSR asks for.** The host script checks the name in the CSR before it applies the `CertificateRequest`. A user who can create a `CertificateRequest` in `spire-system` skips this check. That user can ask for any name.
+- **The CA signs what the CSR asks for.** The `Certificate` in git sets the names. A user who can create a `Certificate` or a `CertificateRequest` in `spire-system` can ask for any name. The microVM mounts the admin kubeconfig of the k3s cluster today, so a process in the microVM can do this.
 - **The CA key is a Secret in `spire-system`.** A user who can read Secrets there can sign any node certificate. The service account of trust-manager can read every Secret in `spire-system`, so it can read the key too.
-- **The GitHub id is a claim of the host.** The CA does not check it against GitHub. The host script reads it from the logged-in user.
-- **Evict does not block a node.** The node can attest again with the same certificate until it expires. A short certificate life limits this. A new node CA ends it for all nodes.
+- **The GitHub id is a claim of git.** The CA does not check it against GitHub. The `Certificate` `sandbox-node` holds it.
+- **The node certificate lasts 90 days, and nothing revokes it.** The key is a Secret in `spire-system`, and a copy is a file on the host. If it leaks, remove the Secret with `kubectl -n spire-system delete secret sandbox-node-tls`. cert-manager makes a new key and certificate. Run `just msb node-cert` and restart the agent. The server still accepts the old certificate until it expires. A new node CA ends it for sure.
+- **The key is a mounted file.** The agent runs as root, so that the user `agent` cannot read the key. No test checked the file modes that the microVM shows for the mount.
+- **Evict does not block a node.** The node can attest again with the same certificate until it expires. The certificate life is 90 days here. A new node CA ends it for all nodes.
 - **The plugin docs list no revocation check.**
 - **A removed node keeps its SVID until it expires.**
 - **The values of the selectors are only as good as the issuing rule.** The plugin trusts the CA.
@@ -256,21 +258,21 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 
 Expect the entry with the two selectors `x509pop:subject:cn:sandbox-dev` and `x509pop:san:github-id:raghav19`.
 
-**Part 4: the key and the CSR.** In the microVM:
+**Part 4: the key and the certificate.** On the host:
 
 ```bash
-openssl req -in ~/.spire/node.csr -noout -subject
-openssl req -in ~/.spire/node.csr -noout -text | grep URI
-stat -c %a ~/.spire/node.key
+kubectl -n spire-system get certificate sandbox-node
+stat -c %a ~/.config/msb/node/node.key
+openssl x509 -in ~/.config/msb/node/node.crt -noout -subject -dates -ext subjectAltName
 ```
 
-Expect the CN `sandbox-dev` and the URI SAN `x509pop://mcp.local/github-id/<login>`. Expect `600` for the key.
+Expect `READY` `True`. Expect `600` for the key. Expect the CN `sandbox-dev`, the URI SAN `x509pop://mcp.local/github-id/<login>`, and an end date about 90 days ahead.
 
 **Part 5: the agent.** In the microVM:
 
 ```bash
-spire-agent healthcheck -socketPath /home/agent/.spire/agent.sock
-grep -E "Node attestation was successful|SVID loaded" ~/.spire/agent.log
+spire-agent healthcheck -socketPath /run/spire/agent.sock
+grep -E "Node attestation was successful|Successfully reattested node" /var/log/spire-agent.log
 ```
 
 On the host, list the attested agents:
@@ -300,8 +302,8 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | 1 | The node CA (cert-manager) | done |
 | 2 | trust-manager and the node CA bundle | done |
 | 3 | `x509pop` on the SPIRE server, and the node entry | done |
-| 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | done |
-| 5 | `msb.py attest` on the host | planned |
+| 4 | The agent config, the read-only mount and the agent start in the microVM, and the port rule of `msb.py` | done |
+| 5 | The Certificate `sandbox-node` and `just msb node-cert` on the host: the key pair, the 90-day certificate and the bundle | done |
 | 6 | Cleanup of the other pages | planned |
 
 ## 11. Setup of the SPIRE server and agent
