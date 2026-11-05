@@ -1,132 +1,103 @@
-# ephemeral-env
+# Ephemeral environments on k3s with Flux
 
-Preview environments for the Boutique microservices. Each pull request gets a sandbox. The sandbox holds only the services that the PR changes. The other services come from a shared baseline. Istio and Kiali show the calls between the two.
+Preview environments for the Online Boutique microservices. The goal: a pull request gets its own short-lived sandbox, and Istio and Kiali show the calls between the sandbox and a shared baseline.
 
-The project grows in small PRs. This is PR 1, the foundation. It installs Flux, makes Flux pull one OCI artifact, and applies a minimal stack. It installs no Istio and no Boutique yet.
+This folder holds the platform that comes first. It is a fresh k3s cluster with Traefik, Istio, Prometheus, Kiali and the Boutique as baseline. Flux delivers it from one OCI artifact in a private registry. The sandbox flow is not built yet.
 
-## How the delivery works
+![The host, the registry and the k3s cluster](docs/diagrams/architecture.svg)
 
-- **Git is the source.** You write, review and merge `platform/` in Git.
-- **The registry is what Flux pulls.** `just publish` pushes `platform/` as one OCI artifact. Flux in the cluster reads only the registry. The cluster never reads Git. This is the gitless model.
-- **The pointer is a tag.** `spec.sync.ref` of the `FluxInstance` names the tag or digest that Flux pulls.
-- **Sandboxes never touch Git.** A later PR makes CI push one artifact for each pull request. Many PRs write to the registry at the same time, and no Git merge conflicts happen.
+## What the cluster looks like
 
-## Layout
+The cluster is a fresh k3s v1.37 or later. It has the packaged Traefik and the packaged Gateway API CRDs. Do not start it with `--disable traefik`. No other project may use these namespaces:
 
-| Path | Purpose |
-|---|---|
-| `platform/` | Everything in the OCI artifact. `sync.yaml` holds the Flux Kustomizations that apply `addons/` and `apps/` in order. A later PR adds `sandboxes/`. |
-| `clusters/k3s/` | Files that you apply from the host. They are not in the artifact. A bad artifact cannot delete Flux. |
-| `justfile` | `check` and `publish`. |
-| `clusters/k3s/justfile` | `up`. |
+- `kube-system`: Traefik, with the Gateway `traefik-gateway`. k3s installs both.
+- `flux-system`: the Flux Operator and the Flux controllers.
+- `istio-system`: `istiod`, Prometheus and Kiali.
+- `boutique`: the 12 Boutique pods, each with an Istio sidecar.
+- `ephemeral-env`: an empty namespace for objects that belong to the whole project.
 
-## The cluster contract
+## Set up from scratch
 
-This project assumes a fresh k3s with its packaged components. It must not depend on what another project left on the cluster.
+Run every command on the host, in the folder `code/ephemeral-env`. The recipes `publish` and `up` refuse to run in the sandbox VM, because the tokens must stay on the host.
 
-- k3s v1.37 or later, with the default Traefik and the default Gateway API CRDs. Do not pass `--disable traefik`.
-- A kubeconfig on the host. The default context name is `default`. Set `KUBE_CONTEXT` for another name.
-- Tools on the host: `just`, `kubectl`, `helm`, `yq`, `flux` and `kustomize`.
-- No other project on the cluster uses the namespaces `flux-system` and `ephemeral-env`.
+1. Install k3s on a clean host. The version is the one that `code/mcp-sandbox/part-3-mcp-guardrails/clusters/k3s/justfile` pins:
 
-`up` checks the node, the Gateway API CRDs and the Traefik Deployment. It stops when one is missing.
+   ```sh
+   curl -sfL https://get.k3s.io | sudo INSTALL_K3S_VERSION=v1.37.1+k3s1 sh -
+   sudo k3s kubectl wait --for=condition=Ready node --all --timeout=5m
+   ```
 
-## Setup (host)
+2. Copy the kubeconfig to your user. k3s names the context `default`. Set `KUBE_CONTEXT` if yours has another name.
 
-Do not run these commands in the sandbox. The recipes refuse to run there, because the registry tokens must stay on the host.
+   ```sh
+   mkdir -p ~/.kube && sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config && sudo chown "$USER" ~/.kube/config
+   ```
 
-1. Create two GitHub tokens and keep their values in your shell, never in a file in the repo:
+3. Install these tools: `just`, `kubectl`, `helm`, `yq`, `kustomize`, `flux` and `flux-schema`.
+4. Make two GitHub tokens. Export them in your shell and never write them in a file in the repo:
    - `GHCR_TOKEN` with `write:packages`. `just publish` uses it.
-   - `GHCR_PULL_TOKEN` with `read:packages`. `up` puts it in the cluster Secret `ghcr-pull`.
-2. Check the manifests, with no cluster: `just check`.
-3. Publish the artifact from the checkout of this branch: `just publish`. The command prints the tag, for example `ephemeral-env-foundation-1a2b3c4d`. On `main`, it also moves the tag `latest`.
-4. Hand the cluster to Flux. Before the first merge, pass the tag from step 3: `just clusters/k3s/up <tag>`. After the merge and a publish from `main`, `just clusters/k3s/up` uses `latest`.
+   - `GHCR_PULL_TOKEN` with `read:packages`. `up` writes it into the cluster Secret `ghcr-pull`.
+5. Check the manifests. The check needs the network, because the Boutique release is a remote file:
 
-## Checks
+   ```sh
+   just check
+   ```
 
-Each command must print the value in the comment.
+6. Publish the platform as an OCI artifact. On `main`, this also moves the tag `latest`:
+
+   ```sh
+   just publish
+   ```
+
+7. Hand the cluster to Flux. `up` stops when a node is not Ready, when the Gateway API CRDs are missing, or when the Traefik Deployment is missing:
+
+   ```sh
+   just clusters/k3s/up
+   ```
+
+   To pull a tag from a branch, run `just clusters/k3s/up <tag>`. `just publish` prints the tag.
+
+## Check that it works
 
 ```sh
-kubectl -n flux-system get fluxinstance flux          # READY True
-kubectl -n flux-system get ocirepository flux-system  # READY True, with the tag as the revision
-kubectl -n flux-system get kustomization flux-system  # READY True
-kubectl get ns ephemeral-env                          # Active
-kubectl get gatewayclass traefik                      # ACCEPTED True
-kubectl -n kube-system get gateway traefik-gateway    # PROGRAMMED True
-flux trace namespace ephemeral-env                         # shows the artifact and the Git source and revision
+kubectl -n flux-system get fluxinstance flux            # READY True
+kubectl -n flux-system get ocirepository flux-system    # READY True, with the tag as the revision
+kubectl -n flux-system get kustomization                # four Kustomizations, READY True
+kubectl -n istio-system get helmrelease                 # istio-base and istiod, READY True
+kubectl -n istio-system get deploy prometheus kiali     # both available
+kubectl -n boutique get pods                            # 12 pods, all Running
+kubectl get gatewayclass traefik                        # ACCEPTED True
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/                                           # 200, the shop
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: kiali.localhost' http://127.0.0.1/kiali/api/status  # 200
 ```
 
-## Undo
+Open the shop at `http://localhost/` and Kiali at `http://kiali.localhost/kiali` in a browser on the host. In Kiali, pick the namespace `boutique` to see the graph.
+
+## Change the platform
+
+Edit a file in `platform/`, run `just check`, merge to `main`, and run `just publish`. Flux pulls the new artifact and applies it in order.
+
+## Tear down
 
 ```sh
-kubectl delete fluxinstance flux -n flux-system   # deletes the Flux controllers
+kubectl delete fluxinstance flux -n flux-system     # deletes the Flux controllers
 helm uninstall flux-operator -n flux-system
-kubectl delete ns flux-system ephemeral-env       # also deletes the Secret ghcr-pull
+kubectl delete ns flux-system ephemeral-env boutique istio-system
 kubectl delete -f clusters/k3s/traefik-config.yaml  # Traefik returns to the k3s defaults
 ```
 
-Delete the old tags in the registry on the GitHub packages page.
+Flux never deletes the Istio CRDs. Delete them by hand with `kubectl delete crd` for the `istio.io` group. Deleting a CRD deletes every object of its kind. To delete the cluster too, run `/usr/local/bin/k3s-uninstall.sh`. Delete the old tags on the GitHub packages page.
 
-## Istio (PR 2)
+## Docs
 
-`platform/addons/istio/` holds the namespace `istio-system`, the Istio `base` chart (the CRDs) and `istiod`. All three use Istio 1.31.1. The mesh is in sidecar mode and `istiod` is its CA. No SPIRE and no ingress gateway are in the project, because Traefik stays the ingress. Flux installs the charts after the artifact reaches the cluster. This PR changes no host step.
+- [The platform and how Flux delivers it](docs/platform.md): the idea, the parts, the flow, the lifetimes and the reasons for the design.
+- [Diagrams](docs/diagrams/README.md): the architecture diagram, with its `.drawio` source.
+- [What the commands checked and what they did not](../../docs/research/ephemeral-env-platform-gaps.md): the research note.
 
-Checks, after you publish and Flux reconciles:
+## Folders
 
-```sh
-kubectl -n istio-system get helmrelease                 # istio-base and istiod, READY True
-kubectl -n istio-system get deploy istiod                # 1/1 available
-kubectl get crd | grep -c istio.io                       # more than 0
-```
-
-Undo: delete the Kustomization `addons-istio` from `platform/sync.yaml`, publish, and let Flux uninstall both releases. Flux never prunes the namespace or the CRDs. To delete them, run `kubectl delete ns istio-system` and delete the `istio.io` CRDs by hand. Deleting a CRD deletes every custom resource of its kind.
-
-## Observability (PR 3)
-
-`platform/addons/observability/` holds Prometheus and Kiali. Both files come from the Istio 1.31.1 sample add-ons and run in `istio-system`. The `HTTPRoute` `kiali` publishes Kiali through the Traefik Gateway.
-
-- **Open Kiali** at `http://kiali.localhost/kiali` in a browser on the machine that runs the cluster. The route matches only the host `kiali.localhost`. A request by IP address gets a 404.
-- **Read the risk.** The sample Kiali login is anonymous. Its ClusterRole can create, patch and delete Istio objects. This project sets `view_only_mode: true`, so Kiali shows the mesh and changes nothing. Anyone who reaches Traefik with the host name `kiali.localhost` can still see the mesh. The Host header is not a login. Do not open ports 80 and 443 of the host to an untrusted network.
-- **Prometheus keeps its data in an `emptyDir`.** A pod restart loses the metrics.
-- **The cluster pulls three images:** `quay.io/kiali/kiali`, `docker.io/prom/prometheus` and `ghcr.io/prometheus-operator/prometheus-config-reloader`.
-- **No traffic yet.** The graph stays empty until PR 4 puts the Boutique in the mesh.
-
-Checks, after you publish and Flux reconciles:
-
-```sh
-kubectl -n istio-system get deploy prometheus kiali        # both 1/1 available
-kubectl -n istio-system get httproute kiali                 # Accepted True
-curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: kiali.localhost' http://127.0.0.1/kiali/api/status   # 200
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/kiali/api/status                               # 404
-```
-
-Undo: delete the Kustomization `addons-observability` from `platform/sync.yaml` and publish. Flux deletes both deployments, the route and the cluster roles.
-
-## Baseline (PR 4)
-
-`platform/apps/boutique/` runs Online Boutique v0.10.7 in the namespace `boutique`. The `kustomization.yaml` there lists the stock release file by its URL, pinned by commit hash. The artifact holds no copy of the release. `kustomize-controller` fetches the file from `raw.githubusercontent.com` on every reconcile. This is the one exception to "the cluster reads only the registry". The namespace has the label `istio-injection=enabled` from its creation, so every pod starts with its sidecar. The `HTTPRoute` `frontend` sends `/` from the Traefik Gateway to the Service `frontend`. The release includes a `loadgenerator`, so the Kiali graph shows traffic without a browser. A kustomize patch deletes the Service `frontend-external`, because Traefik holds node port 80.
-
-**The order of the platform changed.** `platform/sync.yaml` holds three Flux Kustomizations: `addons-istio`, `addons-observability` and `apps-boutique`. Both of the last two wait for `addons-istio` to be Ready. `wait: true` makes "Ready" mean that the HelmReleases and the Deployments are healthy. Without this order, Boutique pods can start before the injection webhook exists. Such a pod runs without a sidecar, and I found no report of it. `just check` now builds every folder under `addons/` and `apps/`.
-
-Checks, after you publish and Flux reconciles:
-
-```sh
-kubectl -n flux-system get kustomization                         # three Kustomizations, READY True
-kubectl -n boutique get pods                                      # 12 pods, all Running
-kubectl -n boutique get pods -o json | jq -r '.items[] | select([.spec.containers[].name, (.spec.initContainers // [])[].name] | index("istio-proxy") | not) | .metadata.name'   # prints nothing: every pod has a sidecar
-kubectl -n boutique get httproute frontend                        # Accepted True
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/        # 200, the shop
-```
-
-In Kiali (`http://kiali.localhost/kiali`), the graph for the namespace `boutique` shows the calls between the services.
-
-Undo: delete the Kustomization `apps-boutique` from `platform/sync.yaml` and publish. Flux deletes the namespace `boutique` and everything in it.
-
-## Not tested
-
-- The Flux Operator 0.62.1 with Flux 2.10.0 on this cluster. `just check` tests only the schemas. No command here ran against a cluster.
-- The k3s Traefik chart accepts the `HelmChartConfig` values on a fresh install. The idea comes from `code/platform-engineering/infrastructure/gateway/traefik-config.yaml`, which works on the current cluster.
-- `flux push artifact` with `--creds` against GHCR, and the size of the GHCR rate limit.
-- The Istio 1.31.1 charts on k3s 1.37, and the redirect from `blob.istio.io` that the `HelmRepository` follows. The chart index lists 1.31.1 for `base` and `istiod`.
-- Kiali and Prometheus from the Istio 1.31.1 samples on k3s 1.37. Whether `view_only_mode` hides every write action of the Kiali UI. The Kiali version is v2.31.
-- Boutique v0.10.7 with Istio 1.31.1 sidecars. The `loadgenerator` init container `frontend-check` needs the network before the main containers start. It works only if Istio injects the sidecar as a native sidecar. The cluster fetches the release file from `raw.githubusercontent.com`, and Flux has no flag set that forbids remote bases (`--no-remote-bases`). The cluster pulls the images from `us-central1-docker.pkg.dev` and `docker.io`. The memory of one node for 12 pods with sidecars is not measured.
+| Folder | Content |
+|---|---|
+| `platform/` | Everything in the OCI artifact: `addons/`, `apps/` and the order in `sync.yaml`. |
+| `clusters/k3s/` | The files that you apply from the host: the Flux instance, the Traefik config and `up`. |
+| `docs/` | The topic doc and the diagrams. |

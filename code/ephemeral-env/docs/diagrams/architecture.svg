@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="720" viewBox="0 0 1260 720" font-family="Helvetica, Arial, sans-serif">
+<rect width="1260" height="720" fill="#ffffff"/>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#000000"/></marker></defs>
+<text x="20" y="20" font-size="20" font-weight="bold" dominant-baseline="middle">Ephemeral environments: the platform and how Flux delivers it</text>
+<rect x="20" y="60" width="250" height="640" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="30" y="73" font-size="14" dominant-baseline="middle">Host (your machine)</text>
+<rect x="320" y="210" width="240" height="170" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="330" y="223" font-size="14" dominant-baseline="middle">ghcr.io (private)</text>
+<rect x="610" y="60" width="630" height="640" rx="12" fill="#f5f5f5" stroke="#666666"/><text x="620" y="73" font-size="14" dominant-baseline="middle">k3s cluster</text>
+<rect x="630" y="100" width="590" height="110" rx="12" fill="#ffffff" stroke="#666666"/><text x="640" y="113" font-size="14" dominant-baseline="middle">flux-system</text>
+<rect x="630" y="290" width="290" height="212" rx="12" fill="#ffffff" stroke="#666666"/><text x="640" y="303" font-size="14" dominant-baseline="middle">istio-system</text>
+<rect x="940" y="290" width="280" height="212" rx="12" fill="#ffffff" stroke="#666666"/><text x="950" y="303" font-size="14" dominant-baseline="middle">boutique</text>
+<rect x="630" y="580" width="590" height="100" rx="12" fill="#ffffff" stroke="#666666"/><text x="640" y="593" font-size="14" dominant-baseline="middle">kube-system</text>
+<rect x="40" y="110" width="210" height="70" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="145.0" y="127.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">platform/ in Git</text>
+<text x="145.0" y="145.0" font-size="14" text-anchor="middle" dominant-baseline="middle">you write, review</text>
+<text x="145.0" y="163.0" font-size="14" text-anchor="middle" dominant-baseline="middle">and merge it</text>
+<rect x="40" y="260" width="210" height="70" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="145.0" y="286.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">just publish</text>
+<text x="145.0" y="304.0" font-size="14" text-anchor="middle" dominant-baseline="middle">flux push artifact</text>
+<rect x="40" y="600" width="210" height="80" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="145.0" y="622.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Browser</text>
+<text x="145.0" y="640.0" font-size="14" text-anchor="middle" dominant-baseline="middle">http://localhost/</text>
+<text x="145.0" y="658.0" font-size="14" text-anchor="middle" dominant-baseline="middle">http://kiali.localhost/kiali</text>
+<rect x="340" y="260" width="200" height="90" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="440.0" y="287.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">OCI artifact</text>
+<text x="440.0" y="305.0" font-size="14" text-anchor="middle" dominant-baseline="middle">ephemeral-env/platform</text>
+<text x="440.0" y="323.0" font-size="14" text-anchor="middle" dominant-baseline="middle">tags: branch-sha8, latest</text>
+<rect x="650" y="140" width="270" height="56" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="785.0" y="159.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Flux Operator + controllers</text>
+<text x="785.0" y="177.0" font-size="14" text-anchor="middle" dominant-baseline="middle">OCIRepository pulls the artifact</text>
+<rect x="930" y="140" width="270" height="56" rx="10" fill="#fff2cc" stroke="#d6b656"/>
+<text x="1065.0" y="159.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">3 Flux Kustomizations</text>
+<text x="1065.0" y="177.0" font-size="14" text-anchor="middle" dominant-baseline="middle">dependsOn and wait</text>
+<rect x="650" y="330" width="250" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="775.0" y="352.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">istiod (sidecar mode, own CA)</text>
+<rect x="650" y="386" width="250" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="775.0" y="408.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Prometheus</text>
+<rect x="650" y="442" width="250" height="44" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
+<text x="775.0" y="464.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Kiali (view-only)</text>
+<rect x="960" y="330" width="240" height="150" rx="10" fill="#d5e8d4" stroke="#82b366"/>
+<text x="1080.0" y="378.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Online Boutique v0.10.7</text>
+<text x="1080.0" y="396.0" font-size="14" text-anchor="middle" dominant-baseline="middle">12 pods</text>
+<text x="1080.0" y="414.0" font-size="14" text-anchor="middle" dominant-baseline="middle">each with an</text>
+<text x="1080.0" y="432.0" font-size="14" text-anchor="middle" dominant-baseline="middle">Istio sidecar</text>
+<rect x="650" y="620" width="550" height="44" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
+<text x="925.0" y="642.0" font-size="14" text-anchor="middle" dominant-baseline="middle" font-weight="bold">Traefik, Gateway traefik-gateway</text>
+<path d="M145.0,180 C145.0,220 145.0,220 145.0,260" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M250,295.0 C290,295.0 300,305.0 340,305.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M650,168.0 C579.7216960933176,168.0 610.2783039066824,305.0 540,305.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M920,168.0 C960,168.0 890,168.0 930,168.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M997.5,196 C997.5,292.6165617272732 775.0,193.38343827272678 775.0,290" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1132.5,196 C1132.5,239.0669246638299 1080.0,246.9330753361701 1080.0,290" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M250,640.0 C410.00199998750014,640.0 489.99800001249986,642.0 650,642.0" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M1117.5,620 C1117.5,570.4738452936228 1080.0,551.5261547063772 1080.0,502" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<path d="M732.5,620 C732.5,563.7686919945836 775.0,542.2313080054164 775.0,486" fill="none" stroke="#000000" stroke-width="1" marker-end="url(#a)"/>
+<rect x="118.75" y="211.0" width="52.5" height="18" fill="#ffffff"/><text x="145.0" y="220.0" font-size="13" text-anchor="middle" dominant-baseline="middle">publish</text>
+<rect x="276.0" y="291.0" width="38.0" height="18" fill="#ffffff"/><text x="295.0" y="300.0" font-size="13" text-anchor="middle" dominant-baseline="middle">push</text>
+<rect x="579.5" y="227.5" width="31.0" height="18" fill="#ffffff"/><text x="595.0" y="236.5" font-size="13" text-anchor="middle" dominant-baseline="middle">pull</text>
+<rect x="904.5" y="159.0" width="41.0" height="18" fill="#ffffff"/><text x="925.0" y="168.0" font-size="13" text-anchor="middle" dominant-baseline="middle">reads</text>
+<rect x="859.25" y="234.0" width="54.0" height="18" fill="#ffffff"/><text x="886.25" y="243.0" font-size="13" text-anchor="middle" dominant-baseline="middle">1. apply</text>
+<rect x="1017.5" y="234.0" width="177.5" height="18" fill="#ffffff"/><text x="1106.25" y="243.0" font-size="13" text-anchor="middle" dominant-baseline="middle">2. apply when istiod is Ready</text>
+<rect x="406.5" y="632.0" width="87.0" height="18" fill="#ffffff"/><text x="450.0" y="641.0" font-size="13" text-anchor="middle" dominant-baseline="middle">HTTP port 80</text>
+<rect x="1075.25" y="552.0" width="47.0" height="18" fill="#ffffff"/><text x="1098.75" y="561.0" font-size="13" text-anchor="middle" dominant-baseline="middle">route /</text>
+<rect x="692.0" y="544.0" width="123.5" height="18" fill="#ffffff"/><text x="753.75" y="553.0" font-size="13" text-anchor="middle" dominant-baseline="middle">route kiali.localhost</text>
+</svg>
