@@ -90,7 +90,6 @@ sequenceDiagram
     Note over M: sandbox-boot makes the node key pair<br/>and a CSR that holds the public key
     H->>M: ssh: read the CSR
     M-->>H: the CSR
-    H->>H: check the name in the CSR
     H->>K: kubectl: CertificateRequest with the CSR, issuer node-ca
     K-->>H: node certificate, with the public key of the VM
     H->>S: kubectl exec: bundle show -format spiffe
@@ -107,7 +106,7 @@ sequenceDiagram
 ```
 
 1. The host starts the VM. `sandbox-boot` makes the node key pair and a CSR when no key exists. The CSR holds the public key, the sandbox name as the CN, and the GitHub id as a URI SAN. The private key never leaves the VM. The agent does not start yet, because it has no certificate.
-2. The host reads the CSR over ssh. It waits until the CSR file exists. It checks that the CN is the sandbox name and that the SAN holds the GitHub id of the logged-in user. It rejects any other CSR.
+2. The host reads the CSR over ssh. It waits until the CSR file exists.
 3. The host applies a `CertificateRequest` with that CSR. cert-manager signs it with the node CA key and returns the node certificate. The certificate holds the public key of the VM.
 4. The host reads the SPIFFE trust bundle from the SPIRE server.
 5. The host writes the certificate and the bundle into the VM over ssh, then starts the agent.
@@ -204,9 +203,9 @@ The research behind the choice is in [docs/research/spire-node-attestation.md](.
 
 ## 8. Limits
 
-- **The CA signs what the CSR asks for.** The host script checks the name in the CSR before it applies the `CertificateRequest`. A user who can create a `CertificateRequest` in `spire-system` skips this check. That user can ask for any name.
+- **The CA signs what the CSR asks for.** The host script does not check the names in the CSR. A node can ask for any name. The node entry gives the alias only to the CN and the URI SAN that it lists. Another name attests, but it gets no alias. A later node entry or workload entry for another name makes this a risk.
 - **The CA key is a Secret in `spire-system`.** A user who can read Secrets there can sign any node certificate. The service account of trust-manager can read every Secret in `spire-system`, so it can read the key too.
-- **The GitHub id is a claim of the host.** The CA does not check it against GitHub. The host script reads it from the logged-in user.
+- **The GitHub id is a claim of the VM.** The CA does not check it against GitHub. The VM writes it from `SANDBOX_GITHUB_LOGIN` in `vm/sandbox.yaml`.
 - **Evict does not block a node.** The node can attest again with the same certificate until it expires. A short certificate life limits this. A new node CA ends it for all nodes.
 - **The plugin docs list no revocation check.**
 - **A removed node keeps its SVID until it expires.**
@@ -301,7 +300,7 @@ kubectl -n spire-system exec spire-server-0 -c spire-server -- /opt/spire/bin/sp
 | 2 | trust-manager and the node CA bundle | done |
 | 3 | `x509pop` on the SPIRE server, and the node entry | done |
 | 4 | The node key and the CSR in the microVM, the agent config, and the port rule of `msb.py` | done |
-| 5 | `msb.py attest` on the host | planned |
+| 5 | `msb.py attest` on the host | done |
 | 6 | Cleanup of the other pages | planned |
 
 ## 11. Setup of the SPIRE server and agent
