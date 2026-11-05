@@ -1,0 +1,213 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: ephemeral-envs
+  namespace: flux-system
+spec:
+  wait: true
+  inputsFrom:
+    - kind: ResourceSetInputProvider
+      selector:
+        matchLabels:
+          ephemeral-env: "true"
+  resourcesTemplate: |
+    <<- /* Catalog: facts of a service, not of a PR. One place, like the kro catalog. */ ->>
+    <<- $catalog := dict
+          "frontend"              (dict "port" 8080 "stateful" false)
+          "productcatalogservice" (dict "port" 3550 "stateful" false)
+          "cartservice"           (dict "port" 7070 "stateful" true)
+    >>
+    <<- $id := inputs.sandboxId >>
+    <<- $ns := printf "boutique-%s" $id >>
+    <<- $stateful := false >>
+    <<- $frontend := false >>
+    <<- range $s := inputs.services >>
+      <<- if (index $catalog $s.name).stateful >><<- $stateful = true >><<- end >>
+      <<- if eq $s.name "frontend" >><<- $frontend = true >><<- end >>
+    <<- end >>
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: << $ns >>
+      labels:
+        istio-injection: enabled
+        ephemeral-env/id: << $id >>
+    ---
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: sandbox
+      namespace: << $ns >>
+    spec:
+      hard:
+        pods: "20"
+        requests.cpu: "4"
+        requests.memory: 4Gi
+    ---
+    apiVersion: security.istio.io/v1
+    kind: PeerAuthentication
+    metadata:
+      name: default
+      namespace: << $ns >>
+    spec:
+      mtls:
+        mode: STRICT
+    ---
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: ReferenceGrant
+    metadata:
+      name: from-baseline
+      namespace: << $ns >>
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          namespace: boutique-baseline
+      to:
+        - group: ""
+          kind: Service
+    ---
+    apiVersion: security.istio.io/v1
+    kind: AuthorizationPolicy
+    metadata:
+      name: sandbox-<< $id >>-claim
+      namespace: boutique-baseline
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: eph-gateway
+      action: DENY
+      rules:
+        - when:
+            - key: request.headers[baggage]
+              values: ["*sandbox=<< $id >>*"]
+            - key: request.auth.claims[sandbox]
+              notValues: ["<< $id >>"]
+    <<- range $s := inputs.services >>
+    <<- $c := index $catalog $s.name >>
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: << $s.name >>
+      namespace: << $ns >>
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: << $s.name >>
+      namespace: << $ns >>
+    spec:
+      replicas: 1
+      selector:
+        matchLabels: {app: << $s.name >>}
+      template:
+        metadata:
+          labels: {app: << $s.name >>}
+        spec:
+          serviceAccountName: << $s.name >>
+          containers:
+            - name: server
+              image: << $s.image >>
+              ports:
+                - containerPort: << $c.port >>
+              <<- if $c.stateful >>
+              env:
+                - name: REDIS_ADDR
+                  value: redis-cart:6379
+              <<- end >>
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: << $s.name >>
+      namespace: << $ns >>
+    spec:
+      selector: {app: << $s.name >>}
+      ports:
+        - name: grpc
+          port: << $c.port >>
+    <<- if ne $s.name "frontend" >>
+    ---
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: << $s.name >>-<< $id >>
+      namespace: boutique-baseline
+    spec:
+      parentRefs:
+        - group: ""
+          kind: Service
+          name: << $s.name >>
+      rules:
+        - matches:
+            - headers:
+                - name: baggage
+                  type: RegularExpression
+                  value: '(^|.*,)\s*sandbox=<< $id >>(;.*|,.*|$)'
+          backendRefs:
+            - name: << $s.name >>
+              namespace: << $ns >>
+              port: << $c.port >>
+    <<- end >>
+    <<- end >>
+    <<- if $frontend >>
+    ---
+    apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: frontend-<< $id >>
+      namespace: boutique-baseline
+    spec:
+      parentRefs:
+        - name: eph-gateway
+      rules:
+        - matches:
+            - headers:
+                - name: baggage
+                  type: RegularExpression
+                  value: '(^|.*,)\s*sandbox=<< $id >>(;.*|,.*|$)'
+          backendRefs:
+            - name: frontend
+              namespace: << $ns >>
+              port: 80
+    <<- end >>
+    <<- if $stateful >>
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: redis-cart
+      namespace: << $ns >>
+    spec:
+      replicas: 1
+      selector:
+        matchLabels: {app: redis-cart}
+      template:
+        metadata:
+          labels: {app: redis-cart}
+        spec:
+          containers:
+            - name: redis
+              image: redis:alpine
+              ports:
+                - containerPort: 6379
+              volumeMounts:
+                - {name: data, mountPath: /data}
+          volumes:
+            - name: data
+              emptyDir: {}
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: redis-cart
+      namespace: << $ns >>
+    spec:
+      selector: {app: redis-cart}
+      ports:
+        - name: tcp
+          port: 6379
+    <<- end >>
