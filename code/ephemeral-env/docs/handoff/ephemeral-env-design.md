@@ -41,6 +41,8 @@ The user wants:
 
 ## Open prerequisite: the CI result check
 
+**Deferred on 2026-11-05.** The user moved this to its own phase after PR 4. The cluster runs on the user's laptop, so any reporting to GitHub needs a connection that the laptop makes, or a runner on the laptop. Build PR 1 to PR 4 first.
+
 The user wants the workflow to run `flux get kustomizations` for the sandbox and poll with a timeout, and to fail the check on a failure or timeout. **A GitHub-hosted runner cannot reach the cluster.** Two ways:
 - **A self-hosted runner** that reaches the cluster API with a read-only ServiceAccount. A self-hosted runner on a public repo is a risk, because a fork PR can run code on it. Limit it to same-repo PRs and require approval for others.
 - **A Flux commit status.** A Flux `Provider` and `Alert` post the status of the sandbox `Kustomization`. The cluster holds one token Secret with `statuses:write`. The workflow polls the status on GitHub and fails on `failure` or timeout.
@@ -122,6 +124,7 @@ The layout below is the first idea. The six-PR series above replaces the phases.
 5. These spikes remain open. S1: a header `HTTPRoute` on a Service parent while Traefik owns the Gateway. S2: baggage through `checkoutservice`. R1: one broken input must not block the others. The fallback is one `ResourceSet` for each environment. R2: prune on removal. R3: `wait: true` with a finished Job, and RBAC for objects in other namespaces. D1: the artifact holds the input provider and the delivery `ResourceSet` applies it.
 6. The smoke Job writes to the baseline `cartservice`. Use a unique session ID for each run.
 7. Memory on one node is not measured.
+8. PR 1 needs no new host on the sandbox allowlist (checked on 2026-11-05). Flux Operator comes from `oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator` (0.62.1). The Istio charts come from `https://blob.istio.io/istio-release/charts`, which redirects to `istio-release.r2.istio.io`. The old host `istio-release.storage.googleapis.com` has no 1.31 chart. Istio 1.31.1 to 1.31.3 exist as Git tags and charts. The addons come from `raw.githubusercontent.com/istio/istio/<tag>/samples/addons/`. The k3s node pulls the images, not the sandbox.
 
 ## Suggested skills
 
