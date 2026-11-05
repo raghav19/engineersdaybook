@@ -40,7 +40,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 
 ## 4. The flow
 
-![Node attestation with x509pop: the node CA, the host that signs the request, the key in the microVM and the agent](diagrams/node-attestation.svg)
+![Node attestation with x509pop: the setup in the cluster (a to c) and the run from the host to the SPIRE server (1 to 6)](diagrams/node-attestation.svg)
 
 ### The parts
 
@@ -117,7 +117,7 @@ sequenceDiagram
 
 ### Stage C: after the attestation
 
-- The agent attests again by itself. Its own SVID is valid for 1 hour by default. About half-way, the agent rotates it. The `x509pop` plugin allows re-attestation, so the rotation runs the full attestation again (steps 5 to 9). The agent reads the key and the certificate from the folder each time.
+- The agent attests again by itself. Its own SVID is valid for 4 hours on this server (`default_x509_svid_ttl` in the server configuration). About half-way, the agent rotates it. The `x509pop` plugin allows re-attestation, so the rotation runs the full attestation again (steps 5 to 9). The agent reads the key and the certificate from the folder each time.
 - So the node certificate must be valid at all times, not only at the start. If it expires, the rotation fails. When the SVID of the agent then expires, the agent has no identity.
 - cert-manager renews the certificate when 30 days remain, and a new key comes with it. `just msb node-cert` copies the new files at each `just msb run`. For a VM that runs more than 60 days without `run`, run `just msb node-cert` on the host.
 - A running agent stays as it is. A new agent starts with an empty data folder, so it attests at each start.
@@ -200,7 +200,7 @@ A node entry that lists both selectors matches only a node that has both values.
 
 `sshpop` is a built-in plugin of SPIRE, but the chart cannot turn it on. The chart option `customPlugins` accepts only external plugin binaries. `x509pop` has a chart switch and it gives selectors, so it fits this repo.
 
-The research behind the choice is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md).
+The research on the node attestation flow is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md).
 
 ## 8. Limits
 

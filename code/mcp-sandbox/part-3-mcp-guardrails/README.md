@@ -90,7 +90,7 @@ Each guide covers one part of the design. Start with the architecture, then read
 | [Diagrams](docs/diagrams/README.md) | The draw.io sources of the diagrams, their image files and how to open them. |
 
 The research behind the rendered manifest pattern is in [docs/research/rendered-manifest-pattern.md](../../../docs/research/rendered-manifest-pattern.md).
-The research behind the node attestation pattern is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md). It also covers the workload attestation.
+The research behind the node attestation pattern is in [docs/research/spire-node-attestation.md](../../../docs/research/spire-node-attestation.md). It also lists what is open for the workload attestation.
 
 ## Repo structure
 

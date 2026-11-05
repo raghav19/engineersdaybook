@@ -1,90 +1,98 @@
-# Node attestation of the sandbox microVM with a SPIRE join token
+# Node attestation of the sandbox microVM
 
-Question: Is it in line with zero trust to attest the microVM as a node with a SPIRE join token and an alias? What does the repo do today, and what must follow so that the node identity becomes a guardrail of the gateway?
+Question: How does the microVM prove to the SPIRE server that it is an approved node? Is this in line with zero trust? What is still open?
 
-Source: SPIRE and SPIFFE documentation (fetched), NIST CSWP 20 (fetched through a search result), the repo files (read), and the live agent in the sandbox (checked). Research date: 2026-10-23. Local repo state: `main` at `77a8744`.
+Source: the repo files (read), the live cluster and the live sandbox (checked), and the SPIRE documentation. Research date: 2026-11-05. Local repo state: `main` at `004569f`.
 
-Evidence tags: **[spire]** is a SPIRE document on GitHub. **[spiffe]** is the spiffe.io concepts page. **[nist]** is NIST CSWP 20, which repeats the tenets of SP 800-207. **[repo]** is a file in this repo. **[live]** is something I ran in the sandbox. **[inference]** is my own conclusion.
+Evidence tags: **[repo]** is a file in this repo. **[live]** is something I ran on the cluster or in the sandbox. **[spire]** is a SPIRE document. **[inference]** is my own conclusion.
+
+This document replaces the first version. That version described a join token and the kind cluster. The join-token model now exists only in the `docker-sbx` tag.
 
 ## Verdict
 
-1. The node attestation exists and works. The agent is healthy and its SVID rotates. [live] [repo]
-2. The approach is in line with zero trust as the first control. It proves that an operator allowed the node. It does not prove the state of the node. [inference]
-3. The node identity blocks no call yet. No workload entry exists. The client hop carries no SVID. No policy checks a microVM SPIFFE ID. [live] [repo]
-4. Next: workload entry for Envoy, Envoy in the microVM, an SVID on the client hop, a gateway policy on the SPIFFE ID.
+1. Node attestation works. The SPIRE agent in the microVM attested with `x509pop`, through the gateway of the k3s cluster. [live]
+2. The node certificate comes from outside the VM. cert-manager makes the key pair and the certificate before the VM starts. [repo]
+3. The proof says that the operator approved this node. It does not say anything about the state or the image of the VM. [inference]
+4. The node identity does not block any call yet. The VM has the node entry and no workload entry. [live]
 
-## 1. What the repo does today
+## The picture
 
-| Claim | Source |
-|---|---|
-| The server accepts join tokens (`nodeAttestor.joinToken.enabled: true`). | [repo] `platform/addons/spire/spire.yaml` |
-| The server API is on NodePort 30081, host port 18081. The VM reaches it as `host.docker.internal:18081`. | [repo] `platform/addons/spire/service.yaml`, `clusters/kind/kind-config.yaml`, `/etc/spire/agent.conf` |
-| The host script makes a token with a TTL of 600 s and the alias `spiffe://<trust domain>/microvm/<github id>`. It writes the token with mode 600. It skips a new token while a node owns the alias and its SVID has not expired. `SPIRE_ENROLL_FORCE=1` forces a token. | [repo] [`.sbx/agent/spire.py`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/agent/spire.py) |
-| The sandbox runs `enroll` at `lifecycle.initialize`. Nothing evicts the node when the sandbox ends. The folder `~/.sbx/spire` is a read-only mount. | [repo] [`.sbx/sbxenv.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/sbxenv.yaml) |
-| The agent starts with `-trustBundle` and `-joinTokenFile`. The kit comment says that an agent with a valid SVID ignores the token. | [repo] [`.sbx/kits/dev-tools/dev-tools.yaml`](https://github.com/raghav19/engineersdaybook/blob/docker-sbx/.sbx/kits/dev-tools/dev-tools.yaml) |
-| The agent is healthy. It loaded the SVID of `spiffe://mcp.local/spire/agent/join_token/...`. It creates the SVID of the alias and rotates both. | [live] `spire-agent healthcheck`, `~/.spire/agent.log` |
-| The server port is open from the VM. | [live] TCP connect to `host.docker.internal:18081` |
-| No workload receives an SVID: `spire-agent api fetch x509` returns `no identity issued`. | [live] |
-| The agent has the `unix` workload attestor and serves the Workload and SDS APIs. The socket allows all users (`srwxrwxrwx`). | [repo] `/etc/spire/agent.conf`, [live] `ls -l` |
+![Node attestation of the microVM: the setup (a to c) and the run (1 to 6)](../../code/mcp-sandbox/part-3-mcp-guardrails/docs/diagrams/node-attestation.svg)
 
-## 2. How join token attestation works
+The letters a to c are the setup. Flux applies it once, from git. The numbers 1 to 6 happen at each `just msb run`.
 
-| Claim | Source |
-|---|---|
-| The plugin "attests a node based on a pre-shared, one-time-use join token". The server must generate the token first. | [spire] `doc/plugin_server_nodeattestor_jointoken.md` |
-| The agent ID is `spiffe://<trust_domain>/spire/agent/join_token/<token>`. | [spire] same file |
-| The CLI `token generate` has `-ttl` (default 600) and `-spiffeID` ("Additional SPIFFE ID to assign the token owner"). It "creates a registration entry for it". | [spire] `doc/spire_server.md` |
-| `agent evict` de-attests a node by its SPIFFE ID. Evicting a join-token node also removes its `CreateJoinToken` alias entry. | [spire] `doc/spire_server.md` |
-| A join token is "a pre-shared key between a SPIRE Server and Agent". It expires immediately after use. Join tokens serve when no platform can identify a node. | [spiffe] https://spiffe.io/docs/latest/spire-about/spire-concepts/ |
-| The agent ID becomes the parent of the workloads that it manages. The server finds the entries of an agent by the parent ID and by the node selectors. | [spiffe] same page |
-| The alias is a second SPIFFE ID of the node. The workload entries use it as their parent. One alias belongs to one GitHub id, so two microVMs of one user share it. | [inference] from the `token generate` text and `spire.py` |
+## The parts
 
-## 3. Zero trust assessment
+| Part | Where | Job |
+|---|---|---|
+| Node CA | cluster, `spire-system` | cert-manager makes it. It signs the node certificate. The SPIRE server trusts only certificates that it signed. [repo] |
+| ConfigMap `node-ca-bundle` | cluster | trust-manager copies the CA certificate into it. The SPIRE server reads it. [repo] |
+| Certificate `sandbox-node` | cluster | cert-manager makes the ECDSA key pair and the 90-day certificate. It keeps both in the Secret `sandbox-node-tls`. [repo] |
+| `just msb node-cert` | host | Waits until the certificate is ready. Copies the key, the certificate and the trust bundle to `~/.config/msb/node`. [repo] |
+| `~/.config/msb/node` | host, mounted in the VM | The VM sees it read-only at `/run/sandbox/node`. The key file has mode 600. [repo] |
+| `sandbox-boot` | microVM | Maps `spire.localhost` to the host. Starts the agent as root. Waits up to 30 seconds until the agent is healthy. [repo] |
+| SPIRE agent | microVM | Reads the key and the certificate. Proves to the server that it holds the key. [repo] |
+| Istio ingress gateway | cluster | Takes the TLS on port 443 and passes it through to the server. It picks the route by the name `spire.localhost`. [repo] |
+| SPIRE server | cluster | Checks the certificate and the proof. Issues the agent SVID. [spire] |
+| Node entry `sandbox-node` | cluster | Gives an attested node the fixed ID `spiffe://mcp.local/node/sandbox-dev`. The selectors are the CN `sandbox-dev` and the URI SAN with the GitHub login. [repo] |
 
-| Claim | Source |
-|---|---|
-| Tenet III: access is decided by dynamic policy. The policy includes the state of the client identity, the application and the requesting asset. The default is to deny all connections. | [nist] https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.20.pdf (as found by search) |
-| The node proof is in line with the tenet in two ways: no network position gives trust, and each node needs an operator approval. | [inference] |
-| A join token does not prove the state or the image of the node. | [inference] |
-| `x509pop` attests nodes "provisioned with an x509 identity through an out-of-band mechanism". It checks the chain and a proof of possession. It gives selectors (subject CN, CA fingerprint, serial number, URI SAN, group, extension). | [spire] `doc/plugin_server_nodeattestor_x509pop.md` |
-| Extension values "are only as trustworthy as the CA's issuance policy". | [spire] same file |
+## The flow
 
-## 4. Workload attestation limits
+```mermaid
+sequenceDiagram
+    participant F as Flux
+    participant CM as cert-manager
+    participant S as SPIRE server
+    participant H as Host
+    participant B as sandbox-boot
+    participant A as SPIRE agent
+    participant G as Istio gateway
 
-| Claim | Source |
-|---|---|
-| The `unix` attestor gives the selectors `unix:uid`, `unix:user`, `unix:gid` and `unix:group`. | [spire] `doc/plugin_agent_workloadattestor_unix.md` |
-| `unix:path` and `unix:sha256` need `discover_workload_path = true`. The default is false. | [spire] same file |
-| A negative `workload_size_limit` turns off the hash. Hashing large binaries can cause denial of service. | [spire] same file |
-| Every process of one user matches `unix:uid`. So Envoy must run as its own user. | [inference] |
+    Note over F,S: Setup, once
+    F->>CM: apply the node CA and the Certificate sandbox-node
+    CM->>CM: make the node CA, the key pair and the 90-day certificate
+    F->>S: apply the CA bundle and the node entry
 
-## 5. How to state the problem in zero trust terms
+    Note over H,A: Each just msb run
+    H->>CM: wait until the Certificate is ready
+    H->>H: copy key, certificate and trust bundle to the host folder
+    H->>B: start the VM with the folder mounted read-only
+    B->>A: map spire.localhost, start the agent, wait until healthy
+    A->>G: TLS to spire.localhost on port 443
+    G->>S: pass the TLS through
+    S-->>A: send a random challenge (nonce)
+    A->>S: send the certificate and the signature of the nonce
+    S->>S: check the chain to the node CA and the signature
+    S-->>A: issue the agent SVID, add the node ID
+```
 
-| Claim | Source |
-|---|---|
-| Zero trust moves defenses "from static, network-based perimeters to focus on users, assets, and resources". | [nist] SP 800-207 abstract (seen in a search result, https://csrc.nist.gov/pubs/sp/800/207/final) |
-| It assumes "no implicit trust granted to assets or user accounts based solely on their physical or network location" or on asset ownership. | [nist] same abstract |
-| "Authentication and authorization (both subject and device) are discrete functions performed before a session to an enterprise resource is established." The subjects include end users, applications and other non-human entities. | [nist] same abstract and its scope text (search result) |
-| Tenet: all communication is secured regardless of network location. The network is always considered contested. Tenet: access is granted per session. | [nist] CSWP 20 draft, https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.08042021-draft.pdf (search result) |
-| SPIFFE says that "network policies that only allow traffic between particular IP addresses" struggle to scale in dynamic environments. It gives workloads short-lived identity documents so that systems can "mutually authenticate wherever they are running". It never uses the words "zero trust". | [spiffe] https://spiffe.io/docs/latest/spiffe-about/overview/ (fetched) |
-| Zero trust means "eliminating implicit trust and continuously validating access based on identity, context, and risk". It assumes a breach has already occurred. | [cisa] joint guide on zero trust for OT (search result, not the maturity model) |
-| Today the gateway verifies the user (JWT) and, between hops in the cluster, the workload (mTLS with an SVID). It verifies no identity for the caller machine of the client hop. | [repo] `docs/arch.md` sections 3 and 5 |
-| So the gap is the workload half of the NIST sentence ("both subject and device"). The user half exists. | [inference] |
+## What the flow proves
 
-## 6. Next steps
+- A caller needs two things: a certificate that the node CA signed, and the matching key. A network position gives no trust. [spire]
+- Only the host folder and the Secret hold the key. The agent runs as root, so the user `agent` (Claude Code) cannot read the key. [repo]
+- The gateway does not open the TLS. The agent and the server do the handshake with each other. [repo]
 
-1. Done: workload entry for Envoy. Parent: the alias. Selector: `unix:user:envoy`, the Unix user of Envoy, and not a uid.
-2. Done: Envoy in the `dev-tools` kit. It reads the SVID through SDS. Restricting the agent socket is open.
-3. Choose how the client hop enforces the SVID. Research the Istio ingress options first.
-4. Add a gateway rule on the source SPIFFE ID. Keep the JWT check.
-5. Add `unix:path` and `unix:sha256`.
-6. Optional: move to `x509pop`.
+## What the flow does not prove
 
-## Gaps and conflicts
+- The state of the VM. Any VM that holds the three files passes the check. [inference]
+- That the VM runs the expected image. [inference]
 
-- The CISA Zero Trust Maturity Model PDF returned HTTP 403. The CISA text above comes from a different CISA guide (OT) found by search. I did not read the maturity model.
-- NIST SP 800-207 returned HTTP 403 (both the PDF and the csrc page). The tenet text comes from NIST CSWP 20, as shown in a search result. I did not read the PDF. The tenet number may differ in the original.
-- The SPIFFE concepts page does not use the word "alias". The meaning comes from the `token generate` text and `spire.py`.
-- I did not check `k8s_psat` in a primary source. The repo guide names it.
-- I did not check how the Istio ingress can require a client SVID. The sandbox has no cluster access, so I could not list the entries on the server.
-- Two spiffe.io pages returned HTTP 404 (`spire-about/security/` and the registering page). The notes on join token security come from the SPIRE plugin docs only.
+## Lifetimes
+
+- The node certificate lasts 90 days. cert-manager renews it 30 days before the end and makes a new key. `just msb node-cert` copies the new files at the next run. [repo]
+- The agent SVID lasts 4 hours on this server (`default_x509_svid_ttl`). [live]
+- The `x509pop` plugin allows re-attestation. The agent attests again when it rotates its SVID. It reads the key and the certificate again each time. So the node certificate must be valid at all times. [spire] [repo]
+- A forced rotation (a leaked key) is a separate step. Delete the Secret `sandbox-node-tls`, then run `just msb node-cert`. [repo]
+
+## What is open
+
+1. Add a workload entry for a process in the VM. Use the node ID as parent and a `unix` selector. [inference]
+2. Put an SVID on the client hop, and add a gateway rule on the SPIFFE ID. [inference]
+3. The VM mounts the k3s admin kubeconfig. Replace it with a scoped one. [repo]
+
+## Gaps
+
+- I did not see a re-attestation. The agent was only minutes old.
+- The agent log is readable by root only. I read the server log and the agent list of the server.
+- I did not test an expired node certificate.
+- I did not check whether the server refuses the old certificate after a forced rotation.
