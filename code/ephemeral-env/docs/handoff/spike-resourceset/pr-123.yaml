@@ -1,0 +1,17 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: pr-123
+  namespace: flux-system
+  labels:
+    ephemeral-env: "true"
+spec:
+  type: Static
+  defaultValues:
+    sandboxId: pr-123
+    commitSha: 9f3c2ab
+    services:
+      - name: productcatalogservice
+        image: ghcr.io/raghav19/eph-productcatalogservice@sha256:aaaa
+      - name: cartservice
+        image: ghcr.io/raghav19/eph-cartservice@sha256:bbbb
