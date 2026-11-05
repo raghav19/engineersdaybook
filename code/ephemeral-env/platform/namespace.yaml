@@ -1,0 +1,5 @@
+# The home of the project-wide objects. PR 1 uses it to prove that Flux applies the artifact.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ephemeral-env

@@ -1,0 +1,30 @@
+set quiet
+
+registry := 'oci://ghcr.io/raghav19/ephemeral-env/platform'
+ghcr_user := env('GHCR_USER', 'raghav19')
+
+# Check every manifest of the project against the Kubernetes and Flux schemas. No cluster needed.
+check:
+    kustomize build platform | flux-schema validate --schema-location default --schema-location ecosystem --verbose
+    flux-schema validate clusters/k3s --schema-location default --schema-location ecosystem --verbose
+
+# The tag is <branch>-<sha8>. The tag `latest` moves only when the branch is main.
+# The recipe refuses to push uncommitted changes.
+# GHCR_TOKEN holds a token with write:packages.
+# Push platform/ to the registry (host), with the Git source and revision.
+[script('bash')]
+publish: _host
+    set -euo pipefail
+    : "${GHCR_TOKEN:?Set GHCR_TOKEN (write:packages) before you run this recipe}"
+    [ -z "$(git status --porcelain platform)" ] || { echo "platform/ holds uncommitted changes. Commit them first." >&2; exit 1; }
+    branch=$(git branch --show-current)
+    sha=$(git rev-parse HEAD)
+    tag="${branch//\//-}-${sha:0:8}"
+    creds="{{ ghcr_user }}:$GHCR_TOKEN"
+    flux push artifact {{ registry }}:"$tag" --path=platform --creds "$creds" \
+      --source="$(git config --get remote.origin.url)" --revision="$branch@sha1:$sha"
+    if [ "$branch" = main ]; then flux tag artifact {{ registry }}:"$tag" --tag latest --creds "$creds"; fi
+    echo "Published tag: $tag"
+
+_host:
+    [ -z "${SANDBOX_NAME:-}" ] || { echo "Run this on the host, not in the sandbox ($SANDBOX_NAME): the registry token is not for the sandbox." >&2; exit 1; }

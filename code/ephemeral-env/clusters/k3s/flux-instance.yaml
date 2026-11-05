@@ -1,0 +1,28 @@
+# Flux itself: the version, and the sync of one OCI artifact. The cluster never reads Git.
+# This file is NOT in the artifact. An artifact cannot delete Flux, and deleting this object uninstalls Flux (the workloads stay).
+# Only `just clusters/k3s/up` applies it (host), once and after each change.
+# The pointer is spec.sync.ref (a tag or a digest). `up` takes the ref as an argument and writes it over this value.
+# The prune annotation keeps a sync that once held this object from removing it.
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  distribution:
+    version: "2.10.0"
+    registry: ghcr.io/fluxcd
+  # No image automation and no notifications yet.
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+  sync:
+    kind: OCIRepository
+    url: oci://ghcr.io/raghav19/ephemeral-env/platform
+    ref: latest
+    path: ./
+    # The Secret `ghcr-pull` (type kubernetes.io/dockerconfigjson) comes from `up`. The registry is private.
+    pullSecret: ghcr-pull

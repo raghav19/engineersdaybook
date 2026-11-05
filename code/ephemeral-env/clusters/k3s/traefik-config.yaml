@@ -1,0 +1,21 @@
+# k3s installs Traefik and the Gateway API CRDs. It does not turn on the Gateway API provider of Traefik.
+# This file turns it on. Without it, Traefik ignores Gateway API objects and no GatewayClass exists.
+# k3s merges these values over its own Traefik values. Do not edit /var/lib/rancher/k3s/server/manifests/traefik.yaml. k3s replaces it at start.
+# `just clusters/k3s/up` applies this file from the host. It is not in the OCI artifact.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesGateway:
+        enabled: true
+    # The chart makes the GatewayClass `traefik` and the Gateway `traefik-gateway` in kube-system.
+    gateway:
+      listeners:
+        web:
+          # Without this, only routes in kube-system can attach. The apps live in other namespaces.
+          namespacePolicy:
+            from: All
