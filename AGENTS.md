@@ -13,6 +13,7 @@ Before implementing:
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
+- If another approach may work better and nobody tested it, leave a `TODO:` comment on the line you wrote. Name the approach and the check that validates it.
 
 ## 2. Simplicity First
 
