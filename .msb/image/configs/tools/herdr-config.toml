@@ -4,6 +4,7 @@
 onboarding = false
 
 [theme]
+# Set name to catppuccin (Catppuccin Mocha) or tokyo-night. Then run: herdr server reload-config
 name = "catppuccin"
 
 [terminal]
