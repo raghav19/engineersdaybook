@@ -1,10 +1,10 @@
-# Herdr config — tokyo-night theme for consistent dark appearance.
+# Herdr config. The catppuccin theme is Catppuccin Mocha.
 
 # Skip the first-run dialog. A top-level key must come before the first table.
 onboarding = false
 
 [theme]
-name = "tokyo-night"
+name = "catppuccin"
 
 [terminal]
 default_shell = "/bin/bash"
