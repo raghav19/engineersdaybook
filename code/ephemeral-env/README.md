@@ -4,7 +4,9 @@ Preview environments for the Online Boutique microservices. The goal: a pull req
 
 This folder holds the platform that comes first. It is a fresh k3s cluster with Traefik, Istio, Prometheus, Kiali and the Boutique as baseline. Flux delivers it from one OCI artifact in a private registry. The sandbox flow is not built yet.
 
-![The host, the registry and the k3s cluster](docs/diagrams/architecture.svg)
+![The target state of the ephemeral environments](docs/diagrams/architecture.svg)
+
+The picture shows the target state. The solid boxes are the platform that the steps below build. The dashed boxes, the sandbox flow, do not exist yet.
 
 ## What the cluster looks like
 

@@ -10,7 +10,9 @@
 
 ## The picture
 
-![The host, the registry and the k3s cluster](diagrams/architecture.svg)
+![The target state of the ephemeral environments](diagrams/architecture.svg)
+
+The picture shows the target state. The solid boxes exist in this repo. The dashed boxes are the sandbox flow, which is not built yet. A sandbox request enters through Traefik with a `baggage` header. The baseline route sends the call to the sandbox service, and the sandbox service calls the baseline peers.
 
 ## The cast
 
