@@ -16,7 +16,7 @@ A handoff document lets a fresh session continue a piece of work without the old
 - **2026-11-05. Node attestation of the msb sandbox microVM.** The microVM attests to the SPIRE server on k3s with `x509pop`. The guide and the diagram are on `main`. Open: the second attestation, the failing `github-upstream` ExternalSecret and the workload entry.
   Path: [`code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md`](../code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md). Status: active.
 - **2026-11-05. Ephemeral environments with Istio, Gateway API and Flux ResourceSet.** Research and design of one baseline and sandboxes for the changed services.
-  Path: `code/ephemeral-env/docs/handoff/ephemeral-env-design.md`. Status: on the branch `docs/handoff-ephemeral-env`, not on `main`.
+  Path: [`code/ephemeral-env/docs/handoff/ephemeral-env-design.md`](../code/ephemeral-env/docs/handoff/ephemeral-env-design.md). Status: active. Read the status entry above first.
 - **2026-11-04. Backstage learning path.**
   Path: `code/platform-engineering/docs/handoff/backstage-learning-path.md`. Status: on the branch `docs/handoff-backstage`, not on `main`.
 - **2026-10-29. SPIRE node attestation of the msb sandbox with `sshpop`.**

@@ -41,7 +41,7 @@ These PRs merged into `main`:
 4. **Security.** A JWT check on the frontend sidecar, a deny policy that compares the claim with the baggage, STRICT mTLS and call-graph policies.
 5. **The central config.**
 
-The design behind steps 1 to 4 is in the older handoff `code/ephemeral-env/docs/handoff/ephemeral-env-design.md` on the branch `docs/handoff-ephemeral-env`. It is not on `main`. Its PR table lists the steps as PR 5 to PR 9.
+The design behind steps 1 to 4 is in [`ephemeral-env-design.md`](ephemeral-env-design.md) in this folder. Its PR table lists the steps as PR 5 to PR 9. The folder `spike-resourceset/` holds the offline `ResourceSet` spike.
 
 ## Decisions that the user has not made
 
@@ -53,7 +53,7 @@ Ask before you start the step that needs each one:
 ## Open risks
 
 The research note has the full list. These matter most:
-- The header match on a mesh route (S1) and the header through `checkoutservice` (S2) are unproven. The fallbacks are in the older handoff.
+- The header match on a mesh route (S1) and the header through `checkoutservice` (S2) are unproven. The fallbacks are in the design handoff.
 - Flux may forbid remote bases (`--no-remote-bases`). Then `apps-boutique` fails to build.
 - The `loadgenerator` init container needs a native Istio sidecar.
 - Memory of one node for 12 pods with sidecars, and the GHCR rate limits, are not measured.
