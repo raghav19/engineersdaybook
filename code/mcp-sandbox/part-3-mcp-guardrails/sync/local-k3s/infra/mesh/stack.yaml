@@ -10,6 +10,7 @@ metadata:
 spec:
   dependsOn:
     - name: spire
+    - name: gateway-api
   interval: 10m
   path: ./
   prune: true
@@ -31,6 +32,7 @@ spec:
   dependsOn:
     - name: istio
     - name: spire
+    - name: gateway-api
   interval: 10m
   path: ./
   prune: true
@@ -83,8 +85,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:2514cee3de3ffe38d330b17b49fb75e05907dd0435f8a23d65a9580595362c77
-    tag: a14dfdba4ef1
+    digest: sha256:8ff75e0d5dd53ff1cfacd8dad8a53ac0fbbaacf98d8ba51ad2a08eb857bd35dd
+    tag: 6a05c570881e
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
