@@ -1,0 +1,23 @@
+# Kiali through the Traefik Gateway. The route matches only the host kiali.localhost, so a request by IP address from the LAN gets a 404.
+# A browser resolves *.localhost to the loopback address. The Gateway listener `web` allows routes from all namespaces (traefik-config.yaml).
+# Kiali serves under /kiali (server.web_root in the Kiali config).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kiali
+  namespace: istio-system
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      namespace: kube-system
+      sectionName: web
+  hostnames:
+    - kiali.localhost
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: kiali
+          port: 20001

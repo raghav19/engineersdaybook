@@ -1,0 +1,7 @@
+# The audit policy of the k3s API server. It is the starter policy of the k3s hardening guide: log the user, time, resource and verb of each request, and no body.
+# The host installs it as /var/lib/rancher/k3s/server/audit.yaml. The steps are in .msb/README.md ("The audit log").
+# To read what the sandbox agent did, see docs/research/sandbox-least-privilege-kubeconfig.md ("Reading the audit log for the agent").
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  - level: Metadata
