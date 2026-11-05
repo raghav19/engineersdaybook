@@ -7,8 +7,8 @@
 # A function is a Python script built into one binary (interpreter and PyYAML inside) and pushed as its own artifact,
 # <registry>/tools/<name>: one file in the registry, not a container image. Dependencies: pyproject.toml of the function, locked in its uv.lock.
 #
-#   just build [tool]  ruff check, format check and ty check the script, then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
-#                      PyInstaller keeps a cache in out/tools/<name>/work-<key>: a second build with the same inputs takes under a second.
+#   just build [tool]  ty check the script (ruff runs in pre-commit), then the binary, built by uv from uv.lock -> out/tools/<name>/<name>.
+#                      The folder out/tools/<name>/work-<key> has a file "built" when it succeeded: a second build with the same inputs is skipped.
 #   just push [tool]   build, push once, then record its tag and digest in out/manifest.yaml (under `tools:`).
 #                      A binary that the manifest already records is not pushed again.
 #
@@ -38,7 +38,7 @@ source := 'https://github.com/raghav19/engineersdaybook'
 # reads:  the script of the function, and its pyproject.toml and uv.lock
 # writes: out/tools/<name>/<name>
 # output: the binary, it runs without Python. On stderr: building, built, or up to date
-# a build function: validate the script with ruff and ty, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
+# a build function: type-check the script with ty (pre-commit skips tools/), then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
 [script('bash')]
 build tool=name:
     set -euo pipefail
@@ -53,8 +53,6 @@ build tool=name:
     if [ -f "$work/built" ] && [ -x {{ tools }}/{{ tool }}/{{ tool }} ]; then echo "{{ tool }} is up to date" >&2; exit 0; fi
     echo "building {{ tool }} ..." >&2
     uv=(uv run --quiet --locked --python {{ python }} --project "$PWD" --group build)
-    "${uv[@]}" ruff check --quiet "$script"
-    "${uv[@]}" ruff format --check --quiet "$script"
     "${uv[@]}" ty check --quiet "$script"
     "${uv[@]}" pyinstaller {{ flags }} \
       --name {{ tool }} \
