@@ -28,3 +28,4 @@ spec:
   sourceRef: {kind: OCIRepository, name: istio}
   dependsOn:
     - name: spire # the CA and the CSI driver
+    - name: gateway-api # istiod serves the Gateway API from its start, so the CRDs come first
