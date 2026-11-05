@@ -35,9 +35,14 @@ source := 'https://github.com/raghav19/engineersdaybook'
 #                 binary, or mixes the old and the new. So the work folder is named by a key of the Python release, the flags, uv.lock and pyproject.toml.
 #                 A change of one of them gives a new folder and a clean build. The same inputs give the same folder and a cached build.
 #
+# stamp           PyInstaller cannot reuse its own cache here: --exclude-module makes it rebuild every time ("excludes changed"), 5 s for each call.
+#                 So out/tools/<name>/<name>.stamp holds the sha256 of every input of the binary (Python release, flags, script, uv.lock, pyproject.toml).
+#                 The same stamp and a binary there: the build is skipped. The stamp is removed before PyInstaller starts and written after it
+#                 succeeds, so a build that stops halfway leaves none. A stamp of other inputs never matches, so a change always rebuilds.
+#
 # reads:  the script of the function, and its pyproject.toml and uv.lock
-# writes: out/tools/<name>/<name>
-# output: the binary, it runs without Python
+# writes: out/tools/<name>/<name>, and <name>.stamp next to it
+# output: the binary, it runs without Python. On stderr: "building" and "built <name> in <n>s", or "<name> is up to date", so a slow build is not silent
 # a build function: validate the script with ruff and ty, then build the binary from exactly what uv.lock says (--locked fails when pyproject.toml and uv.lock disagree)
 [script('bash')]
 build tool=name:
@@ -45,6 +50,14 @@ build tool=name:
     export PYTHONHASHSEED=1
     cd {{ root }}/tools/{{ tool }}
     script={{ replace(tool, '-', '_') }}.py
+    binary={{ tools }}/{{ tool }}/{{ tool }}
+    inputs=$(cat <(printf '%s %s' "{{ python }}" "{{ flags }}") uv.lock pyproject.toml "$script" | sha256sum | cut -d' ' -f1)
+    if [ -x "$binary" ] && [ "$(cat "$binary.stamp" 2>/dev/null)" = "$inputs" ]; then
+      echo "{{ tool }} is up to date" >&2
+      exit 0
+    fi
+    # stderr, not stdout: the pipeline puts the stdout of a recipe into the pull request report
+    echo "building {{ tool }} (ruff, ty, PyInstaller) ..." >&2
     key=$(cat <(printf '%s %s' "{{ python }}" "{{ flags }}") uv.lock pyproject.toml | sha256sum | cut -c1-10)
     work={{ tools }}/{{ tool }}/work-$key
     mkdir -p {{ tools }}/{{ tool }}
@@ -53,12 +66,15 @@ build tool=name:
     "${uv[@]}" ruff check --quiet "$script"
     "${uv[@]}" ruff format --check --quiet "$script"
     "${uv[@]}" ty check --quiet "$script"
+    rm -f "$binary.stamp"
     "${uv[@]}" pyinstaller {{ flags }} \
       --name {{ tool }} \
       --distpath {{ tools }}/{{ tool }} \
       --workpath "$work" \
       --specpath "$work" \
       "$script"
+    echo "$inputs" > "$binary.stamp"
+    echo "built {{ tool }} in ${SECONDS}s" >&2
 
 # reads:  out/tools/<name>/<name>, and out/manifest.yaml
 # writes: the registry, <registry>/tools/<name>:sha256-<sha256 of the binary>
