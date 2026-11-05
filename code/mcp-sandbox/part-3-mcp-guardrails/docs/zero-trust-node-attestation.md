@@ -243,7 +243,7 @@ kubectl -n spire-system get configmap spire-server -o jsonpath='{.data.server\.c
 Expect `mode` `external_pki` and the path of the bundle. Then check the route through the gateway:
 
 ```bash
-kubectl -n istio-ingress get gateway,virtualservice spire
+kubectl -n istio-ingress get gateway,tlsroute spire
 echo | openssl s_client -connect 127.0.0.1:443 -servername spire.localhost 2>/dev/null | openssl x509 -noout -ext subjectAltName
 ```
 
