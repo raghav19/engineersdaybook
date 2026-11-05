@@ -1,0 +1,7 @@
+# istio-injection=enabled from the creation of the namespace: every pod starts with its sidecar, so no pod needs a restart.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: boutique
+  labels:
+    istio-injection: enabled
