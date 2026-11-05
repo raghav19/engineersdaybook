@@ -139,6 +139,10 @@ Before you add or remove tools or LSP servers in `.msb/image/`, read `.msb/AGENT
 
 All text you produce — plans, explanations, PR bodies, commit messages, comments, error strings, log messages, docstrings — must follow ASD-STE100 structural rules. Before you finish any change, invoke `/asd-ste100` for the rule set and worked examples.
 
+## 14. READMEs and guides
+
+Before you write or edit a README or a guide, read `docs/agents/readmes.md` in full.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
