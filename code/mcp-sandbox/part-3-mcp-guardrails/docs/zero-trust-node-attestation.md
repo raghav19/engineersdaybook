@@ -52,7 +52,7 @@ Node attestation alone blocks no call. It makes the identity. A gateway policy m
 | SPIRE server | `spire-system` | Checks the node certificate with the `x509pop` plugin. |
 | `msb.py attest` | host | Signs the CSR of the VM and sends the files to the VM. |
 | `sandbox-boot` | microVM | Makes the node key and the CSR. |
-| SPIRE agent | microVM | Sends the certificate and signs the challenge. It reaches the server at `host.microsandbox.internal`, on the NodePort 30081 of the host. |
+| SPIRE agent | microVM | Sends the certificate and signs the challenge. It reaches the server at `spire.localhost`, on port 443 of the host. The gateway of the host passes the TLS through to the server. |
 
 ### Stage A: setup, once
 

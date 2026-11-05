@@ -49,7 +49,7 @@ LOGIN_TIMEOUT = 300  # seconds that `github-login` waits for your approval
 # So msb.py gives msb one `--net-rule allow@host:tcp:<port>` for each port.
 HOST_PORTS = {
     6443: "k3s API server",
-    30081: "SPIRE server (NodePort)",
+    443: "SPIRE server (gateway, TLS passthrough)",
 }
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
