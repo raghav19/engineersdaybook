@@ -33,15 +33,29 @@ if [ ! -d "$ws/.git" ]; then
 fi
 as_agent sh -c "cd '$ws' && prek install --allow-missing-config" || fail "prek install failed"
 
-# The k3s kubeconfig. The mount is read-only and has 127.0.0.1 as the server URL.
-# Copy it, rewrite the server to host.microsandbox.internal (the host as the VM sees it), and give it to agent.
-src_kube=/run/sandbox/kubeconfig/k3s.yaml
-if [ -f "$src_kube" ]; then
-  mkdir -p "$home/.kube"
-  cp "$src_kube" "$home/.kube/config"
-  sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' "$home/.kube/config"
-  chown agent:agent "$home/.kube" "$home/.kube/config"
-fi
+# The kubeconfig of the sandbox agent. It has no credential. The token is the placeholder $MSB_K8S_TOKEN (K8S_TOKEN in vm/sandbox.yaml).
+# The host replaces it with a token of the ServiceAccount sandbox-agent in each request to host.microsandbox.internal.
+# The file has no certificate-authority-data on purpose: the host proxy ends the TLS on port 6443, so kubectl must trust the CA of the proxy (the system CA store).
+# The heredoc is quoted, so the shell does not expand the placeholder. The file replaces any older kubeconfig, such as one that has an admin credential.
+mkdir -p "$home/.kube"
+cat > "$home/.kube/config" <<'KUBECONFIG'
+apiVersion: v1
+kind: Config
+clusters:
+  - name: k3s
+    cluster:
+      server: https://host.microsandbox.internal:6443
+users:
+  - name: sandbox-agent
+    user:
+      token: $MSB_K8S_TOKEN
+contexts:
+  - name: default
+    context: {cluster: k3s, user: sandbox-agent}
+current-context: default
+KUBECONFIG
+chown agent:agent "$home/.kube" "$home/.kube/config"
+chmod 600 "$home/.kube/config"
 
 # The SPIRE agent dials spire.localhost, the name of the route of the SPIRE server on the gateway of the host.
 # The VM does not resolve a name under .localhost to the host, so this step maps the name to the IPv4 address of the host. It runs at each boot, because the address can change.

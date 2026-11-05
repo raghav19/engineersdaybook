@@ -1,9 +1,17 @@
 # The k3s server config of this project. `just clusters/k3s/create` installs it as /etc/rancher/k3s/config.yaml (host). It is the config of the cluster
 # that k3s runs on this host today (write-kubeconfig-mode and tls-san), plus the packaged components that this project replaces.
-# The sandbox VM reads the kubeconfig at /etc/rancher/k3s/k3s.yaml (mode 0644) and reaches the API server as host.microsandbox.internal, which the certificate must list.
+# The sandbox VM reaches the API server as host.microsandbox.internal, which the certificate must list. The VM has no kubeconfig of the host: it has a token of the ServiceAccount
+# sandbox-agent (sandbox-agent-rbac.yaml), and the host puts that token into each request (secret K8S_TOKEN in .msb/vm/sandbox.yaml).
 write-kubeconfig-mode: "0644"
 tls-san:
   - host.microsandbox.internal
+# The audit log of the API server. Filter it by the user system:serviceaccount:sandbox-agent:sandbox-agent to see what the agent did.
+kube-apiserver-arg:
+  - 'audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log'
+  - 'audit-policy-file=/var/lib/rancher/k3s/server/audit.yaml'
+  - 'audit-log-maxage=30'
+  - 'audit-log-maxbackup=10'
+  - 'audit-log-maxsize=100'
 # Istio ingress and agentgateway are the gateways of this project: Traefik would hold the host ports 80 and 443 (ServiceLB). The component gateway-api installs the Gateway API CRDs.
 # ServiceLB stays on: it gives the Istio ingress Service its host ports.
 # TODO: the name gateway-api-crd is untested as a --disable value. The check: after `create`, before Flux starts, `kubectl get crd | grep gateway.networking.k8s.io`

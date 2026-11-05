@@ -31,12 +31,10 @@ env:
   DISABLE_UPDATES: "1" # the claude that mise installs does not update itself.
   HEADROOM_ALLOW_UNAUTHENTICATED_BIND: "1" # Headroom 0.41 refuses to bind 0.0.0.0 without this. sandbox-boot binds 0.0.0.0 so the host can reach port 8787. Only the host loopback publishes it. TODO: test HEADROOM_PROXY_TOKEN in place of this value. Check that Claude Code still works through the proxy with a token.
   HEADROOM_HARD_WATCHDOG_SECS: "0" # 0 turns off the Headroom watchdog. The watchdog stops Headroom after the host suspends the VM for more than 90 seconds. Nothing starts Headroom again until the next `just msb run`.
-  KUBECONFIG: /home/agent/.kube/config # the k3s kubeconfig. sandbox-boot copies it from the mount and rewrites the server URL.
+  KUBECONFIG: /home/agent/.kube/config # the kubeconfig of the sandbox agent. sandbox-boot writes it. It has the placeholder of the secret K8S_TOKEN and no credential.
 mounts:
   - "${SANDBOX_GIT_DIR}:/run/sandbox/source:ro"
   - "${SANDBOX_OMARCHY_THEME}:/home/agent/.local/state/omarchy/current/theme:ro"
-  # The k3s kubeconfig. sandbox-boot rewrites the server URL to host.microsandbox.internal.
-  - "/etc/rancher/k3s/k3s.yaml:/run/sandbox/kubeconfig/k3s.yaml:ro"
   # The Claude Code login and settings. `just msb rm --volumes` removes them.
   - named: claude-home
     target: /home/agent/.claude
@@ -76,6 +74,12 @@ secrets:
     passthrough: [api.anthropic.com]
   GHCR_PUSH_TOKEN:
     allow: [ghcr.io]
+    passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
+  # A token of the ServiceAccount sandbox-agent (read-only in the cluster). msb.py makes it on the host and msb reads it from the environment. It never enters the VM.
+  # The host replaces the placeholder in requests to the k3s API server. That needs TLS interception on port 6443, so msb.py passes --tls-intercept-port and the CA of k3s.
+  # Without the token, `msb run` fails. So the VM never falls back to another credential.
+  K8S_TOKEN:
+    allow: [host.microsandbox.internal]
     passthrough: [api.anthropic.com, token-plan.ap-southeast-1.maas.aliyuncs.com]
 network:
   tls:

@@ -123,10 +123,9 @@ allow-host $host: _host-only && run
 shell: _host-only
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd /home/agent/engineersdaybook && exec bash -l"
 
-# Copy the k3s kubeconfig into the running VM and rewrite the server URL. Use after k3s reinstall without restarting the VM.
-sync-kubeconfig: _host-only
-    scp -q -F {{ ssh_config }} /etc/rancher/k3s/k3s.yaml $MSB_NAME.msb:/tmp/k3s.yaml || true
-    ssh -F {{ ssh_config }} $MSB_NAME.msb "sed -i 's|https://127.0.0.1:6443|https://host.microsandbox.internal:6443|' /tmp/k3s.yaml && mkdir -p ~/.kube && cp /tmp/k3s.yaml ~/.kube/config && rm /tmp/k3s.yaml && echo kubeconfig-synced"
+# Give the running VM a new Kubernetes token. `run` does this at each start. Use it when the VM runs for longer than the token lasts (24 hours).
+rotate-kube-token: _host-only
+    {{ step }} rotate-kube-token
 
 # Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only
