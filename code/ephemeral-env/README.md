@@ -81,9 +81,31 @@ kubectl get crd | grep -c istio.io                       # more than 0
 
 Undo: delete `addons/istio` from `platform/kustomization.yaml`, publish, and let Flux uninstall both releases. Flux never prunes the namespace or the CRDs. To delete them, run `kubectl delete ns istio-system` and delete the `istio.io` CRDs by hand. Deleting a CRD deletes every custom resource of its kind.
 
+## Observability (PR 3)
+
+`platform/addons/observability/` holds Prometheus and Kiali. Both files come from the Istio 1.31.1 sample add-ons and run in `istio-system`. The `HTTPRoute` `kiali` publishes Kiali through the Traefik Gateway.
+
+- **Open Kiali** at `http://kiali.localhost/kiali` in a browser on the machine that runs the cluster. The route matches only the host `kiali.localhost`. A request by IP address gets a 404.
+- **Read the risk.** The sample Kiali login is anonymous. Its ClusterRole can create, patch and delete Istio objects. This project sets `view_only_mode: true`, so Kiali shows the mesh and changes nothing. Anyone who reaches Traefik with the host name `kiali.localhost` can still see the mesh. The Host header is not a login. Do not open ports 80 and 443 of the host to an untrusted network.
+- **Prometheus keeps its data in an `emptyDir`.** A pod restart loses the metrics.
+- **The cluster pulls three images:** `quay.io/kiali/kiali`, `docker.io/prom/prometheus` and `ghcr.io/prometheus-operator/prometheus-config-reloader`.
+- **No traffic yet.** The graph stays empty until PR 4 puts the Boutique in the mesh.
+
+Checks, after you publish and Flux reconciles:
+
+```sh
+kubectl -n istio-system get deploy prometheus kiali        # both 1/1 available
+kubectl -n istio-system get httproute kiali                 # Accepted True
+curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: kiali.localhost' http://127.0.0.1/kiali/api/status   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/kiali/api/status                               # 404
+```
+
+Undo: delete `addons/observability` from `platform/kustomization.yaml` and publish. Flux deletes both deployments, the route and the cluster roles.
+
 ## Not tested
 
 - The Flux Operator 0.62.1 with Flux 2.10.0 on this cluster. `just check` tests only the schemas. No command here ran against a cluster.
 - The k3s Traefik chart accepts the `HelmChartConfig` values on a fresh install. The idea comes from `code/platform-engineering/infrastructure/gateway/traefik-config.yaml`, which works on the current cluster.
 - `flux push artifact` with `--creds` against GHCR, and the size of the GHCR rate limit.
 - The Istio 1.31.1 charts on k3s 1.37, and the redirect from `blob.istio.io` that the `HelmRepository` follows. The chart index lists 1.31.1 for `base` and `istiod`.
+- Kiali and Prometheus from the Istio 1.31.1 samples on k3s 1.37. Whether `view_only_mode` hides every write action of the Kiali UI. The Kiali version is v2.31.

@@ -1,0 +1,7 @@
+# Prometheus and Kiali from the Istio sample add-ons, in istio-system (the namespace of addons/istio).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - prometheus.yaml
+  - kiali.yaml
+  - kiali-route.yaml
