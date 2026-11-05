@@ -29,3 +29,4 @@ spec:
   dependsOn:
     - name: istio # istiod and its injection webhook
     - name: spire # the ClusterSPIFFEID kind and the CSI driver
+    - name: gateway-api # the Gateway, TLSRoute and ReferenceGrant kinds of the SPIRE route

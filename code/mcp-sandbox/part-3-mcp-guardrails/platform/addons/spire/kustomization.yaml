@@ -7,7 +7,6 @@ resources:
   - namespace.yaml
   - crds.yaml
   - spire.yaml
-  - service.yaml
   - node-ca.yaml
   - trust-manager.yaml
   - node-entry.yaml

@@ -1,0 +1,66 @@
+# The route of the SPIRE server through the Istio ingress gateway, with Gateway API objects only. The sandbox microVM is outside the cluster: its SPIRE agent dials
+# spire.localhost on the host port 443 (k3s ServiceLB opens it for the Service of the gateway). The gateway passes the TLS through: it reads only the SNI name and
+# sends the bytes to the server. The agent keeps its own TLS with the server, so the agent checks the SVID of the server against the trust bundle, and the server
+# reads the SVID of the agent from the handshake. A gateway that ends the TLS would break both. A TLSRoute is the only route kind that carries this (not an HTTPRoute).
+#
+# The Gateway has one Hostname address: Istio then deploys no gateway of its own and binds the Gateway to the existing Service istio-ingressgateway (the Helm chart in
+# gateway.yaml, which has the SPIRE identity). The Service must be in the namespace of the Gateway, and the listener port must equal a port of the Service.
+# Istio 1.31 reads TLSRoute as v1 from the standard CRDs of the component gateway-api. PILOT_ENABLE_ALPHA_GATEWAY_API is not needed.
+# The route is in this component and not in `spire`, because `spire` must be Ready before this component starts, and this component needs the Gateway API CRDs.
+# TODO: untested on a cluster. The check: the Gateway is Accepted and Programmed, the TLSRoute is Accepted and ResolvedRefs, and
+# `openssl s_client -connect <host>:443 -servername spire.localhost` shows the SVID of the SPIRE server.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: spire
+  namespace: istio-ingress
+spec:
+  gatewayClassName: istio
+  addresses:
+    - type: Hostname
+      value: istio-ingressgateway.istio-ingress.svc.cluster.local
+  listeners:
+    - name: tls-spire
+      port: 443
+      protocol: TLS
+      hostname: spire.localhost
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: Same
+        kinds:
+          - kind: TLSRoute
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: spire
+  namespace: istio-ingress
+spec:
+  parentRefs:
+    - name: spire
+      sectionName: tls-spire
+  hostnames:
+    - spire.localhost
+  rules:
+    - backendRefs:
+        - name: spire-server
+          namespace: spire-system
+          port: 8081
+---
+# The backend is in another namespace: the owner of spire-system allows this one route, and only to this Service.
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: istio-ingress-spire-route
+  namespace: spire-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: TLSRoute
+      namespace: istio-ingress
+  to:
+    - group: ""
+      kind: Service
+      name: spire-server
