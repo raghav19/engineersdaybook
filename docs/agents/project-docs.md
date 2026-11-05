@@ -1,6 +1,14 @@
-# READMEs and guides
+# Docs of a project
 
-A README or a guide builds a correct picture of a system in the head of the reader. The reader finishes it and can explain the flow to another person.
+Each project has a README and a `docs/` folder. The README says what the project is, how to start, and where the docs are. The docs go into the detail, one topic in each file.
+
+A topic doc builds a correct picture of its topic in the head of the reader. The reader finishes it and can explain the flow to another person.
+
+## Scope
+
+This structure is for a topic doc in the `docs/` folder of a project. Examples: the node attestation of a VM, the rendered manifest pattern, the orchestration of Flux.
+
+The README keeps its own shape and links to the docs. ADRs, research notes and diagrams follow their own rules.
 
 ## Structure
 
