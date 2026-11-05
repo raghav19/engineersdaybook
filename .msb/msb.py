@@ -51,6 +51,10 @@ HOST_PORTS = {
     6443: "k3s API server",
     443: "SPIRE server (gateway, TLS passthrough)",
 }
+# The agent in the VM calls the k3s API server with the placeholder $MSB_K8S_TOKEN. The host replaces it, so the VM never holds the token.
+# The replacement needs TLS interception on port 6443. msb replaces its default list ([443]) when it gets any port, so the list names 443 again.
+# The recipe `_vm` in the justfile puts the token (K8S_TOKEN) and the path of the public CA file of k3s (K8S_CA_FILE) in the environment of `ensure-vm`.
+TLS_INTERCEPT_PORTS = (443, 6443)
 # --- Helpers. Their names start with _. Only the functions below call them. A helper stands above the code that calls it. ---
 
 
@@ -60,8 +64,10 @@ def _die(message: str) -> NoReturn:
     sys.exit(1)
 
 
-def _fingerprint() -> str:
-    """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values and the host ports. `ensure-vm` calls this.
+def _fingerprint(k3s_ca: str) -> str:
+    """Return the fingerprint of the VM: a hash of sandbox.yaml (it pins the image), the host values, the host ports, the TLS ports and the CA of k3s. `ensure-vm` calls this.
+
+    msb fixes the CA of k3s and the TLS ports when it makes the VM. A new k3s cluster has a new CA, so the VM must be new too.
 
     The justfile puts the host values in the environment (SANDBOX_GIT_DIR, SANDBOX_BRANCH, SANDBOX_OMARCHY_THEME, GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL).
     The tokens and the branch are not in the fingerprint. SANDBOX_OMARCHY_THEME is not in it either. It names a read-only mount
@@ -73,6 +79,8 @@ def _fingerprint() -> str:
         os.environ["GIT_AUTHOR_NAME"],
         os.environ["GIT_AUTHOR_EMAIL"],
         str(HOST_PORTS),
+        str(TLS_INTERCEPT_PORTS),
+        k3s_ca,
     ]
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
@@ -161,13 +169,14 @@ def ensure_vm() -> None:
     msb keeps the fingerprint (_fingerprint) in the label `config-sha` of the VM.
     1. A VM exists with another fingerprint: stop. If you remove the VM, its clone goes too, so you decide.
     2. No VM runs: `msb run -d` makes the VM. If a stopped VM exists, msb starts it, warns, and ignores the flags.
-       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN and the other Bitwarden keys).
+       msb reads the secrets of sandbox.yaml from the environment (GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN, the other Bitwarden keys, and K8S_TOKEN from the justfile).
        A running VM does not read a changed secret. To change a token, stop the VM (`msb stop`) and run this step again.
     Then run sandbox-boot in the VM. Its steps do nothing for work that exists, so this is safe at each run.
     The next run fixes a VM that stopped, a boot that failed and a Headroom that stopped.
     """
     name = os.environ["MSB_NAME"]
-    wanted = _fingerprint()
+    k3s_ca = Path(os.environ["K8S_CA_FILE"])
+    wanted = _fingerprint(k3s_ca.read_text())
 
     found = subprocess.run(["msb", "inspect", name, "--format", "json"], capture_output=True, text=True, check=False, cwd=MSB_DIR)
     # Only "sandbox not found" means that no VM exists. Stop on any other error.
@@ -180,8 +189,12 @@ def ensure_vm() -> None:
         _die("push any work in it (just msb shell). Then run: just msb rm && just msb run")
     if not vm or vm["status"].lower() != "running":
         port_rules = [arg for port in HOST_PORTS for arg in ("--net-rule", f"allow@host:tcp:{port}")]
+        # TODO: untested. msb 0.7.10 has no test for a secret on port 6443 or for these flags together with --conf. Check on a scratch VM:
+        # `kubectl get ns` works in the VM, `kubectl auth whoami` prints system:serviceaccount:sandbox-agent:sandbox-agent, and `curl -sk -H 'Authorization: Bearer $MSB_K8S_TOKEN' https://host.microsandbox.internal:6443/version` works (single quotes: the placeholder is literal text).
+        tls_args = [arg for port in TLS_INTERCEPT_PORTS for arg in ("--tls-intercept-port", str(port))]
+        tls_args += ["--tls-upstream-ca-cert-for", f"host.microsandbox.internal={k3s_ca}"]
         done = subprocess.run(
-            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules],
+            ["msb", "run", "-d", "--name", name, "--conf", str(CONFIG), "--label", f"config-sha={wanted}", *port_rules, *tls_args],
             check=False,
         )
         if done.returncode != 0:
