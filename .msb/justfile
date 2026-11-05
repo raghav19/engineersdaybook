@@ -29,7 +29,6 @@ jq      := require("jq")
 yq      := require("yq")
 ssh     := require("ssh")
 kubectl := require("kubectl")
-openssl := require("openssl")
 
 # --- Required environment variables ---
 in_bws                  := env('MSB_IN_BWS', '')

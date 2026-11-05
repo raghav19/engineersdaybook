@@ -34,7 +34,7 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import NoReturn
 
 from ruamel.yaml import YAML  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString  # ty: ignore[unresolved-import] - PEP 723 dependency, not in the environment of the hook
@@ -168,37 +168,6 @@ def _vm(command: str, data: str | None = None) -> subprocess.CompletedProcess[st
     )
 
 
-def _check_names(kind: str, pem: str, name: str, uri: str) -> None:
-    """Stop unless the CSR (kind `req`) or the certificate (kind `x509`) has exactly the CN `name` and the one URI SAN `uri`.
-
-    The VM makes the CSR, so the host checks it before the CA signs it. The CA signs what the CSR asks for. For a CSR, openssl also checks its signature.
-    The node entry of the SPIRE server (platform/addons/spire/node-entry.yaml) matches the same two values. The checks of the certificate catch a CA that changed them.
-    """
-    flags = ["-verify"] if kind == "req" else []
-    text = _ok(_run(["openssl", kind, "-noout", "-text", "-nameopt", "RFC2253", *flags], pem), f"openssl {kind}")
-    subject = re.search(r"^\s*Subject: (.*)$", text, re.MULTILINE)
-    alt = re.search(r"X509v3 Subject Alternative Name:[^\n]*\n\s*([^\n]*)", text)
-    if not subject or subject.group(1).strip() != f"CN={name}":
-        _die(f"the {kind} has the subject {subject.group(1).strip() if subject else 'none'!r}. Expected CN={name}.")
-    if not alt or [entry.strip() for entry in alt.group(1).split(",")] != [f"URI:{uri}"]:
-        _die(f"the {kind} has the SAN {alt.group(1).strip() if alt else 'none'!r}. Expected only URI:{uri}.")
-
-
-def _certificate_request(name: str, csr: str) -> dict[str, Any]:
-    """Return the cert-manager CertificateRequest for the CSR of the VM. The node CA must sign it with the key usage `digital signature`, which the x509pop plugin needs."""
-    return {
-        "apiVersion": "cert-manager.io/v1",
-        "kind": "CertificateRequest",
-        "metadata": {"generateName": f"node-{name}-"},
-        "spec": {
-            "request": base64.b64encode(csr.encode()).decode(),
-            "issuerRef": {"name": NODE_ISSUER, "kind": "Issuer", "group": "cert-manager.io"},
-            "usages": ["digital signature"],
-            "duration": NODE_CERT_DURATION,
-        },
-    }
-
-
 # --- Steps. One function for each step of main(), in the order of the cases there. ---
 
 
@@ -267,17 +236,15 @@ def attest() -> None:
     """Sign the node certificate of the VM with the node CA of the cluster, put it in the VM with the trust bundle, and start the SPIRE agent.
 
     Run it on the host, after `just msb run` (the VM) and with the cluster up. It does nothing when the agent in the VM is healthy.
-    1. Read the CSR that sandbox-boot made in the VM. Stop unless it has the CN of the VM and the one URI SAN of the fixed GitHub login (sandbox.yaml).
-    2. Make a CertificateRequest with the CSR for the Issuer `node-ca`, and wait until cert-manager signs it. Check the names of the certificate.
+    1. Read the CSR that sandbox-boot made in the VM.
+    2. Make a CertificateRequest with the CSR for the Issuer `node-ca`, and wait until cert-manager signs it.
     3. Read the SPIFFE trust bundle from the SPIRE server.
     4. Write the certificate and the bundle in ~/.spire of the VM, then start the agent and wait until it is healthy.
     The private key stays in the VM. The host sees only the CSR, the certificate and the bundle, and they are public.
+    The host does not check the names in the CSR. The node CA signs what the CSR asks for. The node entry of the SPIRE server gives the alias SVID
+    only to a node with the CN and the URI SAN of platform/addons/spire/node-entry.yaml. Another name attests, but it gets no alias.
     """
     name = os.environ["MSB_NAME"]
-    login = YAML(typ="safe").load(CONFIG)["env"]["SANDBOX_GITHUB_LOGIN"]
-    if not re.fullmatch(r"[A-Za-z0-9-]+", login):
-        _die(f"SANDBOX_GITHUB_LOGIN in {CONFIG.name} is {login!r}. It must be a GitHub login.")
-    uri = f"x509pop://mcp.local/github-id/{login}"
     healthy = shlex.join(["spire-agent", "healthcheck", "-socketPath", AGENT_SOCKET])
 
     if _vm(healthy).returncode == 0:
@@ -285,10 +252,21 @@ def attest() -> None:
         return
 
     csr = _ok(_vm("cat ~/.spire/node.csr"), "reading ~/.spire/node.csr in the VM (is the image new, and did sandbox-boot run?)")
-    _check_names("req", csr, name, uri)
 
+    # The key usage `digital signature` is what the x509pop plugin needs.
+    request_object = {
+        "apiVersion": "cert-manager.io/v1",
+        "kind": "CertificateRequest",
+        "metadata": {"generateName": f"node-{name}-"},
+        "spec": {
+            "request": base64.b64encode(csr.encode()).decode(),
+            "issuerRef": {"name": NODE_ISSUER, "kind": "Issuer", "group": "cert-manager.io"},
+            "usages": ["digital signature"],
+            "duration": NODE_CERT_DURATION,
+        },
+    }
     created = _ok(
-        _run(_kubectl("-n", SPIRE_NAMESPACE, "create", "-f", "-", "-o", "json"), json.dumps(_certificate_request(name, csr))),
+        _run(_kubectl("-n", SPIRE_NAMESPACE, "create", "-f", "-", "-o", "json"), json.dumps(request_object)),
         "making the CertificateRequest",
     )
     request = json.loads(created)["metadata"]["name"]
@@ -304,7 +282,6 @@ def attest() -> None:
         "reading the certificate",
     )
     certificate = base64.b64decode(issued).decode()
-    _check_names("x509", certificate, name, uri)
 
     bundle = _ok(
         _run(
