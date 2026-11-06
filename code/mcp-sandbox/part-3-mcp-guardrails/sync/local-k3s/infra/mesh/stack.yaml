@@ -85,8 +85,8 @@ metadata:
 spec:
   interval: 5m
   ref:
-    digest: sha256:8ff75e0d5dd53ff1cfacd8dad8a53ac0fbbaacf98d8ba51ad2a08eb857bd35dd
-    tag: 6a05c570881e
+    digest: sha256:390017787ed29bf941e485fc64f2dce1c32b20bcce0f6e38465562a6673d3d33
+    tag: 665e5d79795a
   secretRef:
     name: ghcr-pull
   url: oci://ghcr.io/raghav19/mcp-guardrails/istio-ingress
