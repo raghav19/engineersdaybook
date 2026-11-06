@@ -11,6 +11,8 @@ A handoff document lets a fresh session continue a piece of work without the old
 
 ## The list
 
+- **2026-11-06. SPIFFE identity of the msb microVM (workload attestation).** Each microVM gets its own SPIFFE ID, and the SPIRE agent on the host checks VM properties. Start on the host: find what `msb inspect` records, then test how it reaches the Workload API.
+  Path: [`code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-workload-attestation.md`](../code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-workload-attestation.md). Research: [`docs/research/microvm-workload-attestation-spire.md`](research/microvm-workload-attestation-spire.md). Status: active.
 - **2026-11-05. Node attestation of the msb sandbox microVM.** The microVM attests to the SPIRE server on k3s with `x509pop`. The guide and the diagram are on `main`. Open: the second attestation, the failing `github-upstream` ExternalSecret and the workload entry.
   Path: [`code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md`](../code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/node-attestation.md). Status: active.
 - **2026-11-05. Ephemeral environments with Istio, Gateway API and Flux ResourceSet.** Research and design of one baseline and sandboxes for the changed services.
