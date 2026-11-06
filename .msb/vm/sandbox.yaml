@@ -162,5 +162,6 @@ network:
     - fluxcd.control-plane.io
     - docs.microsandbox.dev
     - doc.traefik.io
+    - cloud.google.com
     # Other
     - crl.microsoft.com
