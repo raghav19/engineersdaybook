@@ -59,6 +59,10 @@ mounts:
   - named: qwen-home
     target: /home/agent/.qwen
     create: ensure-exists
+  # The history, the settings and the memory of Headroom (savings_events.jsonl and more). A new VM keeps the savings history. `just msb rm --volumes` removes them.
+  - named: headroom-home
+    target: /home/agent/.headroom
+    create: ensure-exists
 secrets:
   GH_TOKEN:
     allow: [github.com, api.github.com, api.githubcopilot.com]
