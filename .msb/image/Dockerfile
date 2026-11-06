@@ -115,6 +115,13 @@ USER root
 COPY sandbox-boot /usr/local/bin/sandbox-boot
 RUN chmod 0755 /usr/local/bin/sandbox-boot
 
+# Envoy is the workload of the SPIRE entry platform/addons/spire/workload-entry.yaml: sandbox-boot runs it as the user envoy, and only that user gets its SVID.
+# So the binary and the config are owned by root. This is not a mise tool: the files under /opt/mise belong to the user agent, and the user agent must not change what runs as envoy.
+# TODO: pin the release image by digest, as sandbox.yaml pins the sandbox image. The check: `docker buildx imagetools inspect envoyproxy/envoy:v1.40.1`, then the build and `envoy --version` in the VM.
+COPY --from=envoyproxy/envoy:v1.40.1 /usr/local/bin/envoy /usr/local/bin/envoy
+RUN useradd --system --no-create-home --shell /usr/sbin/nologin envoy
+COPY --chmod=0644 configs/envoy/envoy.yaml /etc/envoy/envoy.yaml
+
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
 

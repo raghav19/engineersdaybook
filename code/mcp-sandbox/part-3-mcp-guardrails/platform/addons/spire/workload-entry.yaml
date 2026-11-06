@@ -1,0 +1,16 @@
+# The workload entry of Envoy in the microVM. The SPIRE agent of the VM gives this SPIFFE ID to a process that runs as the Unix user envoy.
+# The Unix workload attestor reads the uid of the caller from the agent socket.
+# The parent is the node alias of node-entry.yaml, not the agent ID. The agent ID has the fingerprint of the node certificate, so it changes with each new certificate. The alias does not.
+# Only an agent that got the alias receives this entry. Another node never sees it.
+# The user envoy runs only Envoy. The image in .msb/image/ makes the binary and the config of Envoy owned by root, so the user agent cannot change what runs as envoy.
+# shortcut: the trust domain mcp.local and the login raghav19 are plain text in the IDs. A setter replaces a whole value, and these IDs are full URIs.
+# Change them with trust_domain in config/ when a second user needs a sandbox.
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata:
+  name: sandbox-envoy
+spec:
+  parentID: spiffe://mcp.local/node/sandbox-dev
+  spiffeID: spiffe://mcp.local/microvm/raghav19/envoy
+  selectors:
+    - unix:user:envoy

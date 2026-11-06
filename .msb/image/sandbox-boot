@@ -82,6 +82,23 @@ if ! agent_healthy; then
   agent_healthy || { tail -n 20 /var/log/spire-agent.log >&2; fail "the SPIRE agent did not attest in 30 seconds (its log is above)"; }
 fi
 
+# Envoy gets its SVID from the SPIRE agent, so it starts after the agent. It runs as the user envoy, the selector of its workload entry (platform/addons/spire/workload-entry.yaml).
+# The binary and the config are owned by root, so the user agent cannot change what runs as envoy. The admin interface answers on 127.0.0.1:9901.
+# Start it only if it does not answer. If the entry is not in the cluster yet, Envoy still starts and retries: `curl -s 127.0.0.1:9901/certs` shows the SVID once the entry exists.
+# TODO: untested. Envoy 1.40 may report /ready only after the first SDS fetch or its timeout. Check on a new VM how long /ready takes, with and without the entry.
+command -v envoy >/dev/null || fail "envoy is not in the PATH of the VM"
+envoy_ready() { curl -sf -o /dev/null http://127.0.0.1:9901/ready; }
+if ! envoy_ready; then
+  pkill -x envoy || true
+  install -m 0644 -o envoy -g envoy /dev/null /var/log/envoy.log || fail "could not make /var/log/envoy.log"
+  setsid nohup runuser -u envoy -- envoy -c /etc/envoy/envoy.yaml --log-level warn --log-path /var/log/envoy.log >/dev/null 2>&1 </dev/null &
+  for _ in $(seq 30); do
+    envoy_ready && break
+    sleep 1
+  done
+  envoy_ready || { tail -n 20 /var/log/envoy.log >&2; fail "Envoy did not answer on 127.0.0.1:9901 in 30 seconds (its log is above)"; }
+fi
+
 # The editor (TTT) has no workspace trust gate, so nothing here pre-answers one. It starts a language server as soon as
 # a file matches an entry of lsp.servers, with no prompt. See decision 15 in README.md for what that costs.
 
