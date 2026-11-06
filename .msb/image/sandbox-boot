@@ -16,8 +16,8 @@ as_agent() { runuser -u agent -- env HOME="$home" "$@"; }
 # msb sets NODE_EXTRA_CA_CERTS in `msb exec` to a file that does not exist. Node then prints a warning for each call.
 [ -e "${NODE_EXTRA_CA_CERTS:-}" ] || unset NODE_EXTRA_CA_CERTS
 
-mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.cache/terraform-providers" "$home/.local/share/containers"
-chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
+mkdir -p "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.headroom" "$home/.cache/terraform-providers" "$home/.local/share/containers"
+chown agent:agent "$(dirname "$ws")" "$home/.claude" "$home/.qwen" "$home/.herdr" "$home/.headroom" "$home/.cache" "$home/.cache/terraform-providers" "$home/.local" "$home/.local/share" "$home/.local/share/containers" || fail "chown of the workspace folders failed"
 
 # Podman runs as agent, without root. The kernel of the VM makes /dev/fuse and /dev/net/tun for root only.
 # fuse-overlayfs needs /dev/fuse. The network of a container (pasta) needs /dev/net/tun. The group agent can use both.
