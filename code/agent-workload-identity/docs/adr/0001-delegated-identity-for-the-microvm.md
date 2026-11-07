@@ -14,7 +14,7 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 - The agent runs its workload attestors on the pid. `unix` gives the uid. `msbvm` gives the VM name and the sandbox ID.
 - The entry of the VM has the selectors `msbvm:name:<vm>` and `unix:uid:<uid>`. Its parent is the node entry.
 - The agent returns the SVID and the key to the delegate. The VM never sees them.
-- `msbvm` reads the name and the ID from the command line of the VMM. It checks them against the `run` row in `msb.db`. The row must have the same pid and the same start time.
+- `msbvm` reads the name and the ID from the command line of the VMM. It checks them against the `run` row in `msb.db`. The row must have the same VM, the same pid and the status Running.
 
 ## Considered options
 
@@ -28,7 +28,7 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 - The plugin must be in Go, because the SPIRE plugin SDK is Go only.
 - The plugin depends on the tables `run` and `sandbox` of msb 0.7.13. They are internal and can change. Pin the msb version.
 - A refusal is an empty response with zero SVIDs. The delegate must treat zero SVIDs as a failure.
-- The delegate must hold a `pidfd`, so that a recycled pid is never sent.
+- The delegate checks that the SVID has the ID that it expected. A recycled pid then gives zero SVIDs or an SVID with another ID, and the delegate fails. The SPIRE docs say that the delegate must make sure that the pid is not recycled between the request and the answer. A `pidfd` in the delegate is a later hardening.
 - The API does not limit a delegate to certain VMs. An attacker who controls a delegate can get the SVID of any VM that the agent can attest. On a host with many users, use one agent for each user.
 - The delegate must run on the same host as the agent, because the API uses a local Unix socket.
 - This decision replaces the design of PR #260 and `docs/zero-trust-workload-attestation.md` (Envoy in the VM).

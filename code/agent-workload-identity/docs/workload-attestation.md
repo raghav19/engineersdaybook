@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. No part of it is in this repo as code yet. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -38,7 +38,7 @@ On the host:
 - **`msbvm` plugin.** It is a Go plugin that we write. It turns a pid into the VM name and the sandbox ID.
 - **Delegate.** It is a Go program that we write. It sends the pid and holds the SVID and the key.
 - **VMM.** It is the process `msb machine --name <vm> --sandbox-id <id>`. It runs one microVM.
-- **`msb.db`.** It is the database of `msb`. Each start of a VM adds a `run` row with the pid and the start time.
+- **`msb.db`.** It is the database of `msb`. Each start of a VM adds a `run` row with the pid and the status.
 
 In the microVM: no part of this flow. The VM holds no key and has no socket of the agent. The agent in the VM from the node attestation stays for now. ADR 0001 lists its fate as an open decision.
 
@@ -100,12 +100,12 @@ flowchart TD
     c1 -->|no| refuse["No selectors.<br/>The agent returns zero SVIDs."]
     c1 -->|yes| c2{"Command line is msb machine<br/>with --name and --sandbox-id?"}
     c2 -->|no| refuse
-    c2 -->|yes| c3{"The run row has the same pid,<br/>status Running and a start time<br/>that matches /proc?"}
+    c2 -->|yes| c3{"The run row has the same VM,<br/>the same pid and<br/>the status Running?"}
     c3 -->|no| refuse
     c3 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID"]
 ```
 
-A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate must also hold a `pidfd`, so that a recycled pid is never sent.
+A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate also checks that the SVID has the ID that it expected. So a pid that changed between the request and the answer cannot give the delegate a wrong identity.
 
 The spike proved this phase with five tests. The real VMM got its SVID. A pid that is not a VMM got zero SVIDs. A fake `msb` with the same exe name and command line got zero SVIDs, because it has no `run` row.
 
@@ -147,7 +147,7 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - **Delegated Identity API** lets a trusted program ask the agent for the SVID of another workload. The agent serves it on `admin.sock`.
 - **`authorized_delegates`** is the list of SPIFFE IDs that may call the Delegated Identity API.
 - **Sandbox ID** is the number that `msb` gives to a VM. It is in the command line of the VMM and in `msb.db`.
-- **`run` row** is the record of one start of a VM in `msb.db`. It has the pid, the status and the start time.
+- **`run` row** is the record of one start of a VM in `msb.db`. It has the pid, the status and other fields. The plugin reads the pid and the status.
 - **`pidfd`** is a handle to a process. It stays valid when another process gets the same pid number.
 
 ## Where each part is in the repo
@@ -158,7 +158,12 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - Config of the agent in the VM: [`.msb/image/configs/spire/spire-agent.conf`](../../../.msb/image/configs/spire/spire-agent.conf)
 - Spike code (not production code): [the spike handoff](../../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md)
 
-These folders do not exist yet: `plugin/`, `delegate/`, `agent/` and `tests/`. They are in the [README](../README.md).
+The code of the parts:
+
+- `msbvm` plugin: [`plugin/`](../plugin/README.md)
+- Delegate: [`delegate/`](../delegate/README.md)
+
+These folders do not exist yet: `agent/` and `tests/`. They are in the [README](../README.md).
 
 ## What comes next
 

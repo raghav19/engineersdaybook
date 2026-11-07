@@ -39,7 +39,7 @@
 <text x="565.0" y="653.0" font-size="12" text-anchor="middle" fill="#000">holds no key</text>
 <rect x="800" y="560" width="260" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
 <text x="930.0" y="593.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">msb.db</text>
-<text x="930.0" y="613.0" font-size="12" text-anchor="middle" fill="#000">run row: pid, start time</text>
+<text x="930.0" y="613.0" font-size="12" text-anchor="middle" fill="#000">run row: pid, status</text>
 <path d="M510.0,144.0 L720.0,144.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
 <path d="M890.0,338.0 L890.0,192.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)" marker-start="url(#ar)"/>
 <path d="M135.0,560.0 L135.0,460.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
@@ -90,8 +90,8 @@
 <text x="409" y="893" font-size="12" fill="#000">The agent runs the unix attestor and the msbvm plugin on the pid. The plugin reads the</text>
 <text x="409" y="910" font-size="12" fill="#000">exe and the command line of the VMM.</text>
 <text x="385" y="936" font-size="12" font-weight="bold" fill="#000">3</text>
-<text x="409" y="936" font-size="12" fill="#000">The plugin checks the run row in msb.db: same pid, same start time. It returns the VM</text>
-<text x="409" y="953" font-size="12" fill="#000">name and the sandbox ID.</text>
+<text x="409" y="936" font-size="12" fill="#000">The plugin checks the run row in msb.db: same VM, same pid, status Running. It returns</text>
+<text x="409" y="953" font-size="12" fill="#000">the VM name and the sandbox ID.</text>
 <text x="385" y="979" font-size="12" font-weight="bold" fill="#000">4</text>
 <text x="409" y="979" font-size="12" fill="#000">The agent matches the VM entry. It sends the SVID and the key to the delegate. A refusal</text>
 <text x="409" y="996" font-size="12" fill="#000">is zero SVIDs.</text>
