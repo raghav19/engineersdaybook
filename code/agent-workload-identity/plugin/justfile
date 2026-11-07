@@ -1,0 +1,18 @@
+# The msbvm plugin. Run `just` in this folder.
+
+default:
+    @just --list
+
+# Run the unit tests.
+test:
+    go test ./...
+
+# Build the binary into build/ and print its sha256. The agent config needs the checksum as plugin_checksum.
+build:
+    mkdir -p build
+    go build -o build/msbvm .
+    sha256sum build/msbvm
+
+# Run the test against the real msb.db and the VM sandbox-dev. It only reads.
+integration:
+    MSBVM_INTEGRATION=1 go test -count=1 -v -run TestRealVM ./internal/attestor

@@ -77,3 +77,13 @@ func bootTime(statPath string) (int64, error) {
 	}
 	return 0, fmt.Errorf("no btime line in %s", statPath)
 }
+
+// Exe returns the target of the link <procRoot>/<pid>/exe.
+func Exe(procRoot string, pid int) (string, error) {
+	return os.Readlink(filepath.Join(procRoot, strconv.Itoa(pid), "exe"))
+}
+
+// Cmdline returns the raw content of <procRoot>/<pid>/cmdline.
+func Cmdline(procRoot string, pid int) ([]byte, error) {
+	return os.ReadFile(filepath.Join(procRoot, strconv.Itoa(pid), "cmdline"))
+}
