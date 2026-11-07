@@ -13,6 +13,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 
 	_ "modernc.org/sqlite" // the driver of database/sql, no cgo
 )
@@ -20,42 +21,46 @@ import (
 // testedMsbVersion is the msb version whose tables the tests assume.
 const testedMsbVersion = "0.7.13"
 
+// The query of the plugin. It gives the name and the ID of the VM that runs as
+// one pid. If there are several rows for a pid, for example one old and one
+// new, the newest row wins.
+const runningVM = `SELECT s.name, s.id FROM run r JOIN sandbox s ON s.id = r.sandbox_id
+	WHERE r.pid = ? AND r.status = 'Running' ORDER BY r.id DESC LIMIT 1`
+
 // open opens msb.db read-only. It does not read the file yet.
 func open(path string) (*sql.DB, error) {
 	return sql.Open("sqlite", "file:"+path+"?mode=ro")
 }
 
-// checkTables runs the real query of the plugin and asks for no rows. It
-// fails if the file cannot be read, or if a table or a column is missing.
+// checkTables runs the query of the plugin once. It fails if the file cannot be
+// read, or if a table or a column is missing.
 func checkTables(ctx context.Context, path string) error {
 	db, err := open(path)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	rows, err := db.QueryContext(ctx, `SELECT s.id, s.name, r.pid, r.status
-		FROM run r JOIN sandbox s ON s.id = r.sandbox_id LIMIT 0`)
-	if err != nil {
+	if err := db.QueryRowContext(ctx, runningVM, 0).Scan(new(string), new(int)); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	return rows.Close()
+	return nil
 }
 
-// isRunning reports whether msb.db has a "run" row of the VM with this ID and
-// name, with this pid and the status Running.
-func isRunning(ctx context.Context, path, id, name string, pid int) (bool, error) {
+// lookup returns the name and the sandbox ID of the VM that runs as this pid.
+// It returns found=false if msb.db has no running row for the pid.
+func lookup(ctx context.Context, path string, pid int) (name, id string, found bool, err error) {
 	db, err := open(path)
 	if err != nil {
-		return false, err
+		return "", "", false, err
 	}
 	defer db.Close()
-	var one int
-	err = db.QueryRowContext(ctx,
-		`SELECT 1 FROM run r JOIN sandbox s ON s.id = r.sandbox_id
-		 WHERE s.id = ? AND s.name = ? AND r.pid = ? AND r.status = 'Running'`,
-		id, name, pid).Scan(&one)
+	var sandboxID int
+	err = db.QueryRowContext(ctx, runningVM, pid).Scan(&name, &sandboxID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
+		return "", "", false, nil
 	}
-	return err == nil, err
+	if err != nil {
+		return "", "", false, err
+	}
+	return name, strconv.Itoa(sandboxID), true, nil
 }

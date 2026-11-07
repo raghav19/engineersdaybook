@@ -14,7 +14,7 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 - The agent runs its workload attestors on the pid. `unix` gives the uid. `msbvm` gives the VM name and the sandbox ID.
 - The entry of the VM has the selectors `msbvm:name:<vm>` and `unix:uid:<uid>`. Its parent is the node entry.
 - The agent returns the SVID and the key to the delegate. The VM never sees them.
-- `msbvm` reads the name and the ID from the command line of the VMM. It checks them against the `run` row in `msb.db`. The row must have the same VM, the same pid and the status Running.
+- `msbvm` checks that the exe of the process is `msb`. Then it reads the name and the ID of the VM from the `run` row in `msb.db` that has this pid and the status Running.
 
 ## Considered options
 

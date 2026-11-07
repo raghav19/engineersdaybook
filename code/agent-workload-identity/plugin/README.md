@@ -6,25 +6,25 @@ Read the [workload attestation guide](../docs/workload-attestation.md) for the d
 
 ## What it does
 
-`Attest` does three checks on the pid:
+`Attest` does two checks on the pid:
 
-1. The exe of the process is `msb`. The plugin reads the kernel link `/proc/<pid>/exe`. A process cannot change this link.
-2. The command line is `msb machine --name <vm> --sandbox-id <id> ...`.
-3. `msb.db` has a `run` row of this VM with the same pid and the status `Running`. Only `msb` writes this row.
+1. The exe of the process is `msb`. The plugin reads the kernel link `/proc/<pid>/exe`. A process cannot change this link. This check protects against a stale row in `msb.db` whose pid another process now uses.
+2. `msb.db` has a `run` row with this pid and the status `Running`. Only `msb` writes this row. The row gives the name and the sandbox ID of the VM.
 
 The result:
 
-- All three checks pass: it returns `name:<vm>` and `id:<sandbox-id>`.
-- The process is not a VMM, or it ended: it returns no selectors and no error. Most processes on the host are like this.
-- The process is a VMM, but `msb.db` has no running row for it: it returns the error `PermissionDenied`. This can mean a fake process or a wrong pid.
+- Both checks pass: it returns `name:<vm>` and `id:<sandbox-id>`.
+- A check fails, or the process ended: it returns no selectors and no error. Most processes on the host are like this.
+- `msb.db` cannot be read: it returns the error `Internal`.
 
 In every refusal, the agent returns zero SVIDs to the delegate.
 
-The plugin is the one part that verifies the pid. The delegate only guesses the pid and checks the ID of the answer.
+The plugin is the one part that verifies the pid. The delegate only guesses the pid and checks the ID of the answer. The delegate finds a pid from a name. The plugin finds a name from a pid. The database has both.
 
 ## What it does not check
 
-The plugin does not compare the start time of the process with the start time in `msb.db`. That check needed about 150 lines of code and tests, and it was not deterministic. The three checks above are enough for the risks of this design. A stale `Running` row plus a reused pid is the only case that the start time would catch. That case also needs a process of the same user that runs `msb machine` with the right name and ID. The delegate checks the ID of the SVID that comes back.
+- **The command line.** The row has the name and the ID, so the plugin does not parse the command line.
+- **The start time.** The plugin does not compare the start time of the process with the start time in `msb.db`. That check needed about 150 lines of code and tests, and it was not deterministic. A stale `Running` row plus a reused pid is the only case that it would catch. The exe check and the check of the ID in the delegate cover most of that case.
 
 ## Configuration
 
@@ -60,5 +60,4 @@ We tested the plugin with `msb` 0.7.13. The tables `sandbox` and `run` are inter
 
 - `main.go`: starts the plugin.
 - `plugin.go`: `Configure` and `Attest`.
-- `vmm.go`: reads the exe and the command line of a process.
-- `msbdb.go`: reads `msb.db`.
+- `msbdb.go`: the query on `msb.db`.

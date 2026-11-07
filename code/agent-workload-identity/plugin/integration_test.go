@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	workloadattestorv1 "github.com/spiffe/spire-plugin-sdk/proto/spire/plugin/agent/workloadattestor/v1"
@@ -45,7 +47,7 @@ func TestRealVM(t *testing.T) {
 	t.Logf("pid %d gave the selectors %v", pid, resp.SelectorValues)
 }
 
-// realVMMPid scans the real /proc with the parser of the plugin.
+// realVMMPid scans the real /proc for the process "msb machine --name <name>".
 func realVMMPid(t *testing.T, name string) int {
 	t.Helper()
 	entries, err := os.ReadDir("/proc")
@@ -58,14 +60,15 @@ func realVMMPid(t *testing.T, name string) int {
 			continue
 		}
 		exe, err := os.Readlink(filepath.Join("/proc", e.Name(), "exe"))
-		if err != nil {
+		if err != nil || filepath.Base(exe) != "msb" {
 			continue
 		}
 		cmdline, err := os.ReadFile(filepath.Join("/proc", e.Name(), "cmdline"))
 		if err != nil {
 			continue
 		}
-		if n, _, ok := parseVMM(exe, cmdline); ok && n == name {
+		args := strings.Split(string(cmdline), "\x00")
+		if i := slices.Index(args, "--name"); i >= 0 && i+1 < len(args) && args[i+1] == name {
 			return pid
 		}
 	}

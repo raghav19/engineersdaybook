@@ -57,7 +57,7 @@ func newMsbDB(t *testing.T, runs []run) string {
 
 // fakeProc writes a fake /proc with one process. exe is the target of the
 // link /proc/<pid>/exe. An empty exe means that the process has no exe link.
-func fakeProc(t *testing.T, pid int, exe string, args ...string) string {
+func fakeProc(t *testing.T, pid int, exe string) string {
 	t.Helper()
 	root := t.TempDir()
 	dir := filepath.Join(root, strconv.Itoa(pid))
@@ -68,13 +68,6 @@ func fakeProc(t *testing.T, pid int, exe string, args ...string) string {
 		if err := os.Symlink(exe, filepath.Join(dir, "exe")); err != nil {
 			t.Fatal(err)
 		}
-	}
-	cmdline := ""
-	for _, a := range args {
-		cmdline += a + "\x00"
-	}
-	if err := os.WriteFile(filepath.Join(dir, "cmdline"), []byte(cmdline), 0o644); err != nil {
-		t.Fatal(err)
 	}
 	return root
 }
@@ -90,42 +83,55 @@ func configured(t *testing.T, procRoot, dbPath string) *Plugin {
 
 func TestAttest(t *testing.T) {
 	const pid = 4242
-	vmm := []string{"/opt/msb", "machine", "--name", "vm-a", "--sandbox-id", "184"}
-	goodRun := run{184, "vm-a", pid, "Running"}
+	running := run{184, "vm-a", pid, "Running"}
 
 	tests := []struct {
-		name      string
-		exe       string
-		args      []string
-		runs      []run
-		want      []string   // selectors
-		wantError codes.Code // codes.OK means no error
+		name string
+		exe  string
+		runs []run
+		want []string // selectors, nil for none
 	}{
-		{name: "a VMM with a running row", exe: "/opt/msb", args: vmm, runs: []run{goodRun}, want: []string{"name:vm-a", "id:184"}},
-		{name: "the process is gone", exe: "", args: vmm, runs: []run{goodRun}},
-		{name: "exe is not msb", exe: "/bin/sleep", args: vmm, runs: []run{goodRun}},
-		{name: "msb with another subcommand", exe: "/opt/msb", args: []string{"/opt/msb", "run", "--name", "vm-a"}, runs: []run{goodRun}},
-		{name: "machine without a sandbox ID", exe: "/opt/msb", args: []string{"/opt/msb", "machine", "--name", "vm-a"}, runs: []run{goodRun}},
-		{name: "a name that is another flag finds no row", exe: "/opt/msb", args: []string{"/opt/msb", "machine", "--name", "--sandbox-id", "184"}, runs: []run{goodRun}, wantError: codes.PermissionDenied},
-		{name: "no row at all", exe: "/opt/msb", args: vmm, wantError: codes.PermissionDenied},
-		{name: "row has another pid", exe: "/opt/msb", args: vmm, runs: []run{{184, "vm-a", pid + 1, "Running"}}, wantError: codes.PermissionDenied},
-		{name: "row has another sandbox ID", exe: "/opt/msb", args: vmm, runs: []run{{185, "vm-a", pid, "Running"}}, wantError: codes.PermissionDenied},
-		{name: "row has another VM name", exe: "/opt/msb", args: vmm, runs: []run{{184, "vm-b", pid, "Running"}}, wantError: codes.PermissionDenied},
-		{name: "row is stopped", exe: "/opt/msb", args: vmm, runs: []run{{184, "vm-a", pid, "Stopped"}}, wantError: codes.PermissionDenied},
+		{name: "msb with a running row", exe: "/opt/msb", runs: []run{running}, want: []string{"name:vm-a", "id:184"}},
+		{name: "the name and the ID come from the row", exe: "/opt/msb", runs: []run{{7, "other", pid, "Running"}}, want: []string{"name:other", "id:7"}},
+		{name: "the newest row of the pid wins", exe: "/opt/msb", runs: []run{{3, "old-vm", pid, "Running"}, running}, want: []string{"name:vm-a", "id:184"}},
+		{name: "a stopped row is ignored", exe: "/opt/msb", runs: []run{{3, "old-vm", pid, "Stopped"}, running}, want: []string{"name:vm-a", "id:184"}},
+		{name: "the process is gone", exe: "", runs: []run{running}},
+		{name: "exe is not msb, although the row exists", exe: "/bin/sleep", runs: []run{running}},
+		{name: "exe name only ends with msb", exe: "/opt/xmsb", runs: []run{running}},
+		{name: "msb, but no row at all", exe: "/opt/msb"},
+		{name: "msb, but the row has another pid", exe: "/opt/msb", runs: []run{{184, "vm-a", pid + 1, "Running"}}},
+		{name: "msb, but the row is stopped", exe: "/opt/msb", runs: []run{{184, "vm-a", pid, "Stopped"}}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p := configured(t, fakeProc(t, pid, tc.exe, tc.args...), newMsbDB(t, tc.runs))
+			p := configured(t, fakeProc(t, pid, tc.exe), newMsbDB(t, tc.runs))
 
 			resp, err := p.Attest(t.Context(), &workloadattestorv1.AttestRequest{Pid: pid})
 
-			if got := status.Code(err); got != tc.wantError {
-				t.Fatalf("Attest() error = %v (code %v), want code %v", err, got, tc.wantError)
+			if err != nil {
+				t.Fatalf("Attest() = %v", err)
 			}
-			if err == nil && !reflect.DeepEqual(resp.SelectorValues, tc.want) {
+			if !reflect.DeepEqual(resp.SelectorValues, tc.want) {
 				t.Errorf("selectors = %v, want %v", resp.SelectorValues, tc.want)
 			}
 		})
+	}
+}
+
+// If msb changes its tables after the start, Attest fails with an error. The
+// agent logs it, and it returns zero SVIDs.
+func TestAttestDatabaseError(t *testing.T) {
+	const pid = 4242
+	db := newMsbDB(t, nil)
+	p := configured(t, fakeProc(t, pid, "/opt/msb"), db)
+	if err := os.Remove(db); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := p.Attest(t.Context(), &workloadattestorv1.AttestRequest{Pid: pid})
+
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("error = %v, want code Internal", err)
 	}
 }
 

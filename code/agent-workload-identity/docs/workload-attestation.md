@@ -84,7 +84,7 @@ sequenceDiagram
     Note over A: attests the delegate, checks authorized_delegates
     D->>A: pid of the VMM
     A->>P: attest the pid
-    P->>V: read exe and command line
+    P->>V: read the exe
     P->>DB: read the run row
     P-->>A: name and sandbox ID
     A-->>D: SVID and key, or zero SVIDs
@@ -92,18 +92,18 @@ sequenceDiagram
 
 The pid is the input. It is not a selector, because it changes at each start. The agent runs the `unix` attestor and the `msbvm` plugin on the pid. Then it matches the VM entry.
 
-The plugin needs three checks to agree:
+The plugin does two checks:
 
 ```mermaid
 flowchart TD
     pid["Pid from the delegate"] --> c1{"Exe is msb?"}
     c1 -->|no| refuse["No selectors.<br/>The agent returns zero SVIDs."]
-    c1 -->|yes| c2{"Command line is msb machine<br/>with --name and --sandbox-id?"}
+    c1 -->|yes| c2{"msb.db has a run row<br/>with this pid and<br/>the status Running?"}
     c2 -->|no| refuse
-    c2 -->|yes| c3{"The run row has the same VM,<br/>the same pid and<br/>the status Running?"}
-    c3 -->|no| refuse
-    c3 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID"]
+    c2 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID<br/>(both from the row)"]
 ```
+
+The name and the ID come from the row, not from the command line of the process. The exe check protects against a stale row whose pid another process now uses.
 
 A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate also checks that the SVID has the ID that it expected. So a pid that changed between the request and the answer cannot give the delegate a wrong identity.
 
@@ -132,7 +132,7 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - **A delegate holds the key.** The VM is the workload, and the key must stay outside the VM.
 - **The agent runs on the host.** It can read `/proc` and the database of `msb`. An agent in the VM cannot.
 - **The input is a pid.** The agent attests a pid with its own attestors. With selectors only, the delegate alone says which VM it is.
-- **The plugin checks the `run` row.** A fake `msb` can copy the exe name and the command line. It cannot make a `run` row.
+- **The plugin reads the `run` row.** A fake `msb` can copy the exe name and the command line. It cannot make a `run` row. The row also gives the name and the ID, so the plugin does not parse the command line.
 - **The Delegated Identity API, not the Broker API.** The Broker API is experimental in 1.15.5.
 - **One agent for each user.** The API does not limit a delegate to certain VMs.
 - **The plugin is in Go.** The SPIRE plugin SDK is Go only.

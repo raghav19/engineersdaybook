@@ -66,14 +66,17 @@ func (p *Plugin) Configure(ctx context.Context, req *configv1.ConfigureRequest) 
 	return &configv1.ConfigureResponse{}, nil
 }
 
-// Attest turns a pid into selectors.
+// Attest turns a pid into selectors. It does two checks:
 //
-// It returns no selectors, and no error, for a process that is not a VMM or
-// that has ended. Most processes on the host are like this. The agent calls
-// all its attestors for each pid.
+//  1. The exe of the process is msb. The kernel link /proc/<pid>/exe tells the
+//     real program. A process cannot change it. This check protects against a
+//     stale row in msb.db whose pid another process now uses.
+//  2. msb.db has a running row for the pid. The row gives the name and the
+//     sandbox ID of the VM.
 //
-// It returns an error when the process is a VMM but msb.db does not list it as
-// running. This can mean a stale row, a fake process, or a wrong pid.
+// If a check fails, Attest returns no selectors and no error. Most processes on
+// the host are like this. The agent calls all its attestors for each pid. The
+// agent then returns zero SVIDs to the delegate.
 func (p *Plugin) Attest(ctx context.Context, req *workloadattestorv1.AttestRequest) (*workloadattestorv1.AttestResponse, error) {
 	p.mu.RLock()
 	dbPath := p.dbPath
@@ -82,24 +85,19 @@ func (p *Plugin) Attest(ctx context.Context, req *workloadattestorv1.AttestReque
 		return nil, status.Error(codes.FailedPrecondition, "the plugin is not configured")
 	}
 
-	// Checks 1 and 2: the exe and the command line. If a read fails, for example
-	// because the process has ended, the value is empty. An empty value is never
-	// a VMM, so parseVMM returns ok=false and the code needs no error branch.
-	pid := strconv.Itoa(int(req.Pid))
-	exe, _ := os.Readlink(filepath.Join(p.procRoot, pid, "exe"))
-	cmdline, _ := os.ReadFile(filepath.Join(p.procRoot, pid, "cmdline"))
-	name, id, ok := parseVMM(exe, cmdline)
-	if !ok {
+	// If the read fails, for example because the process has ended, exe is
+	// empty, and an empty exe is not msb.
+	exe, _ := os.Readlink(filepath.Join(p.procRoot, strconv.Itoa(int(req.Pid)), "exe"))
+	if filepath.Base(exe) != "msb" {
 		return &workloadattestorv1.AttestResponse{}, nil
 	}
 
-	// Check 3: msb itself must say that this pid runs this VM.
-	running, err := isRunning(ctx, dbPath, id, name, int(req.Pid))
+	name, id, found, err := lookup(ctx, dbPath, int(req.Pid))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "read msb.db: %v", err)
 	}
-	if !running {
-		return nil, status.Errorf(codes.PermissionDenied, "msb.db has no running row for the VM %q (ID %s) with pid %s", name, id, pid)
+	if !found {
+		return &workloadattestorv1.AttestResponse{}, nil
 	}
 	return &workloadattestorv1.AttestResponse{SelectorValues: []string{"name:" + name, "id:" + id}}, nil
 }

@@ -62,14 +62,14 @@
 <circle cx="285.0" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
 <text x="285.0" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">4</text>
 <text x="305.0" y="515.0" font-size="12" fill="#000">SVID and key</text>
-<rect x="467.0" y="497.0" width="132.4" height="26" rx="13" fill="#ffffff"/>
+<rect x="467.0" y="497.0" width="139.2" height="26" rx="13" fill="#ffffff"/>
 <circle cx="480.0" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
 <text x="480.0" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">2</text>
-<text x="500.0" y="515.0" font-size="12" fill="#000">reads the VMM</text>
-<rect x="703.2" y="497.0" width="166.4" height="26" rx="13" fill="#ffffff"/>
+<text x="500.0" y="515.0" font-size="12" fill="#000">checks the exe</text>
+<rect x="703.2" y="497.0" width="159.6" height="26" rx="13" fill="#ffffff"/>
 <circle cx="716.2" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
 <text x="716.2" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">3</text>
-<text x="736.2" y="515.0" font-size="12" fill="#000">checks the run row</text>
+<text x="736.2" y="515.0" font-size="12" fill="#000">reads the run row</text>
 <rect x="20" y="754" width="1060" height="266" rx="14" fill="#ffffff" stroke="#666666" stroke-width="1.5"/>
 <text x="40" y="784" font-size="15" font-weight="bold" fill="#000">Flow</text>
 <text x="40" y="816" font-size="14" font-weight="bold" fill="#000">Prerequisites, once</text>
@@ -87,11 +87,11 @@
 <text x="409" y="850" font-size="12" fill="#000">The delegate connects to admin.sock and sends the pid of the VMM. The agent checks that</text>
 <text x="409" y="867" font-size="12" fill="#000">the caller is the delegate.</text>
 <text x="385" y="893" font-size="12" font-weight="bold" fill="#000">2</text>
-<text x="409" y="893" font-size="12" fill="#000">The agent runs the unix attestor and the msbvm plugin on the pid. The plugin reads the</text>
-<text x="409" y="910" font-size="12" fill="#000">exe and the command line of the VMM.</text>
+<text x="409" y="893" font-size="12" fill="#000">The agent runs the unix attestor and the msbvm plugin on the pid. The plugin checks that</text>
+<text x="409" y="910" font-size="12" fill="#000">the exe is msb.</text>
 <text x="385" y="936" font-size="12" font-weight="bold" fill="#000">3</text>
-<text x="409" y="936" font-size="12" fill="#000">The plugin checks the run row in msb.db: same VM, same pid, status Running. It returns</text>
-<text x="409" y="953" font-size="12" fill="#000">the VM name and the sandbox ID.</text>
+<text x="409" y="936" font-size="12" fill="#000">The plugin reads the run row of the pid in msb.db. The row gives the VM name and the</text>
+<text x="409" y="953" font-size="12" fill="#000">sandbox ID.</text>
 <text x="385" y="979" font-size="12" font-weight="bold" fill="#000">4</text>
 <text x="409" y="979" font-size="12" fill="#000">The agent matches the VM entry. It sends the SVID and the key to the delegate. A refusal</text>
 <text x="409" y="996" font-size="12" fill="#000">is zero SVIDs.</text>
