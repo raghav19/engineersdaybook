@@ -1,3 +1,11 @@
+// File agent.go talks to the SPIRE agent.
+//
+// The SPIRE agent has an admin socket, admin.sock. A program in the list
+// authorized_delegates of the agent can call the Delegated Identity API on it.
+// The delegate sends the pid of the VMM. The agent attests that process with
+// its own attestors, and it answers with the SVIDs of the entries that match.
+// An SVID is the short-lived certificate of a SPIFFE ID. The answer also holds
+// the private key of each SVID.
 package main
 
 import (
@@ -23,13 +31,14 @@ var (
 
 // svid is one SVID with its private key. The delegate holds it in memory.
 type svid struct {
-	id       string
-	notAfter time.Time
-	chain    [][]byte // DER certificates, leaf first
-	key      []byte   // DER PKCS#8
+	id       string    // the SPIFFE ID, for example spiffe://mcp.local/node/n/user/u/vm/v
+	notAfter time.Time // the end of the life of the SVID
+	chain    [][]byte  // DER certificates, leaf first
+	key      []byte    // DER PKCS#8
 }
 
-// Format prints the SVID without the key, for all verbs.
+// Format prints the SVID without the key, for all verbs. A call such as
+// fmt.Println(svid) cannot leak the key by mistake.
 func (s svid) Format(f fmt.State, _ rune) {
 	fmt.Fprintf(f, "svid{id: %s, notAfter: %s}", s.id, s.notAfter.UTC().Format(time.RFC3339))
 }
@@ -40,12 +49,17 @@ func (s svid) Format(f fmt.State, _ rune) {
 // takes the first one, and it fails if there is none. This check is the
 // delegate's own. The agent does not know which VM the delegate meant.
 func fetchSVID(ctx context.Context, socket string, pid int, wantID string) (*svid, error) {
+	// Connect to admin.sock. The socket is a local Unix socket. The operating
+	// system controls who can open it, so the connection has no TLS.
 	conn, err := grpc.NewClient("unix:"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("connect to agent: %w", err)
 	}
 	defer conn.Close()
 
+	// SubscribeToX509SVIDs is a stream. The agent can send new answers when it
+	// renews an SVID. This delegate reads the first answer only. The cancel
+	// below ends the stream.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel() // ends the stream
 	stream, err := delegatedidentityv1.NewDelegatedIdentityClient(conn).
@@ -54,15 +68,20 @@ func fetchSVID(ctx context.Context, socket string, pid int, wantID string) (*svi
 		return nil, fmt.Errorf("subscribe to SVIDs: %w", err)
 	}
 	resp, err := stream.Recv()
+	// The agent can end the stream with no answer. This also means a refusal.
 	if errors.Is(err, io.EOF) {
 		return nil, errRefused
 	}
 	if err != nil {
 		return nil, fmt.Errorf("read SVIDs: %w", err)
 	}
+	// An answer with no SVID is the refusal of the agent. It is not a gRPC
+	// error. The caller must treat it as a failure.
 	if len(resp.GetX509Svids()) == 0 {
 		return nil, errRefused
 	}
+	// The agent answers with the SVIDs of all entries that match the process.
+	// Look at each one. The first one is not always the one that we asked for.
 	var got []string
 	for _, in := range resp.GetX509Svids() {
 		id := "spiffe://" + in.GetX509Svid().GetId().GetTrustDomain() + in.GetX509Svid().GetId().GetPath()
@@ -76,5 +95,7 @@ func fetchSVID(ctx context.Context, socket string, pid int, wantID string) (*svi
 		}
 		got = append(got, id)
 	}
+	// No SVID has the expected ID. The agent answered about a process that is
+	// not the VM that we meant. Report both IDs, so that the cause is clear.
 	return nil, fmt.Errorf("%w %s, the agent returned: %s", errIDMismatch, wantID, strings.Join(got, ", "))
 }
