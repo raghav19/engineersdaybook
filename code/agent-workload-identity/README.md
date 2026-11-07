@@ -13,11 +13,11 @@ The ID has three parts: `spiffe://mcp.local/node/sandbox-dev/user/<user>/vm/<vm-
 
 ## Status
 
-Design and spike only. This project has no code yet. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
+The `msbvm` plugin and the delegate are in this repo, with unit tests. The host agent config, the registration entries and the end-to-end test are not. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
 
 ## How to start
 
-Nothing runs yet. Read the docs in this order:
+Read the docs in this order. Then run the tests of each part, as the README of the part says.
 
 1. [`CONTEXT.md`](CONTEXT.md) defines the terms.
 2. [Workload attestation of the microVM](docs/workload-attestation.md) explains the model, the parts and the flow.
@@ -29,9 +29,9 @@ Nothing runs yet. Read the docs in this order:
 
 [Part 3: MCP guardrails](../mcp-sandbox/part-3-mcp-guardrails/README.md) owns the cluster side. That is the SPIRE server, the node CA, the node certificate, the node entry and the gateway rule. The [node attestation guide](../mcp-sandbox/part-3-mcp-guardrails/docs/node-attestation.md) explains the first link, the attestation of the node.
 
-## Where the parts will go
+## Where the parts are
 
-- `plugin/`: the `msbvm` workload attestor, in Go.
-- `delegate/`: the delegate, in Go.
-- `agent/`: the config of the host SPIRE agent.
-- `tests/`: the end-to-end check.
+- [`plugin/`](plugin/README.md): the `msbvm` workload attestor, in Go.
+- [`delegate/`](delegate/README.md): the delegate, in Go.
+- `agent/` (not yet): the config of the host SPIRE agent.
+- `tests/` (not yet): the end-to-end check.
