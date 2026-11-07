@@ -7,9 +7,9 @@
 <text x="32" y="68.0" font-size="14" fill="#000">k3s cluster</text>
 <rect x="40" y="96" width="470" height="96" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
 <text x="275.0" y="119.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">Registration entries</text>
-<text x="275.0" y="139.0" font-size="12" text-anchor="middle" fill="#000">node entry sandbox-dev (exists)</text>
-<text x="275.0" y="159.0" font-size="12" text-anchor="middle" fill="#000">delegate entry (not built)</text>
-<text x="275.0" y="179.0" font-size="12" text-anchor="middle" fill="#000">VM entry: msbvm:name, unix:uid (not built)</text>
+<text x="275.0" y="139.0" font-size="12" text-anchor="middle" fill="#000">node entry sandbox-dev</text>
+<text x="275.0" y="159.0" font-size="12" text-anchor="middle" fill="#000">delegate entry</text>
+<text x="275.0" y="179.0" font-size="12" text-anchor="middle" fill="#000">VM entry: msbvm:name, unix:uid</text>
 <rect x="720" y="96" width="340" height="96" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
 <text x="890.0" y="129.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">SPIRE server</text>
 <text x="890.0" y="149.0" font-size="12" text-anchor="middle" fill="#000">trust domain mcp.local</text>
@@ -66,18 +66,17 @@
 <text x="40" y="808" font-size="15" font-weight="bold" fill="#000">Flow</text>
 <text x="40" y="840" font-size="14" font-weight="bold" fill="#000">Prerequisites, once</text>
 <text x="40" y="874" font-size="12" font-weight="bold" fill="#000">a</text>
-<text x="64" y="874" font-size="12" fill="#000">Flux applies the entries from git.</text>
-<text x="64" y="891" font-size="12" fill="#000">The controller manager copies them to</text>
-<text x="64" y="908" font-size="12" fill="#000">the server. The node entry exists.</text>
-<text x="64" y="925" font-size="12" fill="#000">The delegate entry and the VM entry</text>
-<text x="64" y="942" font-size="12" fill="#000">are not built.</text>
-<text x="40" y="968" font-size="12" font-weight="bold" fill="#000">b</text>
-<text x="64" y="968" font-size="12" fill="#000">The host agent attests with x509pop.</text>
-<text x="64" y="985" font-size="12" fill="#000">Its config loads the msbvm plugin</text>
-<text x="64" y="1002" font-size="12" fill="#000">(path and checksum) and sets</text>
-<text x="64" y="1019" font-size="12" fill="#000">admin.sock. The server sends the</text>
-<text x="64" y="1036" font-size="12" fill="#000">entries of the node. The agent mints</text>
-<text x="64" y="1053" font-size="12" fill="#000">their SVIDs.</text>
+<text x="64" y="874" font-size="12" fill="#000">Flux applies the node entry, the</text>
+<text x="64" y="891" font-size="12" fill="#000">delegate entry and the VM entry from</text>
+<text x="64" y="908" font-size="12" fill="#000">git. The controller manager copies</text>
+<text x="64" y="925" font-size="12" fill="#000">them to the server.</text>
+<text x="40" y="951" font-size="12" font-weight="bold" fill="#000">b</text>
+<text x="64" y="951" font-size="12" fill="#000">The host agent attests with x509pop.</text>
+<text x="64" y="968" font-size="12" fill="#000">Its config loads the msbvm plugin</text>
+<text x="64" y="985" font-size="12" fill="#000">(path and checksum) and sets</text>
+<text x="64" y="1002" font-size="12" fill="#000">admin.sock. The server sends the</text>
+<text x="64" y="1019" font-size="12" fill="#000">entries of the node. The agent mints</text>
+<text x="64" y="1036" font-size="12" fill="#000">their SVIDs.</text>
 <text x="385" y="840" font-size="14" font-weight="bold" fill="#000">Each time a VM needs its SVID</text>
 <text x="385" y="874" font-size="12" font-weight="bold" fill="#000">1</text>
 <text x="409" y="874" font-size="12" fill="#000">The delegate connects to admin.sock</text>
@@ -100,9 +99,8 @@
 <text x="730" y="891" font-size="12" fill="#000">the agent.</text>
 <text x="730" y="917" font-size="12" fill="#000">The pid is an input, not a selector. It</text>
 <text x="730" y="934" font-size="12" fill="#000">changes at each start.</text>
-<text x="730" y="960" font-size="12" fill="#000">The agent SVID lives 4 hours. The life</text>
-<text x="730" y="977" font-size="12" fill="#000">of the VM SVID is not tested.</text>
+<text x="730" y="960" font-size="12" fill="#000">The server default for the life of an</text>
+<text x="730" y="977" font-size="12" fill="#000">SVID is 4 hours.</text>
 <text x="730" y="1003" font-size="12" fill="#000">The ID: spiffe://mcp.local/node/sandbox-</text>
 <text x="730" y="1020" font-size="12" fill="#000">dev/user/&lt;user&gt;/vm/&lt;vm&gt;</text>
-<text x="730" y="1046" font-size="12" fill="#000">The orange boxes are not built yet.</text>
 </svg>
