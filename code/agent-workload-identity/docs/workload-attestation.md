@@ -20,7 +20,7 @@ The ID has three parts: the node, the user and the VM. Example: `spiffe://mcp.lo
 
 ![Agent workload identity of the microVM: the host agent, the delegate and the msbvm plugin](diagrams/agent-workload-identity.svg)
 
-The letters a and b are the prerequisites. They happen once. The numbers 1 to 4 happen each time a VM needs its SVID. The panel below the diagram repeats the steps in words. The orange parts are the ones that we write.
+The letters a and b are the prerequisites. They happen once. The numbers 1 to 4 happen each time a VM needs its SVID. The panel below the diagram repeats the steps in words. The orange parts are the ones that we write. The diagram shows the parts and their names only. The flows below show the details.
 
 ## The cast
 
@@ -41,6 +41,18 @@ On the host:
 - **`msb.db`.** It is the database of `msb`. Each start of a VM adds a `run` row with the pid and the start time.
 
 In the microVM: no part of this flow. The VM holds no key and has no socket of the agent. The agent in the VM from the node attestation stays for now. ADR 0001 lists its fate as an open decision.
+
+### The entries
+
+The entries make a tree. The node entry is the parent of the other two. The agent config lists the ID of the delegate.
+
+```mermaid
+flowchart TD
+    srv["SPIRE server"] -->|parent of| node["Node entry<br/>spiffe://mcp.local/node/sandbox-dev<br/>selectors: x509pop CN sandbox-dev<br/>and URI SAN github-id raghav19"]
+    node -->|parent of| del["Delegate entry<br/>selectors: unix uid<br/>and unix path of the delegate binary"]
+    node -->|parent of| vm["VM entry<br/>ID ends with user/raghav19/vm/VM-NAME<br/>selectors: msbvm name VM-NAME<br/>and unix uid"]
+    cfg["Agent config:<br/>authorized_delegates"] -->|lists the ID of| del
+```
 
 ## The flow in three phases
 
@@ -78,7 +90,20 @@ sequenceDiagram
     A-->>D: SVID and key, or zero SVIDs
 ```
 
-The pid is the input. It is not a selector, because it changes at each start. The plugin needs three checks to agree. The exe is `msb`. The command line names the VM. The `run` row has the same pid and start time. The agent also runs the `unix` attestor on the pid. Then it matches the VM entry.
+The pid is the input. It is not a selector, because it changes at each start. The agent runs the `unix` attestor and the `msbvm` plugin on the pid. Then it matches the VM entry.
+
+The plugin needs three checks to agree:
+
+```mermaid
+flowchart TD
+    pid["Pid from the delegate"] --> c1{"Exe is msb?"}
+    c1 -->|no| refuse["No selectors.<br/>The agent returns zero SVIDs."]
+    c1 -->|yes| c2{"Command line is msb machine<br/>with --name and --sandbox-id?"}
+    c2 -->|no| refuse
+    c2 -->|yes| c3{"The run row has the same pid,<br/>status Running and a start time<br/>that matches /proc?"}
+    c3 -->|no| refuse
+    c3 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID"]
+```
 
 A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate must also hold a `pidfd`, so that a recycled pid is never sent.
 
