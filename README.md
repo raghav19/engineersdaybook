@@ -19,6 +19,7 @@ This repo holds my engineering projects and write-ups. Each project is independe
 | Project | What it achieves |
 |---|---|
 | [zero trust: node attestation](code/mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-node-attestation.md) | The sandbox microVM proves who it is to a SPIRE server before anyone trusts it. This is the first guardrail of part 3. It follows the zero trust rule of no implicit trust. |
+| [agent workload identity](code/agent-workload-identity/README.md) | Gives each agent microVM its own SPIFFE ID, with the private key on the host. Design and spike only. No code yet. |
 
 ## GitOps
 
