@@ -1,0 +1,8 @@
+# The end-to-end test. Run `just` in this folder.
+
+default:
+    @just --list
+
+# Test the plugin and the delegate with a throwaway SPIRE server and agent on this host.
+e2e:
+    ./e2e.sh

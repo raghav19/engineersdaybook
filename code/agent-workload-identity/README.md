@@ -13,7 +13,7 @@ The ID has three parts: `spiffe://mcp.local/node/sandbox-dev/user/<user>/vm/<vm-
 
 ## Status
 
-The `msbvm` plugin and the delegate are in this repo, with unit tests. The host agent config, the registration entries and the end-to-end test are not. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
+The `msbvm` plugin and the delegate are in this repo, with unit tests. The registration entries are in part 3. An end-to-end test runs the plugin and the delegate with a real SPIRE agent. The host agent config for the real cluster is not here yet. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
 
 ## How to start
 
@@ -33,5 +33,5 @@ Read the docs in this order. Then run the tests of each part, as the README of t
 
 - [`plugin/`](plugin/README.md): the `msbvm` workload attestor, in Go.
 - [`delegate/`](delegate/README.md): the delegate, in Go.
+- [`tests/`](tests/README.md): the end-to-end test with a throwaway SPIRE server and agent.
 - `agent/` (not yet): the config of the host SPIRE agent.
-- `tests/` (not yet): the end-to-end check.

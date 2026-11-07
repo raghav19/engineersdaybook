@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin, the delegate, the delegate entry, the VM entry and an end-to-end test are in this repo. The host agent config for the real cluster is not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -28,8 +28,8 @@ In the cluster (k3s):
 
 - **SPIRE server.** It keeps the registration entries and issues the SVIDs. It checks the node with `x509pop`.
 - **Node entry `sandbox-node`.** It gives the attested node the ID `spiffe://mcp.local/node/sandbox-dev`. It is the parent of the other entries. It exists.
-- **Delegate entry.** It gives the delegate its own ID. It does not exist yet.
-- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`. It does not exist yet.
+- **Delegate entry.** It gives the delegate its own ID.
+- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`.
 
 On the host:
 
@@ -162,8 +162,10 @@ The code of the parts:
 
 - `msbvm` plugin: [`plugin/`](../plugin/README.md)
 - Delegate: [`delegate/`](../delegate/README.md)
+- Delegate entry and VM entry: [`delegate-entry.yaml`](../../mcp-sandbox/part-3-mcp-guardrails/platform/addons/spire/delegate-entry.yaml), [`vm-entry.yaml`](../../mcp-sandbox/part-3-mcp-guardrails/platform/addons/spire/vm-entry.yaml)
+- End-to-end test: [`tests/`](../tests/README.md)
 
-These folders do not exist yet: `agent/` and `tests/`. They are in the [README](../README.md).
+The folder `agent/` does not exist yet. It is in the [README](../README.md).
 
 ## What comes next
 
