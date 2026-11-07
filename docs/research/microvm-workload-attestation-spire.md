@@ -2,9 +2,9 @@
 
 Question: How can a SPIRE agent attest a microVM as the workload? The microVM runs on Firecracker, Kata Containers, libkrun, Cloud Hypervisor or Microsandbox. The SPIFFE ID must bind to VM properties that the platform assigns (a VM name or ID). It must not bind to a process on the host.
 
-Source: SPIRE docs and source at tag `v1.15.5` (read on raw.githubusercontent.com). Also the SPIRE plugin SDK, the SPIRE agent API SDK, and the SPIFFE Workload Endpoint and Broker specs. Also the Kata Containers and Firecracker docs, and SPIRE GitHub issues. Research date: 2026-11-06. Local repo state: `main` at `c6a9dc2`.
+Source: SPIRE docs and source at tag `v1.15.5` (read on raw.githubusercontent.com). Also the SPIRE plugin SDK, the SPIRE agent API SDK, and the SPIFFE Workload Endpoint and Broker specs. Also the Kata Containers and Firecracker docs, and SPIRE GitHub issues. Research date: 2026-11-06. Local repo state: `main` at `c6a9dc2`. Update of 2026-11-07: the section "Spike results" adds the results of a test on the host.
 
-Evidence tags: **[spire-doc]** is a file in `spiffe/spire/doc/` at `v1.15.5`. **[spire-src]** is Go source in `spiffe/spire` at `v1.15.5`. **[sdk]** is a file in `spiffe/spire-plugin-sdk` or `spiffe/spire-api-sdk` (branch `main`). **[spiffe-spec]** is a spec in `spiffe/spiffe` (branch `main`). **[kata]** is a doc in `kata-containers/kata-containers`. **[firecracker]** is a doc in `firecracker-microvm/firecracker`. **[vmm-doc]** is a doc or header in another VMM repo, read on raw.githubusercontent.com. **[issue]** is a GitHub issue. **[secondary]** is a blog or talk (none used). **[inference]** is my own conclusion.
+Evidence tags: **[spike]** is a result in the spike handoff `code/mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md`. The spike ran on the host with a throwaway SPIRE server on localhost. It did not use the cluster. **[spire-doc]** is a file in `spiffe/spire/doc/` at `v1.15.5`. **[spire-src]** is Go source in `spiffe/spire` at `v1.15.5`. **[sdk]** is a file in `spiffe/spire-plugin-sdk` or `spiffe/spire-api-sdk` (branch `main`). **[spiffe-spec]** is a spec in `spiffe/spiffe` (branch `main`). **[kata]** is a doc in `kata-containers/kata-containers`. **[firecracker]** is a doc in `firecracker-microvm/firecracker`. **[vmm-doc]** is a doc or header in another VMM repo, read on raw.githubusercontent.com. **[issue]** is a GitHub issue. **[secondary]** is a blog or talk (none used). **[inference]** is my own conclusion.
 
 ## Verdict
 
@@ -15,6 +15,57 @@ Evidence tags: **[spire-doc]** is a file in `spiffe/spire/doc/` at `v1.15.5`. **
 5. Today, the lowest cost step is a systemd unit or scope per VM. The selector `systemd:id:<unit>` then carries the VM name. It still describes a host process, but the launcher controls the name. [spire-doc] [inference]
 6. No Kata, Firecracker or SPIRE source that I read gives a SPIFFE identity to a microVM. The one SPIRE issue on this topic closed as stale with no design. [issue]
 7. The Broker API is experimental in 1.15.5. The SPIRE doc says that breaking changes can come. [spire-doc]
+
+Update of 2026-11-07: the spike tested option (d) with a PID, and a plugin of option (b) that maps the PID to the VM. It worked on the host. The spike chose option (d) with a PID, and not option (e). It also corrected verdict 5. See the next section.
+
+## Spike results
+
+The spike used msb 0.7.13 and SPIRE 1.15.5 on the host. It tested the Delegated Identity API with a PID. A custom workload attestor `msbvm` mapped the PID to the VM name and the sandbox ID. It did not test the options (c) and (e). [spike]
+
+### Tests
+
+- T1: the delegate sent the PID of the real VMM. The SVID of the VM came back, and the key parsed as ECDSA.
+- T2: the delegate sent a PID that is not a VMM. The agent returned zero SVIDs.
+- T3: the same delegate binary ran from another path. The agent answered `PermissionDenied: no identity issued`.
+- T4: a fake `msb` with the same exe name and command line. The agent returned zero SVIDs, because the plugin found no `run` row in `msb.db`.
+- T5: the real VMM again. The same SVID came back.
+
+### Open questions that the spike closed
+
+- `msb inspect` shows the name, `created_at`, the image digest and a `config-sha` label. It shows no VM ID, no PID and no start time.
+- The VMM is the process `msb machine --name <vm> --sandbox-id <id>`. Its parent is `systemd --user`. It has no child process.
+- The VMM is also the network proxy of the VM. It holds the `msb` sockets `agent.sock` and `control.sock` under `~/.microsandbox/run/sandboxes/`.
+- The plugin reads the name and the ID from the command line of the VMM. The `run` row in `msb.db` (PID, status, `started_at`) only checks them. `started_at` matches the start time in `/proc` within 5 ms.
+- Each start of the VM adds a `run` row. The `sandbox` ID is an autoincrement value.
+- The Delegated Identity API accepted a PID and ran the workload attestors on it. The attestors were `unix` and `msbvm`.
+
+### Claims that the spike corrected
+
+- Verdict 5 and option (a): the VMM has no cgroup scope of its own. It runs in the scope of the terminal. The system D-Bus returns `user@1000.service` for its PID. So the `systemd` attestor cannot name the VM today. Option (a) needs a change in how `msb` starts the VMM.
+- Option (b): the note said that a PID to VM link was not checked. The link exists: the command line of the VMM, and the `run` row.
+- Option (d): the spike used a PID, and not a selector. The question of a selector that no plugin produces is still open.
+
+### New facts
+
+- A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure.
+- The admin socket must be in a different folder from the Workload API socket. The agent refuses to start otherwise.
+- The API does not limit a delegate to certain VMs. On a host with many users, use one agent for each user.
+- The Delegated Identity API runs on a local Unix socket only. The delegate must run on the same host as the agent.
+- The agent mints the SVIDs of all entries of its node at start. The server is not involved when a delegate calls.
+- The delegate has its own entry, and the agent mints an SVID for it. The `admin.sock` call does not deliver that SVID.
+- A `join_token` agent cannot attest again. The spike agent used the `memory` key manager and warned about this. The real setup uses `x509pop`.
+- The plugin depends on the `run` and `sandbox` tables of msb 0.7.13. These tables are internal and can change.
+- A recycled PID is a risk. The spike has no `pidfd`. A real delegate must hold a `pidfd`.
+
+### Not tested
+
+- The `x509pop` attestation of the host agent against the cluster server, and the alias parent.
+- Two agents with the same node certificate. The agent IDs can clash.
+- The delegate that gets its own SVID with a second call to `agent.sock`.
+- The use of the SVID for mTLS to the gateway. The spike only parsed it.
+- A stop and start of the VM.
+- `tpm_devid`, and whether the agent user can open the TPM.
+- Whether agentgateway can read a URI SAN in a rule.
 
 ## 1. SPIRE workload attestor plugins
 
@@ -174,6 +225,8 @@ Your constraints: the SPIRE agent on the host, the key on the host, one SPIFFE I
 5. (c) costs one agent per VM and moves the binding to the node identity.
 
 ## Gaps and conflicts
+
+The gaps below are from 2026-11-06. The spike closed some of them. Read the section "Spike results" first.
 
 - I did not run `spire-agent`, a plugin, or any VMM. All claims come from reading.
 - I did not confirm that the agent accepts a selector type that no loaded plugin produces in the Delegated Identity API. I did not confirm that the Broker API passes a custom `type_url` end to end in 1.15.5. I read the code paths only.
