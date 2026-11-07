@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1186" viewBox="0 0 1100 1186" font-family="DejaVu Sans, Verdana, Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>
+<rect width="1100" height="1186" fill="#ffffff"/>
+<text x="20" y="28" font-size="22" font-weight="bold" fill="#000">Agent workload identity of the microVM</text>
+<rect x="20" y="50" width="1060" height="162" rx="14" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="20" y1="76" x2="1080" y2="76" stroke="#666666" stroke-width="1.5"/>
+<text x="32" y="68.0" font-size="14" fill="#000">k3s cluster</text>
+<rect x="40" y="96" width="470" height="96" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="275.0" y="119.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">Registration entries</text>
+<text x="275.0" y="139.0" font-size="12" text-anchor="middle" fill="#000">node entry</text>
+<text x="275.0" y="159.0" font-size="12" text-anchor="middle" fill="#000">delegate entry</text>
+<text x="275.0" y="179.0" font-size="12" text-anchor="middle" fill="#000">VM entry</text>
+<rect x="720" y="96" width="340" height="96" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="890.0" y="139.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">SPIRE server</text>
+<text x="890.0" y="159.0" font-size="12" text-anchor="middle" fill="#000">trust domain mcp.local</text>
+<rect x="20" y="292" width="1060" height="422" rx="14" fill="#f5f5f5" stroke="#666666" stroke-width="1.5"/>
+<line x1="20" y1="318" x2="1080" y2="318" stroke="#666666" stroke-width="1.5"/>
+<text x="32" y="310.0" font-size="14" fill="#000">Host</text>
+<rect x="40" y="338" width="1020" height="142" rx="14" fill="#ffffff" stroke="#6c8ebf" stroke-width="1.5"/>
+<line x1="40" y1="368" x2="1060" y2="368" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="52" y="358.0" font-size="14" fill="#000">Host SPIRE agent</text>
+<rect x="60" y="384" width="300" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="210.0" y="417.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">Delegated Identity API</text>
+<text x="210.0" y="437.0" font-size="12" text-anchor="middle" fill="#000">on admin.sock</text>
+<rect x="390" y="384" width="300" height="76" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="540.0" y="417.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">msbvm plugin</text>
+<text x="540.0" y="437.0" font-size="12" text-anchor="middle" fill="#000">pid to VM name and sandbox ID</text>
+<rect x="720" y="384" width="300" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="870.0" y="417.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">unix attestor</text>
+<text x="870.0" y="437.0" font-size="12" text-anchor="middle" fill="#000">pid to uid</text>
+<rect x="60" y="560" width="300" height="76" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="210.0" y="593.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">Delegate</text>
+<text x="210.0" y="613.0" font-size="12" text-anchor="middle" fill="#000">holds the SVID and the key</text>
+<rect x="400" y="560" width="330" height="130" rx="14" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<line x1="400" y1="590" x2="730" y2="590" stroke="#d6b656" stroke-width="1.5"/>
+<text x="412" y="580.0" font-size="14" fill="#000">VMM: msb machine</text>
+<rect x="420" y="606" width="290" height="64" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="565.0" y="633.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">microVM</text>
+<text x="565.0" y="653.0" font-size="12" text-anchor="middle" fill="#000">holds no key</text>
+<rect x="800" y="560" width="260" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="930.0" y="593.0" font-size="14" text-anchor="middle" fill="#000" font-weight="bold">msb.db</text>
+<text x="930.0" y="613.0" font-size="12" text-anchor="middle" fill="#000">run row: pid, start time</text>
+<path d="M510.0,144.0 L720.0,144.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M890.0,338.0 L890.0,192.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)" marker-start="url(#ar)"/>
+<path d="M135.0,560.0 L135.0,460.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M285.0,460.0 L285.0,560.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M480.0,460.0 L480.0,560.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
+<path d="M645.0,460.0 L645.0,500.0 Q645.0,510.0 655.0,510.0 L920.0,510.0 Q930.0,510.0 930.0,520.0 L930.0,560.0" fill="none" stroke="#000" stroke-width="1.8" marker-end="url(#ar)"/>
+<rect x="549.5" y="131.0" width="152.8" height="26" rx="13" fill="#ffffff"/>
+<circle cx="562.5" cy="144.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="562.5" y="149.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">a</text>
+<text x="582.5" y="149.0" font-size="12" fill="#000">entries from git</text>
+<rect x="877.0" y="252.0" width="173.2" height="26" rx="13" fill="#ffffff"/>
+<circle cx="890.0" cy="265.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="890.0" y="270.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">b</text>
+<text x="910.0" y="270.0" font-size="12" fill="#000">attest, get entries</text>
+<rect x="122.0" y="497.0" width="139.2" height="26" rx="13" fill="#ffffff"/>
+<circle cx="135.0" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="135.0" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">1</text>
+<text x="155.0" y="515.0" font-size="12" fill="#000">pid of the VMM</text>
+<rect x="272.0" y="497.0" width="125.6" height="26" rx="13" fill="#ffffff"/>
+<circle cx="285.0" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="285.0" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">4</text>
+<text x="305.0" y="515.0" font-size="12" fill="#000">SVID and key</text>
+<rect x="467.0" y="497.0" width="132.4" height="26" rx="13" fill="#ffffff"/>
+<circle cx="480.0" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="480.0" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">2</text>
+<text x="500.0" y="515.0" font-size="12" fill="#000">reads the VMM</text>
+<rect x="703.2" y="497.0" width="166.4" height="26" rx="13" fill="#ffffff"/>
+<circle cx="716.2" cy="510.0" r="13" fill="#ffffff" stroke="#000" stroke-width="1"/>
+<text x="716.2" y="515.0" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">3</text>
+<text x="736.2" y="515.0" font-size="12" fill="#000">checks the run row</text>
+<rect x="20" y="754" width="1060" height="266" rx="14" fill="#ffffff" stroke="#666666" stroke-width="1.5"/>
+<text x="40" y="784" font-size="15" font-weight="bold" fill="#000">Flow</text>
+<text x="40" y="816" font-size="14" font-weight="bold" fill="#000">Prerequisites, once</text>
+<text x="40" y="850" font-size="12" font-weight="bold" fill="#000">a</text>
+<text x="64" y="850" font-size="12" fill="#000">Flux applies the three entries from git.</text>
+<text x="64" y="867" font-size="12" fill="#000">The controller manager copies them to the</text>
+<text x="64" y="884" font-size="12" fill="#000">SPIRE server.</text>
+<text x="40" y="910" font-size="12" font-weight="bold" fill="#000">b</text>
+<text x="64" y="910" font-size="12" fill="#000">The host agent attests to the server with</text>
+<text x="64" y="927" font-size="12" fill="#000">x509pop. The server sends it the entries of</text>
+<text x="64" y="944" font-size="12" fill="#000">its node. The agent loads the msbvm plugin</text>
+<text x="64" y="961" font-size="12" fill="#000">and opens admin.sock.</text>
+<text x="385" y="816" font-size="14" font-weight="bold" fill="#000">Each time a VM needs its SVID</text>
+<text x="385" y="850" font-size="12" font-weight="bold" fill="#000">1</text>
+<text x="409" y="850" font-size="12" fill="#000">The delegate connects to admin.sock and sends the pid of the VMM. The agent checks that</text>
+<text x="409" y="867" font-size="12" fill="#000">the caller is the delegate.</text>
+<text x="385" y="893" font-size="12" font-weight="bold" fill="#000">2</text>
+<text x="409" y="893" font-size="12" fill="#000">The agent runs the unix attestor and the msbvm plugin on the pid. The plugin reads the</text>
+<text x="409" y="910" font-size="12" fill="#000">exe and the command line of the VMM.</text>
+<text x="385" y="936" font-size="12" font-weight="bold" fill="#000">3</text>
+<text x="409" y="936" font-size="12" fill="#000">The plugin checks the run row in msb.db: same pid, same start time. It returns the VM</text>
+<text x="409" y="953" font-size="12" fill="#000">name and the sandbox ID.</text>
+<text x="385" y="979" font-size="12" font-weight="bold" fill="#000">4</text>
+<text x="409" y="979" font-size="12" fill="#000">The agent matches the VM entry. It sends the SVID and the key to the delegate. A refusal</text>
+<text x="409" y="996" font-size="12" fill="#000">is zero SVIDs.</text>
+<rect x="20" y="1040" width="1060" height="126" rx="14" fill="#ffffff" stroke="#666666" stroke-width="1.5"/>
+<text x="40" y="1070" font-size="15" font-weight="bold" fill="#000">Legend</text>
+<rect x="40" y="1084" width="28" height="18" rx="5" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+<text x="78" y="1098" font-size="12" fill="#000">Identity service</text>
+<rect x="300" y="1084" width="28" height="18" rx="5" fill="#ffe6cc" stroke="#d79b00" stroke-width="1.5"/>
+<text x="338" y="1098" font-size="12" fill="#000">Custom code</text>
+<rect x="560" y="1084" width="28" height="18" rx="5" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+<text x="598" y="1098" font-size="12" fill="#000">Platform runtime</text>
+<rect x="820" y="1084" width="28" height="18" rx="5" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+<text x="858" y="1098" font-size="12" fill="#000">Workload</text>
+<circle cx="51" cy="1135" r="11" fill="#ffffff" stroke="#000" stroke-width="1.2"/>
+<text x="51" y="1139.5" font-size="13" font-weight="bold" text-anchor="middle" fill="#000">a</text>
+<text x="72" y="1139" font-size="12" fill="#000">Setup step, once</text>
+<circle cx="311" cy="1135" r="11" fill="#ffffff" stroke="#000" stroke-width="1.2"/>
+<text x="311" y="1139.5" font-size="13" font-weight="bold" text-anchor="middle" fill="#000">1</text>
+<text x="332" y="1139" font-size="12" fill="#000">Step of each request</text>
+<path d="M562,1135 L612,1135" stroke="#000" stroke-width="1.8" marker-start="url(#ar)" marker-end="url(#ar)"/>
+<text x="624" y="1139" font-size="12" fill="#000">Both directions</text>
+</svg>

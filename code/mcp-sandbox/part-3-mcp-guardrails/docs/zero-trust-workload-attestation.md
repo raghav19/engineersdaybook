@@ -1,5 +1,7 @@
 # Zero trust: workload attestation
 
+> **This design is replaced.** The microVM, and not Envoy, is now the workload. Its key stays on the host. Read [Workload attestation of the microVM](../../../agent-workload-identity/docs/workload-attestation.md). This document and its diagram `workload-attestation` show the old Envoy design.
+
 > **The enroll flow is not on main.** `spire.py`, the `dev-tools` kit and the Envoy config belong to the Docker sbx sandbox. They are in the git tag [`docker-sbx`](https://github.com/raghav19/engineersdaybook/tree/docker-sbx). Run the commands below from a checkout of that tag. A later change ports the flow to the msb sandbox (`.msb/`).
 
 ## 1. What workload attestation is

@@ -189,4 +189,4 @@ A leaked key needs a forced rotation. Delete the Secret `sandbox-node-tls`, then
 
 ## What comes next
 
-After the node attestation, the agent can issue SVIDs to the workloads of the VM. This is the workload attestation. Read [Zero trust: workload attestation](zero-trust-workload-attestation.md).
+After the node attestation, the agent can issue SVIDs to the workloads of the VM. This is the workload attestation. Read [Workload attestation of the microVM](../../../agent-workload-identity/docs/workload-attestation.md).
