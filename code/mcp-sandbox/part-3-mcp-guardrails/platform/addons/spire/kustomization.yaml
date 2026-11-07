@@ -3,6 +3,7 @@ kind: Kustomization
 # The SPIRE addon: its namespace, the CRD chart (crds.yaml) and the spire chart (spire.yaml), both installed by Flux as a HelmRelease.
 # It also holds the CA of the node attestor and the ConfigMap with its certificate (node-ca.yaml), made by cert-manager and trust-manager (trust-manager.yaml).
 # It also holds the node certificate of the microVM (node-certificate.yaml) and its node entry (node-entry.yaml). One folder, one artifact.
+# It also holds the delegate entry (delegate-entry.yaml) and the VM entry (vm-entry.yaml) of the agent workload identity, both children of the node entry.
 resources:
   - namespace.yaml
   - crds.yaml
@@ -11,3 +12,5 @@ resources:
   - node-certificate.yaml
   - trust-manager.yaml
   - node-entry.yaml
+  - delegate-entry.yaml
+  - vm-entry.yaml
