@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. No part of it is in this repo as code yet. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs are in `.msb/`. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -14,7 +14,7 @@ The lists and the diagrams are narrow on purpose. They read well in the GitHub m
 4. A plugin, `msbvm`, turns the pid into the VM name and the sandbox ID. It uses facts that `msb` records.
 5. The agent matches an entry. It gives the SVID and the key to the delegate. The VM never sees them.
 
-The ID has three parts: the node, the user and the VM. Example: `spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/<vm-name>`.
+The ID has three parts: the node, the user and the VM. The node is the host. Its name is the host name of the machine. Example: `spiffe://mcp.local/node/omarchy/user/raghav19/vm/<vm-name>`.
 
 ## The picture
 
@@ -27,9 +27,12 @@ The letters a and b are the prerequisites. They happen once. The numbers 1 to 4 
 In the cluster (k3s):
 
 - **SPIRE server.** It keeps the registration entries and issues the SVIDs. It checks the node with `x509pop`.
-- **Node entry `sandbox-node`.** It gives the attested node the ID `spiffe://mcp.local/node/sandbox-dev`. It is the parent of the other entries. It exists.
-- **Delegate entry.** It gives the delegate its own ID. It does not exist yet.
-- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`. It does not exist yet.
+- **Node certificate of the host.** cert-manager makes it. The host agent attests with it. `just msb host-register` asks for it.
+- **Node entry.** It gives the attested host the ID `spiffe://mcp.local/node/<host-name>`. It is the parent of the other entries of this host. `just msb host-register` creates it.
+- **Delegate entry.** It gives the delegate its own ID. `just msb host-register` creates it.
+- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`. `just msb vm-register` creates it.
+
+The agent in the VM has an older node entry, `sandbox-node`, with the ID `spiffe://mcp.local/node/sandbox-dev`. It stays until you retire that agent. See [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md).
 
 On the host:
 
@@ -38,7 +41,7 @@ On the host:
 - **`msbvm` plugin.** It is a Go plugin that we write. It turns a pid into the VM name and the sandbox ID.
 - **Delegate.** It is a Go program that we write. It sends the pid and holds the SVID and the key.
 - **VMM.** It is the process `msb machine --name <vm> --sandbox-id <id>`. It runs one microVM.
-- **`msb.db`.** It is the database of `msb`. Each start of a VM adds a `run` row with the pid and the start time.
+- **`msb.db`.** It is the database of `msb`. Each start of a VM adds a `run` row with the pid and the status.
 
 In the microVM: no part of this flow. The VM holds no key and has no socket of the agent. The agent in the VM from the node attestation stays for now. ADR 0001 lists its fate as an open decision.
 
@@ -48,7 +51,7 @@ The entries make a tree. The node entry is the parent of the other two. The agen
 
 ```mermaid
 flowchart TD
-    srv["SPIRE server"] -->|parent of| node["Node entry<br/>spiffe://mcp.local/node/sandbox-dev<br/>selectors: x509pop CN sandbox-dev<br/>and URI SAN github-id raghav19"]
+    srv["SPIRE server"] -->|parent of| node["Node entry<br/>spiffe://mcp.local/node/HOST-NAME<br/>selectors: x509pop CN HOST-NAME<br/>and URI SAN github-id raghav19"]
     node -->|parent of| del["Delegate entry<br/>selectors: unix uid<br/>and unix path of the delegate binary"]
     node -->|parent of| vm["VM entry<br/>ID ends with user/raghav19/vm/VM-NAME<br/>selectors: msbvm name VM-NAME<br/>and unix uid"]
     cfg["Agent config:<br/>authorized_delegates"] -->|lists the ID of| del
@@ -60,14 +63,16 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    a["Node key and certificate on the host"] --> b["Host agent attests with x509pop"]
-    b --> c["Server gives the node entry ID"]
-    d["Delegate entry and VM entry in git"] --> e["Flux applies them. The controller manager copies them to the server."]
-    c --> f["Agent gets the entries of its node and mints their SVIDs"]
+    a["just msb host-register:<br/>node certificate, node entry,<br/>delegate entry"] --> b["Node key and certificate<br/>on the host"]
+    b --> c["Host agent attests with x509pop"]
+    c --> d["Server gives the node entry ID"]
+    g["just msb vm-register:<br/>VM entry"] --> e["The controller manager copies<br/>the entries to the server"]
+    a --> e
+    d --> f["Agent gets the entries of its node<br/>and mints their SVIDs"]
     e --> f
 ```
 
-The host agent attests with `x509pop`, as the VM agent does today. Which certificate it uses is an open decision. The entries are objects in git, like the node entry. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
+The host agent attests with `x509pop` and the node certificate that `host-register` made. The entries of the host and of the VMs are not in git. The host creates them with `kubectl`, from templates in `.msb/k3s/`, with the host name and the VM name. [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md) gives the reasons. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
 
 The agent config loads the `msbvm` plugin with `plugin_cmd` and `plugin_checksum`. It also sets `admin_socket_path` and `authorized_delegates`. The admin socket must be in a different folder from the Workload API socket. The agent refuses to start otherwise.
 
@@ -84,7 +89,7 @@ sequenceDiagram
     Note over A: attests the delegate, checks authorized_delegates
     D->>A: pid of the VMM
     A->>P: attest the pid
-    P->>V: read exe and command line
+    P->>V: read the exe
     P->>DB: read the run row
     P-->>A: name and sandbox ID
     A-->>D: SVID and key, or zero SVIDs
@@ -92,20 +97,20 @@ sequenceDiagram
 
 The pid is the input. It is not a selector, because it changes at each start. The agent runs the `unix` attestor and the `msbvm` plugin on the pid. Then it matches the VM entry.
 
-The plugin needs three checks to agree:
+The plugin does two checks:
 
 ```mermaid
 flowchart TD
     pid["Pid from the delegate"] --> c1{"Exe is msb?"}
     c1 -->|no| refuse["No selectors.<br/>The agent returns zero SVIDs."]
-    c1 -->|yes| c2{"Command line is msb machine<br/>with --name and --sandbox-id?"}
+    c1 -->|yes| c2{"msb.db has a run row<br/>with this pid and<br/>the status Running?"}
     c2 -->|no| refuse
-    c2 -->|yes| c3{"The run row has the same pid,<br/>status Running and a start time<br/>that matches /proc?"}
-    c3 -->|no| refuse
-    c3 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID"]
+    c2 -->|yes| ok["Selectors name:VM-NAME<br/>and id:SANDBOX-ID<br/>(both from the row)"]
 ```
 
-A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate must also hold a `pidfd`, so that a recycled pid is never sent.
+The name and the ID come from the row, not from the command line of the process. The exe check protects against a stale row whose pid another process now uses.
+
+A refusal is an empty response with zero SVIDs. It is not an error. The delegate must treat zero SVIDs as a failure. The delegate also checks that the SVID has the ID that it expected. So a pid that changed between the request and the answer cannot give the delegate a wrong identity.
 
 The spike proved this phase with five tests. The real VMM got its SVID. A pid that is not a VMM got zero SVIDs. A fake `msb` with the same exe name and command line got zero SVIDs, because it has no `run` row.
 
@@ -132,7 +137,7 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - **A delegate holds the key.** The VM is the workload, and the key must stay outside the VM.
 - **The agent runs on the host.** It can read `/proc` and the database of `msb`. An agent in the VM cannot.
 - **The input is a pid.** The agent attests a pid with its own attestors. With selectors only, the delegate alone says which VM it is.
-- **The plugin checks the `run` row.** A fake `msb` can copy the exe name and the command line. It cannot make a `run` row.
+- **The plugin reads the `run` row.** A fake `msb` can copy the exe name and the command line. It cannot make a `run` row. The row also gives the name and the ID, so the plugin does not parse the command line.
 - **The Delegated Identity API, not the Broker API.** The Broker API is experimental in 1.15.5.
 - **One agent for each user.** The API does not limit a delegate to certain VMs.
 - **The plugin is in Go.** The SPIRE plugin SDK is Go only.
@@ -147,7 +152,7 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - **Delegated Identity API** lets a trusted program ask the agent for the SVID of another workload. The agent serves it on `admin.sock`.
 - **`authorized_delegates`** is the list of SPIFFE IDs that may call the Delegated Identity API.
 - **Sandbox ID** is the number that `msb` gives to a VM. It is in the command line of the VMM and in `msb.db`.
-- **`run` row** is the record of one start of a VM in `msb.db`. It has the pid, the status and the start time.
+- **`run` row** is the record of one start of a VM in `msb.db`. It has the pid, the status and other fields. The plugin reads the pid and the status.
 - **`pidfd`** is a handle to a process. It stays valid when another process gets the same pid number.
 
 ## Where each part is in the repo
@@ -158,7 +163,12 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 - Config of the agent in the VM: [`.msb/image/configs/spire/spire-agent.conf`](../../../.msb/image/configs/spire/spire-agent.conf)
 - Spike code (not production code): [the spike handoff](../../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md)
 
-These folders do not exist yet: `plugin/`, `delegate/`, `agent/` and `tests/`. They are in the [README](../README.md).
+The code of the parts:
+
+- `msbvm` plugin: [`plugin/`](../plugin/README.md)
+- Delegate: [`delegate/`](../delegate/README.md)
+
+These folders do not exist yet: `agent/` and `tests/`. They are in the [README](../README.md).
 
 ## What comes next
 

@@ -1,0 +1,57 @@
+# The registration of this host with the SPIRE server. The host applies this file: `just msb host-register`.
+# Flux must not apply it. The VM cannot change it: its token is read-only (sandbox-agent-rbac.yaml). Only a person with the kubeconfig of the host can register an identity.
+# The values come from the host. envsubst fills them in:
+#   MSB_NODE       the host name in lower case. It is the name of the node in the SPIRE server.
+#   MSB_GITHUB_ID  the GitHub login of the owner of the host.
+#   MSB_UID        the uid of the host user that runs the VMM and the delegate.
+#   DELEGATE_PATH  the absolute path of the delegate binary.
+# The file has three objects:
+#   1. The node certificate of the host. cert-manager makes the key pair and the certificate, and the node CA signs it (node-ca.yaml in the spire addon).
+#      The host SPIRE agent attests with them (x509pop). The CN and the URI SAN are the two selectors of the node entry below. Keep them equal.
+#   2. The node entry. It gives the host agent the ID spiffe://mcp.local/node/<host name>. It is the parent of all other entries of this host.
+#   3. The delegate entry. It gives the delegate its own ID. The agent config lists this ID in authorized_delegates.
+# Each microVM has its own registration: vm-registration.yaml.
+# shortcut: the trust domain mcp.local is written out here and in node-ca.yaml. Change both together.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: host-node-${MSB_NODE}
+  namespace: spire-system
+spec:
+  secretName: host-node-${MSB_NODE}-tls
+  commonName: ${MSB_NODE}
+  uris:
+    - x509pop://mcp.local/github-id/${MSB_GITHUB_ID}
+  usages:
+    - digital signature
+  duration: 2160h
+  renewBefore: 720h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    kind: Issuer
+    name: node-ca
+---
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata:
+  name: node-${MSB_NODE}
+spec:
+  parentID: spiffe://mcp.local/spire/server
+  spiffeID: spiffe://mcp.local/node/${MSB_NODE}
+  selectors:
+    - x509pop:subject:cn:${MSB_NODE}
+    - x509pop:san:github-id:${MSB_GITHUB_ID}
+---
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata:
+  name: delegate-${MSB_NODE}
+spec:
+  parentID: spiffe://mcp.local/node/${MSB_NODE}
+  spiffeID: spiffe://mcp.local/node/${MSB_NODE}/user/${MSB_GITHUB_ID}/delegate
+  selectors:
+    - unix:uid:${MSB_UID}
+    - unix:path:${DELEGATE_PATH}

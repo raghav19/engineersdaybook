@@ -35,7 +35,7 @@ The command never prints, logs or writes the private key. The type `svid` also h
 Example output:
 
 ```text
-spiffe_id=spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/sandbox-dev
+spiffe_id=spiffe://mcp.local/node/omarchy/user/raghav19/vm/sandbox-dev
 not_after=2026-11-07T12:00:00Z
 ```
 
@@ -44,7 +44,7 @@ not_after=2026-11-07T12:00:00Z
 ```text
 cd code/agent-workload-identity/delegate
 go build -o delegate .
-./delegate -vm sandbox-dev -id spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/sandbox-dev -socket <admin-socket>
+./delegate -vm sandbox-dev -id spiffe://mcp.local/node/omarchy/user/raghav19/vm/sandbox-dev -socket <admin-socket>
 ```
 
 ## Tests
