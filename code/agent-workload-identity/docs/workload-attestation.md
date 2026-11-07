@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs are in `.msb/`. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -14,7 +14,7 @@ The lists and the diagrams are narrow on purpose. They read well in the GitHub m
 4. A plugin, `msbvm`, turns the pid into the VM name and the sandbox ID. It uses facts that `msb` records.
 5. The agent matches an entry. It gives the SVID and the key to the delegate. The VM never sees them.
 
-The ID has three parts: the node, the user and the VM. Example: `spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/<vm-name>`.
+The ID has three parts: the node, the user and the VM. The node is the host. Its name is the host name of the machine. Example: `spiffe://mcp.local/node/omarchy/user/raghav19/vm/<vm-name>`.
 
 ## The picture
 
@@ -27,9 +27,12 @@ The letters a and b are the prerequisites. They happen once. The numbers 1 to 4 
 In the cluster (k3s):
 
 - **SPIRE server.** It keeps the registration entries and issues the SVIDs. It checks the node with `x509pop`.
-- **Node entry `sandbox-node`.** It gives the attested node the ID `spiffe://mcp.local/node/sandbox-dev`. It is the parent of the other entries. It exists.
-- **Delegate entry.** It gives the delegate its own ID. It does not exist yet.
-- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`. It does not exist yet.
+- **Node certificate of the host.** cert-manager makes it. The host agent attests with it. `just msb host-register` asks for it.
+- **Node entry.** It gives the attested host the ID `spiffe://mcp.local/node/<host-name>`. It is the parent of the other entries of this host. `just msb host-register` creates it.
+- **Delegate entry.** It gives the delegate its own ID. `just msb host-register` creates it.
+- **VM entry.** It gives a VM its ID. Its selectors are `msbvm:name:<vm>` and `unix:uid:<uid>`. `just msb vm-register` creates it.
+
+The agent in the VM has an older node entry, `sandbox-node`, with the ID `spiffe://mcp.local/node/sandbox-dev`. It stays until you retire that agent. See [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md).
 
 On the host:
 
@@ -48,7 +51,7 @@ The entries make a tree. The node entry is the parent of the other two. The agen
 
 ```mermaid
 flowchart TD
-    srv["SPIRE server"] -->|parent of| node["Node entry<br/>spiffe://mcp.local/node/sandbox-dev<br/>selectors: x509pop CN sandbox-dev<br/>and URI SAN github-id raghav19"]
+    srv["SPIRE server"] -->|parent of| node["Node entry<br/>spiffe://mcp.local/node/HOST-NAME<br/>selectors: x509pop CN HOST-NAME<br/>and URI SAN github-id raghav19"]
     node -->|parent of| del["Delegate entry<br/>selectors: unix uid<br/>and unix path of the delegate binary"]
     node -->|parent of| vm["VM entry<br/>ID ends with user/raghav19/vm/VM-NAME<br/>selectors: msbvm name VM-NAME<br/>and unix uid"]
     cfg["Agent config:<br/>authorized_delegates"] -->|lists the ID of| del
@@ -60,14 +63,16 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    a["Node key and certificate on the host"] --> b["Host agent attests with x509pop"]
-    b --> c["Server gives the node entry ID"]
-    d["Delegate entry and VM entry in git"] --> e["Flux applies them. The controller manager copies them to the server."]
-    c --> f["Agent gets the entries of its node and mints their SVIDs"]
+    a["just msb host-register:<br/>node certificate, node entry,<br/>delegate entry"] --> b["Node key and certificate<br/>on the host"]
+    b --> c["Host agent attests with x509pop"]
+    c --> d["Server gives the node entry ID"]
+    g["just msb vm-register:<br/>VM entry"] --> e["The controller manager copies<br/>the entries to the server"]
+    a --> e
+    d --> f["Agent gets the entries of its node<br/>and mints their SVIDs"]
     e --> f
 ```
 
-The host agent attests with `x509pop`, as the VM agent does today. Which certificate it uses is an open decision. The entries are objects in git, like the node entry. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
+The host agent attests with `x509pop` and the node certificate that `host-register` made. The entries of the host and of the VMs are not in git. The host creates them with `kubectl`, from templates in `.msb/k3s/`, with the host name and the VM name. [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md) gives the reasons. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
 
 The agent config loads the `msbvm` plugin with `plugin_cmd` and `plugin_checksum`. It also sets `admin_socket_path` and `authorized_delegates`. The admin socket must be in a different folder from the Workload API socket. The agent refuses to start otherwise.
 

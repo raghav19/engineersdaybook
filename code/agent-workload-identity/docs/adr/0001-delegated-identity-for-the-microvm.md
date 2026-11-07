@@ -36,7 +36,7 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 ## Not decided here
 
 - The language of the delegate, and how it finds the pid of the VMM.
-- The node certificate of the host agent, and the fate of the agent in the VM.
+- The fate of the agent in the VM. [ADR 0002](0002-the-host-registers-its-entries-under-its-own-names.md) decides the node certificate of the host agent.
 - What starts the delegate.
 - Whether the delegate needs its own SVID.
 

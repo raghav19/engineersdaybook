@@ -9,6 +9,8 @@
 #   just msb allow-host     allow one more host for the VM.
 #   just msb sync-kubeconfig  make the read-only ServiceAccount of the agent in k3s (before the first run), and give the running VM a token of it.
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
+#   just msb host-register  register this host with the SPIRE server: the node certificate, the node entry and the delegate entry.
+#   just msb vm-register    register the VM with the SPIRE server: its entry. `vm-unregister` and `host-unregister` remove them.
 #   just msb build          build the image after you change a file of image/, push it to ghcr.io, and pin its digest in vm/sandbox.yaml.
 
 set quiet
@@ -21,6 +23,16 @@ export MSB_NAME := 'sandbox-dev'
 export MSB_WORKSPACE := '/home/agent/engineersdaybook'
 # The node identity of the VM (key, certificate, trust bundle). `node-cert` fills it. vm/sandbox.yaml mounts it read-only in the VM.
 export SANDBOX_NODE_DIR := home_directory() / '.config/msb/node'
+
+# The registration of the agent workload identity (k3s/host-registration.yaml and k3s/vm-registration.yaml).
+# MSB_NODE is the name of this host in the SPIRE server: the host name in lower case. A new host registers under its own name.
+export MSB_NODE := lowercase(shell('hostname'))
+# The GitHub login of the owner of the host. k3s/host-registration.yaml puts it in the node certificate and in the IDs.
+export MSB_GITHUB_ID := 'raghav19'
+# The node identity of the host agent (key, certificate, trust bundle). `host-register` fills it.
+export HOST_NODE_DIR := home_directory() / '.config/msb/host-node'
+# Where the delegate binary lives. The delegate entry has this path as a selector, so the agent only accepts the delegate at this path.
+delegate_path := home_directory() / '.local/share/agent-workload-identity/bin/delegate'
 
 # --- Required tools ---
 msb    := require("msb")
@@ -150,6 +162,57 @@ node-cert: _host-only
     chmod 600 "$dir/node.key.new" && chmod 644 "$dir/node.crt.new" "$dir/bundle.json.new"
     for file in node.key node.crt bundle.json; do mv "$dir/$file.new" "$dir/$file"; done
     echo "The node identity is in $dir."
+
+# Fail if the name of the host or of the VM does not fit in a Kubernetes name and in a SPIFFE path.
+[script('bash')]
+_check-names:
+    for n in "$MSB_NODE" "$MSB_NAME"; do
+      [[ "$n" =~ ^[a-z0-9]([-a-z0-9]{0,38}[a-z0-9])?$ ]] || { echo "msb: '$n' is not a valid name. Use 1 to 40 characters: lower case letters, digits and '-'. Start and end with a letter or a digit." >&2; exit 1; }
+    done
+
+# Register this host with the SPIRE server (k3s/host-registration.yaml): the node certificate, the node entry and the delegate entry. Run it once for each host.
+# It waits until the certificate is ready. Then it copies the key, the certificate and the trust bundle to ~/.config/msb/host-node, as `node-cert` does for the VM.
+# The key of this certificate is the key of the host agent. It is a different key and a different node entry than the agent in the VM, so the two agents do not clash.
+# It changes the cluster. kubectl uses the context kube_ctx (KUBE_CONTEXT).
+[script('bash')]
+host-register: _host-only _check-names
+    set -euo pipefail
+    export MSB_UID=$(id -u) DELEGATE_PATH={{ delegate_path }}
+    k() { kubectl --context {{ kube_ctx }} -n spire-system "$@"; }
+    envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_UID $DELEGATE_PATH' < {{ msb_dir }}/k3s/host-registration.yaml | kubectl --context {{ kube_ctx }} apply -f -
+    k wait --for=condition=Ready certificate/host-node-$MSB_NODE --timeout=60s || { echo "msb: the Certificate host-node-$MSB_NODE is not Ready. Is the node CA in the spire addon applied?" >&2; exit 1; }
+    dir=$HOST_NODE_DIR
+    mkdir -p "$dir" && chmod 700 "$dir"
+    k get secret host-node-$MSB_NODE-tls -o 'jsonpath={.data.tls\.key}' | base64 -d > "$dir/node.key.new"
+    k get secret host-node-$MSB_NODE-tls -o 'jsonpath={.data.tls\.crt}' | base64 -d > "$dir/node.crt.new"
+    k exec spire-server-0 -c spire-server -- /opt/spire/bin/spire-server bundle show -format spiffe > "$dir/bundle.json.new"
+    chmod 600 "$dir/node.key.new" && chmod 644 "$dir/node.crt.new" "$dir/bundle.json.new"
+    for file in node.key node.crt bundle.json; do mv "$dir/$file.new" "$dir/$file"; done
+    echo "The host $MSB_NODE is registered. Its node identity is in $dir."
+
+# Remove the registration of this host: the three objects of host-registration.yaml and the Secret with the key. The files in ~/.config/msb/host-node stay.
+[script('bash')]
+host-unregister: _host-only _check-names
+    set -euo pipefail
+    export MSB_UID=$(id -u) DELEGATE_PATH={{ delegate_path }}
+    envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_UID $DELEGATE_PATH' < {{ msb_dir }}/k3s/host-registration.yaml | kubectl --context {{ kube_ctx }} delete --ignore-not-found -f -
+    kubectl --context {{ kube_ctx }} -n spire-system delete secret host-node-$MSB_NODE-tls --ignore-not-found
+
+# Register the VM with the SPIRE server (k3s/vm-registration.yaml): one entry with its name. The node entry of this host (`host-register`) is the parent.
+# The entry matches the VMM of the VM when the delegate sends its pid. It changes the cluster.
+[script('bash')]
+vm-register: _host-only _check-names
+    set -euo pipefail
+    export MSB_UID=$(id -u)
+    envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_NAME $MSB_UID' < {{ msb_dir }}/k3s/vm-registration.yaml | kubectl --context {{ kube_ctx }} apply -f -
+    echo "The VM $MSB_NAME is registered as spiffe://mcp.local/node/$MSB_NODE/user/$MSB_GITHUB_ID/vm/$MSB_NAME."
+
+# Remove the entry of the VM.
+[script('bash')]
+vm-unregister: _host-only _check-names
+    set -euo pipefail
+    export MSB_UID=$(id -u)
+    envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_NAME $MSB_UID' < {{ msb_dir }}/k3s/vm-registration.yaml | kubectl --context {{ kube_ctx }} delete --ignore-not-found -f -
 
 # Add a host to network.allow in vm/sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
