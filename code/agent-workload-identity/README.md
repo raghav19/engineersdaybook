@@ -20,9 +20,10 @@ Design and spike only. This project has no code yet. The spike proved the flow o
 Nothing runs yet. Read the docs in this order:
 
 1. [`CONTEXT.md`](CONTEXT.md) defines the terms.
-2. [ADR 0001](docs/adr/0001-delegated-identity-for-the-microvm.md) records the decision, the rejected options and the open questions.
-3. The [research note](../../docs/research/microvm-workload-attestation-spire.md) has the evidence. Read the section "Spike results".
-4. The [spike handoff](../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md) has the plan in PRs and the spike code.
+2. [Workload attestation of the microVM](docs/workload-attestation.md) explains the model, the parts and the flow.
+3. [ADR 0001](docs/adr/0001-delegated-identity-for-the-microvm.md) records the decision, the rejected options and the open questions.
+4. The [research note](../../docs/research/microvm-workload-attestation-spire.md) has the evidence. Read the section "Spike results".
+5. The [spike handoff](../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md) has the plan in PRs and the spike code.
 
 ## What stays in part 3
 
