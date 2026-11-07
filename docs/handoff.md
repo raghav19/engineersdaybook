@@ -11,6 +11,8 @@ A handoff document lets a fresh session continue a piece of work without the old
 
 ## The list
 
+- **2026-11-07. Agent workload identity of the msb microVM (works on the cluster, parked).** Each microVM gets its own SPIFFE ID, and the key stays on the host. The flow ran on the real cluster: the delegate got the SVID of `sandbox-dev` from the host agent. The document has the PR table, what runs on the host, the decisions, the next steps in order and the lessons. It replaces the two entries about the msb microVM below for this project.
+  Path: [`code/agent-workload-identity/docs/handoff/agent-workload-identity-status.md`](../code/agent-workload-identity/docs/handoff/agent-workload-identity-status.md). Status: active.
 - **2026-11-07. README audit of the projects.** Eight read-only audits checked each README against its project. The research note has the findings. The handoff has the plan of 12 PRs and the open decisions. Two fixes are drafted on branches (`rootless-docker`, `devk8s-kind-wsl2`).
   Path: [`docs/handoff/readme-audit.md`](handoff/readme-audit.md). Research: [`docs/research/readme-audit-2026-11.md`](research/readme-audit-2026-11.md). Status: active.
 - **2026-11-07. Delegated identity for the msb microVM (spike done).** The spike proved the flow on the host. A proxy sends the pid of the VMM to the agent. A custom plugin turns the pid into the VM name and ID. The document has the design, the results, the plan in six PRs and the open decisions.
