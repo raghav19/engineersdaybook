@@ -9,7 +9,7 @@ Each agent microVM gets its own SPIFFE ID. The private key stays on the host, ou
 - A delegate on the host holds the SVID and the key for the VM.
 - The gateway reads the SPIFFE ID and checks the node, the user and the VM.
 
-The ID has three parts: `spiffe://mcp.local/node/sandbox-dev/user/<user>/vm/<vm-name>`.
+The ID has three parts: `spiffe://mcp.local/node/<host-name>/user/<user>/vm/<vm-name>`. The node is the host, and not a VM.
 
 ## Status
 

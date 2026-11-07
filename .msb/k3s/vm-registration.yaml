@@ -1,0 +1,17 @@
+# The registration of one microVM with the SPIRE server. The host applies this file: `just msb vm-register`. `just msb vm-unregister` removes it.
+# Flux must not apply it. The VM cannot change it (see host-registration.yaml).
+# A SPIFFE ID in an entry is a fixed string, and a selector has one exact value. So each VM needs its own entry, and the host creates it with the VM.
+# envsubst fills in four values. MSB_NODE is the host name. MSB_GITHUB_ID is the GitHub login. MSB_NAME is the name of the VM. MSB_UID is the uid of the host user that runs the VMM.
+# The entry matches when the plugin msbvm reports msbvm:name:<vm> for the pid that the delegate sends, and the unix attestor reports the uid.
+# The node entry of the host (host-registration.yaml) is the parent. The key of this ID stays on the host, with the delegate. The VM never sees it.
+# shortcut: the trust domain mcp.local is written out here. Change it here and in host-registration.yaml together.
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata:
+  name: vm-${MSB_NODE}-${MSB_NAME}
+spec:
+  parentID: spiffe://mcp.local/node/${MSB_NODE}
+  spiffeID: spiffe://mcp.local/node/${MSB_NODE}/user/${MSB_GITHUB_ID}/vm/${MSB_NAME}
+  selectors:
+    - msbvm:name:${MSB_NAME}
+    - unix:uid:${MSB_UID}

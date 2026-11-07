@@ -5,11 +5,11 @@ How an agent microVM gets its own SPIFFE ID while its private key stays on the h
 ## Language
 
 **Node**:
-The host that runs the microVM. The SPIRE server knows it through its node certificate.
+The host that runs the microVMs. Its name in the SPIRE server is the host name of the machine. The SPIRE server knows it through its node certificate.
 _Avoid_: machine, box
 
 **Node entry**:
-A registration entry that gives an attested node a fixed SPIFFE ID, for example `spiffe://mcp.local/node/sandbox-dev`. It is a record in the SPIRE server and is in no certificate.
+A registration entry that gives an attested node a fixed SPIFFE ID, for example `spiffe://mcp.local/node/omarchy`. It is a record in the SPIRE server and is in no certificate.
 _Avoid_: alias
 
 **microVM**:
@@ -25,5 +25,5 @@ A host program that the SPIRE agent trusts to ask for the SVID of a microVM. The
 _Avoid_: proxy, forwarder, launcher
 
 **Agent workload identity**:
-The SPIFFE ID of one agent microVM. It names the node, the user and the VM: `spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/<vm-name>`.
+The SPIFFE ID of one agent microVM. It names the node, the user and the VM: `spiffe://mcp.local/node/omarchy/user/raghav19/vm/<vm-name>`.
 _Avoid_: microVM identity, agent identity (Google uses it for a different identity), VM ID (the sandbox ID of `msb` is a different value)
