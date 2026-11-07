@@ -1,0 +1,55 @@
+# The config of the SPIRE agent of the host. `just msb agent-up` fills in the values with envsubst and starts the agent.
+# The agent runs as the host user, in a user unit of systemd. It attests to the SPIRE server in the cluster as the node of this host (x509pop).
+# Then it serves the Delegated Identity API on the admin socket to the delegate, and only to the delegate.
+#
+# The values:
+#   AGENT_STATE   the folder of the agent for its SVID and its key. Only the user can read it.
+#   AGENT_RUN     the folder of the Workload API socket.
+#   AGENT_ADMIN   the folder of the admin socket. It must differ from AGENT_RUN. The agent refuses to start if the two sockets share a folder.
+#   NODE_DIR      the node identity of the host: node.key, node.crt and bundle.json. `just msb host-register` writes them.
+#   DELEGATE_ID   the SPIFFE ID of the delegate. The delegate entry (host-registration.yaml) gives it.
+#   PLUGIN_PATH   the msbvm plugin binary.
+#   PLUGIN_SHA    the sha256 of the plugin binary. The agent starts the plugin only if the checksum matches.
+#   MSB_DB        the database of msb.
+agent {
+  data_dir             = "${AGENT_STATE}/data"
+  socket_path          = "${AGENT_RUN}/agent.sock"
+  admin_socket_path    = "${AGENT_ADMIN}/admin.sock"
+
+  # Only the delegate may call the Delegated Identity API. The agent attests the delegate first (the unix attestor: uid and path). Then it checks the ID of its entry against this list.
+  authorized_delegates = ["${DELEGATE_ID}"]
+
+  trust_domain         = "mcp.local"
+
+  # The SPIRE server is behind the gateway of the k3s cluster, on port 443. The gateway passes the TLS through to the server.
+  # The gateway picks the route by the name spire.localhost. The host resolves this name to itself.
+  server_address       = "spire.localhost"
+  server_port          = "443"
+
+  # The agent checks the server against this bundle when it starts without a cached one.
+  trust_bundle_path    = "${NODE_DIR}/bundle.json"
+  trust_bundle_format  = "spiffe"
+  log_level            = "INFO"
+}
+
+plugins {
+  # The node key and the node certificate of the host. The agent reads both again at each attestation, and it attests again each time its own SVID rotates.
+  # So the certificate must be valid at all times. cert-manager renews it 30 days before its end, and `just msb host-register` copies the new one.
+  NodeAttestor     "x509pop" { plugin_data {
+    private_key_path = "${NODE_DIR}/node.key"
+    certificate_path = "${NODE_DIR}/node.crt"
+  } }
+
+  # Keep the key and the SVID of the agent in data_dir after a restart.
+  KeyManager       "disk"    { plugin_data { directory = "${AGENT_STATE}/data" } }
+
+  # The unix attestor gives the uid of a process. discover_workload_path adds the path of its binary. The delegate entry needs both.
+  WorkloadAttestor "unix"    { plugin_data { discover_workload_path = true } }
+
+  # The msbvm plugin turns the pid of a VMM into the name and the sandbox ID of a VM (plugin/README.md).
+  WorkloadAttestor "msbvm" {
+    plugin_cmd      = "${PLUGIN_PATH}"
+    plugin_checksum = "${PLUGIN_SHA}"
+    plugin_data { db_path = "${MSB_DB}" }
+  }
+}

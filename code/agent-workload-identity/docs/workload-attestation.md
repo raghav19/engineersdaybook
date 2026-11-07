@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs are in `.msb/`. The host agent config and the end-to-end test are not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs, and the recipes that start the host agent, are in `.msb/`. The step in `just msb run` that asks for the SVID is not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -72,7 +72,7 @@ flowchart TD
     e --> f
 ```
 
-The host agent attests with `x509pop` and the node certificate that `host-register` made. The entries of the host and of the VMs are not in git. The host creates them with `kubectl`, from templates in `.msb/k3s/`, with the host name and the VM name. [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md) gives the reasons. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
+`just msb agent-up` starts the host agent. It attests with `x509pop` and the node certificate that `host-register` made. The entries of the host and of the VMs are not in git. The host creates them with `kubectl`, from templates in `.msb/k3s/`, with the host name and the VM name. [ADR 0002](adr/0002-the-host-registers-its-entries-under-its-own-names.md) gives the reasons. The agent mints the SVIDs of all entries of its node at start. The server is not involved when the delegate calls later.
 
 The agent config loads the `msbvm` plugin with `plugin_cmd` and `plugin_checksum`. It also sets `admin_socket_path` and `authorized_delegates`. The admin socket must be in a different folder from the Workload API socket. The agent refuses to start otherwise.
 
@@ -168,7 +168,10 @@ The code of the parts:
 - `msbvm` plugin: [`plugin/`](../plugin/README.md)
 - Delegate: [`delegate/`](../delegate/README.md)
 
-These folders do not exist yet: `agent/` and `tests/`. They are in the [README](../README.md).
+- Config of the host agent: [`agent/`](../agent/README.md)
+- The recipes: `host-register`, `vm-register` and `agent-up` in [`.msb/justfile`](../../../.msb/justfile)
+
+The folder `tests/` does not exist yet. It is in the [README](../README.md).
 
 ## What comes next
 
