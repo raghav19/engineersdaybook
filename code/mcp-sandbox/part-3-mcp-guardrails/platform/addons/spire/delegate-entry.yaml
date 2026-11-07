@@ -1,0 +1,15 @@
+# The delegate entry. The delegate is the host program that asks the host SPIRE agent for the SVID of a microVM. The entry gives the delegate its own SPIFFE ID.
+# The agent that attested as the node (node-entry.yaml) matches it. The node entry is the parent. The delegate gets this entry only when both selectors match.
+# unix:uid is the uid of the host user that runs the delegate. unix:path is the absolute path of the delegate binary. Both come from the unix workload attestor of SPIRE.
+# The agent config lists this SPIFFE ID in authorized_delegates. This entry matches nothing until the delegate exists and runs.
+# shortcut: this file has the trust domain mcp.local, the user raghav19, the uid 1000 and the path as literal text. A setter replaces a whole value, and these values are parts of a URI or of a selector string. Change the trust domain here and in config/ together. Change the other values here.
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterStaticEntry
+metadata:
+  name: sandbox-delegate
+spec:
+  parentID: spiffe://mcp.local/node/sandbox-dev
+  spiffeID: spiffe://mcp.local/node/sandbox-dev/user/raghav19/delegate
+  selectors:
+    - unix:uid:1000
+    - unix:path:/home/rana/.local/share/agent-workload-identity/bin/delegate
