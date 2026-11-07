@@ -152,10 +152,13 @@ The `claude-home` volume keeps the Claude Code conversations, so they survive `j
 
 | You want to | Run |
 |---|---|
-| Start or repair the VM | `just msb run` |
+| Start or repair the VM | `just msb run`. It also registers the VM with the SPIRE server, starts the SPIRE agent of the host, and checks that the VM gets its SVID. If no SVID comes, it stops before it opens the editor. |
 | Open a bash prompt in the VM | `just msb shell` |
 | Allow one more host | `just msb allow-host example.org`, then `just msb rm && just msb run`, then commit |
 | Make the Kubernetes access of the agent, or renew its token | `just msb sync-kubeconfig` |
+| Register this host with the SPIRE server (once for each host) | `just msb host-register`. `host-unregister` removes it. Read [ADR 0002](../code/agent-workload-identity/docs/adr/0002-the-host-registers-its-entries-under-its-own-names.md) |
+| Check the SPIFFE identity of the VM | `just msb identity` (`run` does it). It asks the agent of the host for the SVID. If none comes, it asks again for 40 seconds. |
+| Start, stop or look at the SPIRE agent of the host | `just msb agent-up` (`run` does it), `agent-down`, `agent-status`. Read the [README of the agent](../code/agent-workload-identity/agent/README.md) |
 | Copy the node identity of the SPIRE agent from the cluster | `just msb node-cert` (`run` does it first). To rotate the key, run `kubectl -n spire-system delete secret sandbox-node-tls`, then this recipe, then restart the agent |
 | Change a token | Change the Bitwarden key, revoke the old token, then `msb stop sandbox-dev` and `just msb run` |
 | Add another secret | Add it under `secrets:` in `vm/sandbox.yaml`, add its hosts to `network.allow`, add a Bitwarden key with the same name, add the name to `# --- Required environment variables ---` in `.msb/justfile`, then `just msb rm && just msb run` |

@@ -4,7 +4,7 @@ This guide explains how a microVM gets its own SPIFFE ID. Read the [node attesta
 
 The lists and the diagrams are narrow on purpose. They read well in the GitHub mobile app.
 
-**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs, and the recipes that start the host agent, are in `.msb/`. The step in `just msb run` that asks for the SVID is not. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
+**Status.** The node attestation exists. The flow in this guide is a design. The spike proved it on the host with a throwaway SPIRE server, and the flow runs on the real cluster. The `msbvm` plugin and the delegate are in this repo as code. The recipes that register the host and the VMs, and the recipes that start the host agent, are in `.msb/`. `just msb run` registers the VM, starts the host agent and asks for the SVID of the VM before it opens the editor. [ADR 0001](adr/0001-delegated-identity-for-the-microvm.md) records the decision. This design replaces the Envoy design of [Zero trust: workload attestation](../../mcp-sandbox/part-3-mcp-guardrails/docs/zero-trust-workload-attestation.md).
 
 ## The idea
 
@@ -95,6 +95,8 @@ sequenceDiagram
     A-->>D: SVID and key, or zero SVIDs
 ```
 
+`just msb run` starts this phase for the VM that it starts. The step `identity` runs the delegate and asks again once each second for up to 40 seconds. A new entry needs about 8 seconds to reach the agent. If no SVID comes, the run fails before it opens the editor.
+
 The pid is the input. It is not a selector, because it changes at each start. The agent runs the `unix` attestor and the `msbvm` plugin on the pid. Then it matches the VM entry.
 
 The plugin does two checks:
@@ -128,7 +130,7 @@ Nobody tested this phase. The spike parsed the SVID and the key. It did not use 
 
 - **Node certificate.** 90 days. cert-manager renews it 30 days before the end, with a new key.
 - **Agent SVID.** The server default is 4 hours (`default_x509_svid_ttl`). The agent re-attests by itself, about every 2 hours.
-- **VM SVID.** Not tested. The server default is 4 hours.
+- **VM SVID.** 4 hours, the server default. The agent holds one SVID for each entry. If the VM stops and starts again, the delegate gets the same SVID and the same key until it expires. A stopped VM gets no answer, because there is no VMM.
 - **Pid of the VMM.** Until the VM stops. A new start gives a new pid.
 - **`run` row.** One row for each start of the VM.
 

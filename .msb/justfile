@@ -4,7 +4,7 @@
 # The recipes list the steps in order. msb.py has the steps that need Python.
 #
 #   just msb setup          once for each host: authorize your SSH key.
-#   just msb run            every day: make or start the VM, prepare it, then open the TTT editor in it.
+#   just msb run            every day: register the VM, start the agent of the host, make or start the VM, and prepare it. Then check its SPIFFE identity and open the TTT editor in it.
 #   just msb edit           open the TTT editor in the running VM, in this terminal. Quit with Ctrl+Q.
 #   just msb allow-host     allow one more host for the VM.
 #   just msb sync-kubeconfig  make the read-only ServiceAccount of the agent in k3s (before the first run), and give the running VM a token of it.
@@ -12,6 +12,7 @@
 #   just msb host-register  register this host with the SPIRE server: the node certificate, the node entry and the delegate entry.
 #   just msb vm-register    register the VM with the SPIRE server: its entry. `vm-unregister` and `host-unregister` remove them.
 #   just msb agent-up       install the SPIRE agent of the host, the msbvm plugin and the delegate, and start the agent. `agent-down` stops it. `agent-status` shows it.
+#   just msb identity       ask the agent of the host for the SVID of the VM, and check its ID. `run` does this.
 #   just msb build          build the image after you change a file of image/, push it to ghcr.io, and pin its digest in vm/sandbox.yaml.
 
 set quiet
@@ -138,6 +139,8 @@ _k8s-ca:
     kubectl --context {{ kube_ctx }} config view --raw --minify -o 'jsonpath={.clusters[0].cluster.certificate-authority-data}' | base64 -d > {{ k8s_ca_file }}
     [ -s {{ k8s_ca_file }} ] || { echo "msb: the kubectl context {{ kube_ctx }} has no certificate-authority-data" >&2; exit 1; }
 
+# The steps in order: the node identity of the VM agent, the entry of the VM, the SPIRE agent of the host, the VM. Then the check that the VM got its SVID.
+# If the VM gets no SVID, the run stops before it opens the editor. `just msb host-register` must have run once for this host.
 # The [env] lines give the git values and the Omarchy theme path that vm/sandbox.yaml names as ${NAME}. They apply to this recipe only.
 # Every day. Make or start the VM from vm/sandbox.yaml, run sandbox-boot in it, then open Herdr in it.
 # Use prefix+t in Herdr to open TTT in a worktree.
@@ -146,8 +149,9 @@ _k8s-ca:
 [env('GIT_AUTHOR_NAME', shell('git config user.name || echo agent'))]
 [env('GIT_AUTHOR_EMAIL', shell('git config user.email || echo agent@localhost'))]
 [env('SANDBOX_OMARCHY_THEME', shell('printf %s "$HOME/.local/state/omarchy/current/theme"'))]
-run: _host-only node-cert
+run: _host-only node-cert vm-register agent-up
     {{ bws_run }} 'MSB_IN_BWS=1 GHCR_PUSH_TOKEN="$GITHUB_TOKEN" just --justfile {{ source_file() }} _vm'
+    just --justfile {{ source_file() }} identity
     ssh -t -F {{ ssh_config }} $MSB_NAME.msb "cd $MSB_WORKSPACE && COLORTERM=truecolor exec herdr"
 
 # ssh, not msb exec (1 MB output limit freezes editors). COLORTERM gives TTT 24-bit color. VM outlives the session.
@@ -225,7 +229,7 @@ vm-unregister: _host-only _check-names
     envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_NAME $MSB_UID' < {{ msb_dir }}/k3s/vm-registration.yaml | kubectl --context {{ kube_ctx }} delete --ignore-not-found -f -
 
 # Install what the host agent needs: the SPIRE agent (checked with sha256sum), the msbvm plugin and the delegate.
-# The SPIRE release goes to ~/.cache. The plugin and the delegate go to ~/.local/share/agent-workload-identity/bin. The delegate entry (host-registration.yaml) has the path of the delegate as a selector.
+# The SPIRE release goes to ~/.cache. The plugin and the delegate go to ~/.local/share/agent-workload-identity/bin. `go build -trimpath -buildvcs=false` keeps the path of the checkout and the git commit out of the binaries. So the checksum of the plugin changes only when the code changes, and `agent-up` does not restart the agent for nothing. The delegate entry (host-registration.yaml) has the path of the delegate as a selector.
 [script('bash')]
 agent-install: _host-only
     set -euo pipefail
@@ -245,8 +249,8 @@ agent-install: _host-only
       tar -xzf "$cache/download/$release.tar.gz" -C "$cache/release" --strip-components=1
     fi
     mkdir -p {{ awi_bin }}
-    (cd {{ awi_dir }}/plugin && go build -o {{ awi_bin }}/msbvm .)
-    (cd {{ awi_dir }}/delegate && go build -o {{ awi_bin }}/delegate .)
+    (cd {{ awi_dir }}/plugin && go build -trimpath -buildvcs=false -o {{ awi_bin }}/msbvm .)
+    (cd {{ awi_dir }}/delegate && go build -trimpath -buildvcs=false -o {{ awi_bin }}/delegate .)
     echo "Installed in {{ awi_bin }}: msbvm, delegate. The SPIRE agent is in $cache/release/bin."
 
 # Start the SPIRE agent of the host as the user unit awi-spire-agent. It needs the node identity that `host-register` wrote.
@@ -261,7 +265,15 @@ agent-up: _host-only _check-names agent-install
     export PLUGIN_PATH={{ awi_bin }}/msbvm
     export PLUGIN_SHA=$(sha256sum "$PLUGIN_PATH" | cut -d' ' -f1)
     mkdir -p -m 700 "$AGENT_STATE" "$AGENT_RUN" "$AGENT_ADMIN"
-    (umask 077 && envsubst '$AGENT_STATE $AGENT_RUN $AGENT_ADMIN $NODE_DIR $DELEGATE_ID $PLUGIN_PATH $PLUGIN_SHA $MSB_DB' < {{ awi_dir }}/agent/agent.conf.tmpl > "$AGENT_STATE/agent.conf")
+    (umask 077 && envsubst '$AGENT_STATE $AGENT_RUN $AGENT_ADMIN $NODE_DIR $DELEGATE_ID $PLUGIN_PATH $PLUGIN_SHA $MSB_DB' < {{ awi_dir }}/agent/agent.conf.tmpl > "$AGENT_STATE/agent.conf.new")
+    # `run` calls this recipe each time. If the agent runs, is healthy and has the same config, leave it alone: a restart makes it attest again.
+    if systemctl --user is-active --quiet awi-spire-agent && cmp -s "$AGENT_STATE/agent.conf.new" "$AGENT_STATE/agent.conf" \
+       && {{ spire_cache }}/release/bin/spire-agent healthcheck -socketPath "$AGENT_RUN/agent.sock" >/dev/null 2>&1; then
+      rm -f "$AGENT_STATE/agent.conf.new"
+      echo "The agent of the host $MSB_NODE runs already. Admin socket: $AGENT_ADMIN/admin.sock"
+      exit 0
+    fi
+    mv "$AGENT_STATE/agent.conf.new" "$AGENT_STATE/agent.conf"
     systemctl --user stop awi-spire-agent 2>/dev/null || true
     rm -f "$AGENT_RUN/agent.sock" "$AGENT_ADMIN/admin.sock"
     systemd-run --user --quiet --unit=awi-spire-agent --collect --description="SPIRE agent of the host $MSB_NODE" \
@@ -272,6 +284,29 @@ agent-up: _host-only _check-names agent-install
     done
     {{ spire_cache }}/release/bin/spire-agent healthcheck -socketPath "$AGENT_RUN/agent.sock" || { echo "msb: the agent is not healthy. See: journalctl --user -u awi-spire-agent" >&2; exit 1; }
     echo "The agent of the host $MSB_NODE runs. Admin socket: $AGENT_ADMIN/admin.sock"
+
+# Ask the SPIRE agent of the host for the SVID of the VM, and check that its ID is the one of this VM. Print the ID and the end of the SVID.
+# The delegate answers with an error until the VM runs and until the agent has the entry of the VM. The entry needs about 8 seconds to reach the agent.
+# So the recipe asks again, once each second, for MSB_IDENTITY_WAIT seconds (40 if you do not set it). If no SVID comes, it prints the last answer and fails.
+[script('bash')]
+identity: _host-only _check-names
+    set -euo pipefail
+    id="spiffe://mcp.local/node/$MSB_NODE/user/$MSB_GITHUB_ID/vm/$MSB_NAME"
+    wait=${MSB_IDENTITY_WAIT:-40}
+    end=$((SECONDS + wait))
+    last=""
+    while :; do
+      if out=$({{ delegate_path }} -vm "$MSB_NAME" -id "$id" -socket {{ agent_admin }}/admin.sock 2>&1); then
+        echo "VM identity: $(sed -n 's/^spiffe_id=//p' <<<"$out") (expires $(sed -n 's/^not_after=//p' <<<"$out"))"
+        exit 0
+      fi
+      last=$out
+      [ "$SECONDS" -ge "$end" ] && break
+      sleep 1
+    done
+    echo "msb: the VM $MSB_NAME got no SVID in $wait seconds. The last answer: $last" >&2
+    echo "msb: look at: just msb agent-status, journalctl --user -u awi-spire-agent, and kubectl get clusterstaticentry vm-$MSB_NODE-$MSB_NAME" >&2
+    exit 1
 
 # Stop the SPIRE agent of the host.
 agent-down: _host-only
@@ -305,4 +340,5 @@ sync-kubeconfig: _host-only _k8s-ca
 # Remove the VM. `--volumes` also removes all the volumes: the Claude login and settings, the Terraform provider cache, the podman images, the Herdr layout and the Qwen sessions
 rm *args: _host-only
     msb rm -f $MSB_NAME || true
+    just --justfile {{ source_file() }} vm-unregister || echo "msb: could not remove the SPIRE entry of the VM. Run later: just msb vm-unregister" >&2
     if [ "{{ args }}" = "--volumes" ]; then msb volume rm {{ volumes }} || true; fi
