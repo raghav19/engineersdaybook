@@ -49,7 +49,7 @@ func TestFetchX509SVID(t *testing.T) {
 			fake := testutil.StartFakeAgent(t)
 			fake.Response, fake.Err = tc.resp, tc.err
 
-			got, err := agent.FetchX509SVID(t.Context(), fake.Socket, 4242)
+			all, err := agent.FetchX509SVIDs(t.Context(), fake.Socket, 4242)
 			if calls := fake.Calls(); len(calls) != 1 || calls[0] != 4242 {
 				t.Fatalf("pids sent to the agent = %v, want [4242]", calls)
 			}
@@ -62,6 +62,10 @@ func TestFetchX509SVID(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if len(all) != 1 {
+				t.Fatalf("got %d SVIDs, want 1", len(all))
+			}
+			got := all[0]
 			if got.ID != spiffeID {
 				t.Errorf("ID = %q, want %q", got.ID, spiffeID)
 			}
@@ -99,7 +103,7 @@ func TestFetchX509SVIDBadData(t *testing.T) {
 			resp, _, _ := testutil.NewSVID(t, id, time.Now().Add(time.Hour))
 			tc.mutate(resp.X509Svids[0])
 			fake.Response = resp
-			_, err := agent.FetchX509SVID(t.Context(), fake.Socket, 1)
+			_, err := agent.FetchX509SVIDs(t.Context(), fake.Socket, 1)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error = %v, want text %q", err, tc.want)
 			}
@@ -112,10 +116,11 @@ func TestSVIDFormatHidesKey(t *testing.T) {
 	fake := testutil.StartFakeAgent(t)
 	var keyDER []byte
 	fake.Response, _, keyDER = testutil.NewSVID(t, id, time.Now().Add(time.Hour))
-	got, err := agent.FetchX509SVID(t.Context(), fake.Socket, 1)
+	all, err := agent.FetchX509SVIDs(t.Context(), fake.Socket, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	got := all[0]
 	key := got.Key.(*ecdsa.PrivateKey)
 	for _, verb := range []string{"%v", "%+v", "%#v", "%s"} {
 		for _, v := range []any{got, *got} {
@@ -123,6 +128,29 @@ func TestSVIDFormatHidesKey(t *testing.T) {
 			if strings.Contains(out, key.D.String()) || strings.Contains(out, string(keyDER)) {
 				t.Errorf("%s output shows the private key", verb)
 			}
+		}
+	}
+}
+
+func TestFetchX509SVIDsReturnsAllInOrder(t *testing.T) {
+	var ids []*url.URL
+	for _, s := range []string{spiffeID, "spiffe://mcp.local/other", "spiffe://mcp.local/third"} {
+		u, _ := url.Parse(s)
+		ids = append(ids, u)
+	}
+	fake := testutil.StartFakeAgent(t)
+	fake.Response = testutil.NewSVIDs(t, ids, time.Now().Add(time.Hour))
+
+	got, err := agent.FetchX509SVIDs(t.Context(), fake.Socket, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(ids) {
+		t.Fatalf("got %d SVIDs, want %d", len(got), len(ids))
+	}
+	for i := range ids {
+		if got[i].ID != ids[i].String() {
+			t.Errorf("SVID %d has ID %q, want %q", i, got[i].ID, ids[i])
 		}
 	}
 }

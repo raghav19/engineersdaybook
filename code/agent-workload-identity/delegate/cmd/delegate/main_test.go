@@ -30,7 +30,7 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			name:     "prints ID, not_after and URI SAN",
-			args:     []string{"-vm", "vm-a", "-socket", fake.Socket, "-db", db},
+			args:     []string{"-vm", "vm-a", "-id", spiffeID, "-socket", fake.Socket, "-db", db},
 			wantCode: 0,
 			wantOut: []string{
 				"spiffe_id=" + spiffeID,
@@ -38,9 +38,16 @@ func TestRun(t *testing.T) {
 				"uri_san=" + spiffeID,
 			},
 		},
-		{name: "no VM name", args: []string{"-socket", fake.Socket, "-db", db}, wantCode: 2, wantErr: "-vm"},
-		{name: "no socket", args: []string{"-vm", "vm-a", "-db", db}, wantCode: 2, wantErr: "-socket"},
-		{name: "unknown VM", args: []string{"-vm", "vm-x", "-socket", fake.Socket, "-db", db}, wantCode: 1, wantErr: "no running row"},
+		{name: "no VM name", args: []string{"-id", spiffeID, "-socket", fake.Socket, "-db", db}, wantCode: 2, wantErr: "-vm"},
+		{name: "no ID", args: []string{"-vm", "vm-a", "-socket", fake.Socket, "-db", db}, wantCode: 2, wantErr: "-id"},
+		{name: "no socket", args: []string{"-vm", "vm-a", "-id", spiffeID, "-db", db}, wantCode: 2, wantErr: "-socket"},
+		{name: "unknown VM", args: []string{"-vm", "vm-x", "-id", spiffeID, "-socket", fake.Socket, "-db", db}, wantCode: 1, wantErr: "no running row"},
+		{
+			name:     "the agent returns another ID",
+			args:     []string{"-vm", "vm-a", "-id", "spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/vm-b", "-socket", fake.Socket, "-db", db},
+			wantCode: 1,
+			wantErr:  "expected ID",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

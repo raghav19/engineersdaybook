@@ -100,3 +100,14 @@ func NewSVID(t *testing.T, id *url.URL, notAfter time.Time) (resp *delegatediden
 	}
 	return resp, certDER, keyDER
 }
+
+// NewSVIDs makes an answer of an agent with one SVID for each id, in order.
+func NewSVIDs(t *testing.T, ids []*url.URL, notAfter time.Time) *delegatedidentityv1.SubscribeToX509SVIDsResponse {
+	t.Helper()
+	out := &delegatedidentityv1.SubscribeToX509SVIDsResponse{}
+	for _, id := range ids {
+		resp, _, _ := NewSVID(t, id, notAfter)
+		out.X509Svids = append(out.X509Svids, resp.X509Svids...)
+	}
+	return out
+}

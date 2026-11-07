@@ -23,19 +23,20 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("delegate", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	vm := fs.String("vm", "", "name of the microVM (required)")
+	id := fs.String("id", "", "SPIFFE ID that the SVID of the VM must have (required)")
 	socket := fs.String("socket", "", "admin socket of the host SPIRE agent (required)")
 	db := fs.String("db", filepath.Join(home, ".microsandbox", "db", "msb.db"), "path of msb.db")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if *vm == "" || *socket == "" {
-		fmt.Fprintln(stderr, "delegate: -vm and -socket are required")
+	if *vm == "" || *id == "" || *socket == "" {
+		fmt.Fprintln(stderr, "delegate: -vm, -id and -socket are required")
 		return 2
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	svid, err := delegate.Fetch(ctx, delegate.Config{VM: *vm, Socket: *socket, DBPath: *db})
+	svid, err := delegate.Fetch(ctx, delegate.Config{VM: *vm, ID: *id, Socket: *socket, DBPath: *db})
 	if err != nil {
 		fmt.Fprintf(stderr, "delegate: %v\n", err)
 		return 1

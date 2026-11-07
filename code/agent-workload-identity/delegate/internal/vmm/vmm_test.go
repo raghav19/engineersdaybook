@@ -8,7 +8,7 @@ import (
 	"github.com/raghav19/engineersdaybook/code/agent-workload-identity/delegate/internal/vmm"
 )
 
-func TestFindPID(t *testing.T) {
+func TestRunningPID(t *testing.T) {
 	proc := testutil.StartProcess(t, "vm-a")
 	pid := proc.Process.Pid
 
@@ -55,17 +55,11 @@ func TestFindPID(t *testing.T) {
 			vm:      "vm-a",
 			wantErr: "no running row",
 		},
-		{
-			name:    "command line has another VM name",
-			runs:    []testutil.Run{{Sandbox: "vm-b", PID: pid, Status: "Running"}},
-			vm:      "vm-b",
-			wantErr: "command line",
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			db := testutil.NewMsbDB(t, tc.runs)
-			got, err := vmm.FindPID(t.Context(), db, tc.vm)
+			got, err := vmm.RunningPID(t.Context(), db, tc.vm)
 			if tc.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 					t.Fatalf("error = %v, want text %q", err, tc.wantErr)
@@ -82,9 +76,23 @@ func TestFindPID(t *testing.T) {
 	}
 }
 
-func TestFindPIDMissingDB(t *testing.T) {
-	_, err := vmm.FindPID(t.Context(), t.TempDir()+"/none.db", "vm-a")
+func TestRunningPIDMissingDB(t *testing.T) {
+	_, err := vmm.RunningPID(t.Context(), t.TempDir()+"/none.db", "vm-a")
 	if err == nil {
 		t.Fatal("want an error for a missing database")
+	}
+}
+
+func TestCheckCmdline(t *testing.T) {
+	pid := testutil.StartProcess(t, "vm-a").Process.Pid
+
+	if err := vmm.CheckCmdline(pid, "vm-a"); err != nil {
+		t.Fatalf("command line of vm-a: %v", err)
+	}
+	if err := vmm.CheckCmdline(pid, "vm-b"); err == nil || !strings.Contains(err.Error(), "command line") {
+		t.Fatalf("error for another VM name = %v, want text %q", err, "command line")
+	}
+	if err := vmm.CheckCmdline(1<<22+7, "vm-a"); err == nil {
+		t.Fatal("want an error for a pid that does not exist")
 	}
 }

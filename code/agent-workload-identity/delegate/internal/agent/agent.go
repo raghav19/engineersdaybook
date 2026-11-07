@@ -32,10 +32,10 @@ func (s SVID) Format(f fmt.State, _ rune) {
 	fmt.Fprintf(f, "SVID{ID: %s, NotAfter: %s}", s.ID, s.NotAfter.UTC().Format(time.RFC3339))
 }
 
-// FetchX509SVID sends the pid to the Delegated Identity API on the Unix
-// socket and reads the first response. It returns the first SVID of that
-// response. It returns ErrRefused if the response has no SVID.
-func FetchX509SVID(ctx context.Context, socket string, pid int) (*SVID, error) {
+// FetchX509SVIDs sends the pid to the Delegated Identity API on the Unix
+// socket and reads the first response. It returns all SVIDs of that response,
+// in order. It returns ErrRefused if the response has no SVID.
+func FetchX509SVIDs(ctx context.Context, socket string, pid int) ([]*SVID, error) {
 	conn, err := grpc.NewClient("unix:"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("connect to agent: %w", err)
@@ -59,7 +59,15 @@ func FetchX509SVID(ctx context.Context, socket string, pid int) (*SVID, error) {
 	if len(resp.X509Svids) == 0 {
 		return nil, ErrRefused
 	}
-	return parse(resp.X509Svids[0])
+	svids := make([]*SVID, 0, len(resp.X509Svids))
+	for _, in := range resp.X509Svids {
+		svid, err := parse(in)
+		if err != nil {
+			return nil, err
+		}
+		svids = append(svids, svid)
+	}
+	return svids, nil
 }
 
 func parse(in *delegatedidentityv1.X509SVIDWithKey) (*SVID, error) {
