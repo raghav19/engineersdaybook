@@ -1,6 +1,6 @@
-# MCP sandbox
+# Agent workload identity
 
-A series about an AI agent that calls MCP tools from a sandbox. Part 3 puts guardrails on a gateway. The gateway decides from the identity of the caller.
+How an agent microVM gets its own SPIFFE ID while its private key stays on the host. The name follows the term "Agent Workload Identity" of Google Agent Compute Engine.
 
 ## Language
 
@@ -24,6 +24,6 @@ _Avoid_: hypervisor process
 A host program that the SPIRE agent trusts to ask for the SVID of a microVM. The SVID and its key stay with the delegate.
 _Avoid_: proxy, forwarder, launcher
 
-**microVM identity**:
-The SPIFFE ID of one microVM. It names the node, the user and the VM: `spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/<vm-name>`.
-_Avoid_: VM ID (the sandbox ID of `msb` is a different value)
+**Agent workload identity**:
+The SPIFFE ID of one agent microVM. It names the node, the user and the VM: `spiffe://mcp.local/node/sandbox-dev/user/raghav19/vm/<vm-name>`.
+_Avoid_: microVM identity, agent identity (Google uses it for a different identity), VM ID (the sandbox ID of `msb` is a different value)

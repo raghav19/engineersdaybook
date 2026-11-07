@@ -40,4 +40,4 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 - What starts the delegate.
 - Whether the delegate needs its own SVID.
 
-The evidence is in the section "Spike results" of [`docs/research/microvm-workload-attestation-spire.md`](../../../../docs/research/microvm-workload-attestation-spire.md). The handoff is [`microvm-attestation-spike.md`](../../part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md).
+The evidence is in the section "Spike results" of [`docs/research/microvm-workload-attestation-spire.md`](../../../../docs/research/microvm-workload-attestation-spire.md). The handoff is [`microvm-attestation-spike.md`](../../../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md).
