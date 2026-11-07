@@ -20,7 +20,7 @@ The ID has three parts: the node, the user and the VM. Example: `spiffe://mcp.lo
 
 ![Agent workload identity of the microVM: the host agent, the delegate and the msbvm plugin](diagrams/agent-workload-identity.svg)
 
-The letter a happens once. The numbers 1 to 4 happen when a VM needs its SVID. The orange parts do not exist yet.
+The letters a and b are the prerequisites. They happen once. The numbers 1 to 4 happen each time a VM needs its SVID. The panel below the diagram repeats the steps in words. The orange parts do not exist yet.
 
 ## The cast
 
