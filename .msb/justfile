@@ -11,6 +11,7 @@
 #   just msb github-login   log in to GitHub (once, and when it asks for it).
 #   just msb host-register  register this host with the SPIRE server: the node certificate, the node entry and the delegate entry.
 #   just msb vm-register    register the VM with the SPIRE server: its entry. `vm-unregister` and `host-unregister` remove them.
+#   just msb agent-up       install the SPIRE agent of the host, the msbvm plugin and the delegate, and start the agent. `agent-down` stops it. `agent-status` shows it.
 #   just msb build          build the image after you change a file of image/, push it to ghcr.io, and pin its digest in vm/sandbox.yaml.
 
 set quiet
@@ -32,7 +33,16 @@ export MSB_GITHUB_ID := 'raghav19'
 # The node identity of the host agent (key, certificate, trust bundle). `host-register` fills it.
 export HOST_NODE_DIR := home_directory() / '.config/msb/host-node'
 # Where the delegate binary lives. The delegate entry has this path as a selector, so the agent only accepts the delegate at this path.
-delegate_path := home_directory() / '.local/share/agent-workload-identity/bin/delegate'
+awi_bin := home_directory() / '.local/share/agent-workload-identity/bin'
+delegate_path := awi_bin / 'delegate'
+# The code of the project and the SPIRE agent of the host (code/agent-workload-identity/agent/agent.conf.tmpl).
+awi_dir := msb_dir / '../code/agent-workload-identity'
+spire_version := '1.15.5'
+spire_cache := home_directory() / '.cache/agent-workload-identity/spire-' + spire_version
+agent_state := home_directory() / '.local/state/agent-workload-identity/spire-agent'
+agent_run := env('XDG_RUNTIME_DIR', '/tmp') / 'awi-spire-agent'
+agent_admin := env('XDG_RUNTIME_DIR', '/tmp') / 'awi-spire-agent-admin'
+msb_db := home_directory() / '.microsandbox/db/msb.db'
 
 # --- Required tools ---
 msb    := require("msb")
@@ -213,6 +223,65 @@ vm-unregister: _host-only _check-names
     set -euo pipefail
     export MSB_UID=$(id -u)
     envsubst '$MSB_NODE $MSB_GITHUB_ID $MSB_NAME $MSB_UID' < {{ msb_dir }}/k3s/vm-registration.yaml | kubectl --context {{ kube_ctx }} delete --ignore-not-found -f -
+
+# Install what the host agent needs: the SPIRE agent (checked with sha256sum), the msbvm plugin and the delegate.
+# The SPIRE release goes to ~/.cache. The plugin and the delegate go to ~/.local/share/agent-workload-identity/bin. The delegate entry (host-registration.yaml) has the path of the delegate as a selector.
+[script('bash')]
+agent-install: _host-only
+    set -euo pipefail
+    command -v go >/dev/null || { echo "msb: go is not installed. The plugin and the delegate need it." >&2; exit 1; }
+    release=spire-{{ spire_version }}-linux-amd64-musl
+    url=https://github.com/spiffe/spire/releases/download/v{{ spire_version }}
+    cache={{ spire_cache }}
+    mkdir -p "$cache/download"
+    if [ ! -f "$cache/download/$release.tar.gz" ] || [ ! -f "$cache/download/${release}_sha256sum.txt" ]; then
+      echo "Download SPIRE {{ spire_version }}."
+      curl -fsSL -o "$cache/download/$release.tar.gz" "$url/$release.tar.gz"
+      curl -fsSL -o "$cache/download/${release}_sha256sum.txt" "$url/${release}_sha256sum.txt"
+    fi
+    (cd "$cache/download" && sha256sum -c --quiet "${release}_sha256sum.txt") || { echo "msb: the checksum of the SPIRE archive is wrong. Remove $cache and run again." >&2; exit 1; }
+    if [ ! -x "$cache/release/bin/spire-agent" ]; then
+      rm -rf "$cache/release" && mkdir "$cache/release"
+      tar -xzf "$cache/download/$release.tar.gz" -C "$cache/release" --strip-components=1
+    fi
+    mkdir -p {{ awi_bin }}
+    (cd {{ awi_dir }}/plugin && go build -o {{ awi_bin }}/msbvm .)
+    (cd {{ awi_dir }}/delegate && go build -o {{ awi_bin }}/delegate .)
+    echo "Installed in {{ awi_bin }}: msbvm, delegate. The SPIRE agent is in $cache/release/bin."
+
+# Start the SPIRE agent of the host as the user unit awi-spire-agent. It needs the node identity that `host-register` wrote.
+# The recipe fills in agent.conf.tmpl, starts the agent, and waits until the admin socket and the health check answer.
+# The agent attests to the cluster with the key of the host. The log is `journalctl --user -u awi-spire-agent`.
+[script('bash')]
+agent-up: _host-only _check-names agent-install
+    set -euo pipefail
+    [ -s "$HOST_NODE_DIR/node.key" ] || { echo "msb: no node identity of this host. Run first: just msb host-register" >&2; exit 1; }
+    export AGENT_STATE={{ agent_state }} AGENT_RUN={{ agent_run }} AGENT_ADMIN={{ agent_admin }} NODE_DIR=$HOST_NODE_DIR MSB_DB={{ msb_db }}
+    export DELEGATE_ID="spiffe://mcp.local/node/$MSB_NODE/user/$MSB_GITHUB_ID/delegate"
+    export PLUGIN_PATH={{ awi_bin }}/msbvm
+    export PLUGIN_SHA=$(sha256sum "$PLUGIN_PATH" | cut -d' ' -f1)
+    mkdir -p -m 700 "$AGENT_STATE" "$AGENT_RUN" "$AGENT_ADMIN"
+    (umask 077 && envsubst '$AGENT_STATE $AGENT_RUN $AGENT_ADMIN $NODE_DIR $DELEGATE_ID $PLUGIN_PATH $PLUGIN_SHA $MSB_DB' < {{ awi_dir }}/agent/agent.conf.tmpl > "$AGENT_STATE/agent.conf")
+    systemctl --user stop awi-spire-agent 2>/dev/null || true
+    rm -f "$AGENT_RUN/agent.sock" "$AGENT_ADMIN/admin.sock"
+    systemd-run --user --quiet --unit=awi-spire-agent --collect --description="SPIRE agent of the host $MSB_NODE" \
+      {{ spire_cache }}/release/bin/spire-agent run -config "$AGENT_STATE/agent.conf"
+    for _ in $(seq 1 60); do
+      [ -S "$AGENT_ADMIN/admin.sock" ] && {{ spire_cache }}/release/bin/spire-agent healthcheck -socketPath "$AGENT_RUN/agent.sock" >/dev/null 2>&1 && break
+      sleep 0.5
+    done
+    {{ spire_cache }}/release/bin/spire-agent healthcheck -socketPath "$AGENT_RUN/agent.sock" || { echo "msb: the agent is not healthy. See: journalctl --user -u awi-spire-agent" >&2; exit 1; }
+    echo "The agent of the host $MSB_NODE runs. Admin socket: $AGENT_ADMIN/admin.sock"
+
+# Stop the SPIRE agent of the host.
+agent-down: _host-only
+    systemctl --user stop awi-spire-agent 2>/dev/null || true
+
+# Show whether the SPIRE agent of the host runs and is healthy.
+[script('bash')]
+agent-status: _host-only
+    systemctl --user is-active awi-spire-agent || true
+    {{ spire_cache }}/release/bin/spire-agent healthcheck -socketPath {{ agent_run }}/agent.sock || true
 
 # Add a host to network.allow in vm/sandbox.yaml, then run. If a VM exists, `run` tells you to remove it first
 allow-host $host: _host-only && run
