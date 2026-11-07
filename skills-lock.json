@@ -5,7 +5,7 @@
       "source": "danyuchn/asd-ste100-skill",
       "sourceType": "github",
       "skillPath": "SKILL.md",
-      "computedHash": "33bb8e9f86631d413374e321fd46b150d6a4e7f6d0a71846d5dbcacc40cf551a"
+      "computedHash": "17d26df92913077363eac4bf346a41ed30dea17a6c9bfaf790ae404ebebd14f1"
     },
     "ask-matt": {
       "source": "mattpocock/skills",
@@ -53,7 +53,7 @@
       "source": "aws/agent-toolkit-for-aws",
       "sourceType": "github",
       "skillPath": "skills/core-skills/aws-storage/SKILL.md",
-      "computedHash": "66616c2ed7cbabccb21bf03a87783278c84b852bf1dc5aa151270e556dc4be52"
+      "computedHash": "0b228ac8d5ac8d92fcc3fa6a442ecab28676b69f70afc2eee776fc5d676b13b0"
     },
     "code-intelligence": {
       "source": "antonbabenko/agent-plugins",
