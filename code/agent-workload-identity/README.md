@@ -13,7 +13,7 @@ The ID has three parts: `spiffe://mcp.local/node/<host-name>/user/<user>/vm/<vm-
 
 ## Status
 
-The `msbvm` plugin and the delegate are in this repo, with unit tests. The recipes `host-register`, `vm-register` and `agent-up` in `.msb/` register the host and the VMs, and start the host SPIRE agent. The step in `just msb run` that asks for the SVID is not here yet. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
+The `msbvm` plugin and the delegate are in this repo, with unit tests. The recipes `host-register`, `vm-register` and `agent-up` in `.msb/` register the host and the VMs, and start the host SPIRE agent. `just msb run` also checks that the VM gets its SVID before it opens the editor. The spike proved the flow on the host with a throwaway SPIRE server. The ADR records the decision.
 
 ## How to start
 

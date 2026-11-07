@@ -37,7 +37,7 @@ The microVM is the workload. Its SPIFFE ID must come from facts about the VM, an
 
 - The language of the delegate, and how it finds the pid of the VMM.
 - The fate of the agent in the VM. [ADR 0002](0002-the-host-registers-its-entries-under-its-own-names.md) decides the node certificate of the host agent.
-- What starts the delegate.
+- A delegate that runs for a long time. `just msb run` runs the delegate once, to check the identity of the VM.
 - Whether the delegate needs its own SVID.
 
 The evidence is in the section "Spike results" of [`docs/research/microvm-workload-attestation-spire.md`](../../../../docs/research/microvm-workload-attestation-spire.md). The handoff is [`microvm-attestation-spike.md`](../../../mcp-sandbox/part-3-mcp-guardrails/docs/handoff/microvm-attestation-spike.md).
