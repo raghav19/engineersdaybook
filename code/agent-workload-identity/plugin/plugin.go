@@ -82,16 +82,12 @@ func (p *Plugin) Attest(ctx context.Context, req *workloadattestorv1.AttestReque
 		return nil, status.Error(codes.FailedPrecondition, "the plugin is not configured")
 	}
 
-	// Checks 1 and 2: the exe and the command line.
+	// Checks 1 and 2: the exe and the command line. If a read fails, for example
+	// because the process has ended, the value is empty. An empty value is never
+	// a VMM, so parseVMM returns ok=false and the code needs no error branch.
 	pid := strconv.Itoa(int(req.Pid))
-	exe, err := os.Readlink(filepath.Join(p.procRoot, pid, "exe"))
-	if err != nil {
-		return &workloadattestorv1.AttestResponse{}, nil // the process has ended, or we may not read it
-	}
-	cmdline, err := os.ReadFile(filepath.Join(p.procRoot, pid, "cmdline"))
-	if err != nil {
-		return &workloadattestorv1.AttestResponse{}, nil
-	}
+	exe, _ := os.Readlink(filepath.Join(p.procRoot, pid, "exe"))
+	cmdline, _ := os.ReadFile(filepath.Join(p.procRoot, pid, "cmdline"))
 	name, id, ok := parseVMM(exe, cmdline)
 	if !ok {
 		return &workloadattestorv1.AttestResponse{}, nil

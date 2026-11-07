@@ -106,6 +106,7 @@ func TestAttest(t *testing.T) {
 		{name: "exe is not msb", exe: "/bin/sleep", args: vmm, runs: []run{goodRun}},
 		{name: "msb with another subcommand", exe: "/opt/msb", args: []string{"/opt/msb", "run", "--name", "vm-a"}, runs: []run{goodRun}},
 		{name: "machine without a sandbox ID", exe: "/opt/msb", args: []string{"/opt/msb", "machine", "--name", "vm-a"}, runs: []run{goodRun}},
+		{name: "a name that is another flag finds no row", exe: "/opt/msb", args: []string{"/opt/msb", "machine", "--name", "--sandbox-id", "184"}, runs: []run{goodRun}, wantError: codes.PermissionDenied},
 		{name: "no row at all", exe: "/opt/msb", args: vmm, wantError: codes.PermissionDenied},
 		{name: "row has another pid", exe: "/opt/msb", args: vmm, runs: []run{{184, "vm-a", pid + 1, "Running"}}, wantError: codes.PermissionDenied},
 		{name: "row has another sandbox ID", exe: "/opt/msb", args: vmm, runs: []run{{185, "vm-a", pid, "Running"}}, wantError: codes.PermissionDenied},

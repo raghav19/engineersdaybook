@@ -21,12 +21,12 @@ func TestParseVMM(t *testing.T) {
 		{"machine without name", "/opt/msb", "/opt/msb\x00machine\x00--sandbox-id\x00184\x00", "", "", false},
 		{"machine without sandbox ID", "/opt/msb", "/opt/msb\x00machine\x00--name\x00vm-a\x00", "", "", false},
 		{"flag at the end has no value", "/opt/msb", "/opt/msb\x00machine\x00--sandbox-id\x001\x00--name\x00", "", "", false},
-		{"value is the next flag", "/opt/msb", "/opt/msb\x00machine\x00--name\x00--sandbox-id\x00184\x00", "", "", false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			name, id, ok := parseVMM(tc.exe, []byte(tc.cmdline))
-			if name != tc.wantName || id != tc.wantID || ok != tc.wantOK {
+			// The name and the ID are valid only when ok is true.
+			if ok != tc.wantOK || (ok && (name != tc.wantName || id != tc.wantID)) {
 				t.Errorf("parseVMM() = %q, %q, %v; want %q, %q, %v", name, id, ok, tc.wantName, tc.wantID, tc.wantOK)
 			}
 		})

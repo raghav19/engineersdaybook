@@ -9,6 +9,7 @@ package main
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -22,31 +23,22 @@ import (
 //
 // A process that is msb but has no name or no ID is not a VMM. Its answer is
 // the same as for any other process: no selectors.
+//
+// The parser is not strict on purpose. It does not check the values. The check
+// against msb.db does that: a wrong name or ID finds no row there.
 func parseVMM(exe string, cmdline []byte) (name, id string, ok bool) {
-	if filepath.Base(exe) != "msb" {
-		return "", "", false
-	}
 	args := strings.Split(strings.TrimRight(string(cmdline), "\x00"), "\x00")
-	if len(args) < 2 || args[1] != "machine" {
+	if filepath.Base(exe) != "msb" || len(args) < 2 || args[1] != "machine" {
 		return "", "", false
 	}
 	name, id = flagValue(args, "--name"), flagValue(args, "--sandbox-id")
-	if name == "" || id == "" {
-		return "", "", false
-	}
-	return name, id, true
+	return name, id, name != "" && id != ""
 }
 
-// flagValue returns the argument after flag. It returns "" if there is none,
-// or if the next argument is another flag.
+// flagValue returns the argument after flag, or "" if there is none.
 func flagValue(args []string, flag string) string {
-	for i := 0; i+1 < len(args); i++ {
-		if args[i] == flag {
-			if strings.HasPrefix(args[i+1], "--") {
-				return ""
-			}
-			return args[i+1]
-		}
+	if i := slices.Index(args, flag); i >= 0 && i+1 < len(args) {
+		return args[i+1]
 	}
 	return ""
 }
