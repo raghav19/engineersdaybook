@@ -1,0 +1,44 @@
+dns:
+  listen: ":53"
+  proxy_ip: "10.89.31.2"
+proxy:
+  http_listen: ":80"
+  https_listen: ":443"
+  tunnel_listen: ":8080"
+tls:
+  ca_cert: /etc/iron-proxy/ca.crt
+  ca_key: /etc/iron-proxy/ca.key
+metrics:
+  listen: "127.0.0.1:9090"
+management:
+  listen: "127.0.0.1:9092"
+transforms:
+  - name: allowlist
+    config:
+      domains: [api.example.test, other.example.test, example.com, "*.example.org"]
+  - name: secrets
+    config:
+      secrets:
+        - source: {type: env, var: CLAUDE_TOKEN}
+          replace: {proxy_value: proxy-token-CLAUDE, match_headers: [Authorization], require: true}
+          rules: [{host: api.example.test, paths: ["/v1/*"]}]
+        - source: {type: file, path: /secrets/rot}
+          replace: {proxy_value: proxy-rot-TOKEN, match_headers: [X-Rot]}
+          rules: [{host: api.example.test, paths: ["/misc/*"]}]
+        - source: {type: file, path: /secrets/ttl, ttl: 3s}
+          replace: {proxy_value: proxy-ttl-TOKEN, match_headers: [X-Ttl]}
+          rules: [{host: api.example.test, paths: ["/misc/*"]}]
+        - source: {type: env, var: QB_TOKEN}
+          replace: {proxy_value: proxy-qb-TOKEN, match_headers: [X-Nothing], match_query: true, match_body: true}
+          rules: [{host: api.example.test, paths: ["/qb/*"]}]
+        - source: {type: file, path: /secrets/gh}
+          replace: {proxy_value: proxy-gh-PLACEHOLDER, match_headers: [Authorization]}
+          rules: [{host: api.example.test, paths: ["/git/*"]}]
+        - source: {type: env, var: INJECT_TOKEN}
+          inject: {header: Authorization, formatter: 'Basic {{ base64 "x-access-token:" .Value }}'}
+          rules: [{host: api.example.test, paths: ["/inject/*"]}]
+        - source: {type: env, var: REQ_OTHER}
+          replace: {proxy_value: proxy-other-TOKEN, match_headers: [Authorization], require: true}
+          rules: [{host: other.example.test}]
+log:
+  level: info

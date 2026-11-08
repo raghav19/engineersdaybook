@@ -1,0 +1,96 @@
+name: spk-d2
+networks:
+  inner:
+    name: spk-d2-inner
+    internal: true
+    ipam:
+      config: [{subnet: 10.90.2.0/24}]
+  outer:
+    name: spk-d2-outer
+    ipam:
+      config: [{subnet: 10.90.12.0/24}]
+volumes:
+  scratch:
+    name: spk-d2-scratch
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=24m,uid=1000,mode=1777"}
+secrets:
+  # ACL on the host file: setfacl -m u:65534:r certs/ca/ca.key  (Compose ignores uid/gid/mode of file secrets)
+  ca_key:
+    file: ./certs/ca/ca.key
+configs:
+  proxy_yaml:
+    file: ./conf/proxy.yaml
+services:
+  proxy:
+    container_name: spk-d2-proxy
+    image: docker.io/ironsh/iron-proxy@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+    command: ["-config", "/proxy.yaml"]
+    env_file: ./proxy.env
+    user: "65534"
+    init: true
+    restart: on-failure:5
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 200
+    mem_limit: 128m
+    cpus: 1.0
+    dns: [1.1.1.1]   # upstream DNS of the proxy. The daemon default 172.17.0.1 is unreachable from user bridges.
+    extra_hosts: ["api.example.test:10.90.12.20", "other.example.test:10.90.12.20"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 1s
+    configs:
+      - source: proxy_yaml
+        target: /proxy.yaml
+    secrets:
+      - source: ca_key
+        target: ca.key
+    volumes:
+      - ./certs/ca/ca.crt:/etc/iron-proxy/ca.crt:ro
+      - ./certs/up/bundle.crt:/up/bundle.crt:ro
+      - ./secrets:/secrets:ro
+    networks:
+      inner: {ipv4_address: 10.90.2.2}
+      outer: {ipv4_address: 10.90.12.2}
+  echo:
+    container_name: spk-d2-echo
+    image: alpine:3.22
+    command: ["/echo-bin"]
+    volumes:
+      - ./echo/echo-bin:/echo-bin:ro
+      - ./certs/up:/up:ro
+    networks:
+      outer: {ipv4_address: 10.90.12.20}
+  client:
+    container_name: spk-d2-client
+    image: spk-d2-client:1
+    runtime: runsc-uds
+    command: ["sleep", "infinity"]
+    user: "1000:1000"
+    init: true
+    cap_drop: [ALL]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    sysctls: {net.ipv4.ping_group_range: "0 0"}
+    tmpfs: ["/tmp:size=16m,mode=1777", "/home/h:size=16m,mode=1777"]
+    dns: [10.90.2.2]
+    depends_on:
+      proxy: {condition: service_healthy}
+    environment:
+      HOME: /home/h
+      CURL_CA_BUNDLE: /certs/ca.crt
+      SSL_CERT_FILE: /certs/ca.crt
+    volumes:
+      - ./certs/ca-client.crt:/certs/ca.crt:ro
+      - ./resolv.conf:/etc/resolv.conf:ro
+      - scratch:/scratch
+    networks:
+      inner: {ipv4_address: 10.90.2.3}

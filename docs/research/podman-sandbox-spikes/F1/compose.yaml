@@ -1,0 +1,44 @@
+name: spk-f1
+networks:
+  inner:
+    name: spk-f1-inner
+    internal: true
+    ipam:
+      config: [{subnet: 10.90.21.0/24}]
+services:
+  sandbox:
+    image: spk-f1-sbx:1
+    container_name: spk-f1-sandbox
+    runtime: ${RT:-runsc-suid}
+    entrypoint: ["/entry.sh"]
+    command: ["sleep", "infinity"]
+    user: "0:0"
+    init: true
+    working_dir: /home/agent
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, DAC_OVERRIDE]
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run:size=8m,mode=0755
+    environment:
+      HOME: /home/agent
+      GATEWAY_URL: https://10.90.21.20:8443/
+    volumes:
+      - <SPIKES>/F1/sock:/run/priv/spire:ro
+      - <SPIKES>/F1/gw/ca.pem:/run/gwca/ca.pem:ro
+    networks:
+      inner: {ipv4_address: 10.90.21.10}
+  gateway:
+    image: ghcr.io/raghav19/engineersdaybook/dev-sbx:b257a198ab1815985c0baef10b916fde40385a2f
+    container_name: spk-f1-gateway
+    entrypoint: ["python3", "/gw/gw.py"]
+    command: []
+    cap_drop: [ALL]
+    volumes:
+      - <SPIKES>/F1/gw:/gw:ro
+    networks:
+      inner: {ipv4_address: 10.90.21.20}
