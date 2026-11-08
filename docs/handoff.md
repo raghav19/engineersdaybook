@@ -11,6 +11,8 @@ A handoff document lets a fresh session continue a piece of work without the old
 
 ## The list
 
+- **2026-11-08. A Podman sandbox with a microVM to replace the msb sandbox (spikes done).** Fifteen spikes tested Podman with `krun`, Podman with gVisor and Docker with gVisor, with iron-proxy as the egress proxy. The document has the results, the decisions, the open decisions, the next steps in order, the lessons and the state of the host.
+  Path: [`docs/handoff/podman-krun-sandbox.md`](handoff/podman-krun-sandbox.md). Research: [`docs/research/podman-sandbox-runtimes.md`](research/podman-sandbox-runtimes.md). Spike files: [`docs/research/podman-sandbox-spikes/`](research/podman-sandbox-spikes/README.md). Status: active.
 - **2026-11-07. Agent workload identity of the msb microVM (works on the cluster, parked).** Each microVM gets its own SPIFFE ID, and the key stays on the host. The flow ran on the real cluster: the delegate got the SVID of `sandbox-dev` from the host agent. The document has the PR table, what runs on the host, the decisions, the next steps in order and the lessons. It replaces the two entries about the msb microVM below for this project.
   Path: [`code/agent-workload-identity/docs/handoff/agent-workload-identity-status.md`](../code/agent-workload-identity/docs/handoff/agent-workload-identity-status.md). Status: active.
 - **2026-11-07. README audit of the projects.** Eight read-only audits checked each README against its project. The research note has the findings. The handoff has the plan of 12 PRs and the open decisions. Two fixes are drafted on branches (`rootless-docker`, `devk8s-kind-wsl2`).

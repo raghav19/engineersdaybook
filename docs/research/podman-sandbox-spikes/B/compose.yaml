@@ -1,0 +1,55 @@
+name: spkB
+networks:
+  inner:
+    name: spk-b-inner
+    internal: true
+    x-podman.disable_dns: true
+    ipam:
+      config: [{subnet: 10.89.31.0/24}]
+  outer:
+    name: spk-b-outer
+    ipam:
+      config: [{subnet: 10.89.36.0/24}]
+services:
+  proxy:
+    container_name: spk-b-proxy
+    image: docker.io/ironsh/iron-proxy@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+    command: ["-config", "/etc/iron-proxy/conf/proxy.yaml"]
+    env_file: ./proxy.env
+    user: "65534:65534"
+    userns_mode: "keep-id:uid=65534,gid=65534"
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    read_only: true
+    security_opt: ["no-new-privileges"]
+    extra_hosts: ["api.example.test:10.89.36.20", "other.example.test:10.89.36.20"]
+    volumes:
+      - ./conf:/etc/iron-proxy/conf:ro
+      - ./certs/ca/ca.crt:/etc/iron-proxy/ca.crt:ro
+      - ./certs/ca/ca.key:/etc/iron-proxy/ca.key:ro
+      - ./certs/up/bundle.crt:/up/bundle.crt:ro
+      - ./secrets:/secrets
+    networks:
+      inner: {ipv4_address: 10.89.31.2}
+      outer: {ipv4_address: 10.89.36.2}
+  echo:
+    container_name: spk-b-echo
+    image: docker.io/library/alpine:3.22
+    command: ["/echo-bin"]
+    volumes:
+      - ./echo/echo-bin:/echo-bin:ro
+      - ./certs/up:/up:ro
+    networks:
+      outer: {ipv4_address: 10.89.36.20}
+  client:
+    container_name: spk-b-client
+    image: localhost/spk-b-client:1
+    command: ["sleep", "infinity"]
+    dns: [10.89.31.2]
+    environment:
+      CURL_CA_BUNDLE: /certs/ca.crt
+      SSL_CERT_FILE: /certs/ca.crt
+    volumes:
+      - ./certs/ca-client.crt:/certs/ca.crt:ro
+    networks:
+      inner: {ipv4_address: 10.89.31.3}
