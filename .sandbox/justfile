@@ -1,0 +1,38 @@
+# The Podman sandbox: a krun microVM for Claude Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
+# Every recipe runs on the host. This part has the image only. The compose file and the egress proxy come in later changes.
+#
+#   just sandbox build   build the image with Podman.
+#   just sandbox smoke   start the image in a krun microVM and run nested Podman as the user agent.
+
+set quiet
+set shell := ['bash', '-euo', 'pipefail', '-c']
+
+podman := require("podman")
+
+image := 'localhost/sandbox-dev:latest'
+image_dir := source_directory() / 'image'
+# The static uid map of the sandbox. Podman maps the root of the container to the host uid 100000. See docs/research/podman-sandbox-runtimes.md, spike N2.
+uid_map := '0:100000:65536'
+
+# List the recipes (the default)
+[default]
+help:
+    just --list --unsorted
+
+# Build the image. The first build takes several minutes.
+build:
+    podman build {{ image_dir }} -t {{ image }}
+
+# Run the image in a krun microVM. As the user agent, run a nested container and a nested build.
+# The nested pull uses the network of the host. The egress proxy is not part of this recipe yet.
+smoke:
+    [ -x /usr/bin/krun ] || [ -x /usr/local/bin/krun ] || { echo "sandbox: no krun runtime. Run: sudo ln -s crun /usr/bin/krun" >&2; exit 1; }
+    podman run --rm --runtime krun --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
+      --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
+      {{ image }} sandbox-entry bash -ec ' \
+        test "$(id -un)" = agent; \
+        podman run --rm docker.io/library/alpine:3.22 echo nested-run-ok; \
+        printf "FROM docker.io/library/alpine:3.22\nRUN echo build-step > /x\n" > /tmp/Containerfile; \
+        podman build -q -t smoke -f /tmp/Containerfile /tmp; \
+        podman run --rm smoke cat /x; \
+        echo smoke-ok'
