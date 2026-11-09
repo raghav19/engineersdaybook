@@ -1,7 +1,7 @@
 #!/bin/sh
 # The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It prepares the guest, drops to the user agent and runs the command that you give it.
-# Example: sandbox-entry bash -l
+# It makes two things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# Example: sandbox-entry bash --login -i
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
 
@@ -10,14 +10,12 @@ fail() { echo "sandbox-entry: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || fail "run as root"
 [ "$#" -gt 0 ] || fail "give a command to run"
 
-# The mount `/` must be shared, or podman prints a warning.
-mount --make-rshared / || fail "could not make / a shared mount for podman"
-# The network of a nested container (pasta) needs /dev/net/tun. The kernel makes it for root only. The group agent can use it.
-chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/net/tun for podman"
-
-# The storage of nested Podman is an ext4 image that the entry mounts with a loop device.
-# On the root filesystem of the guest (virtiofs), overlay fails: "unable to create kernel-style whiteout: operation not permitted".
-# The image is a sparse file. Make /var/lib/sandbox a named volume to keep the images of nested Podman after you remove the container.
+# 1. Where nested Podman keeps its images.
+#    The disk of a krun microVM is a virtiofs share of the host. The overlay driver of Podman cannot use it:
+#    "unable to create kernel-style whiteout". A volume, a tmpfs and the vfs driver fail on the same limit.
+#    The overlay driver does work on an ext4 file system. So the entry makes a sparse file, formats it as ext4
+#    and mounts it with a loop device on the folder where Podman keeps its images.
+#    Make /var/lib/sandbox a named volume to keep the images after you remove the container.
 storage_dir=/home/agent/.local/share/containers
 storage_img=/var/lib/sandbox/podman-storage.img
 mkdir -p /var/lib/sandbox "$storage_dir" || fail "could not make the folders of the storage"
@@ -26,6 +24,10 @@ if [ ! -f "$storage_img" ]; then
 fi
 mount -o loop "$storage_img" "$storage_dir" || fail "could not mount $storage_img on $storage_dir"
 chown agent:agent "$storage_dir" || fail "could not give $storage_dir to agent"
+
+# 2. The network of a nested container.
+#    Podman uses pasta, and pasta opens /dev/net/tun. The kernel makes it for root only. Give it to the group agent.
+chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/net/tun for podman"
 
 # The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.
 unset NOTIFY_SOCKET

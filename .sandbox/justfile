@@ -8,6 +8,7 @@ set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
 podman := require("podman")
+crun := require("crun")
 
 image := 'localhost/sandbox-dev:latest'
 image_dir := source_directory() / 'image'
@@ -30,7 +31,6 @@ build:
 [script('bash')]
 run *command: build
     set -euo pipefail
-    crun --version | grep -q '+LIBKRUN' || { echo "sandbox: crun has no libkrun support. Install crun with +LIBKRUN, libkrun and libkrunfw." >&2; exit 1; }
     if [ "$#" -eq 0 ]; then set -- bash --login -i; fi
     tty=; if [ -t 0 ]; then tty=-it; fi
     podman run --rm $tty --name sandbox -w /home/agent --runtime crun --annotation run.oci.handler=krun \
