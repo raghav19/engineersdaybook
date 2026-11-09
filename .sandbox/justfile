@@ -1,0 +1,35 @@
+# The Podman sandbox: a krun microVM for Claude Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
+# Every recipe runs on the host. This part has the image only. The compose file and the egress proxy come in later changes.
+#
+#   just sandbox build   build the image with Podman.
+#   just sandbox run     build the image, start the sandbox in a krun microVM and open a shell in it.
+
+set quiet
+set shell := ['bash', '-euo', 'pipefail', '-c']
+
+podman := require("podman")
+crun := require("crun")
+
+image := 'localhost/sandbox-dev:latest'
+image_dir := source_directory() / 'image'
+# The static uid map of the sandbox. Podman maps the root of the container to the host uid 100000. See docs/research/podman-sandbox-runtimes.md, spike N2.
+uid_map := '0:100000:65536'
+
+# List the recipes (the default)
+[default]
+help:
+    just --list --unsorted
+
+# Build the image. The first build takes several minutes.
+build:
+    podman build {{ image_dir }} -t {{ image }}
+
+# Start the sandbox in a krun microVM and open Herdr in it, as the user agent. `run` builds the image first.
+# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+# crun starts the microVM when the annotation run.oci.handler=krun is set.
+# The sandbox uses the network of the host. The egress proxy comes in a later change.
+run *command: build
+    podman run --rm -it --name sandbox -w /home/agent -e COLORTERM=truecolor --runtime {{ crun }} --annotation run.oci.handler=krun \
+      --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
+      --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
+      {{ image }} sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
