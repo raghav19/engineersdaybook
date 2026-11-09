@@ -44,13 +44,12 @@ if [ -f /usr/local/share/ca-certificates/sandbox-proxy.crt ]; then
 fi
 
 # 4. SSH. The host gets in with ssh, because krun has no `podman exec`.
-#    compose.yaml mounts the public key of the host. The host key of the sandbox lives in the volume, so it stays after a restart.
+#    compose.yaml mounts the public key of the host. `ssh-keygen -A` makes the server key of sshd if there is none. The image has none, so each new container gets its own.
 #    An ssh session does not inherit the environment of the container, so the entry writes it to /etc/environment (pam_env reads it).
 #    The selftest has no key, so it has no sshd.
 if [ -f /run/sandbox/ssh/authorized_keys ]; then
-  mkdir -p /run/sshd /var/lib/sandbox/ssh || fail "could not make the folders of sshd"
-  [ -f /var/lib/sandbox/ssh/ssh_host_ed25519_key ] \
-    || ssh-keygen -q -t ed25519 -N '' -f /var/lib/sandbox/ssh/ssh_host_ed25519_key || fail "could not make the host key of sshd"
+  mkdir -p /run/sshd || fail "could not make the folder of sshd"
+  ssh-keygen -A >/dev/null || fail "could not make the server key of sshd"
   install -m 0644 /run/sandbox/ssh/authorized_keys /etc/ssh/sandbox_authorized_keys || fail "could not install the authorized key"
   env | grep -Ev '^(HOME|USER|LOGNAME|SHELL|PWD|OLDPWD|SHLVL|_|TERM|HOSTNAME|NOTIFY_SOCKET|container)=' > /etc/environment
   /usr/sbin/sshd || fail "sshd did not start"

@@ -78,7 +78,7 @@ Krun has no `podman exec`, so the sandbox has an `sshd`. The msb VM has none, be
 - `sandbox-entry` starts `sshd` as root. It listens on port 2222 in the sandbox. Port 22 needs a capability that the sandbox does not have.
 - `compose.yaml` publishes the port on `127.0.0.1:2222` of the host only. The sandbox network stays internal, so the port adds no way out. A published port works on an internal network (test: HTTP 200 from the host).
 - Only the key `~/.local/state/sandbox/ssh/id_ed25519` can log in, and only as the user agent. `just sandbox run` makes the key pair. The sandbox gets the public part, read-only. No password, no root, no port forwarding.
-- The host key of `sshd` is in the volume `sandbox-state`, so it stays after a restart. The ssh command does not check the host key, as the msb ssh config does, because the connection is a port on your loopback.
+- The server key of `sshd` is new for each container. `sandbox-entry` runs `ssh-keygen -A`, which makes a missing key. The image has no server key (the Dockerfile removes the one that the package makes), so two sandboxes never share one. The ssh command does not check the server key, as the msb ssh config does, because the connection is a port on your loopback.
 - An ssh session does not inherit the environment of the container. `sandbox-entry` writes the environment to `/etc/environment`, so a session has the placeholders, `NODE_OPTIONS`, the workspace path and the other values. A session has no capability (`CapEff` is 0).
 
 ## What `run` starts
