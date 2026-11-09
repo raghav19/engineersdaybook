@@ -23,6 +23,12 @@ compose := source_directory() / 'compose.yaml'
 # The public CA of the proxy. The Podman secret sandbox-ca-key holds the key.
 state_dir := env('XDG_STATE_HOME', home_directory() / '.local/state') / 'sandbox'
 export SANDBOX_STATE_DIR := state_dir
+# The host values that compose.yaml uses. The clone starts from the .git folder and the branch of the host checkout.
+export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-common-dir')
+export SANDBOX_BRANCH := shell('git branch --show-current')
+export GIT_AUTHOR_NAME := shell('git config user.name || echo agent')
+export GIT_AUTHOR_EMAIL := shell('git config user.email || echo agent@localhost')
+export SANDBOX_OMARCHY_THEME := home_directory() / '.local/state/omarchy/current/theme'
 # Bitwarden token encrypted with `age -p`. See .msb/README.md, prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` puts each key of the Bitwarden project in the environment of one command. It uses BWS_ACCESS_TOKEN if set, else it decrypts `token_file`.
@@ -37,12 +43,12 @@ help:
 build:
     podman build {{ image_dir }} -t {{ image }}
 
-# Start the proxy and the sandbox, and open Herdr in the sandbox as the user agent. `run` builds the image and makes the CA first.
-# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+# Start the proxy and the sandbox, and open Herdr in the sandbox, with Claude Code in the top pane, as the user agent. `run` builds the image and makes the CA first.
+# Give a command to run it in place of the start script: `just sandbox run claude --version`.
 # Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
 # crun starts the microVM when the annotation run.oci.handler=krun is set (see compose.yaml).
 run *command: build _ca
-    {{ bws_run }} 'GHCR_PUSH_TOKEN="$GITHUB_TOKEN" podman-compose -f {{ compose }} run --rm sandbox sandbox-entry {{ if command == '' { 'herdr' } else { command } }}'
+    {{ bws_run }} 'GHCR_PUSH_TOKEN="$GITHUB_TOKEN" podman-compose -f {{ compose }} run --rm sandbox sandbox-entry {{ if command == '' { 'sandbox-start' } else { command } }}'
 
 # Make the CA of the egress proxy if there is none.
 [private]

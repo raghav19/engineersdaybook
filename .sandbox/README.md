@@ -2,7 +2,7 @@
 
 This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Podman starts. It runs Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. `crun` starts the microVM when the annotation `run.oci.handler=krun` is set. `krun` is not a separate program. The research note is `docs/research/podman-sandbox-runtimes.md`. The handoff is `docs/handoff/podman-krun-sandbox.md`.
 
-**Status:** the image, the egress proxy and the compose file. The clone of the repo, the start of Claude Code in Herdr, the CI guard and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
+**Status:** the image, the egress proxy, the compose file and the start of the sandbox. The CI guard, the signed artifact and the SPIFFE identity come in later changes. `.msb/` stays in use until the last of them.
 
 ## What is here
 
@@ -52,12 +52,34 @@ sandbox (krun microVM)  --inner network, no route out-->  proxy  --outer network
 ## Use
 
 ```shell
-just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens Herdr as the user agent
-just sandbox run claude --version     # runs one command in place of Herdr
+just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens Herdr with Claude Code as the user agent
+just sandbox run claude --version     # runs one command in place of the start script
 just sandbox selftest                 # checks the wall with dummy tokens. No Bitwarden needed
 just sandbox down                     # removes the containers and the networks
 ```
 
 `run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Quit Herdr to leave the sandbox. Run `just sandbox run bash --login -i` for a plain shell. The proxy keeps running until `just sandbox down`.
 
-The clone of the repo and the start of Claude Code in Herdr come in a later change. Then `just sandbox run` is the one daily command.
+## What `run` starts
+
+`sandbox-start` runs as the user agent, after `sandbox-entry`. It does these steps. Each step does nothing if its work exists.
+
+1. It clones the host repo into `~/engineersdaybook`, on the branch of the host checkout. The source is the `.git` folder of the host repo, mounted read-only at `/run/sandbox/source`. The sandbox cannot change the host repo. The clone has `origin` set to GitHub, so a push goes to a feature branch. Only committed work reaches the clone.
+2. It installs the `prek` hooks of the clone.
+3. It starts Headroom on `127.0.0.1:8787`. The `.claude/settings.json` of the repo points Claude Code to it.
+4. It installs the plugins of Claude Code. A failure prints a warning.
+5. It opens Herdr in the clone. Claude Code runs in the top pane, and a shell runs in the pane below.
+
+## Volumes
+
+A volume stays after `just sandbox down`. Remove one with `podman volume rm`.
+
+| Volume | Folder in the sandbox | Content |
+|---|---|---|
+| `sandbox-workspace` | `~/engineersdaybook` | The clone. The work of the agent stays here. |
+| `sandbox-claude-home` | `~/.claude` | The settings and the plugins of Claude Code. |
+| `sandbox-qwen-home` | `~/.qwen` | The sessions of Qwen Code. |
+| `sandbox-headroom-home` | `~/.headroom` | The history and the settings of Headroom. |
+| `sandbox-herdr` | `~/.herdr` | The layout of Herdr. A new sandbox restores the panes. |
+| `sandbox-terraform-providers` | `~/.cache/terraform-providers` | The Terraform provider cache. |
+| `sandbox-state` | `/var/lib/sandbox` | The ext4 file with the images of nested Podman. |

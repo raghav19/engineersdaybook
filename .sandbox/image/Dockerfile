@@ -111,6 +111,7 @@ RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/a
 # Root-only: sandbox-entry, managed settings.
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
+COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
 
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json

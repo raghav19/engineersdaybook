@@ -29,6 +29,24 @@ volumes:
   # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`.
   sandbox-state:
     name: sandbox-state
+  # The clone of the repo. The work of the agent stays here after you quit. `down` keeps it.
+  sandbox-workspace:
+    name: sandbox-workspace
+  # The login and settings of Claude Code, and its plugins.
+  sandbox-claude-home:
+    name: sandbox-claude-home
+  # The sessions of Qwen Code.
+  sandbox-qwen-home:
+    name: sandbox-qwen-home
+  # The history, the settings and the memory of Headroom.
+  sandbox-headroom-home:
+    name: sandbox-headroom-home
+  # The layout of Herdr (session.json and session-snapshots). A new sandbox restores the panes.
+  sandbox-herdr:
+    name: sandbox-herdr
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in image/mise.toml).
+  sandbox-terraform-providers:
+    name: sandbox-terraform-providers
 
 x-sandbox: &sandbox
   image: localhost/sandbox-dev:latest
@@ -58,12 +76,34 @@ x-sandbox: &sandbox
     GHCR_PUSH_TOKEN: sandbox-placeholder-GHCR_PUSH_TOKEN
     # The tools that do not read the system trust store by default.
     COLORTERM: truecolor
+    SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone
+    SANDBOX_BRANCH: ${SANDBOX_BRANCH:-} # the branch of the host checkout. The clone starts on it.
+    REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone
+    GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-agent} # git reads the identity from these four variables
+    GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME:-agent}
+    GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+    GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+    MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook # mise trusts the mise.toml files in the clone
+    MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # the root mise.toml of the clone lists host tools
+    CLAUDE_CONFIG_DIR: /home/agent/.claude
+    DISABLE_UPDATES: "1" # the claude that mise installs does not update itself
+    HEADROOM_HARD_WATCHDOG_SECS: "0" # 0 turns off the watchdog. It stops Headroom after the host suspends the VM for more than 90 seconds.
     NODE_OPTIONS: --use-system-ca
     REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
   volumes:
     # The public CA of the proxy. sandbox-entry adds it to the trust store of the sandbox.
     - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/usr/local/share/ca-certificates/sandbox-proxy.crt:ro
     - sandbox-state:/var/lib/sandbox
+    # The .git folder of the host repo. The clone is made from it. The mount is read-only, so the sandbox cannot change the host repo.
+    - ${SANDBOX_GIT_DIR:?run this through just}:/run/sandbox/source:ro
+    # The Omarchy theme of the host, for the TTT editor.
+    - ${SANDBOX_OMARCHY_THEME:?run this through just}:/home/agent/.local/state/omarchy/current/theme:ro
+    - sandbox-workspace:/home/agent/engineersdaybook
+    - sandbox-claude-home:/home/agent/.claude
+    - sandbox-qwen-home:/home/agent/.qwen
+    - sandbox-headroom-home:/home/agent/.headroom
+    - sandbox-herdr:/home/agent/.herdr
+    - sandbox-terraform-providers:/home/agent/.cache/terraform-providers
   networks:
     inner: {ipv4_address: 10.89.61.10}
   depends_on: [proxy]
