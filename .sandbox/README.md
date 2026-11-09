@@ -39,4 +39,4 @@ just sandbox run                      # builds the image, starts the microVM and
 just sandbox run claude --version     # runs one command in place of Herdr
 ```
 
-`run` builds the image first. The first build takes several minutes. Quit Herdr to stop the sandbox. Run `just sandbox run bash --login -i` for a plain shell. In this change the sandbox uses the network of the host, and `claude` has no token. The egress proxy, the token placeholders, the clone of the repo and the start of Claude Code and Herdr come in later changes. Then `just sandbox run` is the one daily command.
+`run` builds the image first. The first build takes several minutes. Quit Herdr to stop the sandbox. Run `just sandbox run bash --login -i` for a plain shell. In this change the sandbox uses the network of the host, and `claude` has no token. The egress proxy, the token placeholders, the clone of the repo and the start of Claude Code in Herdr come in later changes. Then `just sandbox run` is the one daily command.
