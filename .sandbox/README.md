@@ -70,7 +70,7 @@ just sandbox down                     # removes the containers and the networks
 2. It installs the `prek` hooks of the clone.
 3. It starts Headroom on `127.0.0.1:8787`. The `.claude/settings.json` of the repo points Claude Code to it.
 4. It installs the plugins of Claude Code. A failure prints a warning.
-5. It starts the Herdr server in the background and waits until it answers. Krun has no `podman exec`, so the script cannot start Claude Code from outside. With the server up, the script uses the Herdr API in order: it makes the workspace in the clone, splits it, and runs `claude` in the top pane. A restored layout keeps its panes, and the script runs `claude` in the first pane. Then it opens the Herdr client.
+5. It starts the Herdr server in the background and waits until it answers. Krun has no `podman exec`, so the script cannot start Claude Code from outside. Then the script calls the Herdr API. It makes the workspace in the clone, splits it, and runs `claude` in the top pane. A restored layout keeps its panes, and the script runs `claude` in the first pane. Then it opens the Herdr client.
 
 ## Volumes
 
