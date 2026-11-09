@@ -2,6 +2,8 @@
 
 Written on 2026-11-08. The index of all handoff documents is `docs/handoff.md`.
 
+> **Update of 2026-11-09.** The owner chose another direction: a plain hardened Podman container with a host-side proxy. See [podman-plain-sandbox.md](podman-plain-sandbox.md). Read this document for the spike results, the lessons and the state of the host.
+
 The research and the spikes are done. No part of the new sandbox exists in `.msb/` or in a `.sandbox/` folder yet. This handoff lets a fresh session continue without the old conversation. Read it, then read "Next steps".
 
 ## Goal
