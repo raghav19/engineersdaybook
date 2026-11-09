@@ -2,7 +2,7 @@
 
 This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Podman starts. It runs Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. `crun` starts the microVM when the annotation `run.oci.handler=krun` is set. `krun` is not a separate program. The research note is `docs/research/podman-sandbox-runtimes.md`. The handoff is `docs/handoff/podman-krun-sandbox.md`.
 
-**Status:** the image, the egress proxy and the compose file. The clone of the repo, the start of Claude Code and Herdr, the CI guard and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
+**Status:** the image, the egress proxy and the compose file. The clone of the repo, the start of Claude Code in Herdr, the CI guard and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
 
 ## What is here
 
@@ -59,4 +59,4 @@ just sandbox down                     # removes the containers and the networks
 
 `run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Quit Herdr to leave the sandbox. Run `just sandbox run bash --login -i` for a plain shell. The proxy keeps running until `just sandbox down`.
 
-The clone of the repo and the start of Claude Code and Herdr come in a later change. Then `just sandbox run` is the one daily command.
+The clone of the repo and the start of Claude Code in Herdr come in a later change. Then `just sandbox run` is the one daily command.
