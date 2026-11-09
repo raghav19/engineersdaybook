@@ -1,6 +1,6 @@
 #!/bin/sh
 # The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It makes two things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# It makes three things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
@@ -28,6 +28,13 @@ chown agent:agent "$storage_dir" || fail "could not give $storage_dir to agent"
 # 2. The network of a nested container.
 #    Podman uses pasta, and pasta opens /dev/net/tun. The kernel makes it for root only. Give it to the group agent.
 chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/net/tun for podman"
+
+# 3. Trust the CA of the egress proxy.
+#    The proxy ends the TLS with its own CA. The compose file mounts the public part of it. Add it to the trust store of the sandbox.
+#    Nested containers get the same trust store (configs/containers/containers.conf).
+if [ -f /usr/local/share/ca-certificates/sandbox-proxy.crt ]; then
+  update-ca-certificates >/dev/null || fail "update-ca-certificates failed"
+fi
 
 # The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.
 unset NOTIFY_SOCKET

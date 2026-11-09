@@ -2,14 +2,17 @@
 
 This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Podman starts. It runs Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. `crun` starts the microVM when the annotation `run.oci.handler=krun` is set. `krun` is not a separate program. The research note is `docs/research/podman-sandbox-runtimes.md`. The handoff is `docs/handoff/podman-krun-sandbox.md`.
 
-**Status:** the image only. The compose file, the egress proxy, access to the sandbox and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
+**Status:** the image, the egress proxy and the compose file. The clone of the repo, the start of Claude Code and Herdr, the CI guard and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
 
 ## What is here
 
 | Path | Content |
 |---|---|
 | `image/` | The image. It is the image of `.msb/image/` with the changes that krun needs. |
-| `justfile` | The recipes `build` and `run`. |
+| `compose.yaml` | The sandbox (a krun microVM) and iron-proxy, its only way out. |
+| `proxy/iron-proxy.yaml` | The allowlist of hosts and the secret swaps. It has placeholders and variable names, never a real value. |
+| `egress-selftest.sh` | The egress self-test. It runs inside the sandbox. |
+| `justfile` | The recipes `run`, `selftest`, `build`, `ca` and `down`. |
 | `AGENTS.md` | The rules for a change to the tools of the image. |
 
 ## Changes from `.msb/image/`
@@ -30,13 +33,30 @@ This change does not port the boot steps of `sandbox-boot` that need a clone, th
 ## Prerequisites
 
 1. Install `podman`, `crun` with `+LIBKRUN`, `libkrun` and `libkrunfw`. The command `crun --version` must show `+LIBKRUN`.
-2. Make sure that `/dev/kvm` is open for your user.
+2. Install `podman-compose` (1.6.0 or newer), `openssl`, `bws` and `age`. Set up Bitwarden as in `.msb/README.md`, prerequisite 4. The project needs the keys `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`.
+3. Make sure that `/dev/kvm` is open for your user.
+
+## How the network wall works
+
+```text
+sandbox (krun microVM)  --inner network, no route out-->  proxy  --outer network-->  internet
+  placeholders only                                   real tokens, allowlist
+```
+
+- The sandbox is on the `inner` network. The network is internal, so the sandbox has no default route. All DNS goes to the proxy.
+- The proxy ends the TLS with its own CA. `just sandbox ca` makes the CA. The key is a Podman secret that only the proxy gets. The sandbox gets the certificate, and `sandbox-entry` adds it to the trust store.
+- A host that is not in `proxy/iron-proxy.yaml` gets 403. A placeholder that goes to a host of its rule becomes the real token. The real tokens come from Bitwarden into the environment of the proxy.
+- The proxy passes HTTP and TLS only. Use https remotes for `git`.
 
 ## Use
 
 ```shell
-just sandbox run                      # builds the image, starts the microVM and opens a shell as the user agent
+just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens a shell as the user agent
 just sandbox run claude --version     # runs one command in place of the shell
+just sandbox selftest                 # checks the wall with dummy tokens. No Bitwarden needed
+just sandbox down                     # removes the containers and the networks
 ```
 
-`run` builds the image first. The first build takes several minutes. Type `exit` to stop the sandbox. In this change the sandbox uses the network of the host, and `claude` has no token. The egress proxy, the token placeholders, the clone of the repo and the start of Claude Code and Herdr come in later changes. Then `just sandbox run` is the one daily command.
+`run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Type `exit` to leave the sandbox. The proxy keeps running until `just sandbox down`.
+
+The clone of the repo and the start of Claude Code and Herdr come in a later change. Then `just sandbox run` is the one daily command.
