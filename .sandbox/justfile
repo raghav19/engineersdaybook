@@ -23,11 +23,11 @@ help:
 build:
     podman build {{ image_dir }} -t {{ image }}
 
-# Run the image in a krun microVM. As the user agent, run a nested container and a nested build.
+# Run the image in a krun microVM. crun starts the microVM when the annotation run.oci.handler=krun is set. As the user agent, run a nested container and a nested build.
 # The nested pull uses the network of the host. The egress proxy is not part of this recipe yet.
 smoke:
-    [ -x /usr/bin/krun ] || [ -x /usr/local/bin/krun ] || { echo "sandbox: no krun runtime. Run: sudo ln -s crun /usr/bin/krun" >&2; exit 1; }
-    podman run --rm --runtime krun --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
+    crun --version | grep -q '+LIBKRUN' || { echo "sandbox: crun has no libkrun support. Install crun with +LIBKRUN, libkrun and libkrunfw." >&2; exit 1; }
+    podman run --rm --runtime crun --annotation run.oci.handler=krun --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
       --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
       {{ image }} sandbox-entry bash -ec ' \
         test "$(id -un)" = agent; \

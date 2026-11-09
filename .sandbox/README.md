@@ -1,6 +1,6 @@
 # The Podman sandbox
 
-This folder will replace `.msb/`. The sandbox is a krun microVM that Rootless Podman starts. It runs Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. The research note is `docs/research/podman-sandbox-runtimes.md`. The handoff is `docs/handoff/podman-krun-sandbox.md`.
+This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Podman starts. It runs Claude Code and the [TTT](https://github.com/eugenioenko/ttt) editor. `crun` starts the microVM when the annotation `run.oci.handler=krun` is set. `krun` is not a separate program. The research note is `docs/research/podman-sandbox-runtimes.md`. The handoff is `docs/handoff/podman-krun-sandbox.md`.
 
 **Status:** the image only. The compose file, the egress proxy, access to the sandbox and the signed artifact come in later changes. `.msb/` stays in use until the last of them.
 
@@ -29,8 +29,7 @@ This change does not port the boot steps of `sandbox-boot` that need a clone, th
 ## Prerequisites
 
 1. Install `podman`, `crun` with `+LIBKRUN`, `libkrun` and `libkrunfw`. The command `crun --version` must show `+LIBKRUN`.
-2. Make the runtime name `krun`. Podman looks for `/usr/bin/krun`. One time for each host: `sudo ln -s crun /usr/bin/krun`.
-3. Make sure that `/dev/kvm` is open for your user.
+2. Make sure that `/dev/kvm` is open for your user.
 
 ## Use
 
