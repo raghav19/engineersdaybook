@@ -133,7 +133,7 @@ Always use git worktrees for agent work. Use Herdr's worktree commands to create
 
 ## 12. msb sandbox image
 
-Before you add or remove tools or LSP servers in `.msb/image/`, read `.msb/AGENTS.md` in full. Before you do the same in `.sandbox/image/`, read `.sandbox/AGENTS.md` in full.
+Before you add or remove tools or LSP servers in `.msb/image/`, read `.msb/AGENTS.md` in full.
 
 ## 13. Simplified Technical English
 
