@@ -1,0 +1,124 @@
+# The Podman sandbox: the sandbox (a krun microVM) and iron-proxy, its only way out.
+# Run it with `just sandbox <recipe>`. The justfile sets SANDBOX_STATE_DIR and makes the CA first (`just sandbox ca`).
+# podman-compose 1.6.0 ignores `configs:` and the uid, gid and mode of file secrets, so the secret is external (`podman secret create`).
+name: sandbox
+x-podman:
+  # Without this, podman-compose puts all services in one pod, and a pod shares one network namespace.
+  in_pod: false
+
+networks:
+  # The sandbox has no route out of this network. The proxy is the only other host on it.
+  inner:
+    name: sandbox-inner
+    internal: true
+    # Without this, the resolver of the sandbox points at aardvark-dns and the `dns:` key has no effect.
+    x-podman.disable_dns: true
+    ipam:
+      config: [{subnet: 10.89.61.0/24}]
+  outer:
+    name: sandbox-outer
+    ipam:
+      config: [{subnet: 10.89.62.0/24}]
+
+secrets:
+  # `just sandbox ca` makes it. Only the proxy gets it.
+  sandbox-ca-key:
+    external: true
+
+volumes:
+  # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`.
+  sandbox-state:
+    name: sandbox-state
+
+x-sandbox: &sandbox
+  image: localhost/sandbox-dev:latest
+  # crun starts a krun microVM when this annotation is set.
+  runtime: crun
+  annotations:
+    run.oci.handler: krun
+  # The entry starts as root in the guest and drops to the user agent.
+  user: "0:0"
+  working_dir: /home/agent
+  # A static map. An automatic map shifts between runs, and a volume then shows as `nobody`. The proxy has its own range.
+  x-podman.uidmaps: ["0:100000:65536"]
+  x-podman.gidmaps: ["0:100000:65536"]
+  cap_drop: [ALL]
+  cap_add: [CHOWN, SETUID, SETGID, FOWNER, DAC_OVERRIDE]
+  security_opt: ["no-new-privileges:true"]
+  pids_limit: 4096
+  mem_limit: 3g
+  cpus: 4
+  # All DNS goes to the proxy.
+  dns: [10.89.61.2]
+  environment:
+    # The placeholders. They must equal the proxy_value lines in proxy/iron-proxy.yaml. They are not secrets.
+    GH_TOKEN: sandbox-placeholder-GH_TOKEN
+    CLAUDE_CODE_OAUTH_TOKEN: sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
+    QWEN_API_KEY: sandbox-placeholder-QWEN_API_KEY
+    GHCR_PUSH_TOKEN: sandbox-placeholder-GHCR_PUSH_TOKEN
+    # The tools that do not read the system trust store by default.
+    COLORTERM: truecolor
+    NODE_OPTIONS: --use-system-ca
+    REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  volumes:
+    # The public CA of the proxy. sandbox-entry adds it to the trust store of the sandbox.
+    - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/usr/local/share/ca-certificates/sandbox-proxy.crt:ro
+    - sandbox-state:/var/lib/sandbox
+  networks:
+    inner: {ipv4_address: 10.89.61.10}
+  depends_on: [proxy]
+
+services:
+  proxy:
+    container_name: sandbox-proxy
+    # Pinned by digest. The releases of iron-proxy have no signature (see the research note, spike B).
+    image: docker.io/ironsh/iron-proxy@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+    command: ["-config", "/etc/iron-proxy/conf/iron-proxy.yaml"]
+    user: "65534:65534"
+    x-podman.uidmaps: ["0:200000:65536"]
+    x-podman.gidmaps: ["0:200000:65536"]
+    cap_drop: [ALL]
+    # The proxy binds the ports 53, 80 and 443. Without this, it exits with code 0.
+    cap_add: [NET_BIND_SERVICE]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    # TODO: test a Podman secret with a file source in place of these variables. `podman inspect` shows the values of these variables to the host user.
+    environment:
+      GH_TOKEN: ${GH_TOKEN:?set GH_TOKEN}
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?set CLAUDE_CODE_OAUTH_TOKEN}
+      QWEN_API_KEY: ${QWEN_API_KEY:?set QWEN_API_KEY}
+      GHCR_PUSH_TOKEN: ${GHCR_PUSH_TOKEN:?set GHCR_PUSH_TOKEN}
+    secrets:
+      - source: sandbox-ca-key
+        target: /etc/iron-proxy/ca.key
+        uid: "65534"
+        gid: "65534"
+        mode: "0400"
+    volumes:
+      # A folder, not a file. A mount of one file goes stale after `sed -i`.
+      - ./proxy:/etc/iron-proxy/conf:ro
+      - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/etc/iron-proxy/ca.crt:ro
+    networks:
+      inner: {ipv4_address: 10.89.61.2}
+      outer: {ipv4_address: 10.89.62.2}
+
+  sandbox:
+    <<: *sandbox
+    command: ["sandbox-entry", "sleep", "infinity"]
+
+  # The egress self-test. krun has no `podman exec`, so the test runs as the command of a container: `just sandbox selftest`.
+  selftest:
+    <<: *sandbox
+    profiles: [selftest]
+    command:
+      - sandbox-entry
+      - egress-selftest
+      - -p
+      - 'ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{20,}'
+      - -a
+      - https://api.github.com/zen
+      - example.com
+    volumes:
+      - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/usr/local/share/ca-certificates/sandbox-proxy.crt:ro
+      - sandbox-state:/var/lib/sandbox
+      - ./egress-selftest.sh:/usr/local/bin/egress-selftest:ro

@@ -1,0 +1,120 @@
+# The config of iron-proxy, the only way out of the sandbox. compose.yaml mounts this folder read-only in the proxy container.
+# The sandbox sends all DNS to the proxy. The proxy answers with its own address, ends the TLS with its own CA and forwards the request.
+# The allowlist below is the list of hosts that the sandbox can reach. Any other host gets 403.
+# The sandbox holds only the placeholders. The proxy replaces a placeholder with the real value in a request to the hosts of its rule.
+# The real values come from the environment of the proxy container. This file has the names of the variables, never the values.
+# The placeholders in compose.yaml (service sandbox) must equal the proxy_value lines.
+dns:
+  listen: ":53"
+  proxy_ip: "10.89.61.2"
+proxy:
+  http_listen: ":80"
+  https_listen: ":443"
+  tunnel_listen: ":8080"
+tls:
+  ca_cert: /etc/iron-proxy/ca.crt
+  ca_key: /etc/iron-proxy/ca.key
+# The default is all interfaces, and the sandbox could then reach the metrics.
+metrics:
+  listen: "127.0.0.1:9090"
+transforms:
+  - name: allowlist
+    config:
+      domains:
+        # Claude Code
+        - api.anthropic.com
+        - claude.ai
+        - console.anthropic.com
+        - platform.claude.com
+        - code.claude.com
+        # Qwen Code: the Token Plan (international, Singapore) endpoint
+        - token-plan.ap-southeast-1.maas.aliyuncs.com
+        # GitHub: git, API, release downloads and the GitHub MCP server
+        - github.com
+        - api.github.com
+        - api.githubcopilot.com
+        - "*.githubusercontent.com"
+        - github.githubassets.com
+        - www.githubstatus.com
+        # MCP servers
+        - mcp.draw.io
+        - schemas.fluxoperator.dev
+        # Container images (podman). Docker Hub needs the registry, the token service and a CDN for the blobs.
+        # The CDN host changes (cloudflare, cloudfront), so *.docker.com covers it.
+        - registry-1.docker.io
+        - auth.docker.io
+        - "*.docker.com"
+        # GitHub Container Registry. ghcr.io serves the token and the manifests. It redirects the blobs to pkg-containers.githubusercontent.com.
+        - ghcr.io
+        - pkg-containers.githubusercontent.com
+        # Tool downloads
+        - releases.hashicorp.com
+        - registry.terraform.io
+        - mise.jdx.dev
+        - astral.sh
+        - "*.astral.sh"
+        - pypi.org
+        - files.pythonhosted.org
+        - registry.npmjs.org
+        # Chart and OCI registries that the cluster uses (blob.istio.io redirects to istio-release.r2.istio.io)
+        - istio.io
+        - "*.istio.io"
+        - istio-release.storage.googleapis.com
+        - cr.agentgateway.dev
+        - quay.io
+        - "*.quay.io"
+        - charts.dexidp.io
+        # Schemas
+        - www.schemastore.org
+        # Documentation and project sites, for research
+        - artifacthub.io
+        - backstage.io
+        - kind.sigs.k8s.io
+        - just.systems
+        - fluxcd.io
+        - fluxoperator.dev
+        - spiffe.github.io
+        - docs.ansible.com
+        - argo-cd.readthedocs.io
+        - pkl-lang.org
+        - kubernetes.io
+        - helm.sh
+        - kubectl.docs.kubernetes.io
+        - docs.aws.amazon.com
+        - docs.k3s.io
+        - agentgateway.dev
+        - cuelang.org
+        - spiffe.io
+        - owasp.org
+        - fluxcd.control-plane.io
+        - doc.traefik.io
+        - cloud.google.com
+        # Other
+        - crl.microsoft.com
+  - name: secrets
+    config:
+      secrets:
+        # GitHub: git (Basic authentication), the API and the GitHub MCP server.
+        - source: {type: env, var: GH_TOKEN}
+          replace: {proxy_value: sandbox-placeholder-GH_TOKEN, match_headers: [Authorization]}
+          rules:
+            - {host: github.com}
+            - {host: api.github.com}
+            - {host: api.githubcopilot.com}
+        # Claude Code
+        - source: {type: env, var: CLAUDE_CODE_OAUTH_TOKEN}
+          replace: {proxy_value: sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN, match_headers: [Authorization]}
+          rules:
+            - {host: api.anthropic.com}
+        # Qwen Code: the Token Plan (international, Singapore) endpoint
+        - source: {type: env, var: QWEN_API_KEY}
+          replace: {proxy_value: sandbox-placeholder-QWEN_API_KEY, match_headers: [Authorization]}
+          rules:
+            - {host: token-plan.ap-southeast-1.maas.aliyuncs.com}
+        # GitHub Container Registry: podman login, podman push and flux push artifact
+        - source: {type: env, var: GHCR_PUSH_TOKEN}
+          replace: {proxy_value: sandbox-placeholder-GHCR_PUSH_TOKEN, match_headers: [Authorization]}
+          rules:
+            - {host: ghcr.io}
+log:
+  level: info
