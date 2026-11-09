@@ -74,8 +74,7 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils e2fsprogs openssh-server \
- && rm -f /etc/ssh/ssh_host_* \
+ && apt-get install -y --no-install-recommends binutils socat \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -113,8 +112,6 @@ RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/a
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# The sshd drop-in. The host keys are not in the image: sandbox-entry makes them at the first start.
-COPY --chmod=0644 configs/ssh/sandbox.conf /etc/ssh/sshd_config.d/sandbox.conf
 # The entry runs as root, then drops to agent and runs the command. The default command is the start script.
 ENTRYPOINT ["sandbox-entry"]
 CMD ["sandbox-start"]

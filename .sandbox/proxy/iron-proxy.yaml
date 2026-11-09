@@ -1,22 +1,24 @@
-# The config of iron-proxy, the only way out of the sandbox. compose.yaml mounts this folder read-only in the proxy container.
-# The sandbox sends all DNS to the proxy. The proxy answers with its own address, ends the TLS with its own CA and forwards the request.
-# The allowlist below is the list of hosts that the sandbox can reach. Any other host gets 403.
+# The config of iron-proxy, the only way out of the sandbox. It runs on the host, as a user service (`just sandbox run` starts it).
+# The sandbox has no network. It reaches the proxy through a relay and a Unix socket, and it sends HTTPS_PROXY requests (CONNECT) to tunnel_listen.
+# The proxy ends the TLS with its own CA and checks the allowlist below. Any other host gets 403.
 # The sandbox holds only the placeholders. The proxy replaces a placeholder with the real value in a request to the hosts of its rule.
-# The real values come from the environment of the proxy container. This file has the names of the variables, never the values.
+# The real values come from the environment of the proxy. This file has the names of the variables, never the values.
 # The placeholders in compose.yaml (service sandbox) must equal the proxy_value lines.
+# The proxy runs in the state folder (~/.local/state/sandbox), so ca.crt and ca.key are relative paths.
+# All listeners are on the loopback of the host. The DNS, HTTP and HTTPS listeners are required by iron-proxy and the sandbox does not use them.
 dns:
-  listen: ":53"
-  proxy_ip: "10.89.61.2"
+  listen: "127.0.0.1:15353"
+  proxy_ip: "127.0.0.1"
 proxy:
-  http_listen: ":80"
-  https_listen: ":443"
-  # No tunnel_listen. That listener takes CONNECT and SOCKS5, and the sandbox needs only DNS, HTTP and HTTPS.
+  http_listen: "127.0.0.1:8081"
+  https_listen: "127.0.0.1:8443"
+  # The tunnel takes CONNECT and SOCKS5. `just sandbox run` bridges it to the Unix socket that the sandbox mounts.
+  tunnel_listen: "127.0.0.1:1080"
 tls:
-  ca_cert: /etc/iron-proxy/ca.crt
-  ca_key: /etc/iron-proxy/ca.key
-# The default is all interfaces, and the sandbox could then reach the metrics.
+  ca_cert: ca.crt
+  ca_key: ca.key
 metrics:
-  listen: "127.0.0.1:9090"
+  listen: "127.0.0.1:9091"
 transforms:
   - name: allowlist
     config:
@@ -112,7 +114,7 @@ transforms:
           rules:
             - {host: token-plan.ap-southeast-1.maas.aliyuncs.com}
         # GitHub Container Registry: podman login, podman push and flux push artifact
-        - source: {type: env, var: GHCR_PUSH_TOKEN}
+        - source: {type: env, var: GITHUB_TOKEN}
           replace: {proxy_value: sandbox-placeholder-GHCR_PUSH_TOKEN, match_headers: [Authorization]}
           rules:
             - {host: ghcr.io}

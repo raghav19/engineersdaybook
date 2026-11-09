@@ -1,6 +1,6 @@
 #!/bin/sh
-# The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It makes four things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# The command of the sandbox container. It starts as root in the container. In rootless Podman, container root is the host user.
+# It trusts the CA of the egress proxy and starts the relay to the proxy. Then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
@@ -10,52 +10,22 @@ fail() { echo "sandbox-entry: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || fail "run as root"
 [ "$#" -gt 0 ] || fail "give a command to run"
 
-# 1. Where nested Podman keeps its images.
-#    The disk of a krun microVM is a virtiofs share of the host. The overlay driver of Podman cannot use it:
-#    "unable to create kernel-style whiteout". A volume, a tmpfs and the vfs driver fail on the same limit.
-#    The overlay driver does work on an ext4 file system. So the entry makes a sparse file, formats it as ext4
-#    and mounts it with a loop device on the folder where Podman keeps its images.
-#    Make /var/lib/sandbox a named volume to keep the images after you remove the container.
-storage_dir=/home/agent/.local/share/containers
-storage_img=/var/lib/sandbox/podman-storage.img
-mkdir -p /var/lib/sandbox "$storage_dir" || fail "could not make the folders of the storage"
-if [ ! -f "$storage_img" ]; then
-  truncate -s 20G "$storage_img" && mkfs.ext4 -q -F "$storage_img" || fail "could not make $storage_img"
-fi
-# Do not run two sandboxes on the same volume. Two VMs that mount the same file damage the file system, and a lock in the guest does not stop it.
-# compose.yaml blocks a second sandbox with a fixed IP address. A manual `podman run` on the volume bypasses this.
-# The VM does not unmount the file system when it stops. Repair it before you mount it. Code 0 and 1 mean the file system is clean or repaired.
-rc=0
-e2fsck -p "$storage_img" >/dev/null 2>&1 || rc=$?
-[ "$rc" -le 1 ] || fail "e2fsck could not repair $storage_img (code $rc)"
-# The option discard gives the freed blocks back, so the file on the host shrinks when Podman removes data.
-mount -o loop,discard "$storage_img" "$storage_dir" || fail "could not mount $storage_img on $storage_dir"
-chown agent:agent "$storage_dir" || fail "could not give $storage_dir to agent"
-
-# 2. The network of a nested container.
-#    Podman uses pasta, and pasta opens /dev/net/tun. The kernel makes it for root only. Give it to the group agent.
-chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/net/tun for podman"
-
-# 3. Trust the CA of the egress proxy.
-#    The proxy ends the TLS with its own CA. The compose file mounts the public part of it. Add it to the trust store of the sandbox.
-#    Nested containers get the same trust store (configs/containers/containers.conf).
+# 1. Trust the CA of the egress proxy.
+#    The proxy on the host ends the TLS with its own CA. The compose file mounts the public part of it. Add it to the trust store of the sandbox.
 if [ -f /usr/local/share/ca-certificates/sandbox-proxy.crt ]; then
   update-ca-certificates >/dev/null || fail "update-ca-certificates failed"
 fi
 
-# 4. SSH. The host gets in with ssh, because krun has no `podman exec`.
-#    compose.yaml mounts the public key of the host. `ssh-keygen -A` makes the server key of sshd if there is none. The image has none, so each new container gets its own.
-#    An ssh session does not inherit the environment of the container, so the entry writes it to /etc/environment (pam_env reads it).
-#    The selftest has no key, so it has no sshd.
-if [ -f /run/sandbox/ssh/authorized_keys ]; then
-  mkdir -p /run/sshd || fail "could not make the folder of sshd"
-  ssh-keygen -A >/dev/null || fail "could not make the server key of sshd"
-  install -m 0644 /run/sandbox/ssh/authorized_keys /etc/ssh/sandbox_authorized_keys || fail "could not install the authorized key"
-  env | grep -Ev '^(HOME|USER|LOGNAME|SHELL|PWD|OLDPWD|SHLVL|_|TERM|HOSTNAME|NOTIFY_SOCKET|container)=' > /etc/environment
-  /usr/sbin/sshd || fail "sshd did not start"
+# 2. The relay to the proxy.
+#    The sandbox has no network. The host proxy listens on a Unix socket that the compose file mounts at /run/sandbox/proxy/proxy.sock.
+#    The socket belongs to the host user, and container root is the host user, so root opens it and the user agent cannot.
+#    The relay listens on 127.0.0.1:3128 and copies the bytes to the socket. HTTPS_PROXY points at it.
+#    The relay has no capability: the bounding set and the inheritable set are empty.
+sock=/run/sandbox/proxy/proxy.sock
+if [ -S "$sock" ]; then
+  setpriv --bounding-set=-all --inh-caps=-all socat TCP-LISTEN:3128,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:"$sock" &
+else
+  echo "sandbox-entry: no proxy socket at $sock. The sandbox has no way out." >&2
 fi
 
-# The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.
-unset NOTIFY_SOCKET
-
-exec setpriv --reuid=agent --regid=agent --init-groups --inh-caps=-all env HOME=/home/agent "$@"
+exec setpriv --reuid=agent --regid=agent --init-groups --inh-caps=-all --bounding-set=-all env HOME=/home/agent "$@"

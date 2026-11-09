@@ -26,9 +26,14 @@ res() { # res STATUS NAME DETAIL
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # http_code URL: prints the HTTP status, or 000 when no connection. Returns 2 when there is no HTTP tool.
+# Through a CONNECT proxy, a refused host has no HTTP status. The proxy answers the CONNECT with 403, so print that code.
 http_code() {
   if have curl; then
-    curl -s -o /dev/null -m3 -w '%{http_code}' "$1" 2>/dev/null || true
+    out=$(curl -s -o /dev/null -m5 -w '%{http_code} %{http_connect}' "$1" 2>/dev/null || true)
+    code=${out%% *}
+    conn=${out##* }
+    if [ "$code" = "000" ] && [ -n "$conn" ] && [ "$conn" != "000" ]; then code=$conn; fi
+    printf '%s' "${code:-000}"
   elif have wget; then
     out=$(wget -q -T3 -O /dev/null -S "$1" 2>&1)
     code=$(printf '%s\n' "$out" | sed -n 's/^ *HTTP\/[0-9.]* \([0-9][0-9][0-9]\).*/\1/p' | head -n 1)
@@ -68,6 +73,14 @@ else
   res PASS dns-to-1.1.1.1 "$dns_tool got no answer"
 fi
 
+# 2b. The container has the loopback interface only.
+ifaces=$(ls /sys/class/net 2>/dev/null | tr '\n' ' ' | sed 's/ $//')
+if [ "$ifaces" = "lo" ]; then
+  res PASS only-loopback "interfaces: $ifaces"
+else
+  res FAIL only-loopback "interfaces: $ifaces"
+fi
+
 # 3. No default route. /proc/net/route needs no tool. A default route has Destination 00000000 and Mask 00000000.
 if awk 'NR>1 && $2=="00000000" && $8=="00000000" {f=1} END {exit !f}' /proc/net/route 2>/dev/null; then
   res FAIL no-default-route "default route exists: $(awk 'NR>1 && $2=="00000000" && $8=="00000000" {print $1}' /proc/net/route | head -n 1)"
@@ -97,8 +110,8 @@ else
   done
 fi
 
-# 5. No container-engine socket. conmon makes /run/notify/notify.sock in each Podman container. It is not an API socket.
-socks=$(find / \( -path /proc -o -path /sys \) -prune -o \( -type s -o -name '*.sock' \) -print 2>/dev/null | grep -v '^/run/notify/notify.sock$')
+# 5. No container-engine socket. conmon makes /run/notify/notify.sock in each Podman container, and the host proxy has the socket /run/sandbox/proxy/proxy.sock. Neither is an API socket.
+socks=$(find / \( -path /proc -o -path /sys \) -prune -o \( -type s -o -name '*.sock' \) -print 2>/dev/null | grep -v -e '^/run/notify/notify.sock$' -e '^/run/sandbox/proxy/proxy.sock$')
 if [ -z "$socks" ]; then
   res PASS no-engine-socket "no socket outside /proc and /sys (except the conmon notify socket)"
 else

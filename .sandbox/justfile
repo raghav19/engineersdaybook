@@ -1,38 +1,43 @@
-# The Podman sandbox: a krun microVM for Claude Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
-# Every recipe runs on the host. compose.yaml declares the sandbox and its egress proxy.
+# The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
+# Every recipe runs on the host. compose.yaml declares the sandbox, which has no network. iron-proxy and a socket bridge run on the host as user services.
 #
-#   just sandbox run       make the CA, build the image and start the proxy and the sandbox if they do not run, and open Herdr in the sandbox over ssh.
-#   just sandbox selftest  start the proxy and run the egress self-test in the sandbox. It uses dummy tokens.
-#   just sandbox build     build the image with Podman.
-#   just sandbox ca        make a new CA for the egress proxy. `run` makes the first one.
-#   just sandbox down      stop and remove the containers and the networks.
+#   just sandbox run        make the CA, start the proxy and the sandbox if they do not run, and open Herdr in the sandbox with `podman exec`.
+#   just sandbox selftest   start the proxy with dummy tokens and run the egress self-test in the sandbox.
+#   just sandbox build      build the image with Podman.
+#   just sandbox ca         make a new CA for the proxy. `run` makes the first one.
+#   just sandbox proxy-log  follow the audit log of the proxy.
+#   just sandbox down       stop and remove the sandbox, the proxy and the bridge.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
 podman         := require("podman")
-crun           := require("crun")
 podman_compose := require("podman-compose")
 openssl        := require("openssl")
-ssh            := require("ssh")
+socat          := require("socat")
+systemd_run    := require("systemd-run")
+systemctl      := require("systemctl")
 bws            := require("bws")
 age            := require("age")
 
 image := 'localhost/sandbox-dev:latest'
 image_dir := source_directory() / 'image'
 compose := source_directory() / 'compose.yaml'
-# The public CA of the proxy. The Podman secret sandbox-ca-key holds the key.
+proxy_config := source_directory() / 'proxy/iron-proxy.yaml'
+workspace := '/home/agent/engineersdaybook'
+# The proxy binary comes from this image. The digest pins it. The binary is cached in the state folder under the digest.
+proxy_image := 'docker.io/ironsh/iron-proxy@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff'
+# The state folder has the CA of the proxy and the proxy binary. The run folder (a tmpfs of the login) has the socket of the proxy.
 state_dir := env('XDG_STATE_HOME', home_directory() / '.local/state') / 'sandbox'
+run_dir := env('XDG_RUNTIME_DIR') / 'sandbox'
+proxy_bin := state_dir / 'bin' / ('iron-proxy-' + replace_regex(proxy_image, '.*sha256:(.{12}).*', '$1'))
 export SANDBOX_STATE_DIR := state_dir
+export SANDBOX_RUN_DIR := run_dir
 # The host values that compose.yaml uses. The clone starts from the .git folder and the branch of the host checkout.
 export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-common-dir')
 export SANDBOX_BRANCH := shell('git branch --show-current')
 export GIT_AUTHOR_NAME := shell('git config user.name || echo agent')
 export GIT_AUTHOR_EMAIL := shell('git config user.email || echo agent@localhost')
-# The ssh key of the host user. compose.yaml gives the public part to the sandbox.
-ssh_key := home_directory() / '.ssh/id_ed25519'
-# The connection is a port on the loopback of the host, so host key checks add no safety. Each new container makes a new server key.
-ssh_cmd := 'ssh -p 2222 -i ' + ssh_key + ' -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ServerAliveInterval=60 agent@127.0.0.1'
 # Bitwarden token encrypted with `age -p`. See .msb/README.md, prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` puts each key of the Bitwarden project in the environment of one command. It uses BWS_ACCESS_TOKEN if set, else it decrypts `token_file`.
@@ -47,46 +52,78 @@ help:
 build:
     podman build {{ image_dir }} -t {{ image }}
 
-# Open Herdr in the sandbox over ssh, in the clone. Close the terminal and the sandbox keeps running: run this again to get the same Herdr session.
+# Open Herdr in the sandbox, in the clone. Close the terminal and the sandbox keeps running: run this again to get the same Herdr session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-# `_up` starts the sandbox if it does not run. Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
-# crun starts the microVM when the annotation run.oci.handler=krun is set (see compose.yaml).
+# `_up` starts the proxy and the sandbox if they do not run. Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
 run *command: _up
-    {{ ssh_cmd }} -t 'cd "$SANDBOX_WORKSPACE" && exec {{ if command == '' { 'herdr' } else { command } }}'
+    podman exec -it -u agent -w {{ workspace }} sandbox {{ if command == '' { 'herdr' } else { command } }}
 
-# Start the proxy and the sandbox unless the sandbox runs, then wait until sandbox-start is ready.
-# The start builds the image first, so `just sandbox down` and `run` pick up a changed image. An attach to a running sandbox builds nothing and asks for no passphrase.
+# Start what is not running, then wait until sandbox-start is ready.
+# The proxy and the bridge run as user services of systemd. An attach to a running sandbox builds nothing and asks for no passphrase.
 [private]
-_up: _ca
-    [ -f '{{ ssh_key }}.pub' ] || { echo 'sandbox: no ssh key. Make one with: ssh-keygen -t ed25519' >&2; exit 1; }
-    [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' sandbox-vm 2>/dev/null)" = true ] || { just --justfile '{{ source_file() }}' build && {{ bws_run }} podman-compose -f {{ compose }} up -d sandbox; }
-    timeout 180 bash -c 'until {{ ssh_cmd }} -n test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done' || { podman logs --tail 20 sandbox-vm >&2; echo 'sandbox: the sandbox is not ready' >&2; exit 1; }
+_up: _ca _bin
+    systemctl --user is-active --quiet sandbox-proxy || {{ bws_run }} just --justfile '{{ source_file() }}' _proxy
+    systemctl --user is-active --quiet sandbox-bridge || just --justfile '{{ source_file() }}' _bridge
+    timeout 15 bash -c 'until (exec 3<>/dev/tcp/127.0.0.1/1080) 2>/dev/null; do sleep 0.2; done' || { echo 'sandbox: the proxy does not listen. See: just sandbox proxy-log' >&2; exit 1; }
+    [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' sandbox 2>/dev/null)" = true ] || { just --justfile '{{ source_file() }}' build && podman-compose -f {{ compose }} up -d sandbox; }
+    timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done' || { podman logs --tail 20 sandbox >&2; echo 'sandbox: the sandbox is not ready' >&2; exit 1; }
 
-# Make the CA of the egress proxy if there is none.
+# Start iron-proxy as a user service. The tokens must be in the environment (`bws run` puts them there). systemd keeps them in memory.
+[private]
+_proxy:
+    mkdir -p -m 0700 '{{ run_dir }}'
+    systemd-run --user --unit=sandbox-proxy --collect --quiet \
+      -p Restart=on-failure -p NoNewPrivileges=yes -p PrivateTmp=yes \
+      --working-directory='{{ state_dir }}' \
+      --setenv=GH_TOKEN --setenv=CLAUDE_CODE_OAUTH_TOKEN --setenv=QWEN_API_KEY --setenv=GITHUB_TOKEN \
+      '{{ proxy_bin }}' -config '{{ proxy_config }}'
+
+# Start the bridge as a user service. It turns the tunnel listener of the proxy (TCP, loopback) into the Unix socket that the sandbox mounts.
+[private]
+_bridge:
+    mkdir -p -m 0700 '{{ run_dir }}'
+    systemd-run --user --unit=sandbox-bridge --collect --quiet -p Restart=on-failure \
+      socat 'UNIX-LISTEN:{{ run_dir }}/proxy.sock,fork,unlink-early,mode=600' 'TCP:127.0.0.1:1080'
+
+# Take the proxy binary from the pinned image if it is not in the state folder.
+[private]
+_bin:
+    [ -x '{{ proxy_bin }}' ] || { mkdir -p '{{ state_dir }}/bin'; c=$(podman create '{{ proxy_image }}') && podman cp "$c:/usr/local/bin/iron-proxy" '{{ proxy_bin }}' && podman rm "$c" >/dev/null && chmod 0755 '{{ proxy_bin }}'; }
+
+# Make the CA of the proxy if there is none.
 [private]
 _ca:
-    [ -f '{{ state_dir }}/ca.crt' ] || just --justfile '{{ source_file() }}' ca
+    { [ -f '{{ state_dir }}/ca.crt' ] && [ -f '{{ state_dir }}/ca.key' ]; } || just --justfile '{{ source_file() }}' ca
 
-# Make a new CA for the egress proxy. The key goes to the Podman secret sandbox-ca-key, and the certificate to the state folder.
+# Make a new CA for the proxy. The key and the certificate go to the state folder. The sandbox gets the certificate only.
 # A new CA replaces the old one. Run `just sandbox down` first.
 ca:
-    mkdir -p '{{ state_dir }}'
+    mkdir -p -m 0700 '{{ state_dir }}'
     tmp=$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/sandbox-ca.XXXXXX") && trap 'rm -rf "$tmp"' EXIT \
       && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
            -subj '/CN=sandbox egress proxy CA' \
            -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
            -addext 'keyUsage=critical,keyCertSign,cRLSign' \
            -keyout "$tmp/ca.key" -out "$tmp/ca.crt" 2>/dev/null \
-      && podman secret create --replace sandbox-ca-key "$tmp/ca.key" >/dev/null \
+      && install -m 0600 "$tmp/ca.key" '{{ state_dir }}/ca.key' \
       && install -m 0644 "$tmp/ca.crt" '{{ state_dir }}/ca.crt' \
-      && echo "sandbox: CA made. Certificate: {{ state_dir }}/ca.crt. Key: Podman secret sandbox-ca-key."
+      && echo "sandbox: CA made in {{ state_dir }} (ca.crt and ca.key)."
 
-# Start the proxy, run the egress self-test in the sandbox, then remove everything. The tokens are dummies, so no real token is in this test.
-selftest: build _ca
+# Start the proxy with dummy tokens, run the egress self-test in the sandbox, then remove everything. No real token is in this test.
+selftest: build _ca _bin
+    ! systemctl --user is-active --quiet sandbox-proxy || { echo 'sandbox: the proxy runs with real tokens. Run `just sandbox down` first.' >&2; exit 1; }
     export GH_TOKEN=dummy-gh CLAUDE_CODE_OAUTH_TOKEN=dummy-claude QWEN_API_KEY=dummy-qwen GITHUB_TOKEN=dummy-ghcr; \
+      just --justfile '{{ source_file() }}' _proxy; just --justfile '{{ source_file() }}' _bridge; \
+      timeout 15 bash -c 'until (exec 3<>/dev/tcp/127.0.0.1/1080) 2>/dev/null; do sleep 0.2; done'; \
       rc=0; podman-compose -f {{ compose }} --profile selftest run --rm selftest || rc=$?; \
-      podman-compose -f {{ compose }} --profile selftest down >/dev/null 2>&1; exit $rc
+      just --justfile '{{ source_file() }}' down >/dev/null 2>&1; exit $rc
 
-# Stop and remove the containers and the networks. The volume sandbox-state stays.
+# Follow the audit log of the proxy (one JSON line for each request: host, method, action, status).
+proxy-log:
+    journalctl --user -u sandbox-proxy -o cat -f
+
+# Stop and remove the sandbox, the proxy and the bridge. The volumes stay.
 down:
-    GH_TOKEN=x CLAUDE_CODE_OAUTH_TOKEN=x QWEN_API_KEY=x GITHUB_TOKEN=x podman-compose -f {{ compose }} --profile selftest down
+    podman-compose -f {{ compose }} --profile selftest down
+    systemctl --user stop sandbox-bridge sandbox-proxy 2>/dev/null || true
+    rm -f '{{ run_dir }}/proxy.sock'
