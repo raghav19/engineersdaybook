@@ -28,12 +28,8 @@ build:
 # Give a command to run it in place of the shell: `just sandbox run claude --version`.
 # crun starts the microVM when the annotation run.oci.handler=krun is set.
 # The sandbox uses the network of the host. The egress proxy comes in a later change.
-[script('bash')]
 run *command: build
-    set -euo pipefail
-    if [ "$#" -eq 0 ]; then set -- bash --login -i; fi
-    tty=; if [ -t 0 ]; then tty=-it; fi
-    podman run --rm $tty --name sandbox -w /home/agent --runtime crun --annotation run.oci.handler=krun \
+    podman run --rm -it --name sandbox -w /home/agent --runtime {{ crun }} --annotation run.oci.handler=krun \
       --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
       --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
-      {{ image }} sandbox-entry "$@"
+      {{ image }} sandbox-entry {{ if command == '' { 'bash --login -i' } else { command } }}
