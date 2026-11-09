@@ -2,7 +2,7 @@
 # Every recipe runs on the host. This part has the image only. The compose file and the egress proxy come in later changes.
 #
 #   just sandbox build   build the image with Podman.
-#   just sandbox smoke   start the image in a krun microVM and run nested Podman as the user agent.
+#   just sandbox run     build the image, start the sandbox in a krun microVM and open a shell in it.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -23,16 +23,17 @@ help:
 build:
     podman build {{ image_dir }} -t {{ image }}
 
-# Run the image in a krun microVM. crun starts the microVM when the annotation run.oci.handler=krun is set. As the user agent, run a nested container and a nested build.
-# The nested pull uses the network of the host. The egress proxy is not part of this recipe yet.
-smoke:
+# Start the sandbox in a krun microVM and open a shell in it, as the user agent. `run` builds the image first.
+# Give a command to run it in place of the shell: `just sandbox run claude --version`.
+# crun starts the microVM when the annotation run.oci.handler=krun is set.
+# The sandbox uses the network of the host. The egress proxy comes in a later change.
+[script('bash')]
+run *command: build
+    set -euo pipefail
     crun --version | grep -q '+LIBKRUN' || { echo "sandbox: crun has no libkrun support. Install crun with +LIBKRUN, libkrun and libkrunfw." >&2; exit 1; }
-    podman run --rm --runtime crun --annotation run.oci.handler=krun --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
+    if [ "$#" -eq 0 ]; then set -- bash --login -i; fi
+    tty=; if [ -t 0 ]; then tty=-it; fi
+    podman run --rm $tty --name sandbox -w /home/agent --runtime crun --annotation run.oci.handler=krun \
+      --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
       --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
-      {{ image }} sandbox-entry bash -ec ' \
-        test "$(id -un)" = agent; \
-        podman run --rm docker.io/library/alpine:3.22 echo nested-run-ok; \
-        printf "FROM docker.io/library/alpine:3.22\nRUN echo build-step > /x\n" > /tmp/Containerfile; \
-        podman build -q -t smoke -f /tmp/Containerfile /tmp; \
-        podman run --rm smoke cat /x; \
-        echo smoke-ok'
+      {{ image }} sandbox-entry "$@"

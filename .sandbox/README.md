@@ -9,7 +9,7 @@ This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Po
 | Path | Content |
 |---|---|
 | `image/` | The image. It is the image of `.msb/image/` with the changes that krun needs. |
-| `justfile` | The recipes `build` and `smoke`. |
+| `justfile` | The recipes `build` and `run`. |
 | `AGENTS.md` | The rules for a change to the tools of the image. |
 
 ## Changes from `.msb/image/`
@@ -34,6 +34,8 @@ This change does not port the boot steps of `sandbox-boot` that need a clone, th
 ## Use
 
 ```shell
-just sandbox build   # several minutes the first time
-just sandbox smoke   # starts the microVM, then runs a nested container and a nested build as the user agent
+just sandbox run                      # builds the image, starts the microVM and opens a shell as the user agent
+just sandbox run claude --version     # runs one command in place of the shell
 ```
+
+`run` builds the image first. The first build takes several minutes. Type `exit` to stop the sandbox. In this change the sandbox uses the network of the host, and `claude` has no token. The egress proxy, the token placeholders, the clone of the repo and the start of Claude Code and Herdr come in later changes. Then `just sandbox run` is the one daily command.
