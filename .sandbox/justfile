@@ -1,7 +1,7 @@
 # The Podman sandbox: a krun microVM for Claude Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
 # Every recipe runs on the host. compose.yaml declares the sandbox and its egress proxy.
 #
-#   just sandbox run       build the image, start the proxy and the sandbox, and open a shell in it.
+#   just sandbox run       build the image, start the proxy and the sandbox if they do not run, and open Herdr in the sandbox over ssh.
 #   just sandbox selftest  start the proxy and run the egress self-test in the sandbox. It uses dummy tokens.
 #   just sandbox build     build the image with Podman.
 #   just sandbox ca        make a new CA for the egress proxy. `run` makes the first one.
@@ -14,6 +14,8 @@ podman         := require("podman")
 crun           := require("crun")
 podman_compose := require("podman-compose")
 openssl        := require("openssl")
+ssh            := require("ssh")
+ssh_keygen     := require("ssh-keygen")
 bws            := require("bws")
 age            := require("age")
 
@@ -28,6 +30,10 @@ export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-comm
 export SANDBOX_BRANCH := shell('git branch --show-current')
 export GIT_AUTHOR_NAME := shell('git config user.name || echo agent')
 export GIT_AUTHOR_EMAIL := shell('git config user.email || echo agent@localhost')
+# The ssh key of the host for the sandbox. `_ssh_key` makes it. compose.yaml gives the public part to the sandbox.
+ssh_key := state_dir / 'ssh/id_ed25519'
+# The connection is a port on the loopback of the host, so host key checks add no safety. The host key stays the same after a restart, but a new volume makes a new one.
+ssh_cmd := 'ssh -p 2222 -i ' + ssh_key + ' -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ServerAliveInterval=60 agent@127.0.0.1'
 # Bitwarden token encrypted with `age -p`. See .msb/README.md, prerequisite 4.
 token_file := home_directory() / '.config/bws/access-token.age'
 # `bws run` puts each key of the Bitwarden project in the environment of one command. It uses BWS_ACCESS_TOKEN if set, else it decrypts `token_file`.
@@ -42,12 +48,23 @@ help:
 build:
     podman build {{ image_dir }} -t {{ image }}
 
-# Start the proxy and the sandbox, and open Herdr in the sandbox, with Claude Code in the top pane, as the user agent. `run` builds the image and makes the CA first.
-# Give a command to run it in place of the start script (the image entry still runs first): `just sandbox run claude --version`.
-# Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
+# Open Herdr in the sandbox over ssh, in the clone. Close the terminal and the sandbox keeps running: run this again to get the same Herdr session.
+# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+# `_up` starts the sandbox if it does not run. Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
 # crun starts the microVM when the annotation run.oci.handler=krun is set (see compose.yaml).
-run *command: build _ca
-    {{ bws_run }} 'GHCR_PUSH_TOKEN="$GITHUB_TOKEN" podman-compose -f {{ compose }} run --rm sandbox {{ command }}'
+run *command: _up
+    {{ ssh_cmd }} -t 'cd "$SANDBOX_WORKSPACE" && exec {{ if command == '' { 'herdr' } else { command } }}'
+
+# Build the image and start the proxy and the sandbox, unless the sandbox runs. Wait until sandbox-start is ready.
+[private]
+_up: build _ca _ssh_key
+    [ -n "$(podman ps -q --filter name='^sandbox-vm$')" ] || {{ bws_run }} 'GHCR_PUSH_TOKEN="$GITHUB_TOKEN" podman-compose -f {{ compose }} up -d sandbox'
+    for _ in $(seq 180); do {{ ssh_cmd }} -n test -e /tmp/sandbox-ready 2>/dev/null && exit 0; [ -n "$(podman ps -q --filter name='^sandbox-vm$')" ] || break; sleep 1; done; podman logs --tail 20 sandbox-vm >&2; echo 'sandbox: the sandbox is not ready' >&2; exit 1
+
+# Make the ssh key of the host if there is none.
+[private]
+_ssh_key:
+    [ -f '{{ ssh_key }}' ] || { mkdir -p -m 0700 '{{ state_dir }}/ssh' && ssh-keygen -q -t ed25519 -N '' -C sandbox -f '{{ ssh_key }}'; }
 
 # Make the CA of the egress proxy if there is none.
 [private]

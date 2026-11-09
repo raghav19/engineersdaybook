@@ -1,6 +1,6 @@
 #!/bin/sh
 # The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It makes three things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# It makes four things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
@@ -41,6 +41,19 @@ chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/
 #    Nested containers get the same trust store (configs/containers/containers.conf).
 if [ -f /usr/local/share/ca-certificates/sandbox-proxy.crt ]; then
   update-ca-certificates >/dev/null || fail "update-ca-certificates failed"
+fi
+
+# 4. SSH. The host gets in with ssh, because krun has no `podman exec`.
+#    compose.yaml mounts the public key of the host. The host key of the sandbox lives in the volume, so it stays after a restart.
+#    An ssh session does not inherit the environment of the container, so the entry writes it to /etc/environment (pam_env reads it).
+#    The selftest has no key, so it has no sshd.
+if [ -f /run/sandbox/ssh/authorized_keys ]; then
+  mkdir -p /run/sshd /var/lib/sandbox/ssh || fail "could not make the folders of sshd"
+  [ -f /var/lib/sandbox/ssh/ssh_host_ed25519_key ] \
+    || ssh-keygen -q -t ed25519 -N '' -f /var/lib/sandbox/ssh/ssh_host_ed25519_key || fail "could not make the host key of sshd"
+  install -m 0644 /run/sandbox/ssh/authorized_keys /etc/ssh/sandbox_authorized_keys || fail "could not install the authorized key"
+  env | grep -Ev '^(HOME|USER|LOGNAME|SHELL|PWD|OLDPWD|SHLVL|_|TERM|HOSTNAME|NOTIFY_SOCKET|container)=' > /etc/environment
+  /usr/sbin/sshd || fail "sshd did not start"
 fi
 
 # The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.

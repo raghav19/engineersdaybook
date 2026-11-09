@@ -34,7 +34,7 @@ This change does not port the boot steps of `sandbox-boot` that need a clone, th
 ## Prerequisites
 
 1. Install `podman`, `crun` with `+LIBKRUN`, `libkrun` and `libkrunfw`. The command `crun --version` must show `+LIBKRUN`.
-2. Install `podman-compose` (1.6.0 or newer), `openssl`, `bws` and `age`. Set up Bitwarden as in `.msb/README.md`, prerequisite 4. The project needs the keys `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`.
+2. Install `podman-compose` (1.6.0 or newer), `openssl`, `ssh`, `bws` and `age`. Set up Bitwarden as in `.msb/README.md`, prerequisite 4. The project needs the keys `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`.
 3. Make sure that `/dev/kvm` is open for your user.
 
 ## How the network wall works
@@ -52,17 +52,27 @@ sandbox (krun microVM)  --inner network, no route out-->  proxy  --outer network
 ## Use
 
 ```shell
-just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens Herdr with Claude Code as the user agent
-just sandbox run claude --version     # runs one command in place of the start script
+just sandbox run                      # builds the image, makes the CA and the ssh key, starts the proxy and the sandbox if they do not run, opens Herdr over ssh
+just sandbox run claude --version     # runs one command over ssh in place of Herdr
 just sandbox selftest                 # checks the wall with dummy tokens. No Bitwarden needed
-just sandbox down                     # removes the containers and the networks
+just sandbox down                     # removes the containers and the networks. The volumes stay
 ```
 
-`run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Quit Herdr to leave the sandbox. Run `just sandbox run bash --login -i` for a plain shell. The proxy keeps running until `just sandbox down`.
+The sandbox works as the msb VM does. `run` starts it once and asks for the passphrase of the Bitwarden token. Close the terminal and the sandbox keeps running, with Herdr and Claude Code in it. Run `just sandbox run` again to get the same Herdr session at once, with no passphrase. `just sandbox down` stops the sandbox. The next `run` makes a new sandbox, and Herdr restores its layout from the volume. A restored pane has a shell, and you start Claude Code again, as Herdr does not restart agents. In the first Herdr session, run `claude` in the pane. Run `just sandbox run bash -l` for a plain shell.
+
+## How you get in
+
+Krun has no `podman exec`, so the sandbox has an `sshd`. The msb VM has none, because the `msb` command on the host is its SSH server. Here:
+
+- `sandbox-entry` starts `sshd` as root. It listens on port 2222 in the sandbox. Port 22 needs a capability that the sandbox does not have.
+- `compose.yaml` publishes the port on `127.0.0.1:2222` of the host only. The sandbox network stays internal, so the port adds no way out. A published port works on an internal network (test: HTTP 200 from the host).
+- Only the key `~/.local/state/sandbox/ssh/id_ed25519` can log in, and only as the user agent. `just sandbox run` makes the key pair. The sandbox gets the public part, read-only. No password, no root, no port forwarding.
+- The host key of `sshd` is in the volume `sandbox-state`, so it stays after a restart. The ssh command does not check the host key, as the msb ssh config does, because the connection is a port on your loopback.
+- An ssh session does not inherit the environment of the container. `sandbox-entry` writes the environment to `/etc/environment`, so a session has the placeholders, `NODE_OPTIONS`, the workspace path and the other values. A session has no capability (`CapEff` is 0).
 
 ## What `run` starts
 
-`sandbox-entry` and `sandbox-start` are two scripts because they need two users. The entry needs root (the loop mount, `/dev/net/tun` and the CA). The start script does the work of the user agent. The image runs them together: `sandbox-entry` is the `ENTRYPOINT`, and `sandbox-start` is the default command. `just sandbox run bash` replaces only the command, so the root steps still run first.
+`sandbox-entry` and `sandbox-start` are two scripts because they need two users. The entry needs root (the loop mount, `/dev/net/tun`, the CA and `sshd`). The start script does the work of the user agent. The image runs them together: `sandbox-entry` is the `ENTRYPOINT`, and `sandbox-start` is the default command. `just sandbox run bash` replaces only the command that `ssh` runs.
 
 `sandbox-start` does these steps. Each step does nothing if its work exists.
 
@@ -70,7 +80,7 @@ just sandbox down                     # removes the containers and the networks
 2. It installs the `prek` hooks of the clone.
 3. It starts Headroom on `127.0.0.1:8787`. The `.claude/settings.json` of the repo points Claude Code to it.
 4. It installs the plugins of Claude Code. A failure prints a warning.
-5. It starts the Herdr server in the background and waits until it answers. Krun has no `podman exec`, so the script cannot start Claude Code from outside. Then the script calls the Herdr API. It makes the workspace in the clone, splits it, and runs `claude` in the top pane. A restored layout keeps its panes, and the script runs `claude` in the first pane. Then it opens the Herdr client.
+5. It links the Herdr session files to the volume, writes `/tmp/sandbox-ready` and waits. `run` waits for this file, then opens Herdr with `ssh -t`.
 
 ## Volumes
 

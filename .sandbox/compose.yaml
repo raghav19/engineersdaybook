@@ -1,5 +1,11 @@
 # The Podman sandbox: the sandbox (a krun microVM) and iron-proxy, its only way out.
 # Run it with `just sandbox <recipe>`. The justfile sets SANDBOX_STATE_DIR and makes the CA first (`just sandbox ca`).
+#
+# The owner of the volumes. The sandbox runs in a user namespace with a static map (x-podman.uidmaps below).
+#   container id 0 = host id 100000, so container id N = host id 100000 + N
+#   user agent in the sandbox = 1000
+#   owner option of a volume = 100000 + 1000 = 101000 (uid and gid)
+# If you change the map or the user id of agent, change the volume option (x-agent-volume) to the same sum.
 # podman-compose 1.6.0 ignores `configs:` and the uid, gid and mode of file secrets, so the secret is external (`podman secret create`).
 name: sandbox
 x-podman:
@@ -25,8 +31,7 @@ secrets:
   sandbox-ca-key:
     external: true
 
-# Podman gives a volume to this owner when it makes the volume. The ids are the ids of the host user namespace.
-# 101000 is 100000 (the start of the static map of the sandbox) plus 1000 (the user agent). The sandbox sees 1000:1000.
+# Podman gives a volume to this owner when it makes the volume. The sum is at the top of this file. The sandbox sees 1000:1000.
 x-agent-volume: &agent-volume
   driver_opts: {o: "uid=101000,gid=101000"}
 
@@ -105,6 +110,9 @@ x-sandbox: &sandbox
     # The public CA of the proxy. sandbox-entry adds it to the trust store of the sandbox.
     - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/usr/local/share/ca-certificates/sandbox-proxy.crt:ro
     - sandbox-state:/var/lib/sandbox
+    # The public key that may log in. `just sandbox run` makes the key pair. sandbox-entry starts sshd when this file exists.
+    # The selftest service has its own volume list, so it has no key and no sshd.
+    - ${SANDBOX_STATE_DIR:?run this through just}/ssh/id_ed25519.pub:/run/sandbox/ssh/authorized_keys:ro
     # The .git folder of the host repo. The clone is made from it. The mount is read-only, so the sandbox cannot change the host repo.
     - ${SANDBOX_GIT_DIR:?run this through just}:/run/sandbox/source:ro
     # The Omarchy theme of the host, for the TTT editor.
@@ -153,8 +161,12 @@ services:
       inner: {ipv4_address: 10.89.61.2}
       outer: {ipv4_address: 10.89.62.2}
 
+  # The container stays up after you close the terminal. `just sandbox run` connects with ssh to the published port.
   sandbox:
     <<: *sandbox
+    container_name: sandbox-vm
+    # The port is open on the loopback of the host only. The sandbox network stays internal, so this adds no way out.
+    ports: ["127.0.0.1:2222:2222"]
 
   # The egress self-test. krun has no `podman exec`, so the test runs as the command of a container: `just sandbox selftest`.
   selftest:
