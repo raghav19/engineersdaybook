@@ -60,6 +60,17 @@ just sandbox down                     # removes the containers and the networks.
 
 The sandbox works as the msb VM does. `run` starts it once and asks for the passphrase of the Bitwarden token. Close the terminal and the sandbox keeps running, with Herdr and Claude Code in it. Run `just sandbox run` again to get the same Herdr session at once, with no passphrase. `just sandbox down` stops the sandbox. The next `run` makes a new sandbox, and Herdr restores its layout from the volume. A restored pane has a shell, and you start Claude Code again, as Herdr does not restart agents. In the first Herdr session, run `claude` in the pane. Run `just sandbox run bash -l` for a plain shell.
 
+## Resume a session
+
+The history of each agent is in a volume, and a volume is a folder on the host (`podman volume inspect <name>`). It stays after `just sandbox down` and after a new container. Claude Code keeps its sessions by working folder, and the clone is always `~/engineersdaybook`, so a new sandbox finds them. Start the agent again in the pane. Herdr restores the pane with a shell and does not restart agents.
+
+| Agent | Resume the newest session | Pick a session | Volume |
+|---|---|---|---|
+| Claude Code | `claude --continue` | `claude --resume` | `sandbox-claude-home` |
+| Qwen Code | `qwen -c` | `qwen --resume` | `sandbox-qwen-home` |
+
+Test: a file in `~/.claude/projects` and in `~/.qwen` was still there after `down` and a new `run`. The volume folder belongs to a mapped user id, so read it from the host with `podman unshare ls <folder>`. `just sandbox run` runs one command (`exec <command>`), so give it one command and no `&&`.
+
 ## How you get in
 
 Krun has no `podman exec`, so the sandbox has an `sshd`. The msb VM has none, because the `msb` command on the host is its SSH server. Here:
