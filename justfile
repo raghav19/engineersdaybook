@@ -6,7 +6,6 @@
 set quiet
 
 mod msb '.msb'
-mod sandbox '.sandbox'
 
 # list the recipes, modules included (the default)
 [default]
