@@ -54,7 +54,7 @@ x-sandbox: &sandbox
   runtime: crun
   annotations:
     run.oci.handler: krun
-  # The entry starts as root in the guest and drops to the user agent.
+  # The image entry (sandbox-entry) starts as root in the guest and drops to the user agent. The default command is sandbox-start.
   user: "0:0"
   working_dir: /home/agent
   # A static map. An automatic map shifts between runs, and a volume then shows as `nobody`. The proxy has its own range.
@@ -97,7 +97,7 @@ x-sandbox: &sandbox
     # The .git folder of the host repo. The clone is made from it. The mount is read-only, so the sandbox cannot change the host repo.
     - ${SANDBOX_GIT_DIR:?run this through just}:/run/sandbox/source:ro
     # The Omarchy theme of the host, for the TTT editor.
-    - ${SANDBOX_OMARCHY_THEME:?run this through just}:/home/agent/.local/state/omarchy/current/theme:ro
+    - ${HOME}/.local/state/omarchy/current/theme:/home/agent/.local/state/omarchy/current/theme:ro
     - sandbox-workspace:/home/agent/engineersdaybook
     - sandbox-claude-home:/home/agent/.claude
     - sandbox-qwen-home:/home/agent/.qwen
@@ -144,14 +144,12 @@ services:
 
   sandbox:
     <<: *sandbox
-    command: ["sandbox-entry", "sleep", "infinity"]
 
   # The egress self-test. krun has no `podman exec`, so the test runs as the command of a container: `just sandbox selftest`.
   selftest:
     <<: *sandbox
     profiles: [selftest]
     command:
-      - sandbox-entry
       - egress-selftest
       - -p
       - 'ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{20,}'

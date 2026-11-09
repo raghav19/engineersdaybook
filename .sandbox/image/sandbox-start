@@ -39,20 +39,21 @@ claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin in
 claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
   || echo "sandbox-start: warning: the TokenEconomizer plugin is not installed" >&2
 
-# Claude Code runs in the first pane of Herdr. Herdr makes its server when it starts, so a background step waits for it.
-# A fresh layout has one pane. Then the step adds a shell pane below Claude Code.
-(
-  pane=
-  for _ in $(seq 60); do
-    pane=$(herdr pane list 2>/dev/null | jq -r '.result.panes[0].pane_id // empty') || true
-    [ -n "$pane" ] && break
-    sleep 0.5
-  done
-  [ -n "$pane" ] || exit 0
-  herdr pane run "$pane" claude
-  [ "$(herdr pane list | jq '.result.panes | length')" = 1 ] && herdr pane split --pane "$pane" --direction down --ratio 0.75
-  exit 0
-) >/dev/null 2>&1 &
+# Herdr runs in the clone. A headless server starts first, so the steps below can use its API without a race.
+# A fresh layout gets one workspace: Claude Code in the top pane and a shell in the pane below. A restored layout keeps its panes.
+herdr server >/tmp/herdr-server.log 2>&1 &
+for _ in $(seq 60); do
+  herdr status server 2>/dev/null | grep -q 'status: running' && break
+  sleep 0.5
+done
+herdr status server 2>/dev/null | grep -q 'status: running' || { tail -n 20 /tmp/herdr-server.log >&2; fail "the Herdr server did not start in 30 seconds"; }
+if [ "$(herdr workspace list | jq '.result.workspaces | length')" = 0 ]; then
+  pane=$(herdr workspace create --cwd "$ws" --focus | jq -r '.result.root_pane.pane_id')
+  herdr pane split --pane "$pane" --direction down --ratio 0.75 >/dev/null
+else
+  pane=$(herdr pane list | jq -r '.result.panes[0].pane_id')
+fi
+herdr pane run "$pane" claude >/dev/null
 
 cd "$ws"
 exec herdr

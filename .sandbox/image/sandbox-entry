@@ -45,6 +45,7 @@ fi
 
 # 4. The folders of the volumes.
 #    A volume is a folder of the host, and it shows in the VM as owned by root. Give each one to the user agent.
+#    The guest has one virtiofs share, so /proc/mounts does not list the volumes. Keep this list equal to the volumes in compose.yaml.
 for dir in engineersdaybook .claude .qwen .herdr .headroom .cache/terraform-providers; do
   [ ! -d "/home/agent/$dir" ] || chown agent:agent "/home/agent/$dir" || fail "could not give /home/agent/$dir to agent"
 done

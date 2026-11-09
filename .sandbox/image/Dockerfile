@@ -112,6 +112,9 @@ RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/a
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
+# The entry runs as root, then drops to agent and runs the command. The default command is the start script.
+ENTRYPOINT ["sandbox-entry"]
+CMD ["sandbox-start"]
 
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json

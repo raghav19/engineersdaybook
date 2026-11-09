@@ -19,7 +19,7 @@ This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Po
 
 | Change | Reason |
 |---|---|
-| `sandbox-entry` replaces `sandbox-boot`. | krun has no `podman exec`. The entry runs as the command of the container, then drops to the user `agent`. |
+| `sandbox-entry` replaces `sandbox-boot`. | krun has no `podman exec`. The entry is the `ENTRYPOINT` of the image. It runs as root, then drops to the user `agent` and runs the command. The default command is `sandbox-start`. |
 | `sandbox-entry` mounts an ext4 image on `~/.local/share/containers`. | The overlay driver of nested Podman cannot use the virtiofs disk of the microVM. A volume, a tmpfs and the `vfs` driver fail too. `force_mask` does not fix it. Spike N1 calls the ext4 image fix B. |
 | `sandbox-entry` gives `/dev/net/tun` to the group `agent`. | Nested containers use pasta for the network, and pasta opens `/dev/net/tun`. |
 | `sandbox-entry` runs `e2fsck -p` before it mounts the file, and mounts with `discard`. | The VM never unmounts the file system, so `e2fsck` checks it at each start. With `discard`, the file on the host shrinks when Podman removes data. Test: 300 MiB written and removed. The file went from 435 MiB to 135 MiB. |
@@ -62,13 +62,15 @@ just sandbox down                     # removes the containers and the networks
 
 ## What `run` starts
 
-`sandbox-start` runs as the user agent, after `sandbox-entry`. It does these steps. Each step does nothing if its work exists.
+`sandbox-entry` and `sandbox-start` are two scripts because they need two users. The entry needs root (the loop mount, `/dev/net/tun`, the CA, the volume owners). The start script does the work of the user agent. The image runs them together: `sandbox-entry` is the `ENTRYPOINT`, and `sandbox-start` is the default command. `just sandbox run bash` replaces only the command, so the root steps still run first.
+
+`sandbox-start` does these steps. Each step does nothing if its work exists.
 
 1. It clones the host repo into `~/engineersdaybook`, on the branch of the host checkout. The source is the `.git` folder of the host repo, mounted read-only at `/run/sandbox/source`. The sandbox cannot change the host repo. The clone has `origin` set to GitHub, so a push goes to a feature branch. Only committed work reaches the clone.
 2. It installs the `prek` hooks of the clone.
 3. It starts Headroom on `127.0.0.1:8787`. The `.claude/settings.json` of the repo points Claude Code to it.
 4. It installs the plugins of Claude Code. A failure prints a warning.
-5. It opens Herdr in the clone. Claude Code runs in the top pane, and a shell runs in the pane below.
+5. It starts the Herdr server in the background and waits until it answers. Krun has no `podman exec`, so the script cannot start Claude Code from outside. With the server up, the script uses the Herdr API in order: it makes the workspace in the clone, splits it, and runs `claude` in the top pane. A restored layout keeps its panes, and the script runs `claude` in the first pane. Then it opens the Herdr client.
 
 ## Volumes
 
