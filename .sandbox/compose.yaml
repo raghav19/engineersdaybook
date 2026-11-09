@@ -1,5 +1,11 @@
 # The Podman sandbox: the sandbox (a krun microVM) and iron-proxy, its only way out.
 # Run it with `just sandbox <recipe>`. The justfile sets SANDBOX_STATE_DIR and makes the CA first (`just sandbox ca`).
+#
+# The owner of the volumes. The sandbox runs in a user namespace with a static map (x-podman.uidmaps below).
+#   container id 0 = host id 100000, so container id N = host id 100000 + N
+#   user agent in the sandbox = 1000
+#   owner option of a volume = 100000 + 1000 = 101000 (uid and gid)
+# If you change the map or the user id of agent, change the volume option (x-agent-volume) to the same sum.
 # podman-compose 1.6.0 ignores `configs:` and the uid, gid and mode of file secrets, so the secret is external (`podman secret create`).
 name: sandbox
 x-podman:
@@ -25,10 +31,38 @@ secrets:
   sandbox-ca-key:
     external: true
 
+# Podman gives a volume to this owner when it makes the volume. The sum is at the top of this file. The sandbox sees 1000:1000.
+x-agent-volume: &agent-volume
+  driver_opts: {o: "uid=101000,gid=101000"}
+
 volumes:
-  # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`.
+  # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`. The entry owns it as root.
   sandbox-state:
     name: sandbox-state
+  # The clone of the repo. The work of the agent stays here after you quit. `down` keeps it.
+  sandbox-workspace:
+    <<: *agent-volume
+    name: sandbox-workspace
+  # The login and settings of Claude Code, and its plugins.
+  sandbox-claude-home:
+    <<: *agent-volume
+    name: sandbox-claude-home
+  # The sessions of Qwen Code.
+  sandbox-qwen-home:
+    <<: *agent-volume
+    name: sandbox-qwen-home
+  # The history, the settings and the memory of Headroom.
+  sandbox-headroom-home:
+    <<: *agent-volume
+    name: sandbox-headroom-home
+  # The layout of Herdr (session.json and session-snapshots). A new sandbox restores the panes.
+  sandbox-herdr:
+    <<: *agent-volume
+    name: sandbox-herdr
+  # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in image/mise.toml).
+  sandbox-terraform-providers:
+    <<: *agent-volume
+    name: sandbox-terraform-providers
 
 x-sandbox: &sandbox
   image: localhost/sandbox-dev:latest
@@ -36,7 +70,7 @@ x-sandbox: &sandbox
   runtime: crun
   annotations:
     run.oci.handler: krun
-  # The entry starts as root in the guest and drops to the user agent.
+  # The image entry (sandbox-entry) starts as root in the guest and drops to the user agent. The default command is sandbox-start.
   user: "0:0"
   working_dir: /home/agent
   # A static map. An automatic map shifts between runs, and a volume then shows as `nobody`. The proxy has its own range.
@@ -58,12 +92,37 @@ x-sandbox: &sandbox
     GHCR_PUSH_TOKEN: sandbox-placeholder-GHCR_PUSH_TOKEN
     # The tools that do not read the system trust store by default.
     COLORTERM: truecolor
+    SANDBOX_WORKSPACE: /home/agent/engineersdaybook # the path of the clone
+    SANDBOX_BRANCH: ${SANDBOX_BRANCH:-} # the branch of the host checkout. The clone starts on it.
+    REPO_URL: https://github.com/raghav19/engineersdaybook # the URL of origin in the clone
+    GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-agent} # git reads the identity from these four variables
+    GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME:-agent}
+    GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+    GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+    MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook # mise trusts the mise.toml files in the clone
+    MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml # the root mise.toml of the clone lists host tools
+    CLAUDE_CONFIG_DIR: /home/agent/.claude
+    DISABLE_UPDATES: "1" # the claude that mise installs does not update itself
+    HEADROOM_HARD_WATCHDOG_SECS: "0" # 0 turns off the watchdog. It stops Headroom after the host suspends the VM for more than 90 seconds.
     NODE_OPTIONS: --use-system-ca
     REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
   volumes:
     # The public CA of the proxy. sandbox-entry adds it to the trust store of the sandbox.
     - ${SANDBOX_STATE_DIR:?run this through just}/ca.crt:/usr/local/share/ca-certificates/sandbox-proxy.crt:ro
     - sandbox-state:/var/lib/sandbox
+    # The public key that may log in: the key of the host user. sandbox-entry starts sshd when this file exists.
+    # The selftest service has its own volume list, so it has no key and no sshd.
+    - ${HOME}/.ssh/id_ed25519.pub:/run/sandbox/ssh/authorized_keys:ro
+    # The .git folder of the host repo. The clone is made from it. The mount is read-only, so the sandbox cannot change the host repo.
+    - ${SANDBOX_GIT_DIR:?run this through just}:/run/sandbox/source:ro
+    # The Omarchy theme of the host, for the TTT editor.
+    - ${HOME}/.local/state/omarchy/current/theme:/home/agent/.local/state/omarchy/current/theme:ro
+    - sandbox-workspace:/home/agent/engineersdaybook
+    - sandbox-claude-home:/home/agent/.claude
+    - sandbox-qwen-home:/home/agent/.qwen
+    - sandbox-headroom-home:/home/agent/.headroom
+    - sandbox-herdr:/home/agent/.herdr
+    - sandbox-terraform-providers:/home/agent/.cache/terraform-providers
   networks:
     inner: {ipv4_address: 10.89.61.10}
   depends_on: [proxy]
@@ -82,12 +141,15 @@ services:
     cap_add: [NET_BIND_SERVICE]
     read_only: true
     security_opt: ["no-new-privileges:true"]
-    # TODO: test a Podman secret with a file source in place of these variables. `podman inspect` shows the values of these variables to the host user.
+    # The real tokens. `just sandbox run` starts compose with `bws run`, which puts each key of the Bitwarden project in the environment.
+    # `podman inspect` shows these values to the host user, and Podman keeps them in the container storage while the proxy runs. Podman secrets do the same (tested).
+    # TODO: an iron-proxy source that reads Bitwarden or runs a command (as `sbx secret --command` does) would keep the values out of Podman. Today iron-proxy has the sources env, aws_sm, aws_ssm, 1password and 1password_connect. Check a newer release for one.
     environment:
       GH_TOKEN: ${GH_TOKEN:?set GH_TOKEN}
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:?set CLAUDE_CODE_OAUTH_TOKEN}
       QWEN_API_KEY: ${QWEN_API_KEY:?set QWEN_API_KEY}
-      GHCR_PUSH_TOKEN: ${GHCR_PUSH_TOKEN:?set GHCR_PUSH_TOKEN}
+      # The Bitwarden key GITHUB_TOKEN (scope write:packages) is the token for ghcr.io.
+      GHCR_PUSH_TOKEN: ${GITHUB_TOKEN:?set GITHUB_TOKEN}
     secrets:
       - source: sandbox-ca-key
         target: /etc/iron-proxy/ca.key
@@ -102,16 +164,18 @@ services:
       inner: {ipv4_address: 10.89.61.2}
       outer: {ipv4_address: 10.89.62.2}
 
+  # The container stays up after you close the terminal. `just sandbox run` connects with ssh to the published port.
   sandbox:
     <<: *sandbox
-    command: ["sandbox-entry", "sleep", "infinity"]
+    container_name: sandbox-vm
+    # The port is open on the loopback of the host only. The sandbox network stays internal, so this adds no way out.
+    ports: ["127.0.0.1:2222:2222"]
 
   # The egress self-test. krun has no `podman exec`, so the test runs as the command of a container: `just sandbox selftest`.
   selftest:
     <<: *sandbox
     profiles: [selftest]
     command:
-      - sandbox-entry
       - egress-selftest
       - -p
       - 'ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-ant-[A-Za-z0-9_-]{20,}'
