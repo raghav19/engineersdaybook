@@ -1,6 +1,6 @@
 #!/bin/sh
 # The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It makes four things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# It makes three things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
@@ -42,13 +42,6 @@ chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/
 if [ -f /usr/local/share/ca-certificates/sandbox-proxy.crt ]; then
   update-ca-certificates >/dev/null || fail "update-ca-certificates failed"
 fi
-
-# 4. The folders of the volumes.
-#    A volume is a folder of the host, and it shows in the VM as owned by root. Give each one to the user agent.
-#    The guest has one virtiofs share, so /proc/mounts does not list the volumes. Keep this list equal to the volumes in compose.yaml.
-for dir in engineersdaybook .claude .qwen .herdr .headroom .cache/terraform-providers; do
-  [ ! -d "/home/agent/$dir" ] || chown agent:agent "/home/agent/$dir" || fail "could not give /home/agent/$dir to agent"
-done
 
 # The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.
 unset NOTIFY_SOCKET

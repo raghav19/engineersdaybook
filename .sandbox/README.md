@@ -62,7 +62,7 @@ just sandbox down                     # removes the containers and the networks
 
 ## What `run` starts
 
-`sandbox-entry` and `sandbox-start` are two scripts because they need two users. The entry needs root (the loop mount, `/dev/net/tun`, the CA, the volume owners). The start script does the work of the user agent. The image runs them together: `sandbox-entry` is the `ENTRYPOINT`, and `sandbox-start` is the default command. `just sandbox run bash` replaces only the command, so the root steps still run first.
+`sandbox-entry` and `sandbox-start` are two scripts because they need two users. The entry needs root (the loop mount, `/dev/net/tun` and the CA). The start script does the work of the user agent. The image runs them together: `sandbox-entry` is the `ENTRYPOINT`, and `sandbox-start` is the default command. `just sandbox run bash` replaces only the command, so the root steps still run first.
 
 `sandbox-start` does these steps. Each step does nothing if its work exists.
 
@@ -74,7 +74,7 @@ just sandbox down                     # removes the containers and the networks
 
 ## Volumes
 
-A volume stays after `just sandbox down`. Remove one with `podman volume rm`.
+A volume stays after `just sandbox down`. Remove one with `podman volume rm`. `compose.yaml` gives each volume to the user agent with the volume option `uid=101000,gid=101000`. The ids are the ids of the host user namespace: 100000 (the start of the static map) plus 1000 (the user agent). A volume that exists before you change the option keeps its old owner. Remove it first.
 
 | Volume | Folder in the sandbox | Content |
 |---|---|---|

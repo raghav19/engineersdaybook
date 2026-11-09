@@ -25,27 +25,38 @@ secrets:
   sandbox-ca-key:
     external: true
 
+# Podman gives a volume to this owner when it makes the volume. The ids are the ids of the host user namespace.
+# 101000 is 100000 (the start of the static map of the sandbox) plus 1000 (the user agent). The sandbox sees 1000:1000.
+x-agent-volume: &agent-volume
+  driver_opts: {o: "uid=101000,gid=101000"}
+
 volumes:
-  # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`.
+  # The ext4 image of the storage of nested Podman (see image/sandbox-entry). It stays after `down`. The entry owns it as root.
   sandbox-state:
     name: sandbox-state
   # The clone of the repo. The work of the agent stays here after you quit. `down` keeps it.
   sandbox-workspace:
+    <<: *agent-volume
     name: sandbox-workspace
   # The login and settings of Claude Code, and its plugins.
   sandbox-claude-home:
+    <<: *agent-volume
     name: sandbox-claude-home
   # The sessions of Qwen Code.
   sandbox-qwen-home:
+    <<: *agent-volume
     name: sandbox-qwen-home
   # The history, the settings and the memory of Headroom.
   sandbox-headroom-home:
+    <<: *agent-volume
     name: sandbox-headroom-home
   # The layout of Herdr (session.json and session-snapshots). A new sandbox restores the panes.
   sandbox-herdr:
+    <<: *agent-volume
     name: sandbox-herdr
   # The Terraform provider cache (TF_PLUGIN_CACHE_DIR in image/mise.toml).
   sandbox-terraform-providers:
+    <<: *agent-volume
     name: sandbox-terraform-providers
 
 x-sandbox: &sandbox
