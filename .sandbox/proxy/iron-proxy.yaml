@@ -10,7 +10,7 @@ dns:
 proxy:
   http_listen: ":80"
   https_listen: ":443"
-  tunnel_listen: ":8080"
+  # No tunnel_listen. That listener takes CONNECT and SOCKS5, and the sandbox needs only DNS, HTTP and HTTPS.
 tls:
   ca_cert: /etc/iron-proxy/ca.crt
   ca_key: /etc/iron-proxy/ca.key
