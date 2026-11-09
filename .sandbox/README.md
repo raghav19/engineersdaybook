@@ -51,12 +51,12 @@ sandbox (krun microVM)  --inner network, no route out-->  proxy  --outer network
 ## Use
 
 ```shell
-just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens a shell as the user agent
-just sandbox run claude --version     # runs one command in place of the shell
+just sandbox run                      # builds the image, makes the CA, starts the proxy and the sandbox, opens Herdr as the user agent
+just sandbox run claude --version     # runs one command in place of Herdr
 just sandbox selftest                 # checks the wall with dummy tokens. No Bitwarden needed
 just sandbox down                     # removes the containers and the networks
 ```
 
-`run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Type `exit` to leave the sandbox. The proxy keeps running until `just sandbox down`.
+`run` asks for the passphrase of the Bitwarden token, as `just msb run` does. Quit Herdr to leave the sandbox. Run `just sandbox run bash --login -i` for a plain shell. The proxy keeps running until `just sandbox down`.
 
 The clone of the repo and the start of Claude Code and Herdr come in a later change. Then `just sandbox run` is the one daily command.

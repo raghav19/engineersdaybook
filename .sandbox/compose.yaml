@@ -57,6 +57,7 @@ x-sandbox: &sandbox
     QWEN_API_KEY: sandbox-placeholder-QWEN_API_KEY
     GHCR_PUSH_TOKEN: sandbox-placeholder-GHCR_PUSH_TOKEN
     # The tools that do not read the system trust store by default.
+    COLORTERM: truecolor
     NODE_OPTIONS: --use-system-ca
     REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
   volumes:
