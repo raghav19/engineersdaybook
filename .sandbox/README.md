@@ -22,6 +22,7 @@ This folder will replace `.msb/`. The sandbox is a krun microVM that rootless Po
 | `sandbox-entry` replaces `sandbox-boot`. | krun has no `podman exec`. The entry runs as the command of the container, then drops to the user `agent`. |
 | `sandbox-entry` mounts an ext4 image on `~/.local/share/containers`. | The overlay driver of nested Podman cannot use the virtiofs disk of the microVM. A volume, a tmpfs and the `vfs` driver fail too. `force_mask` does not fix it. Spike N1 calls the ext4 image fix B. |
 | `sandbox-entry` gives `/dev/net/tun` to the group `agent`. | Nested containers use pasta for the network, and pasta opens `/dev/net/tun`. |
+| `sandbox-entry` runs `e2fsck -p` before it mounts the file, and mounts with `discard`. | The VM never unmounts the file system, so `e2fsck` checks it at each start. With `discard`, the file on the host shrinks when Podman removes data. Test: 300 MiB written and removed. The file went from 435 MiB to 135 MiB. |
 | The image has `e2fsprogs`. | `sandbox-entry` needs `mkfs.ext4`. |
 | `TMPDIR=/dev/shm`. | Buildah fails with its temporary folder on virtiofs (spike N1). |
 | `fuse-overlayfs` is not installed. | Native overlay works under krun. |

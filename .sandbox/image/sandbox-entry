@@ -22,7 +22,14 @@ mkdir -p /var/lib/sandbox "$storage_dir" || fail "could not make the folders of 
 if [ ! -f "$storage_img" ]; then
   truncate -s 20G "$storage_img" && mkfs.ext4 -q -F "$storage_img" || fail "could not make $storage_img"
 fi
-mount -o loop "$storage_img" "$storage_dir" || fail "could not mount $storage_img on $storage_dir"
+# Do not run two sandboxes on the same volume. Two VMs that mount the same file damage the file system, and a lock in the guest does not stop it.
+# compose.yaml blocks a second sandbox with a fixed IP address. A manual `podman run` on the volume bypasses this.
+# The VM does not unmount the file system when it stops. Repair it before you mount it. Code 0 and 1 mean the file system is clean or repaired.
+rc=0
+e2fsck -p "$storage_img" >/dev/null 2>&1 || rc=$?
+[ "$rc" -le 1 ] || fail "e2fsck could not repair $storage_img (code $rc)"
+# The option discard gives the freed blocks back, so the file on the host shrinks when Podman removes data.
+mount -o loop,discard "$storage_img" "$storage_dir" || fail "could not mount $storage_img on $storage_dir"
 chown agent:agent "$storage_dir" || fail "could not give $storage_dir to agent"
 
 # 2. The network of a nested container.
