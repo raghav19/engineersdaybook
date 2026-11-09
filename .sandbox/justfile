@@ -38,13 +38,11 @@ build:
     podman build {{ image_dir }} -t {{ image }}
 
 # Start the proxy and the sandbox, and open a shell in the sandbox as the user agent. `run` builds the image and makes the CA first.
-# Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders. Give a command to run it in place of the shell.
+# Give a command to run it in place of the shell: `just sandbox run claude --version`.
+# Bitwarden gives the real tokens to the proxy only. The sandbox holds placeholders.
 # crun starts the microVM when the annotation run.oci.handler=krun is set (see compose.yaml).
-[script('bash')]
 run *command: build _ca
-    set -euo pipefail
-    if [ "$#" -eq 0 ]; then set -- bash --login -i; fi
-    {{ bws_run }} 'export GHCR_PUSH_TOKEN="$GITHUB_TOKEN"; exec podman-compose -f {{ compose }} run --rm sandbox sandbox-entry "$@"' _ "$@"
+    {{ bws_run }} 'GHCR_PUSH_TOKEN="$GITHUB_TOKEN" podman-compose -f {{ compose }} run --rm sandbox sandbox-entry {{ if command == '' { 'bash --login -i' } else { command } }}'
 
 # Make the CA of the egress proxy if there is none.
 [private]
@@ -53,28 +51,23 @@ _ca:
 
 # Make a new CA for the egress proxy. The key goes to the Podman secret sandbox-ca-key, and the certificate to the state folder.
 # A new CA replaces the old one. Run `just sandbox down` first.
-[script('bash')]
 ca:
-    set -euo pipefail
     mkdir -p '{{ state_dir }}'
-    tmp=$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/sandbox-ca.XXXXXX")
-    trap 'rm -rf "$tmp"' EXIT
-    openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
-      -subj '/CN=sandbox egress proxy CA' \
-      -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
-      -addext 'keyUsage=critical,keyCertSign,cRLSign' \
-      -keyout "$tmp/ca.key" -out "$tmp/ca.crt" 2>/dev/null
-    podman secret create --replace sandbox-ca-key "$tmp/ca.key" >/dev/null
-    install -m 0644 "$tmp/ca.crt" '{{ state_dir }}/ca.crt'
-    echo "sandbox: CA made. Certificate: {{ state_dir }}/ca.crt. Key: Podman secret sandbox-ca-key."
+    tmp=$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/sandbox-ca.XXXXXX") && trap 'rm -rf "$tmp"' EXIT \
+      && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+           -subj '/CN=sandbox egress proxy CA' \
+           -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
+           -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+           -keyout "$tmp/ca.key" -out "$tmp/ca.crt" 2>/dev/null \
+      && podman secret create --replace sandbox-ca-key "$tmp/ca.key" >/dev/null \
+      && install -m 0644 "$tmp/ca.crt" '{{ state_dir }}/ca.crt' \
+      && echo "sandbox: CA made. Certificate: {{ state_dir }}/ca.crt. Key: Podman secret sandbox-ca-key."
 
 # Start the proxy, run the egress self-test in the sandbox, then remove everything. The tokens are dummies, so no real token is in this test.
-[script('bash')]
 selftest: build _ca
-    set -euo pipefail
-    export GH_TOKEN=dummy-gh CLAUDE_CODE_OAUTH_TOKEN=dummy-claude QWEN_API_KEY=dummy-qwen GHCR_PUSH_TOKEN=dummy-ghcr
-    trap 'podman-compose -f {{ compose }} --profile selftest down >/dev/null 2>&1' EXIT
-    podman-compose -f {{ compose }} --profile selftest run --rm selftest
+    export GH_TOKEN=dummy-gh CLAUDE_CODE_OAUTH_TOKEN=dummy-claude QWEN_API_KEY=dummy-qwen GHCR_PUSH_TOKEN=dummy-ghcr; \
+      rc=0; podman-compose -f {{ compose }} --profile selftest run --rm selftest || rc=$?; \
+      podman-compose -f {{ compose }} --profile selftest down >/dev/null 2>&1; exit $rc
 
 # Stop and remove the containers and the networks. The volume sandbox-state stays.
 down:
