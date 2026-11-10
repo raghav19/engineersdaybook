@@ -1,0 +1,100 @@
+# The hardened Podman sandbox: no network. iron-proxy on the host is the only way out. Use `just sandbox run`. The README has the other commands.
+# The agent cannot change it: the root file system is read-only, and the CA, the socket folder and the repo are read-only mounts.
+x-podman: {in_pod: false} # podman-compose puts all services in one pod, and a pod shares one network
+x-vol: &vol {driver_opts: {o: "uid=1000,gid=1000"}} # agent is uid 1000
+
+volumes:
+  home: {name: sandbox-home, driver_opts: {type: tmpfs, device: tmpfs, o: "uid=1000,gid=1000,mode=0755,size=256m,nosuid,nodev"}} # empty at each start
+  workspace: {<<: *vol, name: sandbox-workspace} # the clone of the repo
+  claude-home: {<<: *vol, name: sandbox-claude-home}
+  qwen-home: {<<: *vol, name: sandbox-qwen-home}
+  headroom-home: {<<: *vol, name: sandbox-headroom-home}
+  herdr: {<<: *vol, name: sandbox-herdr}
+  cache: {<<: *vol, name: sandbox-cache} # npm, pip and go caches, on disk and not in memory
+  terraform-providers: {<<: *vol, name: sandbox-terraform-providers}
+  containers: {<<: *vol, name: sandbox-containers} # the storage of buildah
+
+x-env: &env
+  GH_TOKEN: sandbox-placeholder-GH_TOKEN # placeholders: the proxy swaps in the real tokens
+  CLAUDE_CODE_OAUTH_TOKEN: sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
+  QWEN_API_KEY: sandbox-placeholder-QWEN_API_KEY
+  GHCR_PUSH_TOKEN: sandbox-placeholder-GHCR_PUSH_TOKEN
+  HTTP_PROXY: http://127.0.0.1:3128 # the relay in sandbox-entry. A tool that ignores these has no route
+  HTTPS_PROXY: http://127.0.0.1:3128
+  http_proxy: http://127.0.0.1:3128
+  https_proxy: http://127.0.0.1:3128
+  NO_PROXY: localhost,127.0.0.1
+  NODE_USE_ENV_PROXY: "1" # Node.js reads the proxy variables only with this value
+  SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt # the CA of the proxy, mounted below
+  REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+  GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
+  NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-certificates.crt
+  NODE_OPTIONS: --use-system-ca
+  HOME: /home/agent
+  TMPDIR: /tmp
+  COLORTERM: truecolor
+  SANDBOX_WORKSPACE: /home/agent/engineersdaybook
+  SANDBOX_BRANCH: ${SANDBOX_BRANCH:-}
+  REPO_URL: https://github.com/raghav19/engineersdaybook
+  GIT_AUTHOR_NAME: ${GIT_AUTHOR_NAME:-agent}
+  GIT_COMMITTER_NAME: ${GIT_AUTHOR_NAME:-agent}
+  GIT_AUTHOR_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+  GIT_COMMITTER_EMAIL: ${GIT_AUTHOR_EMAIL:-agent@localhost}
+  MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook
+  MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml
+  CLAUDE_CONFIG_DIR: /home/agent/.claude
+  DISABLE_UPDATES: "1"
+  HEADROOM_HARD_WATCHDOG_SECS: "0"
+
+x-volumes: &volumes # the mounts in /home/agent are top-level: a deeper mount makes root own the folders above it
+  - home:/home/agent
+  - ${HOME}/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro # the CA of the proxy. Never mount ca.key
+  - ${XDG_RUNTIME_DIR:?}/sandbox:/run/sandbox/proxy:ro # the folder of the proxy socket
+  - ${SANDBOX_GIT_DIR:?run through just}:/run/sandbox/source:ro # the .git folder of the host repo
+  - ${HOME}/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro # the image links it to the path that TTT reads
+  - workspace:/home/agent/engineersdaybook
+  - claude-home:/home/agent/.claude
+  - qwen-home:/home/agent/.qwen
+  - headroom-home:/home/agent/.headroom
+  - herdr:/home/agent/.herdr
+  - cache:/home/agent/.cache
+  - terraform-providers:/home/agent/.cache/terraform-providers
+  - containers:/home/agent/.buildah
+
+x-sandbox: &sandbox
+  image: localhost/sandbox-dev:latest
+  runtime: crun
+  network_mode: none # the loopback interface only
+  user: "0:0" # sandbox-entry starts the relay as container root (the host user), then drops to agent
+  working_dir: /home/agent
+  read_only: true
+  cap_drop: [ALL]
+  cap_add: [SETUID, SETGID, SETPCAP] # only for the entry. The agent gets an empty set
+  security_opt: [no-new-privileges:true, "seccomp=${SANDBOX_DIR:?run through just}/seccomp.json"]
+  pids_limit: 1024
+  mem_limit: 3g
+  cpus: 4
+  tmpfs: ["/tmp:rw,nosuid,nodev,size=512m", "/run:rw,nosuid,nodev,size=16m"]
+  environment: *env
+  volumes: *volumes
+
+services:
+  sandbox: {<<: *sandbox, container_name: sandbox}
+  sandbox-build: # the six capabilities that buildah needs for chroot isolation. No SYS_ADMIN
+    <<: *sandbox
+    container_name: sandbox-build
+    profiles: [build]
+    read_only: false # buildah chroot isolation fails on a read-only root: it cannot remount the host root in its namespace
+    cap_add: [SETUID, SETGID, SETPCAP, CHOWN, DAC_OVERRIDE, FOWNER, SYS_CHROOT]
+    security_opt: [no-new-privileges:true, "seccomp=${SANDBOX_DIR:?run through just}/seccomp-build.json"] # buildah needs unshare, mount and the like
+    environment: {<<: *env, SANDBOX_AGENT_CAPS: "+chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid", BUILDAH_ISOLATION: chroot}
+  selftest: # runs egress-selftest.sh as the command. The README has the command
+    <<: *sandbox
+    container_name: sandbox-selftest
+    profiles: [selftest]
+    command: [egress-selftest, -a, "https://api.github.com/zen", example.com]
+    volumes:
+      - home:/home/agent
+      - ${HOME}/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ${XDG_RUNTIME_DIR:?}/sandbox:/run/sandbox/proxy:ro
+      - ./egress-selftest.sh:/usr/local/bin/egress-selftest:ro
