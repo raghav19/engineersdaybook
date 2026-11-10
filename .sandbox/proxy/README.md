@@ -135,12 +135,10 @@ Check the result with `systemd-analyze --user security sandbox-proxy.service`. A
 | `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | The proxy can open only IPv4 sockets, IPv6 sockets and local (Unix) sockets. | Raw packet sockets (sniffing) and netlink sockets (a change of the network setup of the kernel). |
 | `RestrictNamespaces=yes` | The proxy cannot make a namespace. A namespace is a private view of files, network or users. | Many exploits start with a new namespace. |
 | `RestrictRealtime=yes` | The proxy cannot ask for real-time scheduling. | A real-time process runs before all normal processes. It can use a whole CPU core, so the desktop freezes. |
-| `LockPersonality=yes` | The proxy cannot call `personality()`. | A switch-off of the address randomization that makes exploits harder. |
 | `ProtectKernelTunables=yes`, `ProtectKernelModules=yes` | The proxy cannot write to `/proc/sys` and `/sys`. It cannot load kernel modules. | A change of the kernel settings. |
-| `ProtectControlGroups=yes`, `ProtectClock=yes`, `ProtectHostname=yes` | The proxy cannot change the control group tree, the clock or the host name. | A change of the system setup. |
-| `UMask=0077` | Files that the proxy makes are readable by the owner only. | Another account reads a file of the proxy. |
+| `ProtectControlGroups=yes`, `ProtectClock=yes` | The proxy cannot change the control group tree or the clock. | A change of the system setup. |
 
-The unit does not use `CapabilityBoundingSet=`, because a user unit has no capabilities. It does not use `MemoryDenyWriteExecute=`, because it can break programs that make code at run time.
+The unit leaves out lines that do not lower the score of `systemd-analyze security`: `LockPersonality=`, `ProtectHostname=` and `UMask=`. It does not use `CapabilityBoundingSet=`, because a user unit has no capabilities. It does not use `MemoryDenyWriteExecute=`, because it can break programs that make code at run time.
 
 The unit cannot restrict the network. `IPAddressDeny=` does nothing in a user unit, and the proxy must reach the internet. The allowlist in `iron-proxy.yaml` is the control. Treat that file as the most important file of the proxy.
 
