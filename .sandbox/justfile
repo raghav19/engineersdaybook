@@ -1,6 +1,7 @@
 # The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
 # The container has no network. The host proxy (.sandbox/proxy) is its only way out. compose.yaml defines the container and its volume.
 # The recipes run in this folder, so podman-compose finds compose.yaml and podman build finds image/.
+# A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
 #   just sandbox run     make the container if it does not exist, start it if it stopped, and open Herdr in it.
 #   just sandbox rm      remove the container. The volume stays.
@@ -9,6 +10,7 @@
 # After you edit compose.yaml or build the image, run `just sandbox rm` and then `just sandbox run`.
 
 set quiet
+set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
@@ -40,20 +42,15 @@ help:
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 run *command: _check
-    #!/usr/bin/env bash
-    set -euo pipefail
-
     # Make the container if it does not exist, and start it if it stopped. A running container stays as it is.
     # --wait waits for the healthcheck in compose.yaml.
     podman-compose up -d --no-recreate \
         --wait --wait-timeout 180 \
         sandbox
 
-    # A timeout of --wait-timeout does not fail by itself, so check the result here.
-    if ! podman healthcheck run sandbox; then
-        echo "sandbox: not ready after 180 s. See: podman logs sandbox" >&2
-        exit 1
-    fi
+    # --wait-timeout does not fail by itself. This stops the recipe with "unhealthy" if the container is not ready.
+    # See then: podman logs sandbox
+    podman healthcheck run sandbox
 
     # Open Herdr, or run the command that you gave.
     podman-compose exec \
@@ -67,13 +64,10 @@ rm:
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 build *args:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden. The access token of Bitwarden is the systemd credential of the proxy.
-    export BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
-    bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
-    trap 'podman logout ghcr.io' EXIT
+    # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
+    # The access token of Bitwarden is the systemd credential of the proxy.
+    BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" \
+        bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
     # localhost/sandbox-dev:latest is the tag that compose.yaml uses.
@@ -87,20 +81,22 @@ build *args:
     # Push the commit tag.
     podman push {{ registry }}:{{ commit }}
 
+    # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
+    podman logout ghcr.io
+
 # The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
 # It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
 [private]
 [no-exit-message]
 _check:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -S "$SANDBOX_SOCKET/proxy.sock" ]; then
-        echo "sandbox: no proxy socket at $SANDBOX_SOCKET/proxy.sock." >&2
-        echo "Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md)." >&2
-        exit 1
-    fi
-    if [ ! -f "$SANDBOX_CA" ]; then
-        echo "sandbox: no CA at $SANDBOX_CA." >&2
-        echo "Make the CA: see .sandbox/proxy/README.md." >&2
-        exit 1
-    fi
+    [ -S "$SANDBOX_SOCKET/proxy.sock" ] || { \
+        echo "sandbox: no proxy socket at $SANDBOX_SOCKET/proxy.sock."; \
+        echo "Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md)."; \
+        exit 1; \
+    } >&2
+
+    [ -f "$SANDBOX_CA" ] || { \
+        echo "sandbox: no CA at $SANDBOX_CA."; \
+        echo "Make the CA: see .sandbox/proxy/README.md."; \
+        exit 1; \
+    } >&2
