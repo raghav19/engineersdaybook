@@ -6,9 +6,8 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 | Path | Content |
 |---|---|
-| `sandbox.env` | The environment of the container. |
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
-| `compose.yaml` | The two containers, their hardening flags, their mounts and their volumes. |
+| `compose.yaml` | The two containers: their environment, hardening flags, mounts and volumes. |
 | `justfile` | `run` and `build`. Each recipe starts a container with `podman-compose up -d` and opens Herdr in it. |
 
 ## Architecture
