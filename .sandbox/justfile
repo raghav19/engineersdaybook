@@ -84,7 +84,8 @@ build *args:
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
 
-# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
+# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe checks that they exist.
+# It also stops if an older setup left a container named sandbox.
 # It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
 [private]
 [no-exit-message]
@@ -98,5 +99,12 @@ _check:
     [ -f "$SANDBOX_CA" ] || { \
         echo "sandbox: no CA at $SANDBOX_CA."; \
         echo "Make the CA: see .sandbox/proxy/README.md."; \
+        exit 1; \
+    } >&2
+
+    # A container named sandbox must come from this compose.yaml. An older setup left one with this name.
+    [ -z "$(podman ps -a -q --filter name=^sandbox$)" ] || [ -n "$(podman ps -a -q --filter name=^sandbox$ --filter label=com.docker.compose.project=agent-sandbox)" ] || { \
+        echo "sandbox: the container sandbox is from an older setup. It does not start as the user agent."; \
+        echo "Remove it: podman rm -f sandbox (the volumes stay). Then run this again."; \
         exit 1; \
     } >&2
