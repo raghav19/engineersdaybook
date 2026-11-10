@@ -36,10 +36,10 @@ export SANDBOX_GIT_DIR := shell(git + ' rev-parse --path-format=absolute --git-c
 export SANDBOX_THEME := home_directory() / '.local/state/omarchy/current/theme'
 export SANDBOX_BRANCH := shell(git + ' branch --show-current')
 
-# Stops with a message if a file is missing. A recipe lists what it needs on its first line: `build: (_needs credential 'hint')`.
+# Stops with a message if a file is missing. A recipe lists the files that it needs on its first line: `build: (_needs credential)`.
 [private]
-_needs file hint:
-    {{ if path_exists(file) == 'true' { 'true' } else { error('sandbox: no ' + file + '. ' + hint) } }}
+_needs file:
+    {{ if path_exists(file) == 'true' { 'true' } else { error('sandbox: missing ' + file + '. See .sandbox/proxy/README.md.') } }}
 
 # List the recipes (the default)
 [default]
@@ -48,7 +48,7 @@ help:
 
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: _check (_needs proxy_socket 'Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md).') (_needs SANDBOX_CA 'Make the CA: see .sandbox/proxy/README.md.')
+run *command: _check (_needs proxy_socket) (_needs SANDBOX_CA)
     # Make the container if it does not exist, and start it if it stopped. A running container stays as it is.
     # --wait waits for the healthcheck in compose.yaml.
     podman-compose up -d --no-recreate \
@@ -70,7 +70,7 @@ rm:
     podman-compose down
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
-build *args: (_needs credential 'Make it once: see .sandbox/proxy/README.md, step 6. There is no password prompt after that.')
+build *args: (_needs credential)
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
     # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
