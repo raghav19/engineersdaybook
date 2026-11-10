@@ -49,11 +49,10 @@ x-sandbox: &sandbox
   image: localhost/sandbox-dev:latest
   runtime: crun
   network_mode: none
-  # The entry starts as root in the container. In rootless Podman, that is the host user. It keeps three capabilities to drop to the user agent. Then the agent has none.
-  user: "0"
+  # The container starts as the user agent. In rootless Podman, that user is a subuid, not you.
+  user: agent
   working_dir: /home/agent
   cap_drop: [ALL]
-  cap_add: [SETUID, SETGID, SETPCAP]
   security_opt: [no-new-privileges]
   pids_limit: 1024
   mem_limit: 3g
@@ -65,6 +64,7 @@ x-sandbox: &sandbox
 # The first four mounts of each list have the flag :ro. The agent cannot change the CA, the socket folder, the repo or the theme.
 services:
   # The agent sandbox.
+  # It has no capability.
   sandbox:
     <<: *sandbox
     container_name: sandbox
@@ -78,14 +78,15 @@ services:
 
   # The build sandbox. It adds the capabilities that buildah needs for chroot isolation. It has no SYS_ADMIN and a writable root.
   # It has its own home. It sees the home of the agent at /src, read-only.
+  # The user agent keeps these capabilities. CHOWN, DAC_OVERRIDE and FOWNER set the owner and the access of files.
+  # SYS_CHROOT is for the chroot of a build step. SETUID and SETGID are for a USER step.
   sandbox-build:
     <<: *sandbox
     container_name: sandbox-build
-    cap_add: [SETUID, SETGID, SETPCAP, CHOWN, DAC_OVERRIDE, FOWNER, SYS_CHROOT]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SYS_CHROOT, SETUID, SETGID]
     environment:
       <<: *env
       BUILDAH_ISOLATION: chroot
-      SANDBOX_AGENT_CAPS: +chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid
     volumes:
       - ${SANDBOX_CA}:/etc/ssl/certs/ca-certificates.crt:ro
       - ${SANDBOX_SOCKET}:/run/sandbox/proxy:ro

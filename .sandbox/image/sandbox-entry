@@ -1,42 +1,30 @@
 #!/bin/sh
-# The command of the sandbox container. It starts as root in the container. In rootless Podman, container root is the host user.
-# It starts the relay to the egress proxy, then it drops to the user agent and runs your command.
+# The command of the sandbox container. It starts the relay to the egress proxy, then it runs your command.
 # Example: sandbox-entry bash --login -i
-# The justfile gives the container these capabilities: SETUID, SETGID and SETPCAP. The agent gets none, except the ones in SANDBOX_AGENT_CAPS.
+# The container starts as the user agent. compose.yaml gives the agent container no capability. It gives the build container the capabilities of buildah.
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
 
 fail() { echo "sandbox-entry: $*" >&2; exit 1; }
 
-[ "$(id -u)" = 0 ] || fail "run as root"
+[ "$(id -u)" != 0 ] || fail "run as the user agent, not as root"
 [ "$#" -gt 0 ] || fail "give a command to run"
 
 # The host can pass its NOTIFY_SOCKET. A tool in the sandbox then tries to notify the host service manager and fails.
 unset NOTIFY_SOCKET
 
-# 1. The relay to the proxy.
-#    The sandbox has no network. The proxy on the host listens on a Unix socket that the justfile mounts at /run/sandbox/proxy/proxy.sock.
-#    The socket belongs to the host user, and container root is the host user, so root opens it and the user agent cannot.
-#    The relay listens on 127.0.0.1:3128 and copies the bytes to the socket. HTTPS_PROXY points at it.
-#    The relay has no capability: the bounding set and the inheritable set are empty.
-#    The relay starts only when the entry is the first process of the container. `podman exec -u 0 sandbox-entry <command>` opens a session that has the
-#    capabilities of SANDBOX_AGENT_CAPS. A `podman exec -u agent` session has none, because capabilities do not pass from the first process to an exec session.
+# The relay to the proxy.
+#   The sandbox has no network. The proxy on the host listens on a Unix socket that compose.yaml mounts at /run/sandbox/proxy/proxy.sock.
+#   The socket has the mode 0666, so the user agent opens it. Only you and the containers that mount the folder reach it.
+#   The relay listens on 127.0.0.1:3128 and copies the bytes to the socket. HTTPS_PROXY points at it.
+#   The relay starts only when the entry is the first process of the container. A `podman exec` session finds the relay already running.
 sock=/run/sandbox/proxy/proxy.sock
 if [ "$$" != 1 ]; then
   :
 elif [ -S "$sock" ]; then
-  setpriv --bounding-set=-all --inh-caps=-all socat TCP-LISTEN:3128,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:"$sock" &
+  socat TCP-LISTEN:3128,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:"$sock" &
 else
   echo "sandbox-entry: no proxy socket at $sock. The sandbox has no way out." >&2
 fi
 
-# 2. Drop to the user agent.
-#    SANDBOX_AGENT_CAPS is empty in the default sandbox: the agent has no capability. The build profile sets a list, for example "+chown,+fowner".
-#    A listed capability goes into the bounding, inheritable and ambient sets, so the agent keeps it after the change of user.
-caps=${SANDBOX_AGENT_CAPS:-}
-if [ -n "$caps" ]; then
-  set -- setpriv --reuid=agent --regid=agent --init-groups --bounding-set="-all,$caps" --inh-caps="$caps" --ambient-caps="$caps" env HOME=/home/agent "$@"
-else
-  set -- setpriv --reuid=agent --regid=agent --init-groups --bounding-set=-all --inh-caps=-all env HOME=/home/agent "$@"
-fi
 exec "$@"
