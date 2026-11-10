@@ -47,7 +47,7 @@ just sandbox run     # makes the container if it does not exist, starts it if it
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The next `run` starts the same container. |
 | `just sandbox rm` | Removes the container. The volume stays. Run it after you edit `compose.yaml` or rebuild the image, then run `just sandbox run`. |
-| `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
+| `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. It needs the credential of the proxy (`proxy/README.md`, step 6) and asks for no password. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
 
 ## Hardening
 

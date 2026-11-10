@@ -64,9 +64,17 @@ rm:
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 build *args:
+    # The access token of Bitwarden is the systemd credential of the proxy. Stop here if it is missing.
+    [ -f '{{ credential }}' ] || { \
+        echo "sandbox: no credential at {{ credential }}."; \
+        echo "Make it once: see .sandbox/proxy/README.md, step 6. There is no password prompt after that."; \
+        exit 1; \
+    } >&2
+
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
-    # The access token of Bitwarden is the systemd credential of the proxy.
-    BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" \
+    # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
+        BWS_ACCESS_TOKEN="$token" \
         bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
