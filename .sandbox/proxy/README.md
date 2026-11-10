@@ -41,7 +41,7 @@ The host runs only iron-proxy and three systemd units. It needs **no Podman, no 
 | `mise` | It installs iron-proxy and `bws`. | `mise --version` |
 | `openssl` | It makes the CA. | `openssl version` |
 | A Bitwarden Secrets Manager project and the access token of a machine account | The source of the real tokens. | Step 5 |
-| Linger for your user (optional) | The proxy keeps running when you are logged out. | `loginctl enable-linger "$USER"`, then `loginctl show-user "$USER" -p Linger` |
+| Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"`, then `loginctl show-user "$USER" -p Linger` |
 
 You need `age` only if you keep the access token in an `age` file, as the `just msb` setup does.
 
@@ -83,7 +83,7 @@ You need `age` only if you keep the access token in an `age` file, as the `just 
    chmod 0600 ~/.config/sandbox/bws-token.cred
    ```
 
-   Both commands are pipes, so they write no plaintext file. `systemd-creds` makes the `.cred` file with mode 0644, so the `chmod` is required. A copy of the `.cred` file is useless on another machine. Code that runs as the same user here can decrypt it.
+   Both commands are pipes, so they write no plaintext file. `systemd-creds` makes the `.cred` file with mode 0644, so you must run the `chmod`. A copy of the `.cred` file is useless on another machine. Code that runs as the same user here can decrypt it.
 
 7. Link and start the units:
 
