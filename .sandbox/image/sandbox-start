@@ -2,7 +2,7 @@
 # The start script of the sandbox. It runs as the user agent, after sandbox-entry, and it is the process that keeps the container alive.
 # It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. `just sandbox run` waits for this file, then opens Herdr with `podman exec`.
 # Each step does nothing if its work exists, so a restart does no harm.
-# Values from sandbox.env and the justfile: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
+# Values from compose.yaml and the justfile: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
 set -eu
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
