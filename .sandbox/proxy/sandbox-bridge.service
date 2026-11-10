@@ -1,0 +1,11 @@
+# Joins the socket of sandbox-bridge.socket to the tunnel of iron-proxy. systemd starts it at the first connection.
+# Requires= starts the proxy at the same time.
+[Unit]
+Description=Bridge from the sandbox socket to iron-proxy
+Requires=sandbox-proxy.service
+After=sandbox-proxy.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:18080
+NoNewPrivileges=yes
+PrivateTmp=yes
