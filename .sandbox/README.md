@@ -8,7 +8,8 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 |---|---|
 | `sandbox.env` | The environment of the container. |
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
-| `justfile` | `run` and `build`. It holds the two `podman run` commands. |
+| `compose.yaml` | The two containers, their hardening flags, their mounts and their volumes. |
+| `justfile` | `run` and `build`. Each recipe starts a container with `podman-compose up -d` and opens Herdr in it. |
 
 ## Architecture
 
@@ -25,13 +26,13 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 **Why a relay?** Tools need a TCP address for a proxy. The relay turns that address into the socket. It runs as container root, which is the host user who owns the socket. It has no capability. The agent user cannot open the socket.
 
-**Why is the CA mounted and not installed?** The root file system is read-only, so `update-ca-certificates` cannot run. The `podman run` command mounts `~/.local/state/sandbox/ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. All HTTPS goes through the proxy, which ends the TLS with this CA, so the sandbox trusts this CA only. The command never mounts `ca.key`. If you make a new CA, restart the sandbox.
+**Why is the CA mounted and not installed?** The root file system is read-only, so `update-ca-certificates` cannot run. `compose.yaml` mounts `~/.local/state/sandbox/ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. All HTTPS goes through the proxy, which ends the TLS with this CA, so the sandbox trusts this CA only. The file never mounts `ca.key`. If you make a new CA, restart the sandbox.
 
 **The host side:** the units are `sandbox-proxy.service`, `sandbox-bridge.socket` and `sandbox-bridge.service`. iron-proxy uses the ports 18080 to 18089 on `127.0.0.1`. See [`proxy/README.md`](proxy/README.md). `just sandbox run` stops with a message if the socket `$XDG_RUNTIME_DIR/sandbox/proxy.sock` is missing. Start the proxy with `systemctl --user start sandbox-proxy`.
 
 ## Install and use
 
-Start the host proxy first. Then build the image and run the sandbox:
+Start the host proxy first. You need `podman-compose` (tested with version 1.6.0). Then build the image and run the sandbox:
 
 ```shell
 podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
@@ -39,7 +40,7 @@ just sandbox run     # the agent sandbox: starts the container if it does not ru
 just sandbox build   # the build sandbox: a separate container for buildah, with its own home
 ```
 
-The first `run` makes the volume `sandbox-home` with `podman volume create -o o=uid=1000,gid=1000`. The first `build` makes `sandbox-build-home` the same way. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
+`compose.yaml` declares the volumes `sandbox-home` and `sandbox-build-home`. The first `run` or `build` makes them. The owner of `/home/agent` in the image, user `agent`, becomes the owner of a new volume. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
 
 | Command | What it does |
 |---|---|
@@ -49,6 +50,8 @@ The first `run` makes the volume `sandbox-home` with `podman volume create -o o=
 | `just sandbox build` | Starts the build sandbox if it does not run, and opens Herdr in it. `podman stop sandbox-build` stops it. |
 
 ## Hardening
+
+`compose.yaml` sets these controls for both containers. The build sandbox differs as the table says.
 
 | Control | What it does |
 |---|---|

@@ -1,0 +1,62 @@
+name: sandbox
+
+# Two containers, not one pod. A pod would share the network of both containers (a setting of podman-compose).
+x-podman: { in_pod: false }
+
+# The two sandbox containers. `just sandbox run` and `just sandbox build` start them. The justfile sets the SANDBOX_* variables.
+# Both containers have no network. The host proxy (.sandbox/proxy) is their only way out.
+
+x-sandbox: &sandbox
+  image: localhost/sandbox-dev:latest
+  runtime: crun
+  network_mode: none
+  # The entry starts as root in the container. In rootless Podman, that is the host user. It keeps three capabilities to drop to the user agent. Then the agent has none.
+  user: "0"
+  working_dir: /home/agent
+  cap_drop: [ALL]
+  cap_add: [SETUID, SETGID, SETPCAP]
+  security_opt: [no-new-privileges]
+  pids_limit: 1024
+  mem_limit: 3g
+  cpus: 4
+  tmpfs: [/tmp, /run]
+  env_file: sandbox.env
+  environment: [SANDBOX_BRANCH]
+
+# YAML cannot join two lists, so each service has its own list of mounts.
+# The first four mounts of each list have the flag :ro. The agent cannot change the CA, the socket folder, the repo or the theme.
+services:
+  # The agent sandbox.
+  sandbox:
+    <<: *sandbox
+    container_name: sandbox
+    read_only: true
+    volumes:
+      - ${SANDBOX_CA}:/etc/ssl/certs/ca-certificates.crt:ro
+      - ${SANDBOX_SOCKET}:/run/sandbox/proxy:ro
+      - ${SANDBOX_GIT_DIR}:/run/sandbox/source:ro
+      - ${SANDBOX_THEME}:/home/agent/.omarchy-theme:ro
+      - sandbox-home:/home/agent
+
+  # The build sandbox. It adds the capabilities that buildah needs for chroot isolation. It has no SYS_ADMIN and a writable root.
+  # It has its own home. It sees the home of the agent at /src, read-only.
+  sandbox-build:
+    <<: *sandbox
+    container_name: sandbox-build
+    cap_add: [SETUID, SETGID, SETPCAP, CHOWN, DAC_OVERRIDE, FOWNER, SYS_CHROOT]
+    environment:
+      - SANDBOX_BRANCH
+      - BUILDAH_ISOLATION=chroot
+      - SANDBOX_AGENT_CAPS=+chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid
+    volumes:
+      - ${SANDBOX_CA}:/etc/ssl/certs/ca-certificates.crt:ro
+      - ${SANDBOX_SOCKET}:/run/sandbox/proxy:ro
+      - ${SANDBOX_GIT_DIR}:/run/sandbox/source:ro
+      - ${SANDBOX_THEME}:/home/agent/.omarchy-theme:ro
+      - sandbox-build-home:/home/agent
+      - sandbox-home:/src:ro
+
+# The names do not change, so the volumes of the earlier setup keep working.
+volumes:
+  sandbox-home: { name: sandbox-home }
+  sandbox-build-home: { name: sandbox-build-home }
