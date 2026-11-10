@@ -30,13 +30,13 @@
 <g font-size="13" text-anchor="middle" fill="#000000"><text x="140" y="635.5" font-weight="bold">Read-only mounts</text><text x="140" y="651.5">.git folder of the repo</text><text x="140" y="667.5">ca.crt (the CA of the proxy)</text><text x="140" y="683.5">Omarchy theme</text></g>
 
 <rect x="350" y="260" width="380" height="90" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="281.5" font-weight="bold">Agent tools</text><text x="540" y="297.5">Claude Code, Qwen Code, Herdr, TTT</text><text x="540" y="313.5">buildah in the build profile</text><text x="540" y="329.5">holds placeholders only</text></g>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="289.5" font-weight="bold">Agent tools</text><text x="540" y="305.5">Claude Code, Qwen Code, Herdr, TTT</text><text x="540" y="321.5">holds placeholders only</text></g>
 
 <rect x="470" y="430" width="260" height="100" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="600" y="468.5" font-weight="bold">Relay (socat)</text><text x="600" y="484.5">127.0.0.1:3128 to the proxy socket</text><text x="600" y="500.5">runs as container root, no capability</text></g>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="600" y="468.5" font-weight="bold">Relay (socat)</text><text x="600" y="484.5">127.0.0.1:3128 to the proxy socket</text><text x="600" y="500.5">runs as the user agent, no capability</text></g>
 
 <rect x="350" y="610" width="380" height="80" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="638.5" font-weight="bold">sandbox-home (named volume)</text><text x="540" y="654.5">the clone, .claude, .qwen, .headroom,</text><text x="540" y="670.5">.herdr, .cache and .buildah</text></g>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="638.5" font-weight="bold">sandbox-home (named volume)</text><text x="540" y="654.5">the clone, .claude, .qwen, .headroom,</text><text x="540" y="670.5">.herdr and .cache</text></g>
 
 <rect x="960" y="260" width="250" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="13" text-anchor="middle" fill="#000000"><text x="1085" y="281.5" font-weight="bold">iron-proxy</text><text x="1085" y="297.5">sandbox-proxy.service</text><text x="1085" y="313.5">allowlist, TLS CA, secret swap</text><text x="1085" y="329.5">tunnel 127.0.0.1:18080</text></g>

@@ -74,7 +74,7 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils buildah socat \
+ && apt-get install -y --no-install-recommends binutils socat \
  && apt-get purge -y podman-docker \
  && rm -rf /var/lib/apt/lists/*
 USER agent
@@ -99,16 +99,13 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/herdr-ttt-plugin/ /home/agent/.config/herdr/plugins/ttt-editor/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
-COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
-COPY --chown=agent:agent configs/containers/storage.conf /home/agent/.config/containers/storage.conf
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
-RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
- && touch /home/agent/.config/containers/nodocker
+RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.qwen
 # The justfile mounts the Omarchy theme of the host at ~/.omarchy-theme. TTT reads the theme at the path of Omarchy, so link it.
 # A mount below ~/.local would make root own the folders above it, and the agent could not write there.
 RUN mkdir -p /home/agent/.local/state/omarchy/current \

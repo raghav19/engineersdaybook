@@ -8,7 +8,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 |---|---|
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `compose.yaml` | The two containers: their environment, hardening flags, mounts and volumes. |
-| `justfile` | `run` and `build`. Each recipe starts a container with `podman-compose up -d` and opens Herdr in it. |
+| `justfile` | `run`. It starts the container with `podman-compose up -d` and opens Herdr in it. |
 
 ## Architecture
 
@@ -35,22 +35,20 @@ Start the host proxy first. You need `podman-compose` (tested with version 1.6.0
 
 ```shell
 podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
-just sandbox run     # the agent sandbox: starts the container if it does not run, and opens Herdr
-just sandbox build   # the build sandbox: a separate container for buildah, with its own home
+just sandbox run     # starts the container if it does not run, and opens Herdr
 ```
 
-`compose.yaml` declares the volumes `sandbox-home` and `sandbox-build-home`. The first `run` or `build` makes them. The owner of `/home/agent` in the image, user `agent`, becomes the owner of a new volume. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
+`compose.yaml` declares the volume `sandbox-home`. The first `run` makes it. The owner of `/home/agent` in the image, user `agent`, becomes the owner of a new volume. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
 
 | Command | What it does |
 |---|---|
 | `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
-| `just sandbox build` | Starts the build sandbox if it does not run, and opens Herdr in it. `podman stop sandbox-build` stops it. |
 
 ## Hardening
 
-`compose.yaml` sets these controls for both containers. The build sandbox differs as the table says.
+`compose.yaml` sets these controls.
 
 | Control | What it does |
 |---|---|
@@ -58,8 +56,7 @@ just sandbox build   # the build sandbox: a separate container for buildah, with
 | `--read-only` | The agent cannot write to `/etc`, `/usr`, `/opt/mise`, the policy of Claude Code or the CA. |
 | tmpfs on `/tmp` and `/run` | Scratch space. A restart empties it. |
 | The named volume `sandbox-home` at `/home/agent` | The clone, the logins and the histories stay here. The start script copies the home files of the image back at each start. |
-| A separate build sandbox | `just sandbox build` starts another container with its own home volume, `sandbox-build-home`. It sees `sandbox-home` read-only at `/src`. The agent sandbox keeps all capabilities dropped. |
-| `--cap-drop=ALL` | The agent container has no capability. The build container adds six (see "What the build profile gives up"). |
+| `--cap-drop=ALL` | The container has no capability. |
 | `--security-opt no-new-privileges` | A setuid program cannot raise a privilege. |
 | The default seccomp profile of Podman | A system call filter. A custom profile is not part of this change. |
 | `user: agent` (uid 1000) | The container starts as `agent`, not as root. In rootless Podman, `agent` is a subuid, not your host user. |
@@ -68,21 +65,15 @@ just sandbox build   # the build sandbox: a separate container for buildah, with
 
 ## Developer workflow
 
-The sandbox has no container engine. A build makes an image. You run the image on the host or in CI.
+The sandbox has no container engine. You build and run images on the host with `podman build` and `podman run`. Read the Containerfile that the agent wrote before you build it. A `RUN` step runs on the host with the network of the host, not through the proxy.
 
 ```mermaid
 flowchart TD
     A[Start the sandbox: just sandbox run] --> B[Tier 1: edit and test in the sandbox]
     B --> C{Does the change need an image?}
     C -->|No| G[Push a feature branch with git]
-    C -->|Yes| E[Start the build sandbox: just sandbox build]
-    E --> F[Build: mise run build -- -t name .]
-    F --> H{Must you run the image?}
-    H -->|Yes| I[Tier 3: save the image as an OCI archive in the home]
-    I --> J[On the host: load the archive and run it with Podman]
-    H -->|No| K[Push the image: mise run push -- name ghcr.io/owner/name:tag]
-    J --> G
-    K --> G
+    C -->|Yes| E[Tier 3: on the host, build and run the image with Podman]
+    E --> G
     G --> L[Tier 2: CI builds the image and runs the tests]
     L --> M{Do the checks pass?}
     M -->|Yes| N[Open the pull request]
@@ -93,32 +84,11 @@ flowchart TD
 |---|---|---|
 | 1 | The sandbox | Lint, render manifests, unit tests: `flux build`, `kubeconform`, `terraform validate`, `pytest`, `go test`. |
 | 2 | CI | Build and test the image. The registry push token is not in the sandbox. |
-| 3 | The host | Run a container to debug it. |
-
-**Build and push.** `mise` tasks call `buildah`. They work in the build profile. Open its shell with `just sandbox build`.
-
-| Run | Docker command |
-|---|---|
-| `mise run build -- -t name /src/engineersdaybook` | `docker build -t name .` (`buildah bud --isolation chroot`) |
-| `mise run login` | `docker login ghcr.io`. The proxy swaps in the real token. |
-| `mise run push -- name ghcr.io/owner/name:tag` | `docker push` |
-
-A base image and every download in a `RUN` step go through the proxy, so their hosts must be on the allowlist. **Run the image on the host:** in the build sandbox, save it with `buildah push name oci-archive:/home/agent/name.tar:localhost/name:latest`. The home of the build sandbox is the volume `sandbox-build-home`, so load the archive on the host from the volume:
-
-```shell
-podman unshare cat "$(podman volume inspect sandbox-build-home -f '{{.Mountpoint}}')/name.tar" | podman load
-podman run --rm -p 8080:8080 localhost/name:latest
-```
-
-### What the build profile gives up
-
-`sandbox-build` adds `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SYS_CHROOT`, `SETUID` and `SETGID` to the agent. It has no `SYS_ADMIN`. `buildah` needs them for chroot isolation. They let the agent ignore file permissions in the container and change to any user id, root too. Container root is your host user, but every host path in the container is read-only.
-
-The root file system of `sandbox-build` is **writable**. `buildah` chroot isolation fails on a read-only root. The agent can change `/etc` and `/usr` in this container, and it loses the changes when `just sandbox build` starts a new container. A `RUN` step runs with the authority of the agent. The build sandbox and the agent sandbox are separate containers with separate homes, so both can run. The build sandbox sees the home of the agent read-only at `/src`. Build from `/src/engineersdaybook`. It cannot change the clone of the agent.
+| 3 | The host | Build the image with `podman build`. Run a container to debug it. |
 
 ## What does not work
 
-- **No `podman run`, no `docker`.** The sandbox has no engine. `buildah` builds and pushes.
+- **No `podman`, no `docker`, no `buildah`.** The sandbox has no container engine. Build and run images on the host.
 - **No SSH and no raw TCP.** The proxy passes HTTP and TLS. Use HTTPS remotes for `git`.
 - **A tool that ignores `HTTPS_PROXY` fails.** It has no route.
 - **No `sudo` and no package install.** The root file system is read-only. Change the image.
