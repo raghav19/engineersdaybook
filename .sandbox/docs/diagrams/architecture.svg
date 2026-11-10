@@ -15,7 +15,7 @@
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="179.8" font-weight="bold">Your terminal</text><text x="105.0" y="200.8">just sandbox run</text></g>
 
 <rect x="20" y="320" width="170" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="349.8" font-weight="bold">Repo (clone mode)</text><text x="105.0" y="370.8">.git, read-only</text></g>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="349.8" font-weight="bold">Repo</text><text x="105.0" y="370.8">.git folder, read-only</text></g>
 
 <rect x="250" y="90" width="300" height="345" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
 <line x1="250" y1="150" x2="550" y2="150" stroke="#82b366" stroke-width="1"/>
