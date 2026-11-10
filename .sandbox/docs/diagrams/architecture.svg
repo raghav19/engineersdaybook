@@ -1,46 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1100" height="470" viewBox="0 0 1100 470" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1140" height="480" viewBox="0 0 1140 480" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
 </defs>
-<rect x="0" y="0" width="1100" height="470" fill="#ffffff"/>
+<rect x="0" y="0" width="1140" height="480" fill="#ffffff"/>
 <text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Agent Sandbox with podman</text>
 
-<rect x="680" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000" font-weight="bold"><text x="800.0" y="47.3">Bitwarden Secrets Manager</text></g>
+<rect x="720" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000" font-weight="bold"><text x="840.0" y="47.3">Bitwarden Secrets Manager</text></g>
 
 <rect x="20" y="150" width="170" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="179.8" font-weight="bold">Your terminal</text><text x="105.0" y="200.8">just sandbox run</text></g>
 
-<rect x="20" y="290" width="170" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="319.8" font-weight="bold">Repo (clone mode)</text><text x="105.0" y="340.8">.git, read-only</text></g>
+<rect x="20" y="320" width="170" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="349.8" font-weight="bold">Repo (clone mode)</text><text x="105.0" y="370.8">.git, read-only</text></g>
 
-<rect x="250" y="90" width="300" height="330" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<rect x="250" y="90" width="300" height="345" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
 <line x1="250" y1="150" x2="550" y2="150" stroke="#82b366" stroke-width="1"/>
 <g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="262" y="111.8">Agent container</text><text x="262" y="132.8">(podman - rootless, hardened)</text></g>
 
 <rect x="270" y="160" width="260" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="400.0" y="189.8" font-weight="bold">Agent tools</text><text x="400.0" y="210.8">Claude, Qwen, Herdr, TTT</text></g>
 
-<rect x="270" y="290" width="260" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="400.0" y="319.8" font-weight="bold">Clone of the repo</text><text x="400.0" y="340.8">in the sandbox-home volume</text></g>
+<rect x="270" y="320" width="260" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="400.0" y="349.8" font-weight="bold">Clone of the repo</text><text x="400.0" y="370.8">in the sandbox-home volume</text></g>
 
-<rect x="700" y="208" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="800.0" y="231.3" font-weight="bold">Host proxy</text><text x="800.0" y="252.3">allowlist, TLS,</text><text x="800.0" y="273.3">token swap</text></g>
+<rect x="740" y="208" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="840.0" y="231.3" font-weight="bold">Host proxy</text><text x="840.0" y="252.3">allowlist, TLS,</text><text x="840.0" y="273.3">token swap</text></g>
 
-<rect x="960" y="215" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1020.0" y="241.8" font-weight="bold">Internet</text><text x="1020.0" y="262.8">allowed hosts</text></g>
+<rect x="1000" y="215" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1060.0" y="241.8" font-weight="bold">Internet</text><text x="1060.0" y="262.8">allowed hosts</text></g>
 
 <path d="M190,198 L270,198" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M190,328 L270,328" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M550,250 L700,250" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M900,250 L960,250" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M800,70 L800,208" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
+<path d="M190,358 L270,358" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M550,250 L740,250" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M940,250 L1000,250" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M400,236 L400,320" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M840,70 L840,208" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
 <text x="230.0" y="188.0" font-size="14" text-anchor="middle" fill="#000000">runs</text>
-<text x="230.0" y="318.0" font-size="14" text-anchor="middle" fill="#000000">clone</text>
-<text x="625.0" y="240.0" font-size="14" text-anchor="middle" fill="#000000">the only way out</text>
-<rect x="751.2" y="127.0" width="97.6" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="800.0" y="141.2">real tokens</text></g>
+<text x="230.0" y="348.0" font-size="14" text-anchor="middle" fill="#000000">clone</text>
+<text x="645.0" y="222.0" font-size="14" text-anchor="middle" fill="#000000">the only way out:</text>
+<text x="645.0" y="240.0" font-size="14" text-anchor="middle" fill="#000000">socat to a Unix socket</text>
+<text x="412.0" y="283.0" font-size="14" text-anchor="start" fill="#000000">reads and writes</text>
+<rect x="791.2" y="127.0" width="97.6" height="24" fill="#ffffff"/>
+<g font-size="14" text-anchor="middle" fill="#000000"><text x="840.0" y="141.2">real tokens</text></g>
 </svg>
