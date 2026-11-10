@@ -20,7 +20,7 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0600). `sandbox-bridge.service` joins the socket to the tunnel. Use the path of your main checkout for `$REPO` below.
+`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. Use the path of your main checkout for `$REPO` below.
 
 ## Why there is a bridge
 

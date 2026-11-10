@@ -32,13 +32,13 @@ help:
 run *command: _check
     podman ps -q --filter name=^sandbox$ | grep -q . || {{ compose }} up -d --force-recreate sandbox
     timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
-    podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+    podman exec -it -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
 
 # The same in the build sandbox. In it, `mise run build -- -t name /src/engineersdaybook` and `mise run push -- name ghcr.io/owner/name:tag` work.
 build *command: _check
     podman ps -q --filter name=^sandbox-build$ | grep -q . || {{ compose }} up -d --force-recreate sandbox-build
     timeout 180 bash -c 'until podman exec sandbox-build test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
-    podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox-build sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+    podman exec -it -w /home/agent/engineersdaybook sandbox-build {{ if command == '' { 'herdr' } else { command } }}
 
 # The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
 [private]

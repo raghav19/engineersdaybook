@@ -23,7 +23,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 **Why does `--network none` leave no route to the host?** The container has its own loopback interface, and nothing else. Its `127.0.0.1` is not the loopback of the host. Only a file crosses the wall: the socket in the mounted folder.
 
-**Why a relay?** Tools need a TCP address for a proxy. The relay turns that address into the socket. It runs as container root, which is the host user who owns the socket. It has no capability. The agent user cannot open the socket.
+**Why a relay?** Tools need a TCP address for a proxy. The relay turns that address into the socket. It runs as the user agent and has no capability. The socket has the mode 0666, so the agent opens it. Only you and the containers that mount the folder reach it, because `$XDG_RUNTIME_DIR` has the mode 0700.
 
 **Why is the CA mounted and not installed?** The root file system is read-only, so `update-ca-certificates` cannot run. `compose.yaml` mounts `~/.local/state/sandbox/ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. All HTTPS goes through the proxy, which ends the TLS with this CA, so the sandbox trusts this CA only. The file never mounts `ca.key`. If you make a new CA, restart the sandbox.
 
@@ -43,7 +43,7 @@ just sandbox build   # the build sandbox: a separate container for buildah, with
 
 | Command | What it does |
 |---|---|
-| `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it -u 0 sandbox sandbox-entry herdr`. The entry drops to `agent`. Close the terminal and the sandbox keeps running. |
+| `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
 | `just sandbox build` | Starts the build sandbox if it does not run, and opens Herdr in it. `podman stop sandbox-build` stops it. |
@@ -59,10 +59,10 @@ just sandbox build   # the build sandbox: a separate container for buildah, with
 | tmpfs on `/tmp` and `/run` | Scratch space. A restart empties it. |
 | The named volume `sandbox-home` at `/home/agent` | The clone, the logins and the histories stay here. The start script copies the home files of the image back at each start. |
 | A separate build sandbox | `just sandbox build` starts another container with its own home volume, `sandbox-build-home`. It sees `sandbox-home` read-only at `/src`. The agent sandbox keeps all capabilities dropped. |
-| `--cap-drop=ALL` | The entry drops the agent to an empty capability set. |
+| `--cap-drop=ALL` | The agent container has no capability. The build container adds six (see "What the build profile gives up"). |
 | `--security-opt no-new-privileges` | A setuid program cannot raise a privilege. |
 | The default seccomp profile of Podman | A system call filter. A custom profile is not part of this change. |
-| User `agent` (uid 1000) | Not root. |
+| `user: agent` (uid 1000) | The container starts as `agent`, not as root. In rootless Podman, `agent` is a subuid, not your host user. |
 | `--pids-limit`, `--memory`, `--cpus` | 1024 processes, 3 GB, 4 CPUs. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
 
