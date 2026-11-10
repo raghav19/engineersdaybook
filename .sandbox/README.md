@@ -34,7 +34,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0) and `git`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
 
 ```shell
-podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
+just sandbox build   # builds the image, tags it with the commit and pushes it to ghcr.io. The first build takes several minutes.
 just sandbox run     # makes the container if it does not exist, starts it if it stopped, and opens Herdr
 ```
 

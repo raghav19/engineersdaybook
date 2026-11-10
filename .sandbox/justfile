@@ -3,8 +3,8 @@
 #
 #   just sandbox run   make the container if it does not exist, start it if it stopped, and open Herdr in it.
 #   just sandbox rm    remove the container. The volume stays.
+#   just sandbox build build the image, tag it with the commit and push it to ghcr.io.
 #
-# Make the image once: podman build .sandbox/image -t localhost/sandbox-dev:latest
 # After you edit compose.yaml or rebuild the image, run `just sandbox rm` and then `just sandbox run`.
 
 set quiet
@@ -12,11 +12,23 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # just stops with a message before any recipe runs if one is missing.
+bws            := require("bws")
 git            := require("git")
 podman         := require("podman")
 podman_compose := require("podman-compose")
+systemd_creds  := require("systemd-creds")
 
 compose := podman_compose + ' -f ' + source_directory() / 'compose.yaml'
+
+registry_host := 'ghcr.io'
+registry_user := 'raghav19'
+registry := registry_host + '/raghav19/engineersdaybook/sandbox-dev'
+# The tag of the image is the commit, as in .msb/justfile.
+commit := shell(git + ' rev-parse HEAD')
+# The timestamp of every file in the published image (a fixed date in 2023). Do not change it. A new value gives every layer a new digest.
+image_epoch := '1700000000'
+# The Bitwarden access token of the proxy. `build` reads it, so there is no prompt. See .sandbox/proxy/README.md, step 6.
+credential := home_directory() / '.config/sandbox/bws-token.cred'
 
 # compose.yaml reads these variables from the environment, so they are exported.
 export SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
@@ -42,6 +54,27 @@ run *command: _check
 # Remove the container. The volume sandbox-home stays, so the clone and the logins stay.
 rm:
     {{ compose }} down
+
+# Build the image and push it to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden through bws run.
+# Podman cache: each stage is an image in {{ registry }}-cache. A stage that did not change comes from there.
+# --cache-from degrades if the registry is not reachable. A failure of --cache-to stops the build.
+# localhost/sandbox-dev:latest is the tag that compose.yaml uses. Then run `just sandbox rm` and `just sandbox run`.
+# `just sandbox build refresh` builds without the cache, to update the tools that the Dockerfile pins by a prefix (claude, qwen).
+build refresh='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export BWS_ACCESS_TOKEN="$({{ systemd_creds }} --user decrypt --name=bws-token '{{ credential }}' -)"
+    {{ bws }} run -- sh -c 'printf %s "$GITHUB_TOKEN" | {{ podman }} login {{ registry_host }} -u {{ registry_user }} --password-stdin'
+    trap '{{ podman }} logout {{ registry_host }} >/dev/null' EXIT
+    digest_file="$(mktemp)"
+    {{ podman }} build '{{ source_directory() }}/image' -t localhost/sandbox-dev:latest -t {{ registry }}:{{ commit }} \
+      --timestamp {{ image_epoch }} \
+      --compression-format zstd --compression-level 9 --force-compression --rewrite-timestamp \
+      --cache-to {{ registry }}-cache --cache-from {{ registry }}-cache \
+      {{ if refresh == 'refresh' { '--no-cache' } else if refresh == '' { '' } else { error('sandbox: build takes no argument, or: refresh') } }}
+    {{ podman }} push {{ registry }}:{{ commit }} --compression-format zstd --digestfile "$digest_file"
+    echo "Pushed {{ registry }}:{{ commit }} ($(cat "$digest_file"))"
+    rm -f "$digest_file"
 
 # The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
 # It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
