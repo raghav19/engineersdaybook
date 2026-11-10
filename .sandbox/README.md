@@ -6,10 +6,11 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 | Path | Content |
 |---|---|
-| `quadlet/` | The Quadlet files: two containers, the volumes, the environment and the two seccomp profiles. |
+| `sandbox.env` | The environment of the container. |
+| `seccomp.json`, `seccomp-build.json` | The seccomp profiles of the two containers. |
 | `egress-selftest.sh` | The self-test. It runs in the container as the user `agent`. |
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
-| `justfile` | `build`: builds the image. |
+| `justfile` | `build`, `run` and `run-build`. It holds the one `podman run` command. |
 
 ## Architecture
 
@@ -26,60 +27,58 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 **Why a relay?** Tools need a TCP address for a proxy. The relay turns that address into the socket. It runs as container root, which is the host user who owns the socket. It has no capability. The agent user cannot open the socket.
 
-**Why is the CA mounted and not installed?** The root file system is read-only, so `update-ca-certificates` cannot run. The unit mounts `~/.local/state/sandbox/ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. All HTTPS goes through the proxy, which ends the TLS with this CA, so the sandbox trusts this CA only. The unit never mounts `ca.key`. If you make a new CA, restart the sandbox.
+**Why is the CA mounted and not installed?** The root file system is read-only, so `update-ca-certificates` cannot run. The `podman run` command mounts `~/.local/state/sandbox/ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. All HTTPS goes through the proxy, which ends the TLS with this CA, so the sandbox trusts this CA only. The command never mounts `ca.key`. If you make a new CA, restart the sandbox.
 
-**The host side:** the units are `sandbox-proxy.service`, `sandbox-bridge.socket` and `sandbox-bridge.service`. iron-proxy uses the ports 18080 to 18089 on `127.0.0.1`. See [`proxy/README.md`](proxy/README.md). `sandbox.service` has `Requires=sandbox-proxy.service`, so `systemctl --user start sandbox` starts the proxy and the socket first.
+**The host side:** the units are `sandbox-proxy.service`, `sandbox-bridge.socket` and `sandbox-bridge.service`. iron-proxy uses the ports 18080 to 18089 on `127.0.0.1`. See [`proxy/README.md`](proxy/README.md). `just sandbox run` stops with a message if the socket `$XDG_RUNTIME_DIR/sandbox/proxy.sock` is missing. Start the proxy with `systemctl --user start sandbox-proxy`.
 
 ## Install and use
 
-Quadlet reads the folder `~/.config/containers/systemd/` and makes the systemd units. Link the folder, then build the image and start the sandbox:
+Start the host proxy first. Then build the image and run the sandbox:
 
 ```shell
-mkdir -p ~/.config/containers/systemd
-ln -s "$PWD/.sandbox/quadlet" ~/.config/containers/systemd/sandbox
-systemctl --user daemon-reload
-just sandbox build                # the first build takes several minutes
-systemctl --user start sandbox    # starts sandbox-proxy first
-podman exec -it -u 0 sandbox sandbox-entry herdr
+just sandbox build   # the first build takes several minutes
+just sandbox run     # starts the container if it does not run, and opens Herdr
 ```
 
-The container mounts `~/Projects/engineersdaybook/.git` read-only and clones it. Change the `Volume=` line in `sandbox.container` if your checkout is elsewhere. The clone has the git identity `agent`. Set yours with `git config` in the clone.
+The first `run` makes the volume `sandbox-home` with `podman volume create -o o=uid=1000,gid=1000`. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
 
 | Command | What it does |
 |---|---|
-| `podman exec -it -u 0 sandbox sandbox-entry herdr` | Opens Herdr. The entry drops to `agent`. Close the terminal and the sandbox keeps running. |
-| `systemctl --user cat sandbox` | Shows the unit that Quadlet made. |
-| `journalctl --user -u sandbox -f` | Follows the log. |
-| `systemctl --user stop sandbox` | Stops and removes the container. The volumes stay. |
+| `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it -u 0 sandbox sandbox-entry herdr`. The entry drops to `agent`. Close the terminal and the sandbox keeps running. |
+| `podman logs -f sandbox` | Follows the log. |
+| `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
 | `podman exec -i -u 0 sandbox sandbox-entry sh -s -- -a https://api.github.com/zen example.com < .sandbox/egress-selftest.sh` | Runs the self-test. The proxy must run. |
 
 ## Hardening
 
 | Control | What it does |
 |---|---|
-| `runtime=crun`, `Network=none` | A small runtime. The container has the loopback interface only. |
-| `ReadOnly=true` | The agent cannot write to `/etc`, `/usr`, `/opt/mise`, the policy of Claude Code or the CA. |
-| tmpfs for `/tmp`, `/run` and `/home/agent` | Scratch space. A restart gives the agent a clean home. Only the named volumes keep data. |
-| `DropCapability=ALL` | The entry drops the agent to an empty capability set. |
-| `NoNewPrivileges=true` | A setuid program cannot raise a privilege. |
-| `SeccompProfile=` | A system call filter. See below. |
+| `--runtime=crun --network=none` | A small runtime. The container has the loopback interface only. |
+| `--read-only` | The agent cannot write to `/etc`, `/usr`, `/opt/mise`, the policy of Claude Code or the CA. |
+| tmpfs on `/tmp` and `/run` | Scratch space. A restart empties it. |
+| The named volume `sandbox-home` at `/home/agent` | The clone, the logins, the histories and the buildah storage stay here. The start script copies the home files of the image back at each start. |
+| `--cap-drop=ALL` | The entry drops the agent to an empty capability set. |
+| `--security-opt no-new-privileges` | A setuid program cannot raise a privilege. |
+| `--security-opt seccomp=` | A system call filter. See below. |
 | User `agent` (uid 1000) | Not root. |
-| `PidsLimit`, `Memory`, `--cpus` | 1024 processes, 3 GB, 4 CPUs. |
+| `--pids-limit`, `--memory`, `--cpus` | 1024 processes, 3 GB, 4 CPUs. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
 
 The self-test proves the network and the read-only checks as `agent`. It prints 20 checks, PASS or FAIL.
 
 ### The seccomp profiles
 
-`quadlet/seccomp.json` is `/usr/share/containers/seccomp.json` without these system calls: `ptrace`, `bpf`, `keyctl`, `add_key`, `request_key`, `userfaultfd`, `perf_event_open`, `io_uring_setup`, `io_uring_enter`, `io_uring_register`, `kexec_load`, `kexec_file_load`, `open_by_handle_at`, `unshare`, `setns`, `mount`, `umount2` and `pivot_root`. The default profile allows `ptrace`, `unshare`, `setns`, `mount`, `umount2`, `pivot_root` and `keyctl` with no condition.
+`seccomp.json` is `/usr/share/containers/seccomp.json` without 13 names: `bpf`, `kexec_file_load`, `kexec_load`, `keyctl`, `mount`, `open_by_handle_at`, `perf_event_open`, `pivot_root`, `ptrace`, `setns`, `umount2`, `unshare` and `userfaultfd`.
 
-`quadlet/seccomp-build.json` removes the same calls except `unshare`, `setns`, `mount`, `umount2` and `pivot_root`, because `buildah` needs a user namespace. To review or make the files again:
+`seccomp-build.json` lacks 8 names: `bpf`, `kexec_file_load`, `kexec_load`, `keyctl`, `open_by_handle_at`, `perf_event_open`, `ptrace` and `userfaultfd`. It keeps `unshare`, `setns`, `mount`, `umount2` and `pivot_root`, because `buildah` needs a user namespace.
+
+The default profile already denies `kexec_load`, `kexec_file_load` and `userfaultfd`. It allows `bpf`, `open_by_handle_at` and `perf_event_open` only with a capability, which the agent does not have. So the removal changes `ptrace`, `keyctl`, `mount`, `umount2`, `pivot_root`, `unshare` and `setns`, which the default allows with no condition. The build profile changes only `ptrace` and `keyctl`. To review or make the files again:
 
 ```shell
-common='"ptrace","bpf","keyctl","add_key","request_key","userfaultfd","perf_event_open","io_uring_setup","io_uring_enter","io_uring_register","kexec_load","kexec_file_load","open_by_handle_at"'
-make() { jq --argjson rm "[$1]" '.syscalls |= (map(.names -= $rm) | map(select(.names | length > 0)))' /usr/share/containers/seccomp.json; }
-make "$common" > .sandbox/quadlet/seccomp-build.json
-make "$common,\"unshare\",\"setns\",\"mount\",\"umount2\",\"pivot_root\"" > .sandbox/quadlet/seccomp.json
+make() { jq --argjson rm "$1" '.syscalls |= (map(.names -= $rm) | map(select(.names | length > 0)))' /usr/share/containers/seccomp.json; }
+build='["bpf","kexec_file_load","kexec_load","keyctl","open_by_handle_at","perf_event_open","ptrace","userfaultfd"]'
+make "$build" > .sandbox/seccomp-build.json
+make "${build%]},\"mount\",\"pivot_root\",\"setns\",\"umount2\",\"unshare\"]" > .sandbox/seccomp.json
 ```
 
 ## Developer workflow
@@ -88,13 +87,13 @@ The sandbox has no container engine. A build makes an image. You run the image o
 
 ```mermaid
 flowchart TD
-    A[Start the sandbox: systemctl --user start sandbox] --> B[Tier 1: edit and test in the sandbox]
+    A[Start the sandbox: just sandbox run] --> B[Tier 1: edit and test in the sandbox]
     B --> C{Does the change need an image?}
     C -->|No| G[Push a feature branch with git]
-    C -->|Yes| E[Start the build sandbox: systemctl --user start sandbox-build. It stops sandbox]
+    C -->|Yes| E[Start the build sandbox: just sandbox run-build. It stops sandbox]
     E --> F[Build: mise run build -- -t name .]
     F --> H{Must you run the image?}
-    H -->|Yes| I[Tier 3: save the image as an OCI archive in the workspace]
+    H -->|Yes| I[Tier 3: save the image as an OCI archive in the home]
     I --> J[On the host: load the archive and run it with Podman]
     H -->|No| K[Push the image: mise run push -- name ghcr.io/owner/name:tag]
     J --> G
@@ -111,7 +110,7 @@ flowchart TD
 | 2 | CI | Build and test the image. The registry push token is not in the sandbox. |
 | 3 | The host | Run a container to debug it. |
 
-**Build and push.** `mise` tasks call `buildah`. They work in the build profile. Open its shell with `podman exec -it -u 0 sandbox-build sandbox-entry herdr`.
+**Build and push.** `mise` tasks call `buildah`. They work in the build profile. Open its shell with `just sandbox run-build`.
 
 | Run | Docker command |
 |---|---|
@@ -119,10 +118,10 @@ flowchart TD
 | `mise run login` | `docker login ghcr.io`. The proxy swaps in the real token. |
 | `mise run push -- name ghcr.io/owner/name:tag` | `docker push` |
 
-A base image and every download in a `RUN` step go through the proxy, so their hosts must be on the allowlist. **Run the image on the host:** in the build sandbox, save it with `buildah push name oci-archive:/home/agent/engineersdaybook/name.tar:localhost/name:latest`. The workspace volume is that folder, so load it on the host from the volume:
+A base image and every download in a `RUN` step go through the proxy, so their hosts must be on the allowlist. **Run the image on the host:** in the build sandbox, save it with `buildah push name oci-archive:/home/agent/name.tar:localhost/name:latest`. The home is the volume `sandbox-home`, so load the archive on the host from the volume:
 
 ```shell
-podman unshare cat "$(podman volume inspect sandbox-workspace -f '{{.Mountpoint}}')/name.tar" | podman load
+podman unshare cat "$(podman volume inspect sandbox-home -f '{{.Mountpoint}}')/name.tar" | podman load
 podman run --rm -p 8080:8080 localhost/name:latest
 ```
 
@@ -130,7 +129,7 @@ podman run --rm -p 8080:8080 localhost/name:latest
 
 `sandbox-build` adds `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `SYS_CHROOT`, `SETUID` and `SETGID` to the agent. It has no `SYS_ADMIN`. `buildah` needs them for chroot isolation. They let the agent ignore file permissions in the container and change to any user id, root too. Container root is your host user, but every host path in the container is read-only.
 
-The root file system of `sandbox-build` is **writable**. `buildah` chroot isolation fails on a read-only root. The agent can change `/etc` and `/usr` in this container, and it loses the changes when the container stops. A `RUN` step runs with the authority of the agent. The two units conflict: starting one stops the other. Use the default sandbox when you do not build.
+The root file system of `sandbox-build` is **writable**. `buildah` chroot isolation fails on a read-only root. The agent can change `/etc` and `/usr` in this container, and it loses the changes when `run-build` starts a new container. A `RUN` step runs with the authority of the agent. `just sandbox run-build` stops `sandbox`, and `just sandbox run` stops `sandbox-build`, because both write to `sandbox-home`. Use the default sandbox when you do not build.
 
 ## What does not work
 
