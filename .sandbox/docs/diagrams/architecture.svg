@@ -1,72 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1500" height="660" viewBox="0 0 1500 660" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1100" height="470" viewBox="0 0 1100 470" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
-<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
 </defs>
-<rect x="0" y="0" width="1500" height="660" fill="#ffffff"/>
-<text x="20" y="34" font-size="20" font-weight="bold" fill="#000000">Agent Sandbox with podman</text>
+<rect x="0" y="0" width="1100" height="470" fill="#ffffff"/>
+<text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Agent Sandbox with podman</text>
 
-<rect x="900" y="20" width="300" height="60" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1050.0" y="46.5" font-weight="bold">Bitwarden Secrets Manager</text><text x="1050.0" y="62.5">the real tokens</text></g>
+<rect x="680" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000" font-weight="bold"><text x="800.0" y="47.3">Bitwarden Secrets Manager</text></g>
 
-<rect x="20" y="120" width="1190" height="520" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<line x1="20" y1="150" x2="1210" y2="150" stroke="#666666" stroke-width="1"/>
-<g font-size="14" text-anchor="start" fill="#000000" font-weight="bold"><text x="30" y="139.5">Host: your user</text></g>
+<rect x="20" y="150" width="170" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="179.8" font-weight="bold">Your terminal</text><text x="105.0" y="200.8">just sandbox run</text></g>
 
-<rect x="50" y="200" width="190" height="70" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="145.0" y="231.5" font-weight="bold">Your terminal</text><text x="145.0" y="247.5">just sandbox run</text></g>
+<rect x="20" y="290" width="170" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="105.0" y="319.8" font-weight="bold">Repo (clone mode)</text><text x="105.0" y="340.8">.git, read-only</text></g>
 
-<rect x="50" y="460" width="190" height="80" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="145.0" y="496.5" font-weight="bold">Repo (clone mode)</text><text x="145.0" y="512.5">.git folder, read-only</text></g>
+<rect x="250" y="90" width="300" height="330" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<line x1="250" y1="150" x2="550" y2="150" stroke="#82b366" stroke-width="1"/>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="262" y="111.8">Agent container</text><text x="262" y="132.8">(podman - rootless, hardened)</text></g>
 
-<rect x="320" y="160" width="420" height="440" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
-<line x1="320" y1="216" x2="740" y2="216" stroke="#82b366" stroke-width="1"/>
-<g font-size="14" text-anchor="start" fill="#000000" font-weight="bold"><text x="330" y="184.5">Agent container</text><text x="330" y="200.5">(podman - rootless, hardened)</text></g>
+<rect x="270" y="160" width="260" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="400.0" y="189.8" font-weight="bold">Agent tools</text><text x="400.0" y="210.8">Claude, Qwen, Herdr, TTT</text></g>
 
-<rect x="350" y="235" width="360" height="70" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="530.0" y="266.5" font-weight="bold">Agent tools</text><text x="530.0" y="282.5">Claude Code, Qwen Code, Herdr, TTT</text></g>
+<rect x="270" y="290" width="260" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="400.0" y="319.8" font-weight="bold">Clone of the repo</text><text x="400.0" y="340.8">in the sandbox-home volume</text></g>
 
-<rect x="500" y="385" width="210" height="70" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="605.0" y="416.5" font-weight="bold">Relay</text><text x="605.0" y="432.5">to the proxy socket</text></g>
+<rect x="700" y="208" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="800.0" y="231.3" font-weight="bold">Host proxy</text><text x="800.0" y="252.3">allowlist, TLS,</text><text x="800.0" y="273.3">token swap</text></g>
 
-<rect x="350" y="505" width="360" height="70" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="530.0" y="536.5" font-weight="bold">Clone of the repo</text><text x="530.0" y="552.5">in the sandbox-home volume</text></g>
+<rect x="960" y="215" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1020.0" y="241.8" font-weight="bold">Internet</text><text x="1020.0" y="262.8">allowed hosts</text></g>
 
-<rect x="860" y="160" width="320" height="440" rx="12" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
-<line x1="860" y1="190" x2="1180" y2="190" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="14" text-anchor="start" fill="#000000" font-weight="bold"><text x="870" y="179.5">Host proxy</text></g>
-
-<rect x="890" y="235" width="260" height="70" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1020.0" y="266.5" font-weight="bold">iron-proxy</text><text x="1020.0" y="282.5">allowlist, TLS, token swap</text></g>
-
-<rect x="890" y="385" width="260" height="70" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1020.0" y="416.5" font-weight="bold">Socket bridge</text><text x="1020.0" y="432.5">Unix socket to iron-proxy</text></g>
-
-<rect x="1290" y="240" width="170" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1375.0" y="271.5" font-weight="bold">Internet</text><text x="1375.0" y="287.5">allowed hosts only</text></g>
-
-<path d="M240,235 C295.0,235 295.0,270 350,270" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M240,500 C295.0,500 295.0,540 350,540" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M620,305 C620,345.0 590,345.0 590,385" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M400,305 C400,405.0 430,405.0 430,505" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M710,420 C800.0,420 800.0,420 890,420" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1020,385 C1020,345.0 1020,345.0 1020,305" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1150,270 C1220.0,270 1220.0,275 1290,275" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1030,80 C1030,157.5 1030,157.5 1030,235" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
-<rect x="276.4" y="242.0" width="37.2" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="295.0" y="257.0">runs</text></g>
-<rect x="273.2" y="509.5" width="43.5" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="295.0" y="524.5">clone</text></g>
-<rect x="564.4" y="334.5" width="81.3" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="605.0" y="349.5">HTTPS_PROXY</text></g>
-<rect x="358.6" y="394.5" width="112.8" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="415.0" y="409.5">reads and writes</text></g>
-<rect x="743.6" y="409.5" width="112.8" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="800.0" y="424.5">the only way out</text></g>
-<rect x="1188.8" y="262.0" width="62.4" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="1220.0" y="277.0">outbound</text></g>
-<rect x="961.0" y="92.8" width="138.0" height="21" fill="#ffffff" fill-opacity="0.92"/>
-<g font-size="12" text-anchor="middle" fill="#000000"><text x="1030.0" y="107.8">real tokens at start</text></g>
+<path d="M190,198 L270,198" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M190,328 L270,328" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M550,250 L700,250" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M900,250 L960,250" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M800,70 L800,208" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
+<text x="230.0" y="188.0" font-size="14" text-anchor="middle" fill="#000000">runs</text>
+<text x="230.0" y="318.0" font-size="14" text-anchor="middle" fill="#000000">clone</text>
+<text x="625.0" y="240.0" font-size="14" text-anchor="middle" fill="#000000">the only way out</text>
+<rect x="751.2" y="127.0" width="97.6" height="24" fill="#ffffff"/>
+<g font-size="14" text-anchor="middle" fill="#000000"><text x="800.0" y="141.2">real tokens</text></g>
 </svg>
