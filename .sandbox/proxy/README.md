@@ -30,13 +30,28 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 
 The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sandbox-proxy.service`. `systemctl --user start sandbox` then starts the proxy, the socket and the container in this order. The container has `Network=none`. It shares no network with the proxy. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
 
+## Prerequisites
+
+The host runs only iron-proxy and three systemd units. It needs **no Podman, no crun, no Docker and no socat**. These belong to the sandbox PR. See its README.
+
+| Need | Why | Check |
+|---|---|---|
+| A Linux host with a systemd user manager (tested with systemd 262) | It runs the units and decrypts the credential. | `systemctl --user is-system-running` |
+| `systemd-creds` and `systemd-socket-proxyd` (in the `systemd` package) | The credential and the bridge. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. Change the path if your distribution puts the file elsewhere. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
+| `mise` | It installs iron-proxy and `bws`. | `mise --version` |
+| `openssl` | It makes the CA. | `openssl version` |
+| A Bitwarden Secrets Manager project and the access token of a machine account | The source of the real tokens. | Step 5 |
+| Linger for your user (optional) | The proxy keeps running when you are logged out. | `loginctl enable-linger "$USER"`, then `loginctl show-user "$USER" -p Linger` |
+
+You need `age` only if you keep the access token in an `age` file, as the `just msb` setup does.
+
 ## One-time setup
 
 1. Make the folders: `mkdir -p ~/.local/state/sandbox ~/.config/sandbox`
-2. Install the binary. The releases have no signature, so the command pins the version.
+2. Install the binaries. The iron-proxy releases have no signature, so the command pins the version.
 
    ```bash
-   mise use -g github:ironsh/iron-proxy@0.56.0
+   mise use -g github:ironsh/iron-proxy@0.56.0 bitwarden-secrets-manager
    ```
 
 3. Make the CA. Skip this step if `ca.crt` and `ca.key` exist from the earlier setup. iron-proxy ends the TLS of every HTTPS call, so it can check the allowlist and replace the placeholder. The sandbox must trust this CA. The key never leaves the host. The sandbox gets only `ca.crt`, read-only.
@@ -51,7 +66,16 @@ The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sa
    ```
 
 4. Link the config: `ln -s "$REPO/.sandbox/proxy/iron-proxy.yaml" ~/.config/sandbox/iron-proxy.yaml`
-5. Make the credential. You run this step: `age` asks for your passphrase.
+5. Prepare Bitwarden Secrets Manager in the Bitwarden web app. Make a project. Add one secret for each name in the column "Variable of the proxy" of the table below (`GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY`, `GITHUB_TOKEN`). Make a machine account with read access to the project. Make an access token for it. Do not paste the token into a chat or a file.
+6. Make the credential. You run this step. It asks for the token and shows nothing as you type.
+
+   ```bash
+   read -rsp 'Bitwarden access token: ' tok; echo
+   printf '%s' "$tok" | systemd-creds --user encrypt --name=bws-token - ~/.config/sandbox/bws-token.cred
+   unset tok; chmod 0600 ~/.config/sandbox/bws-token.cred
+   ```
+
+   If you keep the token in an `age` file, as the `just msb` setup does, use this pipe. `age` asks for your passphrase. Keep the file: `just msb` still uses it.
 
    ```bash
    age -d ~/.config/bws/access-token.age \
@@ -59,9 +83,9 @@ The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sa
    chmod 0600 ~/.config/sandbox/bws-token.cred
    ```
 
-   The command is a pipe, so it writes no plaintext file. The `.cred` file must be mode 0600. Keep `~/.config/bws/access-token.age`: `just msb` still uses it. A copy of the `.cred` file is useless on another machine. Code that runs as the same user here can decrypt it.
+   Both commands are pipes, so they write no plaintext file. `systemd-creds` makes the `.cred` file with mode 0644, so the `chmod` is required. A copy of the `.cred` file is useless on another machine. Code that runs as the same user here can decrypt it.
 
-6. Link and start the units:
+7. Link and start the units:
 
    ```bash
    systemctl --user link "$REPO"/.sandbox/proxy/sandbox-{proxy.service,bridge.service,bridge.socket}
@@ -69,8 +93,6 @@ The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sa
    ```
 
    The proxy unit starts the socket of the bridge (`Wants=`). You manage the proxy unit only. The socket has `PartOf=` the proxy, so a stop or a restart of the proxy reaches it.
-
-The Bitwarden project needs a key for each name in the table below, with `GITHUB_TOKEN` for the registry.
 
 ## Daily use
 
@@ -97,7 +119,7 @@ The sandbox holds the placeholder. The proxy replaces it in the `Authorization` 
 
 ## Migration from the running transient units
 
-The running units are transient `systemd-run` units with the same names (`sandbox-proxy`, `sandbox-bridge`). They use the ports 1080, 8081, 8443, 9091 and 15353. The names clash with the new units. Run `systemctl --user stop sandbox-proxy sandbox-bridge` before step 6. Do not run the recipes of the old `sandbox-plain` branch next to the new units.
+The running units are transient `systemd-run` units with the same names (`sandbox-proxy`, `sandbox-bridge`). They use the ports 1080, 8081, 8443, 9091 and 15353. The names clash with the new units. Run `systemctl --user stop sandbox-proxy sandbox-bridge` before step 7. Do not run the recipes of the old `sandbox-plain` branch next to the new units.
 
 ## Later
 
