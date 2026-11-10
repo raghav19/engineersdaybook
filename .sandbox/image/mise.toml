@@ -55,3 +55,23 @@ flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
+
+# Docker-like commands for images. They call buildah. The sandbox has no engine to run an image, so there is build, push and login only.
+# They work in the build profile (`just sandbox build`). The default sandbox has no capability that buildah needs.
+# Use: mise run build -- -t name .      mise run login      mise run push -- name ghcr.io/owner/name:tag
+[tasks."image:build"]
+alias = "build"
+description = "Build an image from a Containerfile, like docker build"
+dir = "{{cwd}}"
+run = "buildah bud --isolation chroot"
+
+[tasks."image:login"]
+alias = "login"
+description = "Log in to ghcr.io with $GHCR_PUSH_TOKEN. In the sandbox this is a placeholder. The egress proxy swaps in the real token."
+run = 'printf "%s" "$GHCR_PUSH_TOKEN" | buildah login --username "${GHCR_USER:-agent}" --password-stdin ghcr.io'
+
+[tasks."image:push"]
+alias = "push"
+description = "Push an image, like docker push"
+dir = "{{cwd}}"
+run = "buildah push"

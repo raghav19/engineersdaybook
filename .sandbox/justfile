@@ -1,35 +1,51 @@
-# The Podman sandbox: a krun microVM for Claude Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
-# Every recipe runs on the host. This part has the image only. The compose file and the egress proxy come in later changes.
+# The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
+# The container has no network. The host proxy (.sandbox/proxy) is its only way out. The README has the other podman commands.
 #
-#   just sandbox build   build the image with Podman.
-#   just sandbox run     build the image, start the sandbox in a krun microVM and open a shell in it.
+#   just sandbox run     the agent sandbox. It starts if it does not run. Opens Herdr in it.
+#   just sandbox build   the build sandbox: a separate container for buildah, with its own home. It sees the home of the agent at /src, read-only.
+#
+# Make the image once: podman build .sandbox/image -t localhost/sandbox-dev:latest
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-podman := require("podman")
-crun := require("crun")
-
 image := 'localhost/sandbox-dev:latest'
-image_dir := source_directory() / 'image'
-# The static uid map of the sandbox. Podman maps the root of the container to the host uid 100000. See docs/research/podman-sandbox-runtimes.md, spike N2.
-uid_map := '0:100000:65536'
+socket := env('XDG_RUNTIME_DIR') / 'sandbox'
+ca := home_directory() / '.local/state/sandbox/ca.crt'
+theme := home_directory() / '.local/state/omarchy/current/theme'
+git_dir := shell('git rev-parse --path-format=absolute --git-common-dir')
+export SANDBOX_BRANCH := shell('git branch --show-current')
+
+# Both containers: no network, all capabilities dropped. The entry keeps three to drop the agent, then the agent has none.
+flags := '--runtime=crun --network=none --user=0 --workdir=/home/agent --cap-drop=ALL --cap-add=SETUID --cap-add=SETGID --cap-add=SETPCAP --security-opt=no-new-privileges --pids-limit=1024 --memory=3g --cpus=4 --tmpfs=/tmp --tmpfs=/run -e SANDBOX_BRANCH --env-file=' + source_directory() / 'sandbox.env'
+# The agent cannot change the CA, the socket folder, the repo or the theme.
+mounts := '-v ' + ca + ':/etc/ssl/certs/ca-certificates.crt:ro -v ' + socket + ':/run/sandbox/proxy:ro -v ' + git_dir + ':/run/sandbox/source:ro -v ' + theme + ':/home/agent/.omarchy-theme:ro'
+# The build sandbox adds the capabilities that buildah needs for chroot isolation. It has no SYS_ADMIN and a writable root.
+build_flags := '--cap-add=CHOWN --cap-add=DAC_OVERRIDE --cap-add=FOWNER --cap-add=SYS_CHROOT -e BUILDAH_ISOLATION=chroot -e SANDBOX_AGENT_CAPS=+chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid'
 
 # List the recipes (the default)
 [default]
 help:
     just --list --unsorted
 
-# Build the image. The first build takes several minutes.
-build:
-    podman build {{ image_dir }} -t {{ image }}
-
-# Start the sandbox in a krun microVM and open Herdr in it, as the user agent. `run` builds the image first.
+# Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-# crun starts the microVM when the annotation run.oci.handler=krun is set.
-# The sandbox uses the network of the host. The egress proxy comes in a later change.
-run *command: build
-    podman run --rm -it --name sandbox -w /home/agent -e COLORTERM=truecolor --runtime {{ crun }} --annotation run.oci.handler=krun \
-      --uidmap {{ uid_map }} --gidmap {{ uid_map }} \
-      --cap-drop=all --cap-add=CHOWN,SETUID,SETGID,FOWNER,DAC_OVERRIDE \
-      {{ image }} sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+run *command: _check
+    podman volume exists sandbox-home || podman volume create -o o=uid=1000,gid=1000 sandbox-home
+    podman ps -q --filter name=^sandbox$ | grep -q . || podman run -d --replace --name sandbox --read-only {{ flags }} {{ mounts }} -v sandbox-home:/home/agent {{ image }}
+    timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
+    podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+
+# The same in the build sandbox. In it, `mise run build -- -t name /src/engineersdaybook` and `mise run push -- name ghcr.io/owner/name:tag` work.
+build *command: _check
+    podman volume exists sandbox-home || podman volume create -o o=uid=1000,gid=1000 sandbox-home
+    podman volume exists sandbox-build-home || podman volume create -o o=uid=1000,gid=1000 sandbox-build-home
+    podman ps -q --filter name=^sandbox-build$ | grep -q . || podman run -d --replace --name sandbox-build {{ flags }} {{ build_flags }} {{ mounts }} -v sandbox-build-home:/home/agent -v sandbox-home:/src:ro {{ image }}
+    timeout 180 bash -c 'until podman exec sandbox-build test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
+    podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox-build sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+
+# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
+[private]
+_check:
+    [ -S '{{ socket }}/proxy.sock' ] || { echo 'sandbox: no proxy socket at {{ socket }}/proxy.sock. Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md).' >&2; exit 1; }
+    [ -f '{{ ca }}' ] || { echo 'sandbox: no CA at {{ ca }}. See .sandbox/proxy/README.md.' >&2; exit 1; }

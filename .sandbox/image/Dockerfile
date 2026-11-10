@@ -74,7 +74,8 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils e2fsprogs \
+ && apt-get install -y --no-install-recommends binutils buildah socat \
+ && apt-get purge -y podman-docker \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -99,6 +100,7 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/herdr-ttt-plugin/ /home/agent/.config/herdr/plugins/ttt-editor/
 COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
 COPY --chown=agent:agent configs/containers/containers.conf /home/agent/.config/containers/containers.conf
+COPY --chown=agent:agent configs/containers/storage.conf /home/agent/.config/containers/storage.conf
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
@@ -107,10 +109,25 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
  && touch /home/agent/.config/containers/nodocker
+# The justfile mounts the Omarchy theme of the host at ~/.omarchy-theme. TTT reads the theme at the path of Omarchy, so link it.
+# A mount below ~/.local would make root own the folders above it, and the agent could not write there.
+RUN mkdir -p /home/agent/.local/state/omarchy/current \
+ && ln -s /home/agent/.omarchy-theme /home/agent/.local/state/omarchy/current/theme
 
 # Root-only: sandbox-entry, managed settings.
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
+COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
+# The entry runs as root, starts the relay to the proxy, drops to agent and runs the command. The default command is the start script.
+ENTRYPOINT ["sandbox-entry"]
+CMD ["sandbox-start"]
+
+# At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
+# as a skeleton. sandbox-start copies it into the tmpfs at each start.
+RUN mkdir -p /usr/share/sandbox \
+ && mv /home/agent /usr/share/sandbox/home \
+ && mkdir /home/agent \
+ && chown agent:agent /home/agent
 
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
@@ -123,4 +140,4 @@ RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
     EDITOR=ttt \
-    TMPDIR=/dev/shm
+    TMPDIR=/tmp

@@ -1,7 +1,8 @@
 #!/bin/sh
-# The command of the sandbox container. It starts as root in the krun microVM, because krun has no `podman exec`.
-# It makes two things ready for Podman inside the sandbox (nested Podman). Then it drops to the user agent and runs your command.
+# The command of the sandbox container. It starts as root in the container. In rootless Podman, container root is the host user.
+# It starts the relay to the egress proxy, then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
+# The justfile gives the container these capabilities: SETUID, SETGID and SETPCAP. The agent gets none, except the ones in SANDBOX_AGENT_CAPS.
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
 
@@ -10,26 +11,32 @@ fail() { echo "sandbox-entry: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || fail "run as root"
 [ "$#" -gt 0 ] || fail "give a command to run"
 
-# 1. Where nested Podman keeps its images.
-#    The disk of a krun microVM is a virtiofs share of the host. The overlay driver of Podman cannot use it:
-#    "unable to create kernel-style whiteout". A volume, a tmpfs and the vfs driver fail on the same limit.
-#    The overlay driver does work on an ext4 file system. So the entry makes a sparse file, formats it as ext4
-#    and mounts it with a loop device on the folder where Podman keeps its images.
-#    Make /var/lib/sandbox a named volume to keep the images after you remove the container.
-storage_dir=/home/agent/.local/share/containers
-storage_img=/var/lib/sandbox/podman-storage.img
-mkdir -p /var/lib/sandbox "$storage_dir" || fail "could not make the folders of the storage"
-if [ ! -f "$storage_img" ]; then
-  truncate -s 20G "$storage_img" && mkfs.ext4 -q -F "$storage_img" || fail "could not make $storage_img"
-fi
-mount -o loop "$storage_img" "$storage_dir" || fail "could not mount $storage_img on $storage_dir"
-chown agent:agent "$storage_dir" || fail "could not give $storage_dir to agent"
-
-# 2. The network of a nested container.
-#    Podman uses pasta, and pasta opens /dev/net/tun. The kernel makes it for root only. Give it to the group agent.
-chgrp agent /dev/net/tun && chmod 660 /dev/net/tun || fail "could not open /dev/net/tun for podman"
-
-# The host can pass its NOTIFY_SOCKET. A nested podman then tries to notify the host service manager and fails.
+# The host can pass its NOTIFY_SOCKET. A tool in the sandbox then tries to notify the host service manager and fails.
 unset NOTIFY_SOCKET
 
-exec setpriv --reuid=agent --regid=agent --init-groups --inh-caps=-all env HOME=/home/agent "$@"
+# 1. The relay to the proxy.
+#    The sandbox has no network. The proxy on the host listens on a Unix socket that the justfile mounts at /run/sandbox/proxy/proxy.sock.
+#    The socket belongs to the host user, and container root is the host user, so root opens it and the user agent cannot.
+#    The relay listens on 127.0.0.1:3128 and copies the bytes to the socket. HTTPS_PROXY points at it.
+#    The relay has no capability: the bounding set and the inheritable set are empty.
+#    The relay starts only when the entry is the first process of the container. `podman exec -u 0 sandbox-entry <command>` opens a session that has the
+#    capabilities of SANDBOX_AGENT_CAPS. A `podman exec -u agent` session has none, because capabilities do not pass from the first process to an exec session.
+sock=/run/sandbox/proxy/proxy.sock
+if [ "$$" != 1 ]; then
+  :
+elif [ -S "$sock" ]; then
+  setpriv --bounding-set=-all --inh-caps=-all socat TCP-LISTEN:3128,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:"$sock" &
+else
+  echo "sandbox-entry: no proxy socket at $sock. The sandbox has no way out." >&2
+fi
+
+# 2. Drop to the user agent.
+#    SANDBOX_AGENT_CAPS is empty in the default sandbox: the agent has no capability. The build profile sets a list, for example "+chown,+fowner".
+#    A listed capability goes into the bounding, inheritable and ambient sets, so the agent keeps it after the change of user.
+caps=${SANDBOX_AGENT_CAPS:-}
+if [ -n "$caps" ]; then
+  set -- setpriv --reuid=agent --regid=agent --init-groups --bounding-set="-all,$caps" --inh-caps="$caps" --ambient-caps="$caps" env HOME=/home/agent "$@"
+else
+  set -- setpriv --reuid=agent --regid=agent --init-groups --bounding-set=-all --inh-caps=-all env HOME=/home/agent "$@"
+fi
+exec "$@"
