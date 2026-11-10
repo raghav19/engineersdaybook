@@ -10,14 +10,21 @@
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-compose := 'podman-compose -f ' + source_directory() / 'compose.yaml'
+# --- Required tools ---
+# just stops with a message before any recipe runs if one is missing.
+git            := require("git")
+podman         := require("podman")
+podman_compose := require("podman-compose")
+timeout        := require("timeout")
+
+compose := podman_compose + ' -f ' + source_directory() / 'compose.yaml'
 
 # compose.yaml reads these variables from the environment, so they are exported.
 export SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
 export SANDBOX_SOCKET := env('XDG_RUNTIME_DIR') / 'sandbox'
-export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-common-dir')
+export SANDBOX_GIT_DIR := shell(git + ' rev-parse --path-format=absolute --git-common-dir')
 export SANDBOX_THEME := home_directory() / '.local/state/omarchy/current/theme'
-export SANDBOX_BRANCH := shell('git branch --show-current')
+export SANDBOX_BRANCH := shell(git + ' branch --show-current')
 
 # List the recipes (the default)
 [default]
@@ -29,15 +36,17 @@ help:
 # --no-recreate leaves a running container alone and starts a stopped one.
 run *command: _check
     {{ compose }} up -d --no-recreate sandbox
-    timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
-    podman exec -it -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
+    {{ timeout }} 180 bash -c 'until {{ podman }} exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
+    {{ podman }} exec -it -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
 
 # Remove the container. The volume sandbox-home stays, so the clone and the logins stay.
 rm:
     {{ compose }} down
 
 # The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
+# It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
 [private]
+[no-exit-message]
 _check:
     #!/usr/bin/env bash
     set -euo pipefail

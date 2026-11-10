@@ -31,7 +31,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-Start the host proxy first. You need `podman-compose` (tested with version 1.6.0). Then build the image and run the sandbox:
+Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0), `git` and `timeout`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
 
 ```shell
 podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
