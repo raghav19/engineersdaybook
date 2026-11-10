@@ -22,6 +22,14 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 
 `iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0600). `sandbox-bridge.service` joins the socket to the tunnel. Use the path of your main checkout for `$REPO` below.
 
+## Why there is a bridge
+
+The sandbox has no network, so only a Unix socket file can reach the host. iron-proxy 0.56.0 listens on TCP only. A `unix://` address in `tunnel_listen` fails with `listen tcp: ... unknown port`. `systemd-socket-proxyd` joins the socket to the tunnel. If iron-proxy later listens on a Unix socket itself, delete `sandbox-bridge.socket` and `sandbox-bridge.service` and set `tunnel_listen` to the socket path.
+
+## How the sandbox uses it
+
+The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sandbox-proxy.service`. `systemctl --user start sandbox` then starts the proxy, the socket and the container in this order. The container has `Network=none`. It shares no network with the proxy. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
+
 ## One-time setup
 
 1. Make the folders: `mkdir -p ~/.local/state/sandbox ~/.config/sandbox`
