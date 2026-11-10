@@ -2,7 +2,7 @@
 # The command of the sandbox container. It starts as root in the container. In rootless Podman, container root is the host user.
 # It starts the relay to the egress proxy, then it drops to the user agent and runs your command.
 # Example: sandbox-entry bash --login -i
-# The compose file gives the container these capabilities: SETUID, SETGID and SETPCAP. The agent gets none, except the ones in SANDBOX_AGENT_CAPS.
+# The justfile gives the container these capabilities: SETUID, SETGID and SETPCAP. The agent gets none, except the ones in SANDBOX_AGENT_CAPS.
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
 
@@ -15,7 +15,7 @@ fail() { echo "sandbox-entry: $*" >&2; exit 1; }
 unset NOTIFY_SOCKET
 
 # 1. The relay to the proxy.
-#    The sandbox has no network. The proxy on the host listens on a Unix socket that the compose file mounts at /run/sandbox/proxy/proxy.sock.
+#    The sandbox has no network. The proxy on the host listens on a Unix socket that the justfile mounts at /run/sandbox/proxy/proxy.sock.
 #    The socket belongs to the host user, and container root is the host user, so root opens it and the user agent cannot.
 #    The relay listens on 127.0.0.1:3128 and copies the bytes to the socket. HTTPS_PROXY points at it.
 #    The relay has no capability: the bounding set and the inheritable set are empty.

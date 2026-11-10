@@ -1,5 +1,9 @@
 # The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
-# Quadlet declares the container (quadlet/) and systemd starts it. The README has the commands. This file builds the image.
+# Every recipe runs on the host. The container has no network. The host proxy (.sandbox/proxy) is its only way out. The README has the other podman commands.
+#
+#   just sandbox build       build the image.
+#   just sandbox run         start the sandbox if it does not run, and open Herdr in it.
+#   just sandbox run-build   the same, with the build profile: buildah can build and push images. It stops the default sandbox.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -8,6 +12,14 @@ podman := require("podman")
 
 image := 'localhost/sandbox-dev:latest'
 image_dir := source_directory() / 'image'
+workspace := '/home/agent/engineersdaybook'
+socket_dir := env('XDG_RUNTIME_DIR') / 'sandbox'
+ca := home_directory() / '.local/state/sandbox/ca.crt'
+theme := home_directory() / '.local/state/omarchy/current/theme'
+git_dir := shell('git rev-parse --path-format=absolute --git-common-dir')
+export SANDBOX_BRANCH := shell('git branch --show-current')
+# The build profile: the six capabilities that buildah needs for chroot isolation (SETUID and SETGID are in the base flags). No SYS_ADMIN.
+build_flags := '--cap-add=CHOWN --cap-add=DAC_OVERRIDE --cap-add=FOWNER --cap-add=SYS_CHROOT -e SANDBOX_AGENT_CAPS=+chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid -e BUILDAH_ISOLATION=chroot'
 
 # List the recipes (the default)
 [default]
@@ -17,3 +29,35 @@ help:
 # Build the image. The first build takes several minutes.
 build:
     podman build {{ image_dir }} -t {{ image }}
+
+# Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same Herdr session.
+# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+run *command: _proxy (_down 'sandbox-build') (_up 'sandbox' 'seccomp.json' '--read-only' '')
+    podman exec -it -u 0 -w {{ workspace }} sandbox sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+
+# Open Herdr in the build sandbox. In it, `mise run build -- -t name .` and `mise run push -- name ghcr.io/owner/name:tag` work.
+run-build *command: _proxy (_down 'sandbox') (_up 'sandbox-build' 'seccomp-build.json' '' build_flags)
+    podman exec -it -u 0 -w {{ workspace }} sandbox-build sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
+
+# The one podman run command of both sandboxes. The sessions go through sandbox-entry as root: it drops to agent and keeps the right capabilities.
+[private]
+_up name seccomp ro extra:
+    podman volume exists sandbox-home || podman volume create -o o=uid=1000,gid=1000 sandbox-home >/dev/null
+    [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' {{ name }} 2>/dev/null)" = true ] || podman run -d --replace --name {{ name }} \
+      --runtime=crun --network=none {{ ro }} --user=0 --workdir=/home/agent --cap-drop=ALL --cap-add=SETUID --cap-add=SETGID --cap-add=SETPCAP \
+      --security-opt=no-new-privileges --security-opt=seccomp={{ source_directory() }}/{{ seccomp }} --pids-limit=1024 --memory=3g --cpus=4 \
+      --tmpfs=/tmp:rw,nosuid,nodev,size=512m --tmpfs=/run:rw,nosuid,nodev,size=16m --env-file={{ source_directory() }}/sandbox.env -e SANDBOX_BRANCH {{ extra }} \
+      -v sandbox-home:/home/agent -v {{ ca }}:/etc/ssl/certs/ca-certificates.crt:ro -v {{ socket_dir }}:/run/sandbox/proxy:ro \
+      -v {{ git_dir }}:/run/sandbox/source:ro -v {{ theme }}:/home/agent/.omarchy-theme:ro {{ image }} >/dev/null
+    timeout 180 bash -c 'until podman exec {{ name }} test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done' || { podman logs --tail 20 {{ name }} >&2; echo 'sandbox: {{ name }} is not ready' >&2; exit 1; }
+
+# Both sandboxes write to the volume sandbox-home, so only one runs.
+[private]
+_down name:
+    podman stop {{ name }} >/dev/null 2>&1 || true
+
+# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
+[private]
+_proxy:
+    [ -S '{{ socket_dir }}/proxy.sock' ] || { echo 'sandbox: no proxy socket at {{ socket_dir }}/proxy.sock. Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md).' >&2; exit 1; }
+    [ -f '{{ ca }}' ] || { echo 'sandbox: no CA at {{ ca }}. See .sandbox/proxy/README.md.' >&2; exit 1; }

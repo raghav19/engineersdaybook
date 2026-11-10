@@ -1,6 +1,0 @@
-# The home of the agent: a tmpfs that the user agent owns. It is empty at each start. sandbox-start fills it from the skeleton in the image.
-[Volume]
-VolumeName=sandbox-home
-Type=tmpfs
-Device=tmpfs
-Options=uid=1000,gid=1000,mode=0755,size=256m,nosuid,nodev

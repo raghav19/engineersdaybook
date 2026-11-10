@@ -109,7 +109,7 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.config/containers /home/agent/.qwen \
  && touch /home/agent/.config/containers/nodocker
-# The compose file mounts the Omarchy theme of the host at ~/.omarchy-theme. TTT reads the theme at the path of Omarchy, so link it.
+# The justfile mounts the Omarchy theme of the host at ~/.omarchy-theme. TTT reads the theme at the path of Omarchy, so link it.
 # A mount below ~/.local would make root own the folders above it, and the agent could not write there.
 RUN mkdir -p /home/agent/.local/state/omarchy/current \
  && ln -s /home/agent/.omarchy-theme /home/agent/.local/state/omarchy/current/theme
