@@ -7,6 +7,7 @@ set quiet
 
 mod msb '.msb'
 mod sandbox '.sandbox'
+mod sandbox-proxy '.sandbox/proxy'
 
 # list the recipes, modules included (the default)
 [default]

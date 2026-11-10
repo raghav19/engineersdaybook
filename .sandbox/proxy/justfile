@@ -1,0 +1,151 @@
+# The host side of the sandbox: iron-proxy, the only way out of the sandbox, and a bridge to it. `mod sandbox-proxy` in ../../justfile makes it `just sandbox-proxy <recipe>`.
+# Every recipe runs on the host. iron-proxy and the bridge run as user services of systemd. See README.md in this folder.
+#
+#   just sandbox-proxy up        make the CA and the config, start the proxy and the bridge if they do not run, wait until the tunnel listens.
+#   just sandbox-proxy status    show the services, the socket and the ports.
+#   just sandbox-proxy reload    write the config again and restart the proxy. The tokens stay in memory, so there is no passphrase prompt.
+#   just sandbox-proxy log       follow the audit log of the proxy.
+#   just sandbox-proxy ca        make a new CA. `up` makes the first one.
+#   just sandbox-proxy selftest  start a second proxy with dummy tokens and check the egress rules.
+#   just sandbox-proxy down      stop the proxy and the bridge.
+#
+# SANDBOX_NS (default `sandbox`) names the user services and the two folders. SANDBOX_PORT_BASE (default 0) is added to each port.
+# Set both to run a second copy next to a live one, for example to test a change.
+
+set quiet
+set shell := ['bash', '-euo', 'pipefail', '-c']
+
+openssl     := require("openssl")
+socat       := require("socat")
+systemd_run := require("systemd-run")
+systemctl   := require("systemctl")
+
+ns        := env('SANDBOX_NS', 'sandbox')
+port_base := env('SANDBOX_PORT_BASE', '0')
+dns_port     := shell('echo $((15353 + $1))', port_base)
+http_port    := shell('echo $((8081 + $1))', port_base)
+https_port   := shell('echo $((8443 + $1))', port_base)
+tunnel_port  := shell('echo $((1080 + $1))', port_base)
+metrics_port := shell('echo $((9091 + $1))', port_base)
+relay_port   := shell('echo $((3128 + $1))', port_base)
+
+# The proxy binary comes from this image. The digest pins it. The binary is cached in the state folder under the digest.
+proxy_image := 'docker.io/ironsh/iron-proxy@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff'
+# The state folder has the CA, the CA bundle, the rendered config and the proxy binary. The run folder (a tmpfs of the login) has the socket.
+state_dir := env('XDG_STATE_HOME', home_directory() / '.local/state') / ns
+run_dir   := env('XDG_RUNTIME_DIR') / ns
+proxy_bin := state_dir / 'bin' / ('iron-proxy-' + replace_regex(proxy_image, '.*sha256:(.{12}).*', '$1'))
+config    := state_dir / 'iron-proxy.yaml'
+# Bitwarden token encrypted with `age -p`. See .msb/README.md, prerequisite 4.
+token_file := home_directory() / '.config/bws/access-token.age'
+# `bws run` puts each key of the Bitwarden project in the environment of one command. It uses BWS_ACCESS_TOKEN if set, else it decrypts `token_file`.
+bws_run := 'BWS_ACCESS_TOKEN="${BWS_ACCESS_TOKEN:-$(age -d ' + token_file + ')}" bws run --'
+this := source_file()
+
+# List the recipes (the default)
+[default]
+help:
+    just --justfile '{{ this }}' --list --unsorted
+
+# Start what is not running. Bitwarden gives the real tokens to the proxy only. An attach to a running proxy builds nothing and asks for no passphrase.
+up: _ca _bundle _bin _config
+    command -v bws >/dev/null && command -v age >/dev/null || systemctl --user is-active --quiet '{{ ns }}-proxy' || { echo 'sandbox-proxy: bws and age must be on the PATH. See .msb/README.md, prerequisite 4.' >&2; exit 1; }
+    systemctl --user is-active --quiet '{{ ns }}-proxy' || {{ bws_run }} just --justfile '{{ this }}' _proxy
+    systemctl --user is-active --quiet '{{ ns }}-bridge' || just --justfile '{{ this }}' _bridge
+    just --justfile '{{ this }}' _wait
+
+# Show the services, the socket and the listeners.
+status:
+    for u in '{{ ns }}-proxy' '{{ ns }}-bridge'; do printf '%-24s %s\n' "$u" "$(systemctl --user is-active "$u" || true)"; done
+    printf '%-24s %s\n' socket "$(stat -c '%a %U' '{{ run_dir }}/proxy.sock' 2>/dev/null || echo missing)"
+    ss -H -lntu | awk '{print $5}' | grep -E ':({{ dns_port }}|{{ http_port }}|{{ https_port }}|{{ tunnel_port }}|{{ metrics_port }})$' | sed 's/^/listens  /' || true
+
+# Write the config again and restart the proxy. systemd keeps the tokens of the first start.
+reload: _config
+    systemctl --user is-active --quiet '{{ ns }}-proxy' || { echo 'sandbox-proxy: the proxy does not run. Use `just sandbox-proxy up`.' >&2; exit 1; }
+    systemctl --user restart '{{ ns }}-proxy'
+    just --justfile '{{ this }}' _wait
+
+# Follow the audit log of the proxy (one JSON line for each request: host, method, action, status).
+log:
+    journalctl --user -u '{{ ns }}-proxy' -o cat -f
+
+# Make a new CA for the proxy. The key and the certificate go to the state folder. The sandbox gets the bundle only.
+# A new CA replaces the old one. Run `down` first.
+ca:
+    mkdir -p -m 0700 '{{ state_dir }}'
+    tmp=$(mktemp -d "${XDG_RUNTIME_DIR:-/dev/shm}/sandbox-ca.XXXXXX") && trap 'rm -rf "$tmp"' EXIT \
+      && openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+           -subj '/CN=sandbox egress proxy CA' \
+           -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
+           -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+           -keyout "$tmp/ca.key" -out "$tmp/ca.crt" 2>/dev/null \
+      && install -m 0600 "$tmp/ca.key" '{{ state_dir }}/ca.key' \
+      && install -m 0644 "$tmp/ca.crt" '{{ state_dir }}/ca.crt' \
+      && echo "sandbox-proxy: CA made in {{ state_dir }} (ca.crt and ca.key)."
+    just --justfile '{{ this }}' _bundle
+
+# Start a proxy with dummy tokens and check the egress rules through its socket. No real token is in this test.
+# It needs the internet: the swap check sends one request to api.github.com.
+# It refuses to run if a proxy of the same SANDBOX_NS runs. Set SANDBOX_NS and SANDBOX_PORT_BASE to test next to a live one.
+selftest: _ca _bundle _bin _config
+    ! systemctl --user is-active --quiet '{{ ns }}-proxy' || { echo 'sandbox-proxy: a proxy runs with the namespace {{ ns }}. Set SANDBOX_NS and SANDBOX_PORT_BASE, or run `just sandbox-proxy down`.' >&2; exit 1; }
+    trap 'just --justfile "{{ this }}" down >/dev/null 2>&1' EXIT; \
+      export GH_TOKEN=dummy-token-GH_TOKEN-0001 CLAUDE_CODE_OAUTH_TOKEN=dummy-token-CLAUDE-0002 QWEN_API_KEY=dummy-token-QWEN-0003 GITHUB_TOKEN=dummy-token-GHCR-0004; \
+      just --justfile '{{ this }}' _proxy; just --justfile '{{ this }}' _bridge; just --justfile '{{ this }}' _wait; \
+      NS='{{ ns }}' STATE_DIR='{{ state_dir }}' RUN_DIR='{{ run_dir }}' RELAY_PORT='{{ relay_port }}' \
+        PORTS='{{ dns_port }} {{ http_port }} {{ https_port }} {{ tunnel_port }} {{ metrics_port }}' \
+        DUMMIES="$GH_TOKEN $CLAUDE_CODE_OAUTH_TOKEN $QWEN_API_KEY $GITHUB_TOKEN" \
+        bash '{{ source_directory() }}/selftest.sh'
+
+# Stop the proxy and the bridge.
+down:
+    systemctl --user stop '{{ ns }}-bridge' '{{ ns }}-proxy' 2>/dev/null || true
+    rm -f '{{ run_dir }}/proxy.sock'
+
+# Take the proxy binary from the pinned image if it is not in the state folder.
+[private]
+_bin:
+    [ -x '{{ proxy_bin }}' ] || { mkdir -p -m 0700 '{{ state_dir }}/bin'; c=$(podman create '{{ proxy_image }}') && podman cp "$c:/usr/local/bin/iron-proxy" '{{ proxy_bin }}' && podman rm "$c" >/dev/null && chmod 0755 '{{ proxy_bin }}'; }
+
+# Make the CA of the proxy if there is none.
+[private]
+_ca:
+    { [ -f '{{ state_dir }}/ca.crt' ] && [ -f '{{ state_dir }}/ca.key' ]; } || just --justfile '{{ this }}' ca
+
+# The CA bundle for the sandbox: the system CAs plus the CA of the proxy. The sandbox mounts it read-only.
+[private]
+_bundle:
+    mkdir -p -m 0700 '{{ state_dir }}'
+    cat /etc/ssl/certs/ca-certificates.crt '{{ state_dir }}/ca.crt' > '{{ state_dir }}/ca-bundle.crt.tmp' && chmod 0644 '{{ state_dir }}/ca-bundle.crt.tmp' && mv '{{ state_dir }}/ca-bundle.crt.tmp' '{{ state_dir }}/ca-bundle.crt'
+
+# Write the config of the proxy: the template with the ports of this namespace.
+[private]
+_config:
+    mkdir -p -m 0700 '{{ state_dir }}'
+    sed -e 's/@DNS_PORT@/{{ dns_port }}/' -e 's/@HTTP_PORT@/{{ http_port }}/' -e 's/@HTTPS_PORT@/{{ https_port }}/' \
+        -e 's/@TUNNEL_PORT@/{{ tunnel_port }}/' -e 's/@METRICS_PORT@/{{ metrics_port }}/' '{{ source_directory() }}/iron-proxy.yaml' > '{{ config }}.tmp'
+    mv '{{ config }}.tmp' '{{ config }}'
+
+# Start iron-proxy as a user service. The tokens must be in the environment (`bws run` puts them there). systemd keeps them in memory.
+# --setenv=NAME (no value) passes the variable from the caller, so the token is not in the arguments.
+[private]
+_proxy:
+    mkdir -p -m 0700 '{{ run_dir }}'
+    systemd-run --user --unit='{{ ns }}-proxy' --collect --quiet \
+      -p Restart=on-failure -p NoNewPrivileges=yes -p PrivateTmp=yes \
+      --working-directory='{{ state_dir }}' \
+      --setenv=GH_TOKEN --setenv=CLAUDE_CODE_OAUTH_TOKEN --setenv=QWEN_API_KEY --setenv=GITHUB_TOKEN \
+      '{{ proxy_bin }}' -config '{{ config }}'
+
+# Start the bridge as a user service. It turns the tunnel listener of the proxy (TCP, loopback) into the Unix socket that the sandbox mounts.
+[private]
+_bridge:
+    mkdir -p -m 0700 '{{ run_dir }}'
+    systemd-run --user --unit='{{ ns }}-bridge' --collect --quiet -p Restart=on-failure \
+      socat 'UNIX-LISTEN:{{ run_dir }}/proxy.sock,fork,unlink-early,mode=600' 'TCP:127.0.0.1:{{ tunnel_port }}'
+
+# Wait until the tunnel listens and the socket exists.
+[private]
+_wait:
+    timeout 15 bash -c 'until (exec 3<>/dev/tcp/127.0.0.1/{{ tunnel_port }}) 2>/dev/null && [ -S "{{ run_dir }}/proxy.sock" ]; do sleep 0.2; done' || { echo 'sandbox-proxy: the proxy does not listen. See: just sandbox-proxy log' >&2; exit 1; }
