@@ -57,7 +57,7 @@ echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
 
 # Docker-like commands for images. They call buildah. The sandbox has no engine to run an image, so there is build, push and login only.
-# They work in the build profile (`just sandbox run-build`). The default sandbox has no capability that buildah needs.
+# They work in the build profile (`just sandbox build`). The default sandbox has no capability that buildah needs.
 # Use: mise run build -- -t name .      mise run login      mise run push -- name ghcr.io/owner/name:tag
 [tasks."image:build"]
 alias = "build"

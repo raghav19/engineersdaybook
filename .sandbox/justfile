@@ -1,9 +1,10 @@
 # The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
 # The container has no network. The host proxy (.sandbox/proxy) is its only way out. The README has the other podman commands.
 #
-#   just sandbox build       build the image.
-#   just sandbox run         start the sandbox if it does not run, and open Herdr in it.
-#   just sandbox run-build   the same, with the capabilities that buildah needs. It stops the default sandbox.
+#   just sandbox run     the agent sandbox. It starts if it does not run. Opens Herdr in it.
+#   just sandbox build   the build sandbox: a separate container for buildah, with its own home. It sees the home of the agent at /src, read-only.
+#
+# Make the image once: podman build .sandbox/image -t localhost/sandbox-dev:latest
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -18,7 +19,7 @@ export SANDBOX_BRANCH := shell('git branch --show-current')
 # Both containers: no network, all capabilities dropped. The entry keeps three to drop the agent, then the agent has none.
 flags := '--runtime=crun --network=none --user=0 --workdir=/home/agent --cap-drop=ALL --cap-add=SETUID --cap-add=SETGID --cap-add=SETPCAP --security-opt=no-new-privileges --pids-limit=1024 --memory=3g --cpus=4 --tmpfs=/tmp --tmpfs=/run -e SANDBOX_BRANCH --env-file=' + source_directory() / 'sandbox.env'
 # The agent cannot change the CA, the socket folder, the repo or the theme.
-mounts := '-v sandbox-home:/home/agent -v ' + ca + ':/etc/ssl/certs/ca-certificates.crt:ro -v ' + socket + ':/run/sandbox/proxy:ro -v ' + git_dir + ':/run/sandbox/source:ro -v ' + theme + ':/home/agent/.omarchy-theme:ro'
+mounts := '-v ' + ca + ':/etc/ssl/certs/ca-certificates.crt:ro -v ' + socket + ':/run/sandbox/proxy:ro -v ' + git_dir + ':/run/sandbox/source:ro -v ' + theme + ':/home/agent/.omarchy-theme:ro'
 # The build sandbox adds the capabilities that buildah needs for chroot isolation. It has no SYS_ADMIN and a writable root.
 build_flags := '--cap-add=CHOWN --cap-add=DAC_OVERRIDE --cap-add=FOWNER --cap-add=SYS_CHROOT -e BUILDAH_ISOLATION=chroot -e SANDBOX_AGENT_CAPS=+chown,+dac_override,+fowner,+sys_chroot,+setuid,+setgid'
 
@@ -27,24 +28,19 @@ build_flags := '--cap-add=CHOWN --cap-add=DAC_OVERRIDE --cap-add=FOWNER --cap-ad
 help:
     just --list --unsorted
 
-# Build the image. The first build takes several minutes.
-build:
-    podman build {{ source_directory() }}/image -t {{ image }}
-
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 run *command: _check
-    podman stop sandbox-build >/dev/null 2>&1 || true
     podman volume exists sandbox-home || podman volume create -o o=uid=1000,gid=1000 sandbox-home
-    podman ps -q --filter name=^sandbox$ | grep -q . || podman run -d --replace --name sandbox --read-only {{ flags }} {{ mounts }} {{ image }}
+    podman ps -q --filter name=^sandbox$ | grep -q . || podman run -d --replace --name sandbox --read-only {{ flags }} {{ mounts }} -v sandbox-home:/home/agent {{ image }}
     timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
     podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
 
-# The same in the build sandbox. In it, `mise run build -- -t name .` and `mise run push -- name ghcr.io/owner/name:tag` work.
-run-build *command: _check
-    podman stop sandbox >/dev/null 2>&1 || true
+# The same in the build sandbox. In it, `mise run build -- -t name /src/engineersdaybook` and `mise run push -- name ghcr.io/owner/name:tag` work.
+build *command: _check
     podman volume exists sandbox-home || podman volume create -o o=uid=1000,gid=1000 sandbox-home
-    podman ps -q --filter name=^sandbox-build$ | grep -q . || podman run -d --replace --name sandbox-build {{ flags }} {{ build_flags }} {{ mounts }} {{ image }}
+    podman volume exists sandbox-build-home || podman volume create -o o=uid=1000,gid=1000 sandbox-build-home
+    podman ps -q --filter name=^sandbox-build$ | grep -q . || podman run -d --replace --name sandbox-build {{ flags }} {{ build_flags }} {{ mounts }} -v sandbox-build-home:/home/agent -v sandbox-home:/src:ro {{ image }}
     timeout 180 bash -c 'until podman exec sandbox-build test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
     podman exec -it -u 0 -w /home/agent/engineersdaybook sandbox-build sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
 

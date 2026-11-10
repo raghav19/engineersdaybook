@@ -10,7 +10,7 @@ headroom_log=/tmp/headroom.log
 rm -f /tmp/sandbox-ready # a restarted container keeps its /tmp
 fail() { echo "sandbox-start: $*" >&2; exit 1; }
 
-# /home/agent is the volume sandbox-home and the root file system is read-only. The image keeps the home files in a skeleton. Copy it at each start.
+# /home/agent is a named volume and the root file system is read-only. The image keeps the home files in a skeleton. Copy it at each start.
 # The copy puts the files of the image back. The folders of the agent stay: the clone, .claude, .qwen, .headroom, .herdr, .cache and .buildah.
 cp -a /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
 mkdir -p "$HOME/.claude" "$HOME/.qwen" "$HOME/.headroom" "$HOME/.herdr" "$HOME/.cache/terraform-providers" "$HOME/.buildah" || fail "could not make the folders of the home"
