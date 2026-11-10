@@ -7,8 +7,6 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 | Path | Content |
 |---|---|
 | `sandbox.env` | The environment of the container. |
-| `seccomp.json`, `seccomp-build.json` | The seccomp profiles of the two containers. |
-| `egress-selftest.sh` | The self-test. It runs in the container as the user `agent`. |
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `justfile` | `build`, `run` and `run-build`. It holds the one `podman run` command. |
 
@@ -47,7 +45,6 @@ The first `run` makes the volume `sandbox-home` with `podman volume create -o o=
 | `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it -u 0 sandbox sandbox-entry herdr`. The entry drops to `agent`. Close the terminal and the sandbox keeps running. |
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
-| `podman exec -i -u 0 sandbox sandbox-entry sh -s -- -a https://api.github.com/zen example.com < .sandbox/egress-selftest.sh` | Runs the self-test. The proxy must run. |
 
 ## Hardening
 
@@ -59,27 +56,10 @@ The first `run` makes the volume `sandbox-home` with `podman volume create -o o=
 | The named volume `sandbox-home` at `/home/agent` | The clone, the logins, the histories and the buildah storage stay here. The start script copies the home files of the image back at each start. |
 | `--cap-drop=ALL` | The entry drops the agent to an empty capability set. |
 | `--security-opt no-new-privileges` | A setuid program cannot raise a privilege. |
-| `--security-opt seccomp=` | A system call filter. See below. |
+| The default seccomp profile of Podman | A system call filter. A custom profile is not part of this change. |
 | User `agent` (uid 1000) | Not root. |
 | `--pids-limit`, `--memory`, `--cpus` | 1024 processes, 3 GB, 4 CPUs. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
-
-The self-test proves the network and the read-only checks as `agent`. It prints 20 checks, PASS or FAIL.
-
-### The seccomp profiles
-
-`seccomp.json` is `/usr/share/containers/seccomp.json` without 13 names: `bpf`, `kexec_file_load`, `kexec_load`, `keyctl`, `mount`, `open_by_handle_at`, `perf_event_open`, `pivot_root`, `ptrace`, `setns`, `umount2`, `unshare` and `userfaultfd`.
-
-`seccomp-build.json` lacks 8 names: `bpf`, `kexec_file_load`, `kexec_load`, `keyctl`, `open_by_handle_at`, `perf_event_open`, `ptrace` and `userfaultfd`. It keeps `unshare`, `setns`, `mount`, `umount2` and `pivot_root`, because `buildah` needs a user namespace.
-
-The default profile already denies `kexec_load`, `kexec_file_load` and `userfaultfd`. It allows `bpf`, `open_by_handle_at` and `perf_event_open` only with a capability, which the agent does not have. So the removal changes `ptrace`, `keyctl`, `mount`, `umount2`, `pivot_root`, `unshare` and `setns`, which the default allows with no condition. The build profile changes only `ptrace` and `keyctl`. To review or make the files again:
-
-```shell
-make() { jq --argjson rm "$1" '.syscalls |= (map(.names -= $rm) | map(select(.names | length > 0)))' /usr/share/containers/seccomp.json; }
-build='["bpf","kexec_file_load","kexec_load","keyctl","open_by_handle_at","perf_event_open","ptrace","userfaultfd"]'
-make "$build" > .sandbox/seccomp-build.json
-make "${build%]},\"mount\",\"pivot_root\",\"setns\",\"umount2\",\"unshare\"]" > .sandbox/seccomp.json
-```
 
 ## Developer workflow
 
@@ -136,7 +116,6 @@ The root file system of `sandbox-build` is **writable**. `buildah` chroot isolat
 - **No `podman run`, no `docker`.** The sandbox has no engine. `buildah` builds and pushes.
 - **No SSH and no raw TCP.** The proxy passes HTTP and TLS. Use HTTPS remotes for `git`.
 - **A tool that ignores `HTTPS_PROXY` fails.** It has no route.
-- **A tool that needs a user namespace or `ptrace` fails.** The seccomp profile denies them. A browser sandbox is an example.
 - **No `sudo` and no package install.** The root file system is read-only. Change the image.
 - **The agent runs as a sub-user of your host user.** The container shares the host kernel. A microVM is a stronger boundary.
 - **Listed hosts can receive data from the agent.** Keep the allowlist short.
