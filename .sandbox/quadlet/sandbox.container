@@ -1,0 +1,45 @@
+# The hardened Podman sandbox: no network. iron-proxy on the host is the only way out. The README has the install steps.
+# The agent cannot change it: the root file system is read-only, and the CA, the socket folder and the repo are read-only mounts.
+[Unit]
+Description=The hardened Podman sandbox
+Requires=sandbox-proxy.service
+After=sandbox-proxy.service
+Conflicts=sandbox-build.service
+
+[Container]
+ContainerName=sandbox
+Image=localhost/sandbox-dev:latest
+PodmanArgs=--runtime=crun --cpus=4
+Network=none
+ReadOnly=true
+User=0
+WorkingDir=/home/agent
+DropCapability=ALL
+AddCapability=SETUID SETGID SETPCAP
+NoNewPrivileges=true
+SeccompProfile=%h/.config/containers/systemd/sandbox/seccomp.json
+PidsLimit=1024
+Memory=3g
+Tmpfs=/tmp:rw,nosuid,nodev,size=512m
+Tmpfs=/run:rw,nosuid,nodev,size=16m
+EnvironmentFile=%h/.config/containers/systemd/sandbox/sandbox.env
+# The home first. The mounts in /home/agent are top-level folders of the home: a deeper mount makes root own the folders above it.
+Volume=sandbox-home.volume:/home/agent
+Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+Volume=%t/sandbox:/run/sandbox/proxy:ro
+Volume=%h/Projects/engineersdaybook/.git:/run/sandbox/source:ro
+Volume=%h/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro
+Volume=sandbox-workspace.volume:/home/agent/engineersdaybook
+Volume=sandbox-claude-home.volume:/home/agent/.claude
+Volume=sandbox-qwen-home.volume:/home/agent/.qwen
+Volume=sandbox-headroom-home.volume:/home/agent/.headroom
+Volume=sandbox-herdr.volume:/home/agent/.herdr
+Volume=sandbox-cache.volume:/home/agent/.cache
+Volume=sandbox-terraform-providers.volume:/home/agent/.cache/terraform-providers
+Volume=sandbox-containers.volume:/home/agent/.buildah
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

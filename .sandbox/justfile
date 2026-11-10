@@ -1,31 +1,13 @@
-# The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`. Use `just sandbox <recipe>`.
-# Every recipe runs on the host. compose.yaml declares the sandbox, which has no network. The host proxy (iron-proxy) is in .sandbox/proxy.
-# The README has the plain podman commands for the self-test, status and stop.
-#
-#   just sandbox build       build the image with Podman.
-#   just sandbox run         start the sandbox if it does not run, and open Herdr in it with `podman exec`.
-#   just sandbox run-build   the same, with the build profile: buildah can build and push images. Stop the default sandbox first.
+# The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
+# Quadlet declares the container (quadlet/) and systemd starts it. The README has the commands. This file builds the image.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-podman         := require("podman")
-podman_compose := require("podman-compose")
+podman := require("podman")
 
 image := 'localhost/sandbox-dev:latest'
 image_dir := source_directory() / 'image'
-compose := source_directory() / 'compose.yaml'
-workspace := '/home/agent/engineersdaybook'
-# The systemd socket unit of the proxy makes this socket. The sandbox mounts its folder.
-socket := env('XDG_RUNTIME_DIR') / 'sandbox/proxy.sock'
-ca := home_directory() / '.local/state/sandbox/ca.crt'
-
-# The values that compose.yaml uses. The clone starts from the .git folder and the branch of the host checkout.
-export SANDBOX_DIR := source_directory()
-export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-common-dir')
-export SANDBOX_BRANCH := shell('git branch --show-current')
-export GIT_AUTHOR_NAME := shell('git config user.name || echo agent')
-export GIT_AUTHOR_EMAIL := shell('git config user.email || echo agent@localhost')
 
 # List the recipes (the default)
 [default]
@@ -35,31 +17,3 @@ help:
 # Build the image. The first build takes several minutes.
 build:
     podman build {{ image_dir }} -t {{ image }}
-
-# Open Herdr in the sandbox, in the clone. Close the terminal and the sandbox keeps running: run this again to get the same Herdr session.
-# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: _up
-    podman exec -it -u agent -w {{ workspace }} sandbox {{ if command == '' { 'herdr' } else { command } }}
-
-# Open Herdr in the sandbox of the build profile. In it, `mise run build -- -t name .` and `mise run push -- name ghcr.io/owner/name:tag` work.
-# The session goes through sandbox-entry as root, which drops to agent with the six capabilities. A plain `-u agent` session would have none.
-run-build *command: _up-build
-    podman exec -it -u 0 -w {{ workspace }} sandbox-build sandbox-entry {{ if command == '' { 'herdr' } else { command } }}
-
-# Start what is not running, then wait until sandbox-start is ready.
-[private]
-_up: _proxy
-    [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' sandbox 2>/dev/null)" = true ] || { podman image exists {{ image }} || just --justfile '{{ source_file() }}' build; podman-compose -p sandbox -f {{ compose }} up -d sandbox; }
-    timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done' || { podman logs --tail 20 sandbox >&2; echo 'sandbox: the sandbox is not ready' >&2; exit 1; }
-
-[private]
-_up-build: _proxy
-    ! [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' sandbox 2>/dev/null)" = true ] || { echo 'sandbox: the default sandbox runs. Run `podman rm -f sandbox` first: both write to the same volumes.' >&2; exit 1; }
-    [ "$(podman inspect -f '{{ "{{.State.Running}}" }}' sandbox-build 2>/dev/null)" = true ] || { podman image exists {{ image }} || just --justfile '{{ source_file() }}' build; podman-compose -p sandbox -f {{ compose }} --profile build up -d sandbox-build; }
-    timeout 180 bash -c 'until podman exec sandbox-build test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done' || { podman logs --tail 20 sandbox-build >&2; echo 'sandbox: the build sandbox is not ready' >&2; exit 1; }
-
-# The sandbox needs the proxy socket and the CA. The proxy sets them up. This recipe only checks that they exist.
-[private]
-_proxy:
-    [ -S '{{ socket }}' ] || { echo 'sandbox: no proxy socket at {{ socket }}. Start the proxy: systemctl --user start sandbox-proxy sandbox-bridge.socket (see .sandbox/proxy/README.md).' >&2; exit 1; }
-    [ -f '{{ ca }}' ] || { echo 'sandbox: no CA at {{ ca }}. Make it as .sandbox/proxy/README.md says.' >&2; exit 1; }
