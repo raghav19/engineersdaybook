@@ -31,20 +31,23 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-Start the host proxy first. You need `podman-compose` (tested with version 1.6.0). Then build the image and run the sandbox:
+Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0) and `git`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
 
 ```shell
-podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
-just sandbox run     # starts the container if it does not run, and opens Herdr
+just sandbox build   # builds the image, tags it with the commit and pushes it to ghcr.io. The first build takes several minutes.
+just sandbox run     # makes the container if it does not exist, starts it if it stopped, and opens Herdr
 ```
 
 `compose.yaml` declares the volume `sandbox-home`. The first `run` makes it. The owner of `/home/agent` in the image, user `agent`, becomes the owner of a new volume. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
 
 | Command | What it does |
 |---|---|
-| `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
+| `just sandbox run` | Makes the container if it does not exist, and starts it if it stopped. A running container stays as it is. Waits until the container is healthy, then opens Herdr with `podman-compose exec`. Close the terminal and the sandbox keeps running. |
+| `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)` for the container. It is healthy after `sandbox-start` finishes. |
 | `podman logs -f sandbox` | Follows the log. |
-| `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
+| `podman stop sandbox` | Stops the container. The next `run` starts the same container. |
+| `just sandbox rm` | Removes the container. The volume stays. Run it after you edit `compose.yaml` or rebuild the image, then run `just sandbox run`. |
+| `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
 
 ## Hardening
 
