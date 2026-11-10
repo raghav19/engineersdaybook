@@ -1,7 +1,7 @@
 #!/bin/sh
 # The command of the sandbox container. It starts the relay to the egress proxy, then it runs your command.
 # Example: sandbox-entry bash --login -i
-# The container starts as the user agent. compose.yaml gives the agent container no capability. It gives the build container the capabilities of buildah.
+# The container starts as the user agent. compose.yaml gives the container no capability.
 # If a step fails, the script prints the reason and exits with 1.
 set -eu
 
