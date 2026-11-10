@@ -42,6 +42,10 @@ help:
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 run *command: _check
+    # just stops the recipe here if the proxy socket or the CA is missing. The proxy units make them.
+    # {{ if path_exists(SANDBOX_SOCKET / 'proxy.sock') == 'true' { 'ok' } else { error('sandbox: no proxy socket at ' + SANDBOX_SOCKET / 'proxy.sock. Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md).') } }}
+    # {{ if path_exists(SANDBOX_CA) == 'true' { 'ok' } else { error('sandbox: no CA at ' + SANDBOX_CA + '. Make the CA: see .sandbox/proxy/README.md.') } }}
+
     # Make the container if it does not exist, and start it if it stopped. A running container stays as it is.
     # --wait waits for the healthcheck in compose.yaml.
     podman-compose up -d --no-recreate \
@@ -64,12 +68,8 @@ rm:
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 build *args:
-    # The access token of Bitwarden is the systemd credential of the proxy. Stop here if it is missing.
-    [ -f '{{ credential }}' ] || { \
-        echo "sandbox: no credential at {{ credential }}."; \
-        echo "Make it once: see .sandbox/proxy/README.md, step 6. There is no password prompt after that."; \
-        exit 1; \
-    } >&2
+    # The access token of Bitwarden is the systemd credential of the proxy. just stops the recipe here if the file is missing.
+    # {{ if path_exists(credential) == 'true' { 'ok' } else { error('sandbox: no credential at ' + credential + '. Make it once: see .sandbox/proxy/README.md, step 6. There is no password prompt after that.') } }}
 
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
     # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
@@ -92,24 +92,11 @@ build *args:
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
 
-# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe checks that they exist.
-# It also stops if an older setup left a container named sandbox.
-# It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
+# Stops if an older setup left a container named sandbox. It must run podman, so it is a shell command.
+# It is a dependency of `run` only. The checks for the proxy socket and the CA are in `run`.
 [private]
 [no-exit-message]
 _check:
-    [ -S "$SANDBOX_SOCKET/proxy.sock" ] || { \
-        echo "sandbox: no proxy socket at $SANDBOX_SOCKET/proxy.sock."; \
-        echo "Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md)."; \
-        exit 1; \
-    } >&2
-
-    [ -f "$SANDBOX_CA" ] || { \
-        echo "sandbox: no CA at $SANDBOX_CA."; \
-        echo "Make the CA: see .sandbox/proxy/README.md."; \
-        exit 1; \
-    } >&2
-
     # A container named sandbox must come from this compose.yaml. An older setup left one with this name.
     [ -z "$(podman ps -a -q --filter name=^sandbox$)" ] || [ -n "$(podman ps -a -q --filter name=^sandbox$ --filter label=com.docker.compose.project=agent-sandbox)" ] || { \
         echo "sandbox: the container sandbox is from an older setup. It does not start as the user agent."; \
