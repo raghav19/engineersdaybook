@@ -1,0 +1,16 @@
+# iron-proxy, the only way out of the sandbox. See README.md in this folder for the one-time steps.
+# bws run gives the real tokens to the proxy. The Bitwarden access token comes from the systemd credential bws-token,
+# so it is not in this file and not in the arguments.
+[Unit]
+Description=iron-proxy: egress proxy of the sandbox
+
+[Service]
+WorkingDirectory=%h/.local/state/sandbox
+LoadCredentialEncrypted=bws-token:%h/.config/sandbox/bws-token.cred
+ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec %h/.local/share/mise/shims/bws run -- /usr/bin/env -u BWS_ACCESS_TOKEN %h/.local/share/mise/shims/iron-proxy -config %E/sandbox/iron-proxy.yaml'
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

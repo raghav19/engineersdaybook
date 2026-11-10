@@ -1,0 +1,11 @@
+# The Unix socket that the sandbox mounts. Only the host user can open it.
+[Unit]
+Description=Socket of the sandbox proxy bridge
+
+[Socket]
+ListenStream=%t/sandbox/proxy.sock
+SocketMode=0600
+DirectoryMode=0700
+
+[Install]
+WantedBy=sockets.target
