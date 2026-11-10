@@ -31,7 +31,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0), `git` and `timeout`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
+Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0) and `git`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
 
 ```shell
 podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
@@ -42,7 +42,8 @@ just sandbox run     # makes the container if it does not exist, starts it if it
 
 | Command | What it does |
 |---|---|
-| `just sandbox run` | Makes the container if it does not exist, and starts it if it stopped. A running container stays as it is. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
+| `just sandbox run` | Makes the container if it does not exist, and starts it if it stopped. A running container stays as it is. Waits until the container is healthy, then opens Herdr with `podman-compose exec`. Close the terminal and the sandbox keeps running. |
+| `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)` for the container. It is healthy after `sandbox-start` finishes. |
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The next `run` starts the same container. |
 | `just sandbox rm` | Removes the container. The volume stays. Run it after you edit `compose.yaml` or rebuild the image, then run `just sandbox run`. |

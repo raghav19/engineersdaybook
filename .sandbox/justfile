@@ -15,7 +15,6 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 git            := require("git")
 podman         := require("podman")
 podman_compose := require("podman-compose")
-timeout        := require("timeout")
 
 compose := podman_compose + ' -f ' + source_directory() / 'compose.yaml'
 
@@ -34,10 +33,11 @@ help:
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 # --no-recreate leaves a running container alone and starts a stopped one.
+# --wait waits for the healthcheck in compose.yaml. A timeout of --wait-timeout does not fail by itself, so `healthcheck run` checks the result.
 run *command: _check
-    {{ compose }} up -d --no-recreate sandbox
-    {{ timeout }} 180 bash -c 'until {{ podman }} exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
-    {{ podman }} exec -it -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
+    {{ compose }} up -d --no-recreate --wait --wait-timeout 180 sandbox
+    {{ podman }} healthcheck run sandbox || { echo 'sandbox: not ready after 180 s. See: podman logs sandbox' >&2; exit 1; }
+    {{ compose }} exec -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
 
 # Remove the container. The volume sandbox-home stays, so the clone and the logins stay.
 rm:
