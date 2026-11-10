@@ -57,17 +57,19 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 
    ```bash
    systemctl --user link "$REPO"/.sandbox/proxy/sandbox-{proxy.service,bridge.service,bridge.socket}
-   systemctl --user enable --now sandbox-proxy.service sandbox-bridge.socket
+   systemctl --user enable --now sandbox-proxy.service
    ```
+
+   The proxy unit starts the socket of the bridge (`Wants=`). You manage the proxy unit only. The socket has `PartOf=` the proxy, so a stop or a restart of the proxy reaches it.
 
 The Bitwarden project needs a key for each name in the table below, with `GITHUB_TOKEN` for the registry.
 
 ## Daily use
 
 ```bash
-systemctl --user start sandbox-proxy.service sandbox-bridge.socket
-systemctl --user stop sandbox-bridge.socket sandbox-bridge.service sandbox-proxy.service
-systemctl --user restart sandbox-proxy.service    # also after you edit iron-proxy.yaml
+systemctl --user start sandbox-proxy.service     # starts the socket too
+systemctl --user stop sandbox-proxy.service      # stops the socket and the bridge too
+systemctl --user restart sandbox-proxy.service   # also after you edit iron-proxy.yaml
 systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 journalctl --user -u sandbox-proxy -f             # the audit log: one JSON line for each request
 ```

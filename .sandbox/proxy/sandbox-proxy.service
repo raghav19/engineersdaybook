@@ -3,6 +3,8 @@
 # so it is not in this file and not in the arguments.
 [Unit]
 Description=iron-proxy: egress proxy of the sandbox
+# Wants= starts the socket of the bridge with the proxy. The socket has PartOf=, so a stop or a restart of the proxy reaches it.
+Wants=sandbox-bridge.socket
 
 [Service]
 WorkingDirectory=%h/.local/state/sandbox

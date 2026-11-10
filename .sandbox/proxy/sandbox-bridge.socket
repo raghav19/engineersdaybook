@@ -1,11 +1,12 @@
 # The Unix socket that the sandbox mounts. Only the host user can open it.
 [Unit]
 Description=Socket of the sandbox proxy bridge
+# sandbox-proxy.service starts this socket (Wants=). A stop or a restart of the proxy stops or restarts the socket.
+PartOf=sandbox-proxy.service
 
 [Socket]
 ListenStream=%t/sandbox/proxy.sock
 SocketMode=0600
 DirectoryMode=0700
-
-[Install]
-WantedBy=sockets.target
+# Remove the socket file at a stop, so that a missing file means the proxy is down.
+RemoveOnStop=yes
