@@ -103,6 +103,8 @@ The grammar comes from `eugenioenko/ttt-plugins`, path `lang-just/syntaxes/just.
 
 **We do not carry it.** This sandbox ships no grammar and no `justfile` server. A `justfile` opens as plain text, and `just-lsp` is out of `tools/lsp.toml`, because nothing could start it without the grammar. The cost is live diagnostics and highlighting in two files, one of them about 350 lines. `just` itself still reports a bad recipe when you run it. The alternative was one vendored file of 18 KB, its MIT notice, and three coordinated settings entries. The mechanism above stays recorded for two reasons. The choice is reversible with one file, and nobody should have to derive the two-route rule again.
 
+**The host does carry it.** The host TTT 1.11.0 has the `lang-just` plugin, as a copy of the `lang-just` directory from `eugenioenko/ttt-plugins` at commit `bb2e2dd` in `~/.config/ttt/plugins/lang-just/`. The plugin has a manifest and the same grammar file, with no Lua code and no permissions, so TTT shows no approval dialog. It matches `justfile`, `.justfile` and `*.just`. The sandbox is not changed. We did not look at the host highlighting on a screen.
+
 The durable answer is upstream. The gap is in the 125 entry table of `textmate-go`, and the same author already ships the grammar in `ttt-plugins/lang-just`. If Just joined that table, a later TTT would handle a `justfile` with no config at all.
 
 ## 3. How TTT starts a language server
