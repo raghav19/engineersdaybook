@@ -35,16 +35,17 @@ Start the host proxy first. You need `podman-compose` (tested with version 1.6.0
 
 ```shell
 podman build .sandbox/image -t localhost/sandbox-dev:latest   # once. The first build takes several minutes.
-just sandbox run     # starts the container if it does not run, and opens Herdr
+just sandbox run     # makes the container if it does not exist, starts it if it stopped, and opens Herdr
 ```
 
 `compose.yaml` declares the volume `sandbox-home`. The first `run` makes it. The owner of `/home/agent` in the image, user `agent`, becomes the owner of a new volume. The container mounts the `.git` folder of the repo that you run `just` in, read-only, and clones it. The clone has the git identity `agent`. Set yours with `git config` in the clone.
 
 | Command | What it does |
 |---|---|
-| `just sandbox run` | Starts the container if it does not run. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
+| `just sandbox run` | Makes the container if it does not exist, and starts it if it stopped. A running container stays as it is. Opens Herdr with `podman exec -it sandbox herdr`. Close the terminal and the sandbox keeps running. |
 | `podman logs -f sandbox` | Follows the log. |
-| `podman stop sandbox` | Stops the container. The volume stays. The next `run` replaces the container. |
+| `podman stop sandbox` | Stops the container. The next `run` starts the same container. |
+| `just sandbox rm` | Removes the container. The volume stays. Run it after you edit `compose.yaml` or rebuild the image, then run `just sandbox run`. |
 
 ## Hardening
 

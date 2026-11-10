@@ -1,22 +1,20 @@
 # The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the TTT editor. ../justfile loads this file as `mod sandbox`.
 # The container has no network. The host proxy (.sandbox/proxy) is its only way out. compose.yaml defines the container and its volume.
 #
-#   just sandbox run     starts the container if it does not run. Opens Herdr in it.
+#   just sandbox run   make the container if it does not exist, start it if it stopped, and open Herdr in it.
+#   just sandbox rm    remove the container. The volume stays.
 #
 # Make the image once: podman build .sandbox/image -t localhost/sandbox-dev:latest
+# After you edit compose.yaml or rebuild the image, run `just sandbox rm` and then `just sandbox run`.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-socket := env('XDG_RUNTIME_DIR') / 'sandbox'
-ca := home_directory() / '.local/state/sandbox/ca.crt'
 compose := 'podman-compose -f ' + source_directory() / 'compose.yaml'
 
-# compose.yaml reads these variables.
-# podman-compose fails with "name already in use" if the container exists, so the recipe starts the container only if it does not run.
-# --force-recreate replaces a stopped container. The volumes stay.
-export SANDBOX_CA := ca
-export SANDBOX_SOCKET := socket
+# compose.yaml reads these variables from the environment, so they are exported.
+export SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
+export SANDBOX_SOCKET := env('XDG_RUNTIME_DIR') / 'sandbox'
 export SANDBOX_GIT_DIR := shell('git rev-parse --path-format=absolute --git-common-dir')
 export SANDBOX_THEME := home_directory() / '.local/state/omarchy/current/theme'
 export SANDBOX_BRANCH := shell('git branch --show-current')
@@ -28,13 +26,28 @@ help:
 
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+# --no-recreate leaves a running container alone and starts a stopped one.
 run *command: _check
-    podman ps -q --filter name=^sandbox$ | grep -q . || {{ compose }} up -d --force-recreate sandbox
+    {{ compose }} up -d --no-recreate sandbox
     timeout 180 bash -c 'until podman exec sandbox test -e /tmp/sandbox-ready 2>/dev/null; do sleep 1; done'
     podman exec -it -w /home/agent/engineersdaybook sandbox {{ if command == '' { 'herdr' } else { command } }}
+
+# Remove the container. The volume sandbox-home stays, so the clone and the logins stay.
+rm:
+    {{ compose }} down
 
 # The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe only checks that they exist.
 [private]
 _check:
-    [ -S '{{ socket }}/proxy.sock' ] || { echo 'sandbox: no proxy socket at {{ socket }}/proxy.sock. Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md).' >&2; exit 1; }
-    [ -f '{{ ca }}' ] || { echo 'sandbox: no CA at {{ ca }}. See .sandbox/proxy/README.md.' >&2; exit 1; }
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -S "$SANDBOX_SOCKET/proxy.sock" ]; then
+        echo "sandbox: no proxy socket at $SANDBOX_SOCKET/proxy.sock." >&2
+        echo "Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md)." >&2
+        exit 1
+    fi
+    if [ ! -f "$SANDBOX_CA" ]; then
+        echo "sandbox: no CA at $SANDBOX_CA." >&2
+        echo "Make the CA: see .sandbox/proxy/README.md." >&2
+        exit 1
+    fi
