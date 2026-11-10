@@ -1,0 +1,51 @@
+#!/bin/bash
+# The start script of the sandbox. It runs as the user agent, after sandbox-entry, and it is the process that keeps the container alive.
+# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. `just sandbox run` waits for this file, then opens Herdr with `podman exec`.
+# Each step does nothing if its work exists, so a restart does no harm.
+# Values from compose.yaml: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
+set -eu
+
+ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
+headroom_log=/tmp/headroom.log
+rm -f /tmp/sandbox-ready # a restarted container keeps its /tmp
+fail() { echo "sandbox-start: $*" >&2; exit 1; }
+
+# /home/agent is a tmpfs and the root file system is read-only. The image keeps the home files in a skeleton. Copy it at each start.
+# The volumes that the compose file mounts in /home/agent (.claude, .qwen, .headroom, .herdr, .cache) keep their own data.
+cp -a /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
+
+# The clone is private. The sandbox cannot write to /run/sandbox/source, the .git folder of the host repo.
+# The clone starts on the branch of the host checkout. A push goes to GitHub, to a feature branch.
+if [ ! -d "$ws/.git" ]; then
+  git clone --no-hardlinks ${SANDBOX_BRANCH:+--branch "$SANDBOX_BRANCH"} /run/sandbox/source "$ws" || fail "git clone failed (branch: ${SANDBOX_BRANCH:-the default})"
+  git -C "$ws" remote set-url origin "$REPO_URL" || fail "could not set origin to $REPO_URL"
+fi
+(cd "$ws" && prek install --allow-missing-config) || fail "prek install failed"
+
+# Herdr keeps its layout in ~/.config/herdr. The volume herdr (mounted at ~/.herdr) keeps session.json and session-snapshots,
+# so that a new sandbox restores the panes. ln -sfn makes the same links at each start.
+mkdir -p "$HOME/.config/herdr" "$HOME/.herdr/session-snapshots"
+ln -sfn "$HOME/.herdr/session.json" "$HOME/.config/herdr/session.json"
+ln -sfn "$HOME/.herdr/session-snapshots" "$HOME/.config/herdr/session-snapshots"
+
+# The Headroom proxy for Claude Code listens on port 8787. ANTHROPIC_BASE_URL in the .claude/settings.json of the repo points to it.
+# Start it only if it does not answer. Then wait until it answers.
+curl -sf -o /dev/null http://127.0.0.1:8787/health || setsid nohup headroom proxy --host 127.0.0.1 --port 8787 >"$headroom_log" 2>&1 &
+for _ in $(seq 60); do
+  curl -sf -o /dev/null http://127.0.0.1:8787/health && break
+  sleep 1
+done
+curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
+
+# Plugins of Claude Code. They go to the volume claude-home, so a new sandbox finds them.
+# A failure prints a warning and does not stop the script.
+claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin install ponytail@ponytail \
+  || echo "sandbox-start: warning: the ponytail plugin is not installed" >&2
+claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
+  || echo "sandbox-start: warning: the TokenEconomizer plugin is not installed" >&2
+
+# The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `just sandbox down` stops it.
+touch /tmp/sandbox-ready
+trap 'exit 0' TERM INT
+sleep infinity &
+wait
