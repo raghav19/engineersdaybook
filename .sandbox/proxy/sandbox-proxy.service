@@ -11,8 +11,48 @@ WorkingDirectory=%h/.local/state/sandbox
 LoadCredentialEncrypted=bws-token:%h/.config/sandbox/bws-token.cred
 ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec %h/.local/share/mise/shims/bws run -- /usr/bin/env -u BWS_ACCESS_TOKEN %h/.local/share/mise/shims/iron-proxy -config %E/sandbox/iron-proxy.yaml'
 Restart=on-failure
+# Hardening. The proxy reads data that the agent controls, so a bug in it must not give an attacker much. README.md in this folder has the table.
+# Check the result with: systemd-analyze --user security sandbox-proxy.service
+# The proxy cannot gain new privileges, for example through a setuid program.
 NoNewPrivileges=yes
+# The proxy has its own /tmp. It cannot see the temporary files of other programs.
 PrivateTmp=yes
+# The proxy sees an empty /home. It sees only the files that the BindReadOnlyPaths= lines below add.
+# To give the proxy one more file, add a BindReadOnlyPaths= line for it. A symbolic link in the list gives the file that it points to.
+ProtectHome=tmpfs
+# The config of the proxy (a link to the file in the repo).
+BindReadOnlyPaths=%E/sandbox/iron-proxy.yaml
+# The CA of the proxy. The old ssh/ folder in the same state folder stays hidden.
+BindReadOnlyPaths=%h/.local/state/sandbox/ca.crt %h/.local/state/sandbox/ca.key
+# The mise shims, the installed tools and the global tool list. The shims need them to find bws and iron-proxy.
+BindReadOnlyPaths=%h/.local/share/mise %h/.config/mise
+# The mise state and cache go to a folder that exists only while the proxy runs. mise cannot write to the empty /home.
+RuntimeDirectory=sandbox-proxy
+Environment=MISE_STATE_DIR=%t/sandbox-proxy/state MISE_CACHE_DIR=%t/sandbox-proxy/cache
+# The proxy can use only the system calls of a normal service. A system call is a request to the kernel.
+# The list leaves out the calls that attackers use: ptrace (spy on a process), mount, load a kernel module, reboot and unshare.
+# A banned call stops the proxy, and the journal shows "Bad system call". Then add the group that you need, for example @network-io.
+SystemCallFilter=@system-service
+# The proxy cannot make 32-bit system calls on a 64-bit host. The filter does not cover them.
+SystemCallArchitectures=native
+# The proxy can open only IPv4, IPv6 and local (Unix) sockets. It cannot open raw packet sockets or netlink sockets.
+# If the proxy fails with an address family error, add AF_NETLINK.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# The proxy cannot make a new namespace. A namespace is a private view of files, network or users. Many exploits start with one.
+RestrictNamespaces=yes
+# The proxy cannot ask for real-time scheduling. A real-time process runs before all normal processes and can use a whole CPU core, so the desktop freezes.
+RestrictRealtime=yes
+# The proxy cannot call personality(). That call can switch off the address randomization that makes exploits harder.
+LockPersonality=yes
+# The proxy cannot write to /proc/sys and /sys, and it cannot load kernel modules.
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+# The proxy cannot change the control group tree, the system clock or the host name.
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+# Files that the proxy makes are readable by the owner only.
+UMask=0077
 
 [Install]
 WantedBy=default.target
