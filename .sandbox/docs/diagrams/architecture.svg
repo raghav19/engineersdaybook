@@ -1,73 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1620" height="770" viewBox="0 0 1620 770" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1650" height="790" viewBox="0 0 1650 790" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
 </defs>
-<rect x="0" y="0" width="1620" height="770" fill="#ffffff"/>
+<rect x="0" y="0" width="1650" height="790" fill="#ffffff"/>
 <text x="20" y="34" font-size="20" font-weight="bold" fill="#000000">Architecture of the hardened Podman sandbox</text>
 
-<!-- groups -->
-<rect x="20" y="150" width="1220" height="600" rx="8" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<line x1="20" y1="180" x2="1240" y2="180" stroke="#666666" stroke-width="1"/>
-<text x="30" y="171" font-size="14" font-weight="bold" fill="#000000">Host: your user, rootless Podman with crun, systemd user services</text>
-<rect x="330" y="190" width="420" height="530" rx="8" fill="#ffffff" stroke="#82b366" stroke-width="1"/>
-<line x1="330" y1="240" x2="750" y2="240" stroke="#82b366" stroke-width="1"/>
-<text x="340" y="211" font-size="14" font-weight="bold" fill="#000000">Sandbox: Podman container (crun)</text>
-<text x="340" y="231" font-size="12" font-weight="bold" fill="#000000">--network none, read-only root</text>
-<rect x="940" y="190" width="290" height="530" rx="8" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
-<line x1="940" y1="220" x2="1230" y2="220" stroke="#6c8ebf" stroke-width="1"/>
-<text x="950" y="211" font-size="14" font-weight="bold" fill="#000000">Host services</text>
+<rect x="1065" y="20" width="330" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="1230.0" y="43.5" font-weight="bold">Bitwarden project</text><text x="1230.0" y="59.5">GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN,</text><text x="1230.0" y="75.5">QWEN_API_KEY, GITHUB_TOKEN</text></g>
 
-<!-- boxes -->
-<rect x="935" y="10" width="300" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1085" y="33.5" font-weight="bold">Bitwarden project</text><text x="1085" y="49.5">GH_TOKEN, CLAUDE_CODE_OAUTH_TOKEN,</text><text x="1085" y="65.5">QWEN_API_KEY, GITHUB_TOKEN</text></g>
+<rect x="20" y="150" width="1290" height="610" rx="8" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<line x1="20" y1="180" x2="1310" y2="180" stroke="#666666" stroke-width="1"/>
+<g font-weight="bold" font-size="14" text-anchor="start" fill="#000000"><text x="30" y="169.5">Host: your user, rootless Podman with crun, systemd user services</text></g>
 
-<rect x="40" y="260" width="200" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="140" y="293.5" font-weight="bold">Your terminal</text><text x="140" y="309.5">just sandbox run</text><text x="140" y="325.5">podman exec -it</text></g>
+<rect x="40" y="270" width="210" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="145.0" y="303.5" font-weight="bold">Your terminal</text><text x="145.0" y="319.5">just sandbox run</text><text x="145.0" y="335.5">opens Herdr in the container</text></g>
 
-<rect x="40" y="610" width="200" height="90" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="140" y="635.5" font-weight="bold">Read-only mounts</text><text x="140" y="651.5">.git folder of the repo</text><text x="140" y="667.5">ca.crt (the CA of the proxy)</text><text x="140" y="683.5">Omarchy theme</text></g>
+<rect x="40" y="595" width="210" height="125" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="145.0" y="630.0" font-weight="bold">Read-only mounts</text><text x="145.0" y="646.0">.git folder of the repo</text><text x="145.0" y="662.0">ca.crt (the CA of the proxy)</text><text x="145.0" y="678.0">the proxy socket folder</text><text x="145.0" y="694.0">Omarchy theme</text></g>
 
-<rect x="350" y="260" width="380" height="90" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="289.5" font-weight="bold">Agent tools</text><text x="540" y="305.5">Claude Code, Qwen Code, Herdr, TTT</text><text x="540" y="321.5">holds placeholders only</text></g>
+<rect x="330" y="190" width="440" height="550" rx="8" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<line x1="330" y1="260" x2="770" y2="260" stroke="#82b366" stroke-width="1"/>
+<g font-weight="bold" font-size="14" text-anchor="start" fill="#000000"><text x="340" y="213.5">Sandbox: Podman container (crun)</text><text x="340" y="229.5">user agent, no capabilities, no-new-privileges</text><text x="340" y="245.5">--network none, read-only root</text></g>
 
-<rect x="470" y="430" width="260" height="100" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="600" y="468.5" font-weight="bold">Relay (socat)</text><text x="600" y="484.5">127.0.0.1:3128 to the proxy socket</text><text x="600" y="500.5">runs as the user agent, no capability</text></g>
+<rect x="350" y="270" width="400" height="90" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="550.0" y="303.5" font-weight="bold">Agent tools</text><text x="550.0" y="319.5">Claude Code, Qwen Code, Herdr, TTT</text><text x="550.0" y="335.5">holds placeholders, never a real token</text></g>
 
-<rect x="350" y="610" width="380" height="80" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="540" y="638.5" font-weight="bold">sandbox-home (named volume)</text><text x="540" y="654.5">the clone, .claude, .qwen, .headroom,</text><text x="540" y="670.5">.herdr and .cache</text></g>
+<rect x="470" y="440" width="280" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="610.0" y="473.5" font-weight="bold">Relay (socat)</text><text x="610.0" y="489.5">127.0.0.1:3128 to the proxy socket</text><text x="610.0" y="505.5">runs as the user agent, no capability</text></g>
 
-<rect x="960" y="260" width="250" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1085" y="281.5" font-weight="bold">iron-proxy</text><text x="1085" y="297.5">sandbox-proxy.service</text><text x="1085" y="313.5">allowlist, TLS CA, secret swap</text><text x="1085" y="329.5">tunnel 127.0.0.1:18080</text></g>
+<rect x="350" y="620" width="400" height="80" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="550.0" y="648.5" font-weight="bold">sandbox-home (named volume)</text><text x="550.0" y="664.5">the clone, .claude, .qwen, .headroom,</text><text x="550.0" y="680.5">.herdr and .cache</text></g>
 
-<rect x="960" y="430" width="250" height="100" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1085" y="468.5" font-weight="bold">Socket unit and</text><text x="1085" y="484.5" font-weight="bold">systemd-socket-proxyd</text><text x="1085" y="500.5">sandbox-bridge.socket</text></g>
+<rect x="930" y="190" width="360" height="380" rx="8" fill="#ffffff" stroke="#6c8ebf" stroke-width="1"/>
+<line x1="930" y1="220" x2="1290" y2="220" stroke="#6c8ebf" stroke-width="1"/>
+<g font-weight="bold" font-size="14" text-anchor="start" fill="#000000"><text x="940" y="209.5">Host services: real tokens, CA key</text></g>
 
-<rect x="1370" y="255" width="230" height="100" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="13" text-anchor="middle" fill="#000000"><text x="1485" y="281.5" font-weight="bold">Allowed hosts</text><text x="1485" y="297.5">github.com, api.anthropic.com,</text><text x="1485" y="313.5">the Qwen endpoint, ghcr.io and</text><text x="1485" y="329.5">the rest of the allowlist</text></g>
+<rect x="950" y="240" width="320" height="120" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="1110.0" y="272.5" font-weight="bold">iron-proxy (sandbox-proxy.service)</text><text x="1110.0" y="288.5">1. allowlist: any other host gets 403</text><text x="1110.0" y="304.5">2. ends the TLS with its own CA</text><text x="1110.0" y="320.5">3. swaps a placeholder for the real token</text><text x="1110.0" y="336.5">tunnel 127.0.0.1:18080</text></g>
 
-<!-- edges -->
-<g stroke="#333333" stroke-width="2" fill="none" marker-end="url(#a)">
-<line x1="240" y1="305" x2="350" y2="305"/>
-<line x1="595" y1="350" x2="595" y2="430"/>
-<line x1="410" y1="350" x2="410" y2="610"/>
-<line x1="730" y1="480" x2="960" y2="480"/>
-<line x1="1085" y1="430" x2="1085" y2="350"/>
-<line x1="1210" y1="305" x2="1370" y2="305"/>
-<line x1="240" y1="655" x2="330" y2="655"/>
-</g>
-<line x1="1085" y1="80" x2="1085" y2="260" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
+<rect x="950" y="440" width="320" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="1110.0" y="481.5" font-weight="bold">Socket unit and systemd-socket-proxyd</text><text x="1110.0" y="497.5">sandbox-bridge.socket</text></g>
 
-<!-- edge labels -->
-<g font-size="12" text-anchor="middle" fill="#000000">
-<rect x="248" y="297" width="74" height="16" fill="#ffffff"/><text x="285" y="309.5">podman exec</text>
-<rect x="512" y="382" width="166" height="16" fill="#ffffff"/><text x="595" y="394.5">HTTPS_PROXY 127.0.0.1:3128</text>
-<rect x="357" y="472" width="106" height="16" fill="#ffffff"/><text x="410" y="484.5">reads and writes</text>
-<rect x="774" y="464" width="142" height="32" fill="#ffffff"/><text x="845" y="476.5">Unix socket proxy.sock</text><text x="845" y="492.5">(read-only mount)</text>
-<rect x="1026" y="382" width="118" height="16" fill="#ffffff"/><text x="1085" y="394.5">loopback TCP 18080</text>
-<rect x="1272" y="289" width="68" height="32" fill="#ffffff"/><text x="1306" y="301.5">allowed</text><text x="1306" y="317.5">hosts only</text>
-<rect x="1020" y="100" width="130" height="32" fill="#ffffff"/><text x="1085" y="112.5">real tokens at start</text><text x="1085" y="128.5">(bws run)</text>
-<rect x="262" y="647" width="46" height="16" fill="#ffffff"/><text x="285" y="659.5">mounts</text>
-</g>
+<rect x="1390" y="255" width="240" height="100" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="13" text-anchor="middle" fill="#000000"><text x="1510.0" y="285.5" font-weight="bold">Allowed hosts</text><text x="1510.0" y="301.5">github.com, api.anthropic.com,</text><text x="1510.0" y="317.5">the Qwen endpoint, ghcr.io and</text><text x="1510.0" y="333.5">the rest of the allowlist</text></g>
+
+<path d="M250,315 L350,315" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M650,360 L650,440" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M400,360 L400,620" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M750,485 L950,485" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M1110,440 L1110,360" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1270,305 L1390,305" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1230,90 L1230,240" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
+<path d="M250,657 L330,657" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<rect x="262.5" y="304.5" width="75.0" height="21" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="300.0" y="319.5">runs Herdr</text></g>
+<rect x="562.1" y="389.5" width="175.8" height="21" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="650.0" y="404.5">HTTPS_PROXY 127.0.0.1:3128</text></g>
+<rect x="343.6" y="479.5" width="112.8" height="21" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="400.0" y="494.5">reads and writes</text></g>
+<rect x="774.7" y="459.5" width="150.6" height="51" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="850.0" y="473.5">the only way out:</text><text x="850.0" y="489.5">Unix socket proxy.sock</text><text x="850.0" y="505.5">(read-only mount)</text></g>
+<rect x="1047.3" y="389.5" width="125.4" height="21" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="1110.0" y="404.5">loopback TCP 18080</text></g>
+<rect x="1292.5" y="287.0" width="75.0" height="36" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="1330.0" y="301.5">allowed</text><text x="1330.0" y="317.5">hosts only</text></g>
+<rect x="1116.9" y="102.0" width="226.2" height="36" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="1230.0" y="116.5">real tokens at start (bws run)</text><text x="1230.0" y="132.5">access token: a systemd credential</text></g>
+<rect x="265.1" y="646.5" width="49.8" height="21" fill="#ffffff" fill-opacity="0.92"/>
+<g font-size="12" text-anchor="middle" fill="#000000"><text x="290.0" y="661.5">mounts</text></g>
 </svg>
