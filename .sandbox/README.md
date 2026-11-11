@@ -34,7 +34,7 @@ The network path in detail:
 | `sandbox-bridge.service` | A systemd unit. systemd starts it at the first connection. It runs `systemd-socket-proxyd`, which copies the bytes from `proxy.sock` to iron-proxy at `127.0.0.1:18080`. iron-proxy listens on TCP only, so the host needs the bridge. |
 | The sentry | The guest kernel of gVisor. It runs the system calls of the agent. It runs as your user on the host. |
 | The gofer | A gVisor helper process on the host. The sentry does not open host files. The gofer opens them for it. With `host-uds=open`, the gofer connects to `proxy.sock` and gives the open connection to the sentry. |
-| The nftables rule | A firewall rule on the host. It lets only your user connect to the proxy ports 18080 to 18089. A TCP port on `127.0.0.1` has no check of the user, so without the rule any local user could use the proxy and its real tokens. |
+| The nftables rule | A firewall rule on the host. It lets only your user connect to the proxy ports 18080 to 18084. A TCP port on `127.0.0.1` has no check of the user, so without the rule any local user could use the proxy and its real tokens. |
 
 The connection changes its carrier at three points, and the bytes stay the same. The tool opens a TCP connection to `socat`. `socat` opens a Unix socket connection to `proxy.sock`. `systemd-socket-proxyd` opens a new TCP connection to iron-proxy. The diagram labels the carrier on each line.
 
@@ -93,7 +93,7 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 | `User=agent` (uid 1000) | The container starts as `agent`, not as root. In rootless Podman, `agent` is a subuid, not your host user. The sentry and the gofer run as your host user. |
 | `MemoryMax`, `MemorySwapMax`, `TasksMax`, `CPUQuota` in `[Service]` | 3 GB of memory with no swap, 2048 host threads, 4 CPUs. gVisor ignores the limits of Podman, so they are on the service. The kernel kills a sandbox that goes over a limit. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
-| The nftables rule `proxy/sandbox-guard.nft` | Only your user may connect to the proxy ports 18080 to 18089 on `127.0.0.1`. It separates users, not programs of the same user. `just sandbox setup` installs it with `sudo`. |
+| The nftables rule `proxy/sandbox-guard.nft` | Only your user may connect to the proxy ports 18080 to 18084 on `127.0.0.1`. It separates users, not programs of the same user. `just sandbox setup` installs it with `sudo`. |
 
 ## Developer workflow
 

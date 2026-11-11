@@ -19,7 +19,7 @@ The owner wants the agent sandbox to run in gVisor (`runsc`) in place of `crun`,
 | `.sandbox/sandbox.container` | New. The Quadlet unit. It replaces `compose.yaml`. It has the limits and the `ExecStartPost` line that brings up `lo`. |
 | `.sandbox/compose.yaml` | Removed. |
 | `.sandbox/runsc.conf` | New. The gVisor flags for Podman, with a comment for each flag. It has no host path, so `setup` links it. |
-| `.sandbox/proxy/sandbox-guard.nft` and `sandbox-guard.service` | New. The firewall rule and its system unit. Only the owner may connect to the proxy ports 18080 to 18089 on `127.0.0.1`. |
+| `.sandbox/proxy/sandbox-guard.nft` and `sandbox-guard.service` | New. The firewall rule and its system unit. Only the owner may connect to the proxy ports 18080 to 18084 on `127.0.0.1`. |
 | `.sandbox/justfile` | `setup` links the unit, `runsc.conf` and `~/.config/sandbox/repo.git` (the `.git` folder of the repo). It installs the firewall rule with `sudo`. `run` restarts `sandbox.service`, which replaces the old container. `rm` stops it. The recipe `_check` is gone. `podman-compose` is no longer a requirement. `runsc`, `nft` and `sudo` are. |
 | `.sandbox/README.md`, `.sandbox/proxy/README.md`, `.sandbox/docs/diagrams/` | The new runtime, the network diagram (with a carrier label on each line and the firewall rule), the glossary and the trade-offs. |
 | `.sandbox/image/` | Comments only. They named `compose.yaml`. |
@@ -28,7 +28,7 @@ The image, `sandbox-entry`, `sandbox-start` and the proxy units do not change.
 
 ## The firewall rule
 
-A TCP or UDP port on `127.0.0.1` has no check of the user. Any local user could connect to iron-proxy and use the real tokens through the placeholders. `sandbox-guard.nft` rejects connections to 18080-18089 from every uid except the owner. The bridge runs as the owner, so it still connects.
+A TCP or UDP port on `127.0.0.1` has no check of the user. Any local user could connect to iron-proxy and use the real tokens through the placeholders. `sandbox-guard.nft` rejects connections to 18080-18084 (the five ports of `iron-proxy.yaml`) from every uid except the owner. The bridge runs as the owner, so it still connects.
 
 - It needs root. `just sandbox setup` copies the rule and the unit to `/etc` with `sudo`. A link to a file in the repo would let the user change what root runs.
 - It is its own table, `inet sandbox_guard`. `ufw` is active on the host of the owner and stays as it is. The `nftables` service is off and stays off.

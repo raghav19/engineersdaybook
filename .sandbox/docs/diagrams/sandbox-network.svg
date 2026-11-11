@@ -37,7 +37,7 @@
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="390.0" y="483.8" font-weight="bold">Internet</text><text x="390.0" y="504.8">allowed hosts</text></g>
 
 <rect x="680" y="614" width="260" height="84" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="810.0" y="637.3" font-weight="bold">nftables rule</text><text x="810.0" y="658.3">only your user may connect</text><text x="810.0" y="679.3">to ports 18080 to 18089</text></g>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="810.0" y="637.3" font-weight="bold">nftables rule</text><text x="810.0" y="658.3">only your user may connect</text><text x="810.0" y="679.3">to ports 18080 to 18084</text></g>
 
 <path d="M210,248 L270,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M460,248 L600,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
