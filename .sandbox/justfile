@@ -78,10 +78,9 @@ setup:
         chmod 0644 "$state/ca.crt"
     fi
 
-    # The proxy config, the hosts file of the proxy and the kubeconfig of the sandbox are links to the files in this folder.
+    # The proxy config and the hosts file of the proxy are links to the files in this folder.
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
     ln -sf "$proxy/hosts" "$HOME/.config/sandbox/hosts"
-    ln -sf '{{ source_directory() }}/cluster.yaml' "$HOME/.config/sandbox/cluster.yaml"
 
     # The k3s cluster on this host. The proxy checks the certificate of k3s, and k3s has a private CA, so the proxy needs the CA.
     # The CA is public data in your kubeconfig. Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.

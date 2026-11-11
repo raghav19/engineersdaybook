@@ -45,7 +45,7 @@ The recipe asks for your `sudo` password and for the access token. Nothing shows
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
-3. Links `iron-proxy.yaml`, `hosts` and `../cluster.yaml` into `~/.config/sandbox`. Builds the CA bundle of the proxy from your kubeconfig. Makes the token of the cluster if it does not exist. See [The k3s cluster](#the-k3s-cluster).
+3. Links `iron-proxy.yaml` and `hosts` into `~/.config/sandbox`. Builds the CA bundle of the proxy from your kubeconfig. Makes the token of the cluster if it does not exist. See [The k3s cluster](#the-k3s-cluster).
 4. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
 5. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
 6. Links the three units, enables `sandbox-proxy.service` and restarts it.
@@ -200,7 +200,7 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 | `just sandbox setup` stops at the firewall step | `sudo` refused the password, or `nft` could not load the rule. | Run `sudo -v`. Run `sudo nft -c -f /etc/sandbox-guard.nft` to check the file. Run `journalctl -u sandbox-guard`. Then run `just sandbox setup` again. |
 | `reading secret file "tokens/NAME": no such file` in the log | The token file of a cluster does not exist yet. | Run `just sandbox setup`. |
 | `502` and `x509: certificate signed by unknown authority` in the log | The proxy does not trust the CA of a cluster. | Run `just sandbox setup`. |
-| `SNI/Host mismatch` in the log | The client sent the host name in a different case, or an IP address. | Use a lower-case host name in `cluster.yaml`. |
+| `SNI/Host mismatch` in the log | The client sent the host name in a different case, or an IP address. | Use a lower-case host name in `image/configs/tools/cluster.yaml`. |
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
 | `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |

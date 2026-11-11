@@ -64,16 +64,13 @@ Environment=GIT_COMMITTER_EMAIL=agent@localhost
 Environment=MISE_TRUSTED_CONFIG_PATHS=/home/agent/engineersdaybook
 Environment=MISE_IGNORED_CONFIG_PATHS=/home/agent/engineersdaybook/mise.toml
 Environment=CLAUDE_CONFIG_DIR=/home/agent/.claude
-Environment=KUBECONFIG=/etc/sandbox/cluster.yaml
 Environment=DISABLE_UPDATES=1
 Environment=HEADROOM_HARD_WATCHDOG_SECS=0
-# The first five mounts have the flag :ro. The agent cannot change the CA, the socket folder, the repo, the kubeconfig or the theme.
+# The first four mounts have the flag :ro. The agent cannot change the CA, the socket folder, the repo or the theme.
 # repo.git is a link that `just sandbox setup` makes. It points to the .git folder of your main checkout.
 Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
 Volume=%t/sandbox:/run/sandbox/proxy:ro
 Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
-# cluster.yaml is the kubeconfig of the sandbox. `just sandbox setup` links it. KUBECONFIG points to it. It has a placeholder and no secret.
-Volume=%h/.config/sandbox/cluster.yaml:/etc/sandbox/cluster.yaml:ro
 Volume=%h/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro
 # The volume keeps the clone, the logins and the histories when the container is replaced.
 Volume=sandbox-home:/home/agent

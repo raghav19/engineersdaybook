@@ -107,7 +107,7 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `setup` | Links `iron-proxy` and `bws`, makes the CA and renders the proxy config and the kubeconfig of the sandbox (see "Clusters"). Installs the firewall rule with `sudo`, encrypts the token and starts the proxy units. Links the container unit, `runsc.conf` and the repo. Run it again after you edit a file in `proxy/`, `cluster.yaml`, `runsc.conf` or `sandbox.container`. |
+| 1 | `setup` | Links `iron-proxy` and `bws`, makes the CA and links the proxy config and the hosts file. It builds the CA bundle of the proxy and makes the token of the cluster (see "Clusters"). Installs the firewall rule with `sudo`, encrypts the token and starts the proxy units. Links the container unit, `runsc.conf` and the repo. Run it again after you edit a file in `proxy/`, `runsc.conf` or `sandbox.container`. |
 | 2 | `build` | Builds `image/` and pushes it to `ghcr.io`. The registry cache makes later builds faster. It uses the credential that `setup` makes, and asks for no password. |
 | 3 | `run` | Restarts `sandbox.service`. Waits until the container is healthy, then opens Herdr with `podman exec`. Close the terminal and the sandbox keeps running until the next `run`. |
 
@@ -147,23 +147,23 @@ Flags go to `podman build`: `just sandbox build --no-cache` updates the tools th
 The sandbox reaches the k3s cluster on your host through the same proxy as every other host. A plain `kubectl` works in the sandbox with no flag, and so do `flux`, `helm` and `k9s`. The sandbox holds no cluster credential. It holds a placeholder, and the proxy swaps in the real token for that host only.
 
 ```text
-kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml (a placeholder token, no CA)
+kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml, set by mise (a placeholder token, no CA)
   → socat → proxy.sock → bridge → iron-proxy
       the rule:    the host of k3s, and the methods that may pass
       the secret:  tokens/k8s_dev, a file on the host, replaces the placeholder
   → the k3s API on this host
 ```
 
-- **One kubeconfig for the sandbox.** `cluster.yaml` has one context, `k8s_dev`. The server is `kubernetes.default.svc`, a name that every k3s certificate lists, so the file is the same on each host. `setup` links the file, and the unit mounts it read-only.
+- **One kubeconfig for the sandbox.** `image/configs/tools/cluster.yaml` has one context, `k8s_dev`. The server is `kubernetes.default.svc`, a name that every k3s certificate lists, so the file is the same on each host. The Dockerfile copies it to `/etc/sandbox/cluster.yaml`, and `image/mise.toml` sets `KUBECONFIG` to it for each shell and each tool. To change it, run `just sandbox build`.
 - **A name for the local cluster.** The proxy needs a name and not an IP address, and it refuses `127.0.0.1`. So the proxy has its own hosts file, `proxy/hosts`, with one line. It maps `kubernetes.default.svc` to `10.42.0.1`, the address of the bridge `cni0`, where k3s listens too. That is the first address of the default pod range of k3s. The hosts file of your system does not change.
 - **One rule and one secret in the proxy.** They are plain text in `proxy/iron-proxy.yaml`. See [the k3s cluster](proxy/README.md#the-k3s-cluster).
 - **A token on the host.** `just sandbox setup` makes a token for the ServiceAccount `sandbox-agent` with `kubectl create token`. It writes the token to `~/.local/state/sandbox/tokens/k8s_dev`, and the proxy reads that file. `setup` makes the token once. It lasts one year, and the sandbox never holds it. Run the recipe again to renew it.
 - **RBAC is the limit.** The rule allows every method for this host, so the rights of the ServiceAccount decide. It reads the cluster, it cannot read Secrets, and it can write in the namespace `sandbox-dev`. To make the proxy stricter, remove methods from the rule.
 - **Another cluster** later means a second context in `cluster.yaml`, and a second rule and secret in `iron-proxy.yaml`.
 
-Run `just sandbox setup`, then `just sandbox run`.
+Run `just sandbox build` once, because the kubeconfig is in the image. Then run `just sandbox setup` and `just sandbox run`.
 
-`kubectx` is in the image. With one context it has nothing to switch, and a context switch fails on the read-only file.
+`kubectx` is in the image. With one context it has nothing to switch, and a switch fails because root owns the file and the root file system is read-only.
 
 ## Hardening
 
@@ -243,10 +243,9 @@ flowchart TD
 
 | Path | Content |
 |---|---|
-| `image/` | The image: the `Dockerfile`, `sandbox-entry`, `sandbox-start`, the tool lists in `tools/` and the settings in `configs/`. |
+| `image/` | The image: the `Dockerfile`, `sandbox-entry`, `sandbox-start`, the tool lists in `tools/` and the settings in `configs/`. `configs/tools/cluster.yaml` is the kubeconfig of the sandbox. |
 | `sandbox.container` | The Quadlet unit of the container: its environment, hardening flags, mounts, volume and limits. |
 | `runsc.conf` | The gVisor flags for Podman, with the reason for each flag. |
-| `cluster.yaml` | The kubeconfig of the sandbox for the k3s cluster on this host. `setup` renders it. |
 | `justfile` | `setup`, `run`, `rm` and `build`. |
 | `proxy/` | The host proxy and the firewall rule. See [`proxy/README.md`](proxy/README.md). |
 | `docs/diagrams/` | The diagrams of this README. See [`docs/diagrams/README.md`](docs/diagrams/README.md). |

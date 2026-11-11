@@ -1,6 +1,5 @@
 # The kubeconfig of the sandbox for the k3s cluster on this host. It holds no secret.
-# `just sandbox setup` links it to ~/.config/sandbox/cluster.yaml. sandbox.container mounts the link read-only as /etc/sandbox/cluster.yaml.
-# KUBECONFIG points to it, so a plain `kubectl` works in the sandbox.
+# The Dockerfile copies it to /etc/sandbox/cluster.yaml. Root owns it, and the root file system is read-only. image/mise.toml sets KUBECONFIG to it, so a plain `kubectl` works in the sandbox.
 # The token is a placeholder. The proxy swaps in the real token for this host only. See proxy/iron-proxy.yaml.
 # The server is kubernetes.default.svc, a name that every k3s certificate lists. It is the same on each host.
 # The sandbox has no network, so it does not resolve the name. The proxy resolves it with proxy/hosts.

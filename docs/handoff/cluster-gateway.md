@@ -7,35 +7,36 @@ The owner wants the agent in the sandbox to reach the k3s cluster on the host wi
 ## The design
 
 ```text
-kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml (a placeholder token, no CA)
+kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml, set by mise (a placeholder token, no CA)
   → socat → proxy.sock → bridge → iron-proxy
       the rule:    the host of k3s, and the methods that may pass
       the secret:  tokens/k8s_dev (a file on the host) replaces the placeholder
   → the k3s API on this host
 ```
 
-- `.sandbox/cluster.yaml` is a plain kubeconfig with one context, `k8s_dev`. The server is `https://kubernetes.default.svc:6443`. The name is the same on each host.
-- `just sandbox setup` links `iron-proxy.yaml`, `hosts` and `cluster.yaml` into `~/.config/sandbox`. It builds `upstream-ca.pem` from the system CAs and the CA in your kubeconfig. `.sandbox/proxy/hosts` has one line: `10.42.0.1 kubernetes.default.svc` (the address of `cni0`, the first address of the default pod range of k3s). The proxy unit binds it over `/etc/hosts`, so the system hosts file does not change.
+- `.sandbox/image/configs/tools/cluster.yaml` is a plain kubeconfig with one context, `k8s_dev`. The server is `https://kubernetes.default.svc:6443`. The name is the same on each host.
+- `just sandbox setup` links `iron-proxy.yaml` and `hosts` into `~/.config/sandbox`. It builds `upstream-ca.pem` from the system CAs and the CA in your kubeconfig. `.sandbox/proxy/hosts` has one line: `10.42.0.1 kubernetes.default.svc` (the address of `cni0`, the first address of the default pod range of k3s). The proxy unit binds it over `/etc/hosts`, so the system hosts file does not change.
 - `.sandbox/proxy/iron-proxy.yaml` holds one allowlist rule and one secret for that host, as plain text.
 - `just sandbox setup` makes a one-year token for the ServiceAccount `sandbox-agent` and writes it to `tokens/k8s_dev`, if the file does not exist. The proxy reads the file with a `ttl`.
-- The container mounts `~/.config/sandbox/cluster.yaml` read-only and sets `KUBECONFIG`. There is no generator, no render step and no copy at start.
+- The Dockerfile copies the kubeconfig to `/etc/sandbox/cluster.yaml`, and `image/mise.toml` sets `KUBECONFIG` for the shell and for each shim. There is no mount, no generator, no render step and no copy at start.
 
 ## Decisions of the owner
 
 - No generator and no policy file for now. One cluster, one declarative file. A second cluster means a second block in two files.
-- Mount the kubeconfig. Do not bake it into the image. Use a fixed name that points to the local k3s, so no file has a host-specific value. Rule edits need only a restart of the proxy, so there is no `config` recipe.
+- Bake the kubeconfig into the image. A mount was the first choice, because the file had the host name. Use a fixed name that points to the local k3s, so no file has a host-specific value. Rule edits need only a restart of the proxy, so there is no `config` recipe.
 - Use a one-year token. The sandbox never holds it, so a short life adds little. A token that leaks from the host is the only risk, and deleting the ServiceAccount revokes it. A timer is not needed.
-- Keep `kubectx` in the image. With one context it has nothing to switch, and the read-only mount blocks a switch.
+- Keep `kubectx` in the image. With one context it has nothing to switch, and root owns the kubeconfig on a read-only root file system, so a switch fails.
 
 ## What changed
 
 | File | Change |
 |---|---|
-| `.sandbox/cluster.yaml` | New. The kubeconfig of the sandbox. |
+| `.sandbox/image/configs/tools/cluster.yaml` | New. The kubeconfig of the sandbox. |
+| `.sandbox/image/Dockerfile`, `.sandbox/image/mise.toml` | Copy the file to `/etc/sandbox/cluster.yaml`. Set `KUBECONFIG` in `[env]`. |
 | `.sandbox/proxy/iron-proxy.yaml` | One allowlist rule and one secret for the k3s host. |
 | `.sandbox/justfile` | `setup` links the three files, builds the CA bundle and makes the token once. |
 | `.sandbox/proxy/sandbox-proxy.service` | Sets `SSL_CERT_FILE`. Binds `upstream-ca.pem`, the `tokens` folder and `hosts` (over `/etc/hosts`). |
-| `.sandbox/sandbox.container` | Mounts `cluster.yaml` read-only and sets `KUBECONFIG`. |
+| `.sandbox/sandbox.container` | No kubeconfig mount and no `KUBECONFIG`. |
 | `.sandbox/image/tools/infra.toml` | Adds `kubectx` 0.11. |
 | The READMEs | A "Clusters" section, the rules of the proxy explained, and the rows for daily use and failures. |
 
@@ -60,7 +61,7 @@ The tests ran on the host of the owner on 2026-11-11 against the real k3s (`v1.3
 | Method and path rules | `POST` and `DELETE` got `403` with `rejected_by: allowlist`. A path rule allowed `GET /version` and refused `GET /api`. |
 | The hardened unit | A transient unit with `ProtectHome=tmpfs`, the same binds, `SSL_CERT_FILE` and the syscall filter gave `200` for the cluster and `403` for a refused method. |
 | The fixed name | A transient unit with `ProtectHome=tmpfs` and the one-line `proxy/hosts` bound over `/etc/hosts` through a link gave `200` for `GET /version`. A `POST` of a self-subject review showed `system:serviceaccount:sandbox-agent:sandbox-agent`. The placeholder was swapped, the certificate matched the name, and `example.com` got `403`. |
-| A symlinked kubeconfig as a file mount | In gVisor with `--network none`, `kubectl config view` read the file through a link on the host and showed the fixed server name. |
+| The baked kubeconfig | The old image with the new `image/mise.toml` and `cluster.yaml` mounted over it, in gVisor with `--network none`. `KUBECONFIG` was set for a shim in a non-interactive shell (`kubectl config current-context` gave `k8s_dev`) and for an interactive bash. A write to the file failed. |
 | The token command | `kubectl create token` under `umask 077` gives a file with mode 0600. k3s accepts `--duration=8760h` (the token has an expiry one year ahead). The ServiceAccount `sandbox-agent` already exists in the k3s. |
 | The end-to-end test in a renamed sandbox | A plain `kubectl` with no flag: the version, `auth whoami` as `system:serviceaccount:sandbox-agent:sandbox-agent`, `get nodes` and `get pods -A` work. `get secrets -A` is `Forbidden`. `can-i create deployments` is `yes` in `sandbox-dev` and `no` in `default`. No token in the environment or the kubeconfig. |
 | `kubectl config use-context` on the read-only file | `permission denied`. `kubectl` wants a lock file in the folder. |
@@ -68,9 +69,9 @@ The tests ran on the host of the owner on 2026-11-11 against the real k3s (`v1.3
 
 ## What was not tested
 
+- A full image build with the new `COPY` and the new `kubectx` line. The test above used the old image.
 - The `kubectx` binary. It is not on the host, and the image has no `kubectx` until the next build. The task `sandbox:completions` has no line for it, because I could not check whether it has a `completion` subcommand, and a wrong line breaks the build.
 - `just sandbox setup` as a real command on the host. Its new steps ran by hand with scratch paths.
-- An image build with the new tool.
 - `kubectl exec`, `port-forward`, `logs -f` and watches. They need a pod and a Role.
 - A path rule for one namespace, such as `/api/v1/namespaces/sandbox-dev/*`.
 - A machine with no k3s, or a k3s with another pod range. The address in `proxy/hosts` is then wrong.
@@ -83,9 +84,9 @@ The tests ran on the host of the owner on 2026-11-11 against the real k3s (`v1.3
 
 ## Next steps
 
-1. Merge the PR. Run `just sandbox setup`, then `just sandbox run`.
+1. Merge the PR. Run `just sandbox build`, then `just sandbox setup`, then `just sandbox run`. The old image has no kubeconfig and no `KUBECONFIG`.
    - check: `kubectl config get-contexts` in the sandbox lists `k8s_dev`. `kubectl get --raw /version` works. `kubectl get secrets -A` is `Forbidden`.
-2. Build the image (`just sandbox build`) and check that `kubectx` runs in the sandbox.
+2. Check that `kubectx` runs in the sandbox.
 3. Spike the streams with the approval of the owner: a test namespace, a ServiceAccount and a read-only Role, then `exec`, `port-forward` and `logs -f` through the gateway.
 
 ## Lessons

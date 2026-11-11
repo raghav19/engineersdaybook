@@ -132,6 +132,9 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
+RUN mkdir -p /etc/sandbox && chmod 0755 /etc/sandbox
+COPY --chmod=0644 configs/tools/cluster.yaml /etc/sandbox/cluster.yaml
+
 RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
