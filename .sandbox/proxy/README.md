@@ -28,11 +28,11 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 
 ## How the sandbox uses it
 
-The sandbox PR declares the container as a Podman Quadlet unit with `Requires=sandbox-proxy.service`. `systemctl --user start sandbox` then starts the proxy, the socket and the container in this order. The container has `Network=none`. It shares no network with the proxy. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
+`.sandbox/compose.yaml` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops with a message if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `network_mode: none`. It shares no network with the proxy. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
 
 ## Prerequisites
 
-The host runs only iron-proxy and three systemd units. It needs **no Podman, no crun, no Docker and no socat**. These belong to the sandbox PR. See its README.
+The proxy is iron-proxy and three systemd units. It needs **no Podman, no crun, no Docker and no socat**. `just sandbox build` and `just sandbox run` need Podman on the host. See the [README of the sandbox](../README.md).
 
 | Need | Why | Check |
 |---|---|---|
@@ -66,7 +66,7 @@ You need `age` only if you keep the access token in an `age` file, as the `just 
    ```
 
 4. Link the config: `ln -s "$REPO/.sandbox/proxy/iron-proxy.yaml" ~/.config/sandbox/iron-proxy.yaml`
-5. Prepare Bitwarden Secrets Manager in the Bitwarden web app. Make a project. Add one secret for each name in the column "Variable of the proxy" of the table below (`GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY`, `GITHUB_TOKEN`). Make a machine account with read access to the project. Make an access token for it. Do not paste the token into a chat or a file.
+5. Prepare Bitwarden Secrets Manager in the Bitwarden web app. Make a project. Add one secret for each name in the column "Variable of the proxy" of the table below (`GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY`, `GITHUB_TOKEN`). `GITHUB_TOKEN` needs the scope `write:packages`, because `just sandbox build` uses it to push to `ghcr.io`. Make a machine account with read access to the project. Make an access token for it. Do not paste the token into a chat or a file.
 6. Make the credential. You run this step. It asks for the token and shows nothing as you type.
 
    ```bash
@@ -84,6 +84,14 @@ You need `age` only if you keep the access token in an `age` file, as the `just 
    ```
 
    Both commands are pipes, so they write no plaintext file. `systemd-creds` makes the `.cred` file with mode 0644, so you must run the `chmod`. A copy of the `.cred` file is useless on another machine. Code that runs as the same user here can decrypt it.
+
+   Check the file. The command prints `ok` and does not show the token.
+
+   ```bash
+   systemd-creds --user decrypt --name=bws-token ~/.config/sandbox/bws-token.cred - >/dev/null && echo ok
+   ```
+
+   The error `Failed to read encrypted credential data: Invalid argument` means the file holds the plain token. `systemd-creds` has no password. Run the commands above again. Do not write the token into the file yourself. Only `systemd-creds encrypt` makes a file that `systemd-creds decrypt` can read.
 
 7. Link and start the units:
 

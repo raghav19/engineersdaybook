@@ -72,9 +72,10 @@ rm:
 build *args: (_needs credential)
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
     # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
+    # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
         BWS_ACCESS_TOKEN="$token" \
-        bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
+        bws run -- 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
     # localhost/sandbox-dev:latest is the tag that compose.yaml uses.

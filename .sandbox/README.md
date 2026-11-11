@@ -8,7 +8,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 |---|---|
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `compose.yaml` | The two containers: their environment, hardening flags, mounts and volumes. |
-| `justfile` | `run`. It starts the container with `podman-compose up -d` and opens Herdr in it. |
+| `justfile` | `run`, `rm` and `build`. `run` starts the container with `podman-compose up -d` and opens Herdr in it. |
 
 ## Architecture
 
@@ -31,7 +31,9 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-Start the host proxy first. You need `podman`, `podman-compose` (tested with version 1.6.0) and `git`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
+Do the [one-time setup of the host proxy](proxy/README.md#one-time-setup) first. It installs `iron-proxy` and `bws`, makes the CA, makes the encrypted credential for `just sandbox build`, and starts the proxy units. `just sandbox build` stops if the credential is missing. `just sandbox run` stops if the proxy socket or the CA is missing.
+
+The host needs `podman`, `podman-compose` (tested with version 1.6.0), `git`, `bws` and `systemd-creds`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
 
 ```shell
 just sandbox build   # builds the image, tags it with the commit and pushes it to ghcr.io. The first build takes several minutes.
