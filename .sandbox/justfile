@@ -37,9 +37,8 @@ export SANDBOX_THEME := home_directory() / '.local/state/omarchy/current/theme'
 export SANDBOX_BRANCH := shell(git + ' branch --show-current')
 
 # Stops with a message if a file is missing. A recipe lists the files that it needs on its first line: `build: (_needs credential)`.
-[private]
 _needs file:
-    {{ if path_exists(file) == 'true' { 'true' } else { error('sandbox: missing ' + file + '. See .sandbox/proxy/README.md.') } }}
+    {{ assert(path_exists(file) == 'true', 'sandbox: missing ' + file + '. See .sandbox/proxy/README.md.') }}
 
 # List the recipes (the default)
 [default]
