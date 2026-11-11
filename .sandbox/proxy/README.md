@@ -121,6 +121,8 @@ systemd starts the bridge at the first connection, and the bridge starts the pro
 
 The sandbox holds the placeholder. The proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Any other host gets 403 at the CONNECT. These values must equal the `proxy_value` lines in `iron-proxy.yaml`.
 
+The GitHub MCP server of Claude Code is an exception. `image/configs/agents/managed-settings.json` holds `sandbox-placeholder-GH_TOKEN` as text in its `Authorization` header. Claude Code does not expand `$GH_TOKEN` there. It sends the text as it is, and GitHub answers `Authorization header is badly formatted`. With `${GH_TOKEN}`, Claude Code drops the server without a message. Qwen Code expands `$GH_TOKEN` itself, so `qwen-settings.json` keeps the variable.
+
 | Placeholder in the sandbox | Variable of the proxy | Hosts |
 |---|---|---|
 | `sandbox-placeholder-GH_TOKEN` | `GH_TOKEN` | `github.com`, `api.github.com`, `api.githubcopilot.com` |
