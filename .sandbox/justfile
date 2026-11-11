@@ -126,7 +126,9 @@ run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
 
     # Wait for the healthcheck in sandbox.container. `podman healthcheck run` runs the check at once and exits 0 when it passes.
     # If the container is not ready after 180 s, this stops the recipe. See then: podman logs sandbox
-    timeout 180 sh -c 'until podman healthcheck run sandbox >/dev/null 2>&1; do sleep 2; done' \
+    # --foreground and </dev/null keep podman away from your terminal. Without them, timeout runs podman in a background group.
+    # In a terminal, the kernel then stops podman for good, and a stopped podman holds the lock of the container, so every podman command hangs.
+    timeout --foreground 180 sh -c 'until podman healthcheck run sandbox >/dev/null 2>&1 </dev/null; do sleep 2; done' \
         || { echo 'sandbox: the container is not healthy. See: podman logs sandbox' >&2; exit 1; }
 
     # Open Herdr, or run the command that you gave.

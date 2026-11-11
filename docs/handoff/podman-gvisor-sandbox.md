@@ -117,6 +117,8 @@ All tests ran on the host of the owner on 2026-11-11 with `runsc` release-202611
 
 - The image `ENTRYPOINT` already starts the relay on port 3128. A test script that starts another `socat` on that port fails with `Address already in use`.
 - `pkill -f` with a pattern that is also in your own command line kills your shell. Use a pid.
+- A test without a terminal hides a stuck process. `timeout` runs its command in a background process group. In a terminal, a `podman` that touches the terminal there gets stopped by the kernel. The stopped `podman` holds the lock of the container, so every podman command hangs, even `podman ps -a`. `just sandbox run` hung at the wait for the health check. Use `timeout --foreground` and `</dev/null`. Test such a loop in a pseudo-terminal: `script -qfec "<command>" /dev/null`.
+- To free a hung podman, find the stopped process (`ps -eo pid,stat,comm` shows state `T`) and kill it with `kill -KILL <pid>`. A stopped process ignores a normal `kill`.
 - Quadlet does not expand shell variables. Use `%h` and `%t`, and links to fixed paths (`~/.config/sandbox/repo.git`). A generated drop-in file was harder to read.
 - A user unit cannot enforce `IPAddressDeny=`, and a TCP port on loopback has no user check. A firewall rule with `meta skuid` is the way. A throwaway network namespace (`podman unshare unshare -n`) tests such a rule without root and without the host firewall.
 - Do not link a file from your repo into `/etc/systemd/system/` for a root service. Copy it. Root would run a file that the user can change.
