@@ -25,6 +25,8 @@ HF_HUB_OFFLINE = "1"
 # Ponytail (sandbox-start installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
+# The kubeconfig of the sandbox. The Dockerfile copies it. The mise shims and `mise activate` set this value, so each shell and each kubectl call has it.
+KUBECONFIG = "/etc/sandbox/cluster.yaml"
 
 [hooks.enter]
 # kubectl shorthand with completion

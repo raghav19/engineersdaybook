@@ -1,0 +1,20 @@
+# The kubeconfig of the sandbox for the k3s cluster on this host. It holds no secret.
+# The Dockerfile copies it to /etc/sandbox/cluster.yaml. Root owns it, and the root file system is read-only. image/mise.toml sets KUBECONFIG to it, so a plain `kubectl` works in the sandbox.
+# The token is a placeholder. The proxy swaps in the real token for this host only. See proxy/iron-proxy.yaml.
+# The server is kubernetes.default.svc, a name that every k3s certificate lists. It is the same on each host.
+# The sandbox has no network, so it does not resolve the name. The proxy resolves it with proxy/hosts.
+# The file has no CA. The sandbox trusts the CA of the proxy, and the proxy checks the certificate of the cluster.
+apiVersion: v1
+kind: Config
+clusters:
+  - name: k8s_dev
+    cluster:
+      server: https://kubernetes.default.svc:6443
+users:
+  - name: k8s_dev
+    user:
+      token: sandbox-placeholder-K8S_DEV
+contexts:
+  - name: k8s_dev
+    context: {cluster: k8s_dev, user: k8s_dev}
+current-context: k8s_dev
