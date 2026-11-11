@@ -3,7 +3,7 @@
 # The proxy ends the TLS with its own CA and checks the allowlist below. Any other host gets 403.
 # The sandbox holds only the placeholders. The proxy replaces a placeholder with the real value in a request to the hosts of its rule.
 # The real values come from the environment of the proxy. This file has the names of the variables, never the values.
-# The placeholders in the compose file of the sandbox must equal the proxy_value lines.
+# The placeholders in sandbox.container must equal the proxy_value lines.
 # The unit runs the proxy in ~/.local/state/sandbox, so ca.crt and ca.key are relative paths.
 # Ports: this proxy reserves 18080 to 18089 on 127.0.0.1. This file uses 18080 to 18084.
 # All listeners are on the loopback of the host. iron-proxy requires the DNS, HTTP and HTTPS listeners. The sandbox does not use them.

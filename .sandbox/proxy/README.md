@@ -29,7 +29,7 @@ For another registry or another secret manager, change `iron-proxy.yaml`, `sandb
 | `systemd-creds` and `systemd-socket-proxyd` (in the `systemd` package) | The credential and the bridge. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. Change the path if your distribution puts the file elsewhere. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
 | `iron-proxy` and `bws`, installed with `mise install` from `mise.toml` | The proxy and its secret loader. | `iron-proxy --version` and `bws --version` |
 | `openssl` | It makes the CA. | `openssl version` |
-| `podman`, `podman-compose` and `git` | `just` stops if one is missing. The proxy itself needs no Podman. | `podman --version` |
+| `podman`, `runsc` and `git` | `just` stops if one is missing. The proxy itself needs no Podman and no gVisor. | `podman --version` and `runsc --version` |
 | Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
 
 ### Step 1: run the setup
@@ -83,7 +83,7 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 
 ## How the sandbox uses it
 
-`.sandbox/compose.yaml` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `network_mode: none`. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
+`.sandbox/sandbox.container` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `Network=none`. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
 
 ## Daily use
 
