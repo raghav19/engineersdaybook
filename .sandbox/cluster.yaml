@@ -3,7 +3,7 @@
 # KUBECONFIG points to it, so a plain `kubectl` works in the sandbox.
 # The token is a placeholder. The proxy swaps in the real token for this host only. See proxy/iron-proxy.yaml.
 # The server is kubernetes.default.svc, a name that every k3s certificate lists. It is the same on each host.
-# The sandbox has no network, so it does not resolve the name. The proxy resolves it. `setup` gives the proxy a hosts file for this.
+# The sandbox has no network, so it does not resolve the name. The proxy resolves it with proxy/hosts.
 # The file has no CA. The sandbox trusts the CA of the proxy, and the proxy checks the certificate of the cluster.
 apiVersion: v1
 kind: Config

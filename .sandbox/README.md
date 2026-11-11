@@ -124,7 +124,7 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 | Stop the sandbox | `just sandbox rm`. The volume stays. |
 | Allow one more host | Add it to `proxy/iron-proxy.yaml`, then run `systemctl --user restart sandbox-proxy` |
 | Change a token of a service | Change the Bitwarden key, then run `systemctl --user restart sandbox-proxy` |
-| Renew the token of the cluster | `just sandbox token`. The token lasts one hour. |
+| Renew the token of the cluster | `just sandbox token`. The token lasts one year. |
 | Change a tool of the image | Edit `image/`, then run `just sandbox build` and `just sandbox run` |
 | Change the unit or the limits | Edit `sandbox.container`, then run `just sandbox run` |
 | Start with an empty home | Run `just sandbox rm`, then `podman volume rm sandbox-home`. This removes the clone and the logins. |
@@ -155,13 +155,13 @@ kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml (a placeholder to
 ```
 
 - **One kubeconfig for the sandbox.** `cluster.yaml` has one context, `k8s_dev`. The server is `kubernetes.default.svc`, a name that every k3s certificate lists, so the file is the same on each host. `setup` links the file, and the unit mounts it read-only.
-- **A name for the local cluster.** The proxy needs a name and not an IP address, and it refuses `127.0.0.1`. So `setup` writes a hosts file for the proxy only. It maps `kubernetes.default.svc` to the address of the bridge `cni0`, where k3s listens too. The hosts file of your system does not change. Run `just sandbox setup` again if the address of `cni0` changes.
+- **A name for the local cluster.** The proxy needs a name and not an IP address, and it refuses `127.0.0.1`. So the proxy has its own hosts file, `proxy/hosts`, with one line. It maps `kubernetes.default.svc` to `10.42.0.1`, the address of the bridge `cni0`, where k3s listens too. That is the first address of the default pod range of k3s. The hosts file of your system does not change.
 - **One rule and one secret in the proxy.** They are plain text in `proxy/iron-proxy.yaml`. See [the k3s cluster](proxy/README.md#the-k3s-cluster).
-- **A token on the host.** `just sandbox token` makes a token for the ServiceAccount `sandbox-agent` with `kubectl create token`. It writes the token to `~/.local/state/sandbox/tokens/k8s_dev`, and the proxy reads that file. The token lasts one hour. Run the recipe again to renew it. A timer is not built yet.
+- **A token on the host.** `just sandbox token` makes a token for the ServiceAccount `sandbox-agent` with `kubectl create token`. It writes the token to `~/.local/state/sandbox/tokens/k8s_dev`, and the proxy reads that file. `setup` makes the token once. It lasts one year, and the sandbox never holds it. Run the recipe again to renew it.
 - **RBAC is the limit.** The rule allows every method for this host, so the rights of the ServiceAccount decide. It reads the cluster, it cannot read Secrets, and it can write in the namespace `sandbox-dev`. To make the proxy stricter, remove methods from the rule.
 - **Another cluster** later means a second context in `cluster.yaml`, and a second rule and secret in `iron-proxy.yaml`.
 
-Run `just sandbox setup`, then `just sandbox token`, then `just sandbox run`.
+Run `just sandbox setup`, then `just sandbox run`.
 
 `kubectx` is in the image. With one context it has nothing to switch, and a context switch fails on the read-only file.
 
@@ -236,7 +236,7 @@ flowchart TD
 | `kubectl` answers `Unauthorized` | The token file is missing or expired. Run `just sandbox token`. |
 | `kubectl` answers `bad gateway`, and the proxy log shows `x509: certificate signed by unknown authority` | The proxy does not trust the CA of the cluster. Run `just sandbox setup`. It builds `upstream-ca.pem` again from your kubeconfig. |
 | `kubectl` answers `Forbidden`, or the proxy log shows `rejected_by: allowlist` | `Forbidden` is the RBAC of the ServiceAccount. `rejected_by: allowlist` means the method is not in the rule of the host in `proxy/iron-proxy.yaml`. |
-| `kubectl` answers `no such host` or `connection refused`, and the proxy log shows a dial error | The hosts file of the proxy has no line for `kubernetes.default.svc`, or k3s is down. Start k3s, then run `just sandbox setup`. |
+| `kubectl` answers `bad gateway` with a dial error in the proxy log | k3s is down, or it does not listen on `10.42.0.1`. Start k3s. If your pod range is not `10.42.0.0/16`, change the address in `proxy/hosts` and restart `sandbox-proxy`. |
 | `just sandbox build` reports `unauthorized` | The Bitwarden key `GITHUB_TOKEN` needs the scope `write:packages`. |
 
 ## Files

@@ -45,7 +45,7 @@ The recipe asks for your `sudo` password and for the access token. Nothing shows
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
-3. Links `iron-proxy.yaml` and `../cluster.yaml` into `~/.config/sandbox`. Writes the hosts file of the proxy and builds the CA bundle of the proxy from your kubeconfig. See [The k3s cluster](#the-k3s-cluster).
+3. Links `iron-proxy.yaml`, `hosts` and `../cluster.yaml` into `~/.config/sandbox`. Builds the CA bundle of the proxy from your kubeconfig. Makes the token of the cluster if it does not exist. See [The k3s cluster](#the-k3s-cluster).
 4. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
 5. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
 6. Links the three units, enables `sandbox-proxy.service` and restarts it.
@@ -117,7 +117,7 @@ What the rule does not do:
 - **The secret says where the real token is.** `type: file` reads the file `tokens/k8s_dev`, and it reads the file again after `ttl`. So `just sandbox token` renews the token with no restart. The path is relative to the working directory of the unit, `~/.local/state/sandbox`, so no path of a home folder is in the config. The unit binds the `tokens` folder, because the proxy sees an empty `/home`.
 - **The placeholder works for one host.** `rules: [{host: ...}]` limits the swap to that host. The cluster answers `401` to a request with a placeholder that the proxy did not swap.
 - **The proxy trusts the cluster through `SSL_CERT_FILE`.** Go reads this variable for its trust roots. `upstream-ca.pem` holds the system CAs and the CA of the cluster. `setup` builds it from your kubeconfig. Only the proxy uses the file, so your system trust does not change. Without it, the proxy answers `502` with `x509: certificate signed by unknown authority`.
-- **The server is a fixed name.** A client sends no server name for an IP address, and the proxy needs one (`no SNI provided`). The proxy also refuses an upstream on `127.0.0.0/8`, so `127.0.0.1` does not work. Every k3s certificate lists `kubernetes.default.svc`, so the file is the same on each host. `setup` writes `~/.local/state/sandbox/hosts`: your `/etc/hosts` plus one line that maps the name to the address of the bridge `cni0`. The unit binds that file over `/etc/hosts` for the proxy only. Use lower case: a client may send the name in lower case, and the proxy compares the text (`SNI/Host mismatch`). For another name, add it to `tls-san` in the k3s config and restart k3s.
+- **The server is a fixed name.** A client sends no server name for an IP address, and the proxy needs one (`no SNI provided`). The proxy also refuses an upstream on `127.0.0.0/8`, so `127.0.0.1` does not work. Every k3s certificate lists `kubernetes.default.svc`, so the file is the same on each host. `hosts` in this folder has one line. It maps the name to `10.42.0.1`, the address of the bridge `cni0`. That is the first address of the default pod range of k3s. The unit binds that file over `/etc/hosts` for the proxy only. If your pod range is not `10.42.0.0/16`, change the address. Use lower case: a client may send the name in lower case, and the proxy compares the text (`SNI/Host mismatch`). For another name, add it to `tls-san` in the k3s config and restart k3s.
 - **A client certificate cannot pass.** The proxy ends the TLS, so the cluster never sees the certificate. The cluster must accept a token. A missing token file logs a warning (`reading secret file`) and the proxy keeps running. The request has no token, and the cluster answers `401`.
 
 ## Why there is a bridge
@@ -133,7 +133,7 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 ```bash
 systemctl --user start sandbox-proxy.service     # starts the socket too
 systemctl --user stop sandbox-proxy.service      # stops the socket and the bridge too
-systemctl --user restart sandbox-proxy.service   # for example after you renew a token file
+systemctl --user restart sandbox-proxy.service   # for example after you edit a file in this folder
 systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 journalctl --user -u sandbox-proxy -f             # the audit log: one JSON line for each request
 ```

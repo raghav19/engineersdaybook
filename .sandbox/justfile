@@ -6,7 +6,7 @@
 #   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags, the repo and the cluster file. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
-#   just sandbox token   make a token for the k3s cluster. The proxy keeps it on the host.
+#   just sandbox token   make a one-year token for the k3s cluster. setup makes it once. The proxy keeps it on the host.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
@@ -79,25 +79,18 @@ setup:
         chmod 0644 "$state/ca.crt"
     fi
 
-    # The proxy config and the kubeconfig of the sandbox are links to the files in this folder.
+    # The proxy config, the hosts file of the proxy and the kubeconfig of the sandbox are links to the files in this folder.
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+    ln -sf "$proxy/hosts" "$HOME/.config/sandbox/hosts"
     ln -sf '{{ source_directory() }}/cluster.yaml' "$HOME/.config/sandbox/cluster.yaml"
 
-    # The k3s cluster on this host. The sandbox and the proxy use the name kubernetes.default.svc, which every k3s certificate lists.
-    # The proxy refuses a loopback address, so the name points to the address of the bridge cni0. k3s listens there too.
-    # The proxy gets its own hosts file, so the hosts file of your system does not change. Run setup again if the address changes.
-    mkdir -p "$state/tokens"
-    chmod 700 "$state/tokens"
-    addr="$(ip -4 -o addr show dev cni0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1 || true)"
-    [ -n "$addr" ] || echo 'sandbox: no cni0 address. Is k3s running? The proxy cannot reach the cluster until you run setup again.' >&2
-    { cat /etc/hosts; [ -z "$addr" ] || echo "$addr kubernetes.default.svc"; } > "$state/hosts.new"
-    mv -f "$state/hosts.new" "$state/hosts"
-    # The proxy checks the certificate of k3s. k3s has a private CA, so the proxy needs it. The CA is public data in your kubeconfig.
-    # Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
-    ca="$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null | base64 -d 2>/dev/null || true)"
-    [ -n "$ca" ] || echo 'sandbox: no cluster CA in your kubeconfig. Set KUBECONFIG, then run setup again.' >&2
-    { cat /etc/ssl/certs/ca-certificates.crt; printf '%s\n' "$ca"; } > "$state/upstream-ca.pem.new"
-    mv -f "$state/upstream-ca.pem.new" "$state/upstream-ca.pem"
+    # The k3s cluster on this host. The proxy checks the certificate of k3s, and k3s has a private CA, so the proxy needs the CA.
+    # The CA is public data in your kubeconfig. Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
+    { cat /etc/ssl/certs/ca-certificates.crt
+      kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d; } > "$state/upstream-ca.pem"
+    # The proxy reads the token of the cluster from this folder. `just sandbox token` makes it. A token that exists stays.
+    mkdir -p -m 700 "$state/tokens"
+    [ -s "$state/tokens/k8s_dev" ] || just --justfile '{{ justfile() }}' token
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -135,15 +128,15 @@ setup:
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
     echo 'The proxy runs.'
 
-# Make a token for the k3s cluster. The proxy swaps it in for the placeholder
+# Make a one-year token for the k3s cluster. The proxy swaps it in for the placeholder
 [script('bash')]
 token:
-    # The host makes the token and keeps it. The sandbox never holds it. It lasts one hour. Run this again to renew it.
+    # The host makes the token and keeps it. The sandbox never holds it, and the proxy adds it to a request. It lasts one year. Run this again to renew it.
     set -euo pipefail
     umask 077
     dir="$HOME/.local/state/sandbox/tokens"
     mkdir -p "$dir"
-    kubectl create token sandbox-agent -n sandbox-agent --duration=1h > "$dir/k8s_dev.new"
+    kubectl create token sandbox-agent -n sandbox-agent --duration=8760h > "$dir/k8s_dev.new"
     mv -f "$dir/k8s_dev.new" "$dir/k8s_dev"
     echo "token written to $dir/k8s_dev"
 
