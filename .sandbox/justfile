@@ -3,9 +3,11 @@
 # The recipes run in this folder, so podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/.
+#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/ or clusters.yaml.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
+#   just sandbox clusters  write the kubeconfig of the sandbox and the proxy rules from clusters.yaml and your kubeconfig, then restart the proxy.
+#   just sandbox token NAME  make a token for the cluster NAME (for example k8s_dev). The proxy keeps it on the host.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
@@ -52,7 +54,7 @@ help:
 
 # Run it in your main checkout, because the links of the units point to the files in this folder.
 # It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in proxy/README.md.
-# Install and start the host proxy. Run it again after you edit a file in proxy/.
+# Install and start the host proxy. Run it again after you edit a file in proxy/ or clusters.yaml.
 [script('bash')]
 setup:
     set -euo pipefail
@@ -78,7 +80,9 @@ setup:
         chmod 0644 "$state/ca.crt"
     fi
 
-    ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+    # The proxy config is iron-proxy.yaml plus a rule and a secret for each cluster in your kubeconfig that clusters.yaml allows.
+    # This also writes the kubeconfig of the sandbox and the CA bundle of the proxy. See proxy/clusters.sh.
+    bash "$proxy/clusters.sh"
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -115,6 +119,17 @@ setup:
     systemctl --user is-active --quiet sandbox-proxy.service \
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
     echo 'The proxy runs.'
+
+# Write the kubeconfig of the sandbox and the rules of the proxy from clusters.yaml and your kubeconfig, then restart the proxy
+clusters:
+    # The container reads the new kubeconfig at its next start: run `just sandbox run` after this.
+    bash '{{ source_directory() }}/proxy/clusters.sh'
+    systemctl --user restart sandbox-proxy.service
+
+# Make a token for a cluster (a context of your kubeconfig such as k8s_dev). The proxy swaps it in for the placeholder
+token name:
+    # The token lasts the time that clusters.yaml sets. Run this again to renew it.
+    bash '{{ source_directory() }}/proxy/clusters.sh' token '{{ name }}'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.

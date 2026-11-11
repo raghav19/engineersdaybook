@@ -10,7 +10,7 @@ A coding agent that you run without handing it your machine.
 
 - **The agent:** Claude Code and Qwen Code in a rootless Podman container. gVisor runs the system calls of the agent in a user-space kernel. The agent works on a private clone of your repo and holds no real token.
 - **The MCP servers:** GitHub, draw.io and the Flux schema catalog. The container loads them from root-owned settings files that the agent cannot change. For Claude Code, a deny list removes five GitHub tools: `merge_pull_request`, `delete_file`, `delete_repository`, `create_repository` and `fork_repository`.
-- **The guardrails:** the container has no network except one path to iron-proxy. The proxy holds an allowlist of hosts and swaps token placeholders. The service holds limits. A firewall rule guards the ports of the proxy.
+- **The guardrails:** the container has no network except one path to iron-proxy. The proxy holds an allowlist of hosts and swaps token placeholders. The service holds limits. A firewall rule guards the ports of the proxy. A shared policy decides which Kubernetes clusters the agent reaches (see "Clusters").
 
 The setup needs a Linux host with systemd, one GitHub repository and secrets in Bitwarden Secrets Manager. There is no daemon of its own. systemd runs the container and the host proxy as services of your user.
 
@@ -90,6 +90,7 @@ The connection changes its carrier at three points, and the bytes stay the same.
 | `nft` and `sudo` | The firewall rule needs root, once. | `nft --version` and `sudo -v` |
 | `git`, `openssl` and `systemd-creds` | The clone, the CA and the encrypted credential. | `git --version`, `openssl version` and `systemd-creds --version` |
 | `iron-proxy` and `bws`, installed with `mise install` | The proxy and its secret loader. Run `mise install` in your main checkout. | `iron-proxy --version` and `bws --version` |
+| `jq` and `yq`, and `kubectl` for clusters | `just sandbox setup` and `just sandbox clusters` use `jq` and `yq`. They read your kubeconfig with `kubectl`. Without `kubectl`, no cluster is exposed. | `kubectl version --client`, `jq --version` and `yq --version` |
 | Secrets in Bitwarden Secrets Manager | The proxy holds the real tokens. See [what the setup assumes](proxy/README.md#what-this-setup-assumes). | The four keys exist in your Bitwarden project |
 
 `just` stops with a message if a tool of the justfile is missing.
@@ -106,7 +107,7 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `setup` | Links `iron-proxy` and `bws`, makes the CA, installs the firewall rule with `sudo`, encrypts the token and starts the proxy units. Links the container unit, `runsc.conf` and the repo. Run it again after you edit a file in `proxy/`, `runsc.conf` or `sandbox.container`. |
+| 1 | `setup` | Links `iron-proxy` and `bws`, makes the CA and writes the proxy config and the kubeconfig of the sandbox (see "Clusters"). Installs the firewall rule with `sudo`, encrypts the token and starts the proxy units. Links the container unit, `runsc.conf` and the repo. Run it again after you edit a file in `proxy/`, `clusters.yaml`, `runsc.conf` or `sandbox.container`. |
 | 2 | `build` | Builds `image/` and pushes it to `ghcr.io`. The registry cache makes later builds faster. It uses the credential that `setup` makes, and asks for no password. |
 | 3 | `run` | Restarts `sandbox.service`. Waits until the container is healthy, then opens Herdr with `podman exec`. Close the terminal and the sandbox keeps running until the next `run`. |
 
@@ -121,8 +122,11 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 | See the state | `podman ps` (`starting`, `healthy` or `unhealthy`) and `systemctl --user status sandbox` |
 | Follow the log | `podman logs -f sandbox` |
 | Stop the sandbox | `just sandbox rm`. The volume stays. |
-| Allow one more host | Add it to `proxy/iron-proxy.yaml`, then run `systemctl --user restart sandbox-proxy` |
-| Change a token | Change the Bitwarden key, then run `systemctl --user restart sandbox-proxy` |
+| Allow one more host | Add it to `proxy/iron-proxy.yaml`, then run `just sandbox clusters` |
+| Change a token of a service | Change the Bitwarden key, then run `systemctl --user restart sandbox-proxy` |
+| Add a cluster, or change its access | Name the context `k8s_dev` with `kubectx k8s_dev=<old name>`. Check that a rule of `clusters.yaml` matches it. Run `just sandbox clusters`, then `just sandbox token k8s_dev`, then `just sandbox run`. |
+| Renew the token of a cluster | `just sandbox token k8s_dev`. The token lasts one hour. |
+| Switch the cluster in the sandbox | `kubectx k8s_staging`, or `kubectl config use-context k8s_staging` |
 | Change a tool of the image | Edit `image/`, then run `just sandbox build` and `just sandbox run` |
 | Change the unit or the limits | Edit `sandbox.container`, then run `just sandbox run` |
 | Start with an empty home | Run `just sandbox rm`, then `podman volume rm sandbox-home`. This removes the clone and the logins. |
@@ -139,6 +143,28 @@ Flags go to `podman build`: `just sandbox build --no-cache` updates the tools th
 - **The MCP servers.** `image/configs/agents/managed-settings.json` becomes `/etc/claude-code/managed-settings.json`. `image/configs/agents/qwen-settings.json` becomes `/etc/qwen-code/settings.json`. Root owns both files, and the root file system is read-only. The agent reads them and cannot change them. To change them, run `just sandbox build`.
 - **The image.** The files of `image/tools/` list the tools and their versions in six groups: `runtimes`, `headroom`, `infra`, `dev`, `agents` and `lsp`. `mise` installs them. `claude` and `qwen` use a version prefix, so a build takes the newest patch version. The tag of the image is the commit.
 - **The firewall rule.** `proxy/sandbox-guard.nft` rejects connections to the proxy ports from every user except you. `setup` copies it to `/etc` with `sudo`, and a system unit loads it at each boot.
+
+## Clusters
+
+The sandbox reaches your Kubernetes clusters through the same proxy as every other host. `kubectl`, `flux`, `helm`, `k9s` and `kubectx` work as they do on the host. The sandbox holds no cluster credential: it holds a placeholder, and the proxy swaps in the real token for the host of that cluster only.
+
+- **Your kubeconfig is the source.** You add a cluster to your own kubeconfig as you always do. `just sandbox clusters` reads it.
+- **The policy is shared.** `clusters.yaml` lists rules by the name of a context, for example `k8s_dev` gets `write-scratch` and `k8s_prod` gets `none`. It has no address and no secret, and every developer uses the same file. A context is exposed only if a rule matches its name. A name must look like `k8s_dev`.
+- **The name is the key.** The context name is the name in the sandbox, in the placeholder (`sandbox-placeholder-K8S_DEV`) and in the token file (`tokens/k8s_dev`). Name a context with `kubectx k8s_dev=<old name>`.
+- **Switching is a context switch.** `kubectx k8s_staging` changes only `current-context`. The proxy picks the token by the host, so a placeholder of one cluster never gets the token of another.
+
+`just sandbox clusters` writes these files. Run `just sandbox token k8s_dev` for each cluster and `just sandbox run` once after it.
+
+| File | Content | Used by |
+|---|---|---|
+| `~/.local/state/sandbox/kube/kubeconfig` | One context for each exposed cluster, with a placeholder token and no CA | The container copies it to `~/.kube/config` at each start, so `kubectx` can write it. |
+| `~/.config/sandbox/iron-proxy.yaml` | `proxy/iron-proxy.yaml` plus a rule and a secret for each cluster | The proxy |
+| `~/.local/state/sandbox/upstream-ca.pem` | The system CAs plus the CA of each cluster | The proxy, as `SSL_CERT_FILE` |
+| `~/.local/state/sandbox/tokens/<name>` | The real token of a cluster (mode 0600). `just sandbox token` writes it. | The proxy. The container never sees it. |
+
+Access levels are in `clusters.yaml`. `read-only` allows `GET`, so `kubectl apply` and `delete` get `403` from the proxy. `write-scratch` allows the write methods. RBAC in the cluster stays the second limit: give the token a ServiceAccount that cannot read Secrets. See [the rules of the proxy](proxy/README.md#clusters).
+
+A token lasts one hour. Run `just sandbox token <name>` to renew it. A timer for this is not built yet. The first version supports a context that logs in with a certificate (the k3s default). The host makes a token for the ServiceAccount of `clusters.yaml`. A context with an exec plugin (EKS) is not supported yet.
 
 ## Hardening
 
@@ -203,11 +229,16 @@ flowchart TD
 | `sandbox: the container is not healthy` | Run `podman logs sandbox`. `sandbox-start` prints the reason. |
 | `systemctl --user status sandbox` shows `failed` | A limit killed the sandbox. Run `just sandbox run`. To raise a limit, edit `[Service]` in `sandbox.container`. |
 | Every `podman` command hangs | A stopped `podman` process holds a lock. Run `ps -eo pid,stat,comm \| awk '$3=="podman" && $2 ~ /T/'`, then `kill -KILL <pid>`. |
-| A site fails in the sandbox with `403` | The host is not in the allowlist. Add it to `proxy/iron-proxy.yaml`, then run `systemctl --user restart sandbox-proxy`. |
+| A site fails in the sandbox with `403` | The host is not in the allowlist. Add it to `proxy/iron-proxy.yaml`, then run `just sandbox clusters`. |
 | A tool reports a certificate error | The CA changed. Run `just sandbox run` to mount the new `ca.crt`. |
 | A tool reports `connection refused` or `no route` | The tool ignores `HTTPS_PROXY`. Set the proxy in its settings to `http://127.0.0.1:3128`. |
 | `claude mcp list` shows `github` as failed, with `Authorization header is badly formatted` | The header in `managed-settings.json` must hold `Bearer sandbox-placeholder-GH_TOKEN`, as text. See [Placeholders](proxy/README.md#placeholders). Run `just sandbox build`, then `just sandbox run`. |
 | `socat` reports `Cannot assign requested address` | `lo` is down. `ExecStartPost` did not run `ip link set lo up`. Run `journalctl --user -u sandbox` and check that `ip` and `nsenter` exist. |
+| A cluster is missing in `kubectl config get-contexts` | No rule of `clusters.yaml` matches the context, or the name does not look like `k8s_dev`. Rename it with `kubectx`, then run `just sandbox clusters` and `just sandbox run`. |
+| `kubectl` answers `Unauthorized` for a cluster | The token file is missing or expired. Run `just sandbox token k8s_dev`. |
+| `kubectl` answers `bad gateway`, and the proxy log shows `x509: certificate signed by unknown authority` | The proxy does not trust the CA of the cluster. Run `just sandbox clusters`. It adds the CA to `upstream-ca.pem`. |
+| `kubectl` answers `Forbidden` before any cluster reply, or `403` for `apply` | The access level of the cluster is `read-only`, or no rule allows the method. Check `clusters.yaml` and `journalctl --user -u sandbox-proxy` (`rejected_by: allowlist`). |
+| `kubectl` fails at the TLS handshake with `no SNI provided` in the proxy log | The server in the kubeconfig is an IP address. Use a host name that the cluster certificate lists. |
 | `just sandbox build` reports `unauthorized` | The Bitwarden key `GITHUB_TOKEN` needs the scope `write:packages`. |
 
 ## Files
@@ -217,6 +248,7 @@ flowchart TD
 | `image/` | The image: the `Dockerfile`, `sandbox-entry`, `sandbox-start`, the tool lists in `tools/` and the settings in `configs/`. |
 | `sandbox.container` | The Quadlet unit of the container: its environment, hardening flags, mounts, volume and limits. |
 | `runsc.conf` | The gVisor flags for Podman, with the reason for each flag. |
+| `clusters.yaml` | The shared policy for Kubernetes clusters: which context names the sandbox may reach, and with which access. |
 | `justfile` | `setup`, `run`, `rm` and `build`. |
-| `proxy/` | The host proxy and the firewall rule. See [`proxy/README.md`](proxy/README.md). |
+| `proxy/` | The host proxy, the firewall rule and `clusters.sh`, which writes the cluster files. See [`proxy/README.md`](proxy/README.md). |
 | `docs/diagrams/` | The diagrams of this README. See [`docs/diagrams/README.md`](docs/diagrams/README.md). |

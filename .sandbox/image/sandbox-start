@@ -15,6 +15,12 @@ fail() { echo "sandbox-start: $*" >&2; exit 1; }
 cp -a /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
 mkdir -p "$HOME/.claude" "$HOME/.qwen" "$HOME/.headroom" "$HOME/.herdr" "$HOME/.cache/terraform-providers" || fail "could not make the folders of the home"
 
+# The kubeconfig of the sandbox. `just sandbox clusters` writes it on the host. It holds placeholders and no secret.
+# A writable copy in the home lets kubectx change the current context. The proxy decides which cluster the agent reaches, not this file.
+if [ -f /etc/sandbox/kube/kubeconfig ]; then
+  mkdir -p "$HOME/.kube" && cp /etc/sandbox/kube/kubeconfig "$HOME/.kube/config" && chmod 600 "$HOME/.kube/config" || fail "could not copy the kubeconfig"
+fi
+
 # The clone is private. The sandbox cannot write to /run/sandbox/source, the .git folder of the host repo.
 # The clone starts on the branch of the host checkout. A push goes to GitHub, to a feature branch.
 if [ ! -d "$ws/.git" ]; then
