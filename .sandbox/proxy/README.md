@@ -10,6 +10,17 @@ sandbox (no network) -> relay -> proxy.sock -> sandbox-bridge -> iron-proxy (127
 
 Do these steps once. After you edit a file in this folder, run `just sandbox setup` again.
 
+### What this setup assumes
+
+This is a personal setup. Other people can use other tools. The guide assumes:
+
+- The image registry is the GitHub Container Registry (`ghcr.io`).
+- The secret manager is Bitwarden Secrets Manager.
+- The secrets are already in a Bitwarden project: `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`, because `just sandbox build` uses it to push to `ghcr.io`. [Placeholders](#placeholders) shows which host each secret is for.
+- You have the access token of a machine account that can read that project. `just sandbox setup` asks for it. Do not paste the token into a chat or a file.
+
+For another registry or another secret manager, change `iron-proxy.yaml`, `sandbox-proxy.service` and the `build` recipe in `justfile`.
+
 ### Before you start
 
 | Need | Why | Check |
@@ -21,16 +32,7 @@ Do these steps once. After you edit a file in this folder, run `just sandbox set
 | `podman`, `podman-compose` and `git` | `just` reads them when it loads. The proxy itself needs no Podman. | `podman --version` |
 | Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
 
-### Step 1: make the Bitwarden access token
-
-Do this in the Bitwarden web app. The proxy reads its real tokens from Bitwarden Secrets Manager.
-
-1. Make a project.
-2. Add one secret for each name in the column "Variable of the proxy" in [Placeholders](#placeholders): `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` needs the scope `write:packages`, because `just sandbox build` uses it to push to `ghcr.io`.
-3. Make a machine account with read access to the project.
-4. Make an access token for the machine account. Keep the page open for step 2. Do not paste the token into a chat or a file.
-
-### Step 2: run the setup
+### Step 1: run the setup
 
 Run this in your main checkout. The links of the units point to the files in this folder.
 
@@ -48,7 +50,7 @@ The recipe asks for the access token and shows nothing as you type. It does thes
 
 The recipe ends with `The proxy runs.`
 
-### Step 3: check the proxy
+### Step 2: check the proxy
 
 ```bash
 systemctl --user status sandbox-proxy.service sandbox-bridge.socket

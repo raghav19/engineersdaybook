@@ -51,7 +51,7 @@ help:
     just --list --unsorted
 
 # The links of the units point to the files in this folder. Run it in your main checkout.
-# Before the first run, do step 1 of .sandbox/proxy/README.md in the Bitwarden web app: it makes the access token that this recipe asks for.
+# It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in .sandbox/proxy/README.md.
 # Install and start the host proxy. Run it again after you edit a file in proxy/.
 [script('bash')]
 setup:
