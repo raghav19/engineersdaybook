@@ -10,8 +10,10 @@ Wants=sandbox-bridge.socket
 WorkingDirectory=%h/.local/state/sandbox
 # No path: the user manager reads ~/.config/credstore.encrypted/bws-token. just sandbox setup makes the file.
 LoadCredentialEncrypted=bws-token
-# just sandbox setup links the real bws and iron-proxy from mise.toml into ~/.config/sandbox/bin. A mise shim does not work here: the proxy does not see the mise.toml of the repo.
-ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec %h/.config/sandbox/bin/bws run -- /usr/bin/env -u BWS_ACCESS_TOKEN %h/.config/sandbox/bin/iron-proxy -config %E/sandbox/iron-proxy.yaml'
+# systemd starts this unit, not your shell, so mise is not active here. just sandbox setup links bws and iron-proxy into ~/.config/sandbox/bin.
+# systemd decrypts the credential to a file. bws reads its token only from the variable BWS_ACCESS_TOKEN, so the shell copies the file into the variable.
+Environment=PATH=%h/.config/sandbox/bin:/usr/bin:/bin
+ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config %E/sandbox/iron-proxy.yaml'
 Restart=on-failure
 # Hardening. README.md in this folder says what each line does. Check the score: systemd-analyze --user security sandbox-proxy.service
 NoNewPrivileges=yes

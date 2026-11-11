@@ -83,8 +83,9 @@ setup:
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
     if ! systemd-creds --user decrypt --name=bws-token '{{ credential }}' - >/dev/null 2>&1; then
         read -rsp 'Bitwarden access token: ' tok; echo
+        rm -f '{{ credential }}'
         printf '%s' "$tok" | systemd-creds --user encrypt --name=bws-token - '{{ credential }}'
-        chmod 0600 '{{ credential }}'
+        chmod 0400 '{{ credential }}'
     fi
 
     systemctl --user link "$proxy"/sandbox-{proxy.service,bridge.service,bridge.socket}
