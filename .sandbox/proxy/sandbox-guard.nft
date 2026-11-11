@@ -1,0 +1,15 @@
+# Only one user may connect to the loopback ports of the sandbox proxy.
+# A TCP or UDP port on 127.0.0.1 has no check of the user, so any local user could use the proxy and its real tokens.
+# `just sandbox setup` replaces @UID@ with your user id and loads this file with sandbox-guard.service.
+# The bridge (systemd-socket-proxyd) runs as you, so it still connects. A program of another user gets a refusal.
+# One clause for each protocol, as in iron-proxy.yaml: the tunnel, HTTP, HTTPS and metrics listeners use TCP (18080 to 18083). The DNS listener uses UDP (18084).
+# The proxy reserves 18080 to 18089. If you add a listener in 18085 to 18089, add it to the right clause here.
+table inet sandbox_guard
+delete table inet sandbox_guard
+table inet sandbox_guard {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        ip daddr 127.0.0.1 tcp dport 18080-18083 meta skuid != @UID@ reject
+        ip daddr 127.0.0.1 udp dport 18084 meta skuid != @UID@ reject
+    }
+}

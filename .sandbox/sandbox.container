@@ -1,0 +1,89 @@
+# The agent sandbox, as a Quadlet unit. `just sandbox setup` links this file into ~/.config/containers/systemd/.
+# `just sandbox run` starts it. Quadlet turns it into the service sandbox.service.
+# The container has no network. The host proxy (.sandbox/proxy) is its only way out.
+# %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
+[Unit]
+Description=Agent sandbox (Podman and gVisor)
+
+# The container needs no network at start. This drops the wait for network-online that Quadlet adds.
+[Quadlet]
+DefaultDependencies=false
+
+[Container]
+ContainerName=sandbox
+Image=localhost/sandbox-dev:latest
+# gVisor. `just sandbox setup` registers runsc in ~/.config/containers/containers.conf.d/runsc.conf.
+PodmanArgs=--runtime=runsc
+Network=none
+# The container starts as the user agent. In rootless Podman, that user is a subuid, not you.
+User=agent
+WorkingDir=/home/agent
+# The container is healthy after sandbox-start writes /tmp/sandbox-ready. `podman ps` shows the state.
+# A failed check in the first 180 s does not count. After that, three failed checks in a row make the container unhealthy.
+HealthCmd=test -e /tmp/sandbox-ready
+HealthInterval=5s
+HealthTimeout=3s
+HealthRetries=3
+HealthStartPeriod=180s
+# The root file system is read-only.
+ReadOnly=true
+DropCapability=ALL
+NoNewPrivileges=true
+Tmpfs=/tmp
+Tmpfs=/run
+# The environment of the container. The values are not secrets.
+# The placeholders: the proxy swaps in the real tokens. They must equal the proxy_value lines of the proxy config.
+Environment=GH_TOKEN=sandbox-placeholder-GH_TOKEN
+Environment=CLAUDE_CODE_OAUTH_TOKEN=sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
+Environment=QWEN_API_KEY=sandbox-placeholder-QWEN_API_KEY
+Environment=GHCR_PUSH_TOKEN=sandbox-placeholder-GHCR_PUSH_TOKEN
+# The relay in sandbox-entry listens here. A tool that ignores these variables has no route.
+Environment=HTTP_PROXY=http://127.0.0.1:3128
+Environment=HTTPS_PROXY=http://127.0.0.1:3128
+Environment=http_proxy=http://127.0.0.1:3128
+Environment=https_proxy=http://127.0.0.1:3128
+Environment=NO_PROXY=localhost,127.0.0.1
+Environment=NODE_USE_ENV_PROXY=1
+# The CA of the proxy is a read-only mount over this file. Each tool needs to read it.
+Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+Environment=REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+Environment=GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+Environment=NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+Environment=NODE_OPTIONS=--use-system-ca
+# The home, the clone and the git identity of the agent.
+Environment=HOME=/home/agent
+Environment=TMPDIR=/tmp
+Environment=COLORTERM=truecolor
+Environment=SANDBOX_WORKSPACE=/home/agent/engineersdaybook
+Environment=REPO_URL=https://github.com/raghav19/engineersdaybook
+Environment=GIT_AUTHOR_NAME=agent
+Environment=GIT_COMMITTER_NAME=agent
+Environment=GIT_AUTHOR_EMAIL=agent@localhost
+Environment=GIT_COMMITTER_EMAIL=agent@localhost
+# The tool settings.
+Environment=MISE_TRUSTED_CONFIG_PATHS=/home/agent/engineersdaybook
+Environment=MISE_IGNORED_CONFIG_PATHS=/home/agent/engineersdaybook/mise.toml
+Environment=CLAUDE_CONFIG_DIR=/home/agent/.claude
+Environment=DISABLE_UPDATES=1
+Environment=HEADROOM_HARD_WATCHDOG_SECS=0
+# The first four mounts have the flag :ro. The agent cannot change the CA, the socket folder, the repo or the theme.
+# repo.git is a link that `just sandbox setup` makes. It points to the .git folder of your main checkout.
+Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+Volume=%t/sandbox:/run/sandbox/proxy:ro
+Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
+Volume=%h/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro
+# The name does not change, so the volume of the earlier setup keeps working.
+Volume=sandbox-home:/home/agent
+
+[Service]
+# gVisor ignores the limits of Podman. These service limits apply to the whole sandbox.
+# A sandbox that goes over a limit is killed, and the service shows failed. `just sandbox run` starts it again.
+# MemorySwapMax=0 is needed. Without it, swap hides the memory limit.
+# gVisor counts host threads, and an idle sandbox uses about 50. Raise TasksMax if a heavy job hits it.
+MemoryMax=3G
+MemorySwapMax=0
+TasksMax=2048
+CPUQuota=400%
+# gVisor does not let the guest bring up its loopback interface. The host does it in the network namespace of the container.
+# The relay in sandbox-entry can bind before this runs. The connect works after it.
+ExecStartPost=/bin/sh -c 'pid=$(podman inspect -f "{{.State.Pid}}" sandbox) && podman unshare nsenter --net=/proc/$pid/ns/net ip link set lo up'

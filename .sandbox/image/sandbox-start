@@ -1,8 +1,8 @@
 #!/bin/bash
 # The start script of the sandbox. It runs as the user agent, after sandbox-entry, and it is the process that keeps the container alive.
-# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. The healthcheck in compose.yaml tests this file. `just sandbox run` waits for it, then opens Herdr.
+# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. The healthcheck in sandbox.container tests this file. `just sandbox run` waits for it, then opens Herdr.
 # Each step does nothing if its work exists, so a restart does no harm.
-# Values from compose.yaml and the justfile: SANDBOX_WORKSPACE (the path of the clone), SANDBOX_BRANCH and REPO_URL.
+# Values from sandbox.container: SANDBOX_WORKSPACE (the path of the clone) and REPO_URL. SANDBOX_BRANCH is optional. Without it, the clone gets the branch that the host repo has checked out.
 set -eu
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
