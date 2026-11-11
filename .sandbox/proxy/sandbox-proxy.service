@@ -9,7 +9,8 @@ Wants=sandbox-bridge.socket
 [Service]
 WorkingDirectory=%h/.local/state/sandbox
 LoadCredentialEncrypted=bws-token:%h/.config/sandbox/bws-token.cred
-ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec %h/.local/share/mise/shims/bws run -- /usr/bin/env -u BWS_ACCESS_TOKEN %h/.local/share/mise/shims/iron-proxy -config %E/sandbox/iron-proxy.yaml'
+# just sandbox setup links the real bws and iron-proxy from mise.toml into ~/.config/sandbox/bin. A mise shim does not work here: the proxy does not see the mise.toml of the repo.
+ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec %h/.config/sandbox/bin/bws run -- /usr/bin/env -u BWS_ACCESS_TOKEN %h/.config/sandbox/bin/iron-proxy -config %E/sandbox/iron-proxy.yaml'
 Restart=on-failure
 # Hardening. README.md in this folder says what each line does. Check the score: systemd-analyze --user security sandbox-proxy.service
 NoNewPrivileges=yes
@@ -18,9 +19,7 @@ PrivateTmp=yes
 ProtectHome=tmpfs
 BindReadOnlyPaths=%E/sandbox/iron-proxy.yaml
 BindReadOnlyPaths=%h/.local/state/sandbox/ca.crt %h/.local/state/sandbox/ca.key
-BindReadOnlyPaths=%h/.local/share/mise %h/.config/mise
-RuntimeDirectory=sandbox-proxy
-Environment=MISE_STATE_DIR=%t/sandbox-proxy/state MISE_CACHE_DIR=%t/sandbox-proxy/cache
+BindReadOnlyPaths=%h/.local/share/mise %h/.config/sandbox/bin
 SystemCallFilter=@system-service
 SystemCallArchitectures=native
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX

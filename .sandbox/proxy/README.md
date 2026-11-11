@@ -27,7 +27,7 @@ For another registry or another secret manager, change `iron-proxy.yaml`, `sandb
 |---|---|---|
 | A Linux host with a systemd user manager | It runs the units and decrypts the credential. | `systemctl --user is-system-running` |
 | `systemd-creds` and `systemd-socket-proxyd` (in the `systemd` package) | The credential and the bridge. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. Change the path if your distribution puts the file elsewhere. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
-| `mise` | It installs iron-proxy and `bws`. | `mise --version` |
+| `iron-proxy` and `bws`, installed with `mise install` from `mise.toml` | The proxy and its secret loader. | `iron-proxy --version` and `bws --version` |
 | `openssl` | It makes the CA. | `openssl version` |
 | `podman`, `podman-compose` and `git` | `just` stops if one is missing. The proxy itself needs no Podman. | `podman --version` |
 | Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
@@ -42,7 +42,7 @@ just sandbox setup
 
 The recipe asks for the access token. Nothing shows as you type. It does these steps and skips a step that is already done.
 
-1. Installs iron-proxy and `bws` with `mise`.
+1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
 3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
 4. Encrypts the access token with `systemd-creds` into `~/.config/sandbox/bws-token.cred`. It asks for the token only if the file is missing or cannot be read.
@@ -120,7 +120,6 @@ Check the result with `systemd-analyze --user security sandbox-proxy.service`. A
 | `PrivateTmp=yes` | The proxy has its own `/tmp`. | Reading the temporary files of other programs. |
 | `ProtectHome=tmpfs` | The proxy sees an empty `/home`. | Reading `~/.ssh`, other repos and browser data. |
 | `BindReadOnlyPaths=` | Adds back only the files that the proxy needs, read-only. | Access to any other file. |
-| `RuntimeDirectory=` with `MISE_STATE_DIR` and `MISE_CACHE_DIR` | `mise` writes its state and cache to a folder that exists only while the proxy runs. | A `mise` error. `mise` cannot write to the empty `/home`. |
 | `SystemCallFilter=@system-service` | The proxy can use only the system calls of a normal service. A system call is a request to the kernel. | `ptrace` (spy on a process), `mount`, loading a kernel module, `reboot` and `unshare`. Most kernel exploits use such calls. |
 | `SystemCallArchitectures=native` | The proxy cannot make 32-bit calls on a 64-bit host. | A way around the filter. |
 | `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | The proxy can open only IPv4 sockets, IPv6 sockets and local (Unix) sockets. | Raw packet sockets (sniffing) and netlink sockets (a change of the network setup of the kernel). |
@@ -139,7 +138,8 @@ The unit cannot restrict the network. `IPAddressDeny=` does nothing in a user un
 |---|---|
 | `~/.config/sandbox/iron-proxy.yaml` | The config. It is a link to the file in the repo. The bind gives the file that the link points to. |
 | `~/.local/state/sandbox/ca.crt` and `ca.key` | The CA. |
-| `~/.local/share/mise` and `~/.config/mise` | The shims, the installed tools and the global tool list. |
+| `~/.local/share/mise` | The installed tools. |
+| `~/.config/sandbox/bin` | The links to `iron-proxy` and `bws`. |
 
 If you point the config at another file, for example a `file` secret source, add a `BindReadOnlyPaths=` line for it in the unit.
 
@@ -154,7 +154,7 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
 | `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |
-| `mise ERROR No version is set for shim` | The tool is not in the global tool list. | Run `just sandbox setup`. |
+| `No such file or directory` for `~/.config/sandbox/bin/bws` or `iron-proxy` | The links are missing or point to an old version. | Run `mise install`, then `just sandbox setup`. |
 
 ## Later
 

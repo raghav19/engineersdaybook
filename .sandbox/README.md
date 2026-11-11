@@ -31,10 +31,10 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-The host needs `podman`, `podman-compose`, `git`, `mise`, `openssl` and `systemd-creds`. `just` stops with a message if one is missing. Follow these steps in your main checkout:
+The host needs `podman`, `podman-compose`, `git`, `openssl` and `systemd-creds`. It also needs `iron-proxy` and `bws`: run `mise install` in your main checkout, because `mise.toml` lists them. `just` stops with a message if one is missing. Follow these steps in your main checkout:
 
 1. Check [what the setup assumes](proxy/README.md#what-this-setup-assumes): the registry is `ghcr.io`, the secret manager is Bitwarden Secrets Manager, and the secrets are already there.
-2. Set up the host proxy. It installs `iron-proxy` and `bws`, makes the CA, encrypts the token and starts the proxy units. Run it again after you edit a file in `proxy/`.
+2. Set up the host proxy. It links `iron-proxy` and `bws`, makes the CA, encrypts the token and starts the proxy units. Run it again after you edit a file in `proxy/`.
 3. Build the image.
 4. Run the sandbox.
 

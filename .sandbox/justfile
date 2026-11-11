@@ -15,9 +15,10 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# `bws` is not in this list, because `setup` installs it.
+# bws and iron-proxy come from mise.toml. Run `mise install` once.
+bws            := require("bws")
 git            := require("git")
-mise           := require("mise")
+iron_proxy     := require("iron-proxy")
 openssl        := require("openssl")
 podman         := require("podman")
 podman_compose := require("podman-compose")
@@ -29,8 +30,6 @@ registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
 commit := shell(git + ' rev-parse HEAD')
 # The Bitwarden access token of the proxy. `setup` makes it. `build` reads it, so there is no prompt.
 credential := home_directory() / '.config/sandbox/bws-token.cred'
-# The same bws that the proxy unit uses. `setup` installs it with mise.
-bws := home_directory() / '.local/share/mise/shims/bws'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
 
@@ -60,8 +59,12 @@ setup:
     state="$HOME/.local/state/sandbox"
     mkdir -p "$state" "$HOME/.config/sandbox"
 
-    # The iron-proxy releases have no signature, so the version is pinned.
-    mise use -g github:ironsh/iron-proxy@0.56.0 bitwarden-secrets-manager
+    # The unit runs the real binaries, not the mise shims. A shim needs the mise.toml of the repo, and the proxy does not see it.
+    mkdir -p "$HOME/.config/sandbox/bin"
+    for tool in '{{ bws }}' '{{ iron_proxy }}'; do
+        case "$tool" in */shims/*) echo "sandbox: $tool is a mise shim. Activate mise in this shell and run this again." >&2; exit 1 ;; esac
+        ln -sf "$tool" "$HOME/.config/sandbox/bin/$(basename "$tool")"
+    done
 
     # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
     if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
@@ -115,7 +118,7 @@ rm:
     podman-compose down
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
-build *args: (_needs credential) (_needs bws)
+build *args: (_needs credential)
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
     # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
     # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
