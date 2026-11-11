@@ -69,17 +69,17 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 
 | Port | Listener |
 |---|---|
-| 18080 | tunnel (CONNECT) |
-| 18081 | HTTP |
-| 18082 | HTTPS |
-| 18083 | metrics |
-| 18084 | DNS |
+| 18080 | tunnel (CONNECT), TCP |
+| 18081 | HTTP, TCP |
+| 18082 | HTTPS, TCP |
+| 18083 | metrics, TCP |
+| 18084 | DNS, UDP |
 
 ## The firewall rule
 
 A TCP or UDP port on `127.0.0.1` has no check of the user. Without a rule, any local user, and any program that reaches the loopback of the host, can connect to these ports. It can use the proxy and send the placeholders to get the real tokens.
 
-`sandbox-guard.nft` is a rule of `nftables` for the five ports that `iron-proxy.yaml` uses, 18080 to 18084. It rejects every connection to those ports from a user other than yours. The spare ports 18085 to 18089 have no listener. If you add one, extend the range in the rule. The bridge runs as you, so it still connects.
+`sandbox-guard.nft` is a rule of `nftables` with one clause for each protocol, as in `iron-proxy.yaml`: TCP 18080 to 18083 (tunnel, HTTP, HTTPS and metrics) and UDP 18084 (DNS). It rejects every connection to those ports from a user other than yours. The spare ports 18085 to 18089 have no listener. If you add one, add it to the right clause. The bridge runs as you, so it still connects.
 
 - `just sandbox setup` replaces `@UID@` with your user id and copies the rule to `/etc/sandbox-guard.nft`. It copies `sandbox-guard.service` to `/etc/systemd/system/`. The unit loads the rule at each boot, before the network.
 - The copies belong to root on purpose. A link to a file in your repo would let you change what root runs.
