@@ -55,7 +55,7 @@ help:
 [script('bash')]
 setup:
     set -euo pipefail
-    proxy='{{ justfile_directory() }}/proxy'
+    proxy='{{ source_directory() }}/proxy'
     state="$HOME/.local/state/sandbox"
     mkdir -p "$state" "$HOME/.config/sandbox"
 
