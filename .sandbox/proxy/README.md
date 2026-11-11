@@ -16,7 +16,7 @@ This is a personal setup. Other people can use other tools. The guide assumes:
 
 - The image registry is the GitHub Container Registry (`ghcr.io`).
 - The secret manager is Bitwarden Secrets Manager.
-- The secrets are already in a Bitwarden project: `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`, because `just sandbox build` uses it to push to `ghcr.io`. [Placeholders](#placeholders) shows which host each secret is for.
+- The secrets are already in a Bitwarden project: `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`. `just sandbox build` uses it to push to `ghcr.io`. [Placeholders](#placeholders) shows which host each secret is for.
 - You have the access token of a machine account that can read that project. `just sandbox setup` asks for it. Do not paste the token into a chat or a file.
 
 For another registry or another secret manager, change `iron-proxy.yaml`, `sandbox-proxy.service` and the `build` recipe in `justfile`.
@@ -29,7 +29,7 @@ For another registry or another secret manager, change `iron-proxy.yaml`, `sandb
 | `systemd-creds` and `systemd-socket-proxyd` (in the `systemd` package) | The credential and the bridge. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. Change the path if your distribution puts the file elsewhere. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
 | `mise` | It installs iron-proxy and `bws`. | `mise --version` |
 | `openssl` | It makes the CA. | `openssl version` |
-| `podman`, `podman-compose` and `git` | `just` reads them when it loads. The proxy itself needs no Podman. | `podman --version` |
+| `podman`, `podman-compose` and `git` | `just` stops if one is missing. The proxy itself needs no Podman. | `podman --version` |
 | Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
 
 ### Step 1: run the setup
@@ -40,7 +40,7 @@ Run this in your main checkout. The links of the units point to the files in thi
 just sandbox setup
 ```
 
-The recipe asks for the access token and shows nothing as you type. It does these steps. It skips a step that is already done.
+The recipe asks for the access token. Nothing shows as you type. It does these steps and skips a step that is already done.
 
 1. Installs iron-proxy and `bws` with `mise`.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
@@ -57,7 +57,7 @@ systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock"
 ```
 
-The status shows `active`, and the socket file exists. Then follow the [README of the sandbox](../README.md#install-and-use): `just sandbox build`, then `just sandbox run`.
+The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#install-and-use) and run `just sandbox build`, then `just sandbox run`.
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
@@ -79,11 +79,11 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 
 ## Why there is a bridge
 
-The sandbox has no network, so only a Unix socket file can reach the host. iron-proxy 0.56.0 listens on TCP only. A `unix://` address in `tunnel_listen` fails with `listen tcp: ... unknown port`. `systemd-socket-proxyd` joins the socket to the tunnel. If iron-proxy later listens on a Unix socket itself, delete `sandbox-bridge.socket` and `sandbox-bridge.service` and set `tunnel_listen` to the socket path.
+The sandbox has no network, so only a Unix socket file can reach the host. iron-proxy listens on TCP only. `systemd-socket-proxyd` joins the socket to the tunnel. If iron-proxy later listens on a Unix socket, delete `sandbox-bridge.socket` and `sandbox-bridge.service` and set `tunnel_listen` to the socket path.
 
 ## How the sandbox uses it
 
-`.sandbox/compose.yaml` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops with a message if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `network_mode: none`. It shares no network with the proxy. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
+`.sandbox/compose.yaml` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `network_mode: none`. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
 
 ## Daily use
 

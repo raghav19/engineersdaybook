@@ -3,7 +3,7 @@
 # The recipes run in this folder, so podman-compose finds compose.yaml and podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install and start the host proxy from the files in proxy/. Run it again after you edit a file in proxy/.
+#   just sandbox setup   install and start the host proxy. Run it again after you edit a file in proxy/.
 #   just sandbox run     make the container if it does not exist, start it if it stopped, and open Herdr in it.
 #   just sandbox rm      remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
@@ -15,7 +15,7 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws is not in this list. `setup` installs it with mise, so `setup` must run on a host that does not have it.
+# `bws` is not in this list, because `setup` installs it.
 git            := require("git")
 mise           := require("mise")
 openssl        := require("openssl")
@@ -50,8 +50,8 @@ _needs file:
 help:
     just --list --unsorted
 
-# The links of the units point to the files in this folder. Run it in your main checkout.
-# It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in .sandbox/proxy/README.md.
+# Run it in your main checkout, because the links of the units point to the files in this folder.
+# It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in proxy/README.md.
 # Install and start the host proxy. Run it again after you edit a file in proxy/.
 [script('bash')]
 setup:
