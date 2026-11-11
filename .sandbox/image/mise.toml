@@ -1,9 +1,9 @@
 # The system config of mise in the image: the settings of the tools and the bash completions. The tools are in tools/, one file for each group.
 # The Dockerfile puts these exact versions in the image. mise reads this file and the files of tools/ from /etc/mise/conf.d/.
-# The root mise.toml is for the host only (kind, msb, bws). The image does not read it.
+# The root mise.toml is for the host only (kind, msb, bws, iron-proxy). The image does not read it.
 # If both sides use a tool (kubectl, helm, kustomize), both files list it.
 # This folder is in image/, not in .sandbox/. No recipe runs here, so the mise of the host does not load these files.
-# node (npm is part of it) and python are in tools/runtimes.toml because the sbx shell kit supplied them. python is 3.13, as in the repo scripts and tools.
+# node (npm is part of it) and python are in tools/runtimes.toml. python is 3.13, as in the repo scripts and tools.
 
 # The mise shims in the sandbox set these values.
 [env]
@@ -15,14 +15,14 @@ TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
 TTT_CONFIG_DIR = "{{env.HOME}}/.config/ttt"
 CHECKPOINT_DISABLE = "1"  # Terraform does not check its version at checkpoint-api.hashicorp.com
 COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/bash-completion/completions') }}"  # the Dockerfile sets the same path at build time
-# Headroom (sandbox-boot starts it) sends no telemetry, makes no update check and downloads nothing from Hugging Face. huggingface.co is not in the egress allow list.
+# Headroom (sandbox-start starts it) sends no telemetry, makes no update check and downloads nothing from Hugging Face. huggingface.co is not in the egress allow list.
 HEADROOM_TELEMETRY = "off"
 HEADROOM_BEACON = "off"
 HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language server) runs on .NET. The image has no ICU library, and this setting lets .NET start without it
 HF_HUB_OFFLINE = "1"
-# Ponytail (sandbox-boot installs the plugin) puts no codebase map in the session context. This saves input tokens.
+# Ponytail (sandbox-start installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
@@ -35,7 +35,7 @@ complete -F __start_kubectl k
 """
 
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
-# If you run the task in the VM, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
+# If you run the task in the sandbox, the default is ~/.local/share/bash-completion/completions. Bash loads completions from this folder when it needs them.
 [tasks."sandbox:completions"]
 description = "Write the bash completions into $COMPLETIONS_DIR"
 run = """

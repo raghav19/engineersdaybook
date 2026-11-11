@@ -3,6 +3,7 @@
 # The recipes run in this folder, so podman-compose finds compose.yaml and podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
+#   just sandbox setup   install and start the host proxy. Run it again after you edit a file in proxy/.
 #   just sandbox run     make the container if it does not exist, start it if it stopped, and open Herdr in it.
 #   just sandbox rm      remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
@@ -14,8 +15,11 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
+# bws and iron-proxy come from mise.toml. Run `mise install` once.
 bws            := require("bws")
 git            := require("git")
+iron_proxy     := require("iron-proxy")
+openssl        := require("openssl")
 podman         := require("podman")
 podman_compose := require("podman-compose")
 systemd_creds  := require("systemd-creds")
@@ -24,8 +28,8 @@ systemd_creds  := require("systemd-creds")
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
 # The tag of the image is the commit, as in .msb/justfile.
 commit := shell(git + ' rev-parse HEAD')
-# The Bitwarden access token of the proxy. `build` reads it, so there is no prompt. See .sandbox/proxy/README.md, step 6.
-credential := home_directory() / '.config/sandbox/bws-token.cred'
+# The Bitwarden access token of the proxy. `setup` makes it. `build` reads it, so there is no prompt.
+credential := config_directory() / 'credstore.encrypted/bws-token'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
 
@@ -38,12 +42,59 @@ export SANDBOX_BRANCH := shell(git + ' branch --show-current')
 
 # Stops with a message if a file is missing. A recipe lists the files that it needs on its first line: `build: (_needs credential)`.
 _needs file:
-    {{ assert(path_exists(file) == 'true', 'sandbox: missing ' + file + '. See .sandbox/proxy/README.md.') }}
+    {{ assert(path_exists(file) == 'true', 'sandbox: missing ' + file + '. Run: just sandbox setup') }}
 
 # List the recipes (the default)
 [default]
 help:
     just --list --unsorted
+
+# Run it in your main checkout, because the links of the units point to the files in this folder.
+# It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in proxy/README.md.
+# Install and start the host proxy. Run it again after you edit a file in proxy/.
+[script('bash')]
+setup:
+    set -euo pipefail
+    proxy='{{ justfile_directory() }}/proxy'
+    state="$HOME/.local/state/sandbox"
+    mkdir -p "$state" "$HOME/.config/sandbox"
+
+    # The unit runs the real binaries, not the mise shims. A shim needs the mise.toml of the repo, and the proxy does not see it.
+    mkdir -p "$HOME/.config/sandbox/bin"
+    for tool in '{{ bws }}' '{{ iron_proxy }}'; do
+        case "$tool" in */shims/*) echo "sandbox: $tool is a mise shim. Activate mise in this shell and run this again." >&2; exit 1 ;; esac
+        ln -sf "$tool" "$HOME/.config/sandbox/bin/$(basename "$tool")"
+    done
+
+    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
+    if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
+        openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+            -subj '/CN=sandbox egress proxy CA' \
+            -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
+            -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+            -keyout "$state/ca.key" -out "$state/ca.crt"
+        chmod 0600 "$state/ca.key"
+        chmod 0644 "$state/ca.crt"
+    fi
+
+    ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+
+    mkdir -p '{{ parent_directory(credential) }}'
+    # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
+    if ! systemd-creds --user decrypt --name=bws-token '{{ credential }}' - >/dev/null 2>&1; then
+        read -rsp 'Bitwarden access token: ' tok; echo
+        rm -f '{{ credential }}'
+        printf '%s' "$tok" | systemd-creds --user encrypt --name=bws-token - '{{ credential }}'
+        chmod 0400 '{{ credential }}'
+    fi
+
+    systemctl --user link "$proxy"/sandbox-{proxy.service,bridge.service,bridge.socket}
+    systemctl --user enable sandbox-proxy.service
+    systemctl --user restart sandbox-proxy.service
+    sleep 2
+    systemctl --user is-active --quiet sandbox-proxy.service \
+        || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
+    echo 'The proxy runs.'
 
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
@@ -72,9 +123,10 @@ rm:
 build *args: (_needs credential)
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
     # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
+    # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
         BWS_ACCESS_TOKEN="$token" \
-        bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
+        '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
     # localhost/sandbox-dev:latest is the tag that compose.yaml uses.

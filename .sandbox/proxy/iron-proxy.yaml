@@ -5,8 +5,8 @@
 # The real values come from the environment of the proxy. This file has the names of the variables, never the values.
 # The placeholders in the compose file of the sandbox must equal the proxy_value lines.
 # The unit runs the proxy in ~/.local/state/sandbox, so ca.crt and ca.key are relative paths.
-# Ports: 18080 to 18089 on 127.0.0.1 are reserved for this proxy. This file uses 18080 to 18084.
-# All listeners are on the loopback of the host. The DNS, HTTP and HTTPS listeners are required by iron-proxy and the sandbox does not use them.
+# Ports: this proxy reserves 18080 to 18089 on 127.0.0.1. This file uses 18080 to 18084.
+# All listeners are on the loopback of the host. iron-proxy requires the DNS, HTTP and HTTPS listeners. The sandbox does not use them.
 dns:
   listen: "127.0.0.1:18084"
   proxy_ip: "127.0.0.1"
