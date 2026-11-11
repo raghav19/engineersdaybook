@@ -21,7 +21,7 @@
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
-        "Authorization": "Bearer $GH_TOKEN",
+        "Authorization": "Bearer sandbox-placeholder-GH_TOKEN",
         "X-MCP-Toolsets": "context,issues,pull_requests,repos"
       }
     }
