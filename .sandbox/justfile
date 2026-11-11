@@ -27,12 +27,18 @@ commit := shell(git + ' rev-parse HEAD')
 # The Bitwarden access token of the proxy. `build` reads it, so there is no prompt. See .sandbox/proxy/README.md, step 6.
 credential := home_directory() / '.config/sandbox/bws-token.cred'
 
+proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
+
 # compose.yaml reads these variables from the environment, so they are exported.
 export SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
 export SANDBOX_SOCKET := env('XDG_RUNTIME_DIR') / 'sandbox'
 export SANDBOX_GIT_DIR := shell(git + ' rev-parse --path-format=absolute --git-common-dir')
 export SANDBOX_THEME := home_directory() / '.local/state/omarchy/current/theme'
 export SANDBOX_BRANCH := shell(git + ' branch --show-current')
+
+# Stops with a message if a file is missing. A recipe lists the files that it needs on its first line: `build: (_needs credential)`.
+_needs file:
+    {{ assert(path_exists(file) == 'true', 'sandbox: missing ' + file + '. See .sandbox/proxy/README.md.') }}
 
 # List the recipes (the default)
 [default]
@@ -41,7 +47,7 @@ help:
 
 # Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
 # Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: _check
+run *command: _check (_needs proxy_socket) (_needs SANDBOX_CA)
     # Make the container if it does not exist, and start it if it stopped. A running container stays as it is.
     # --wait waits for the healthcheck in compose.yaml.
     podman-compose up -d --no-recreate \
@@ -63,10 +69,11 @@ rm:
     podman-compose down
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
-build *args:
+build *args: (_needs credential)
     # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
-    # The access token of Bitwarden is the systemd credential of the proxy.
-    BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" \
+    # The && stops the recipe if systemd-creds fails. A failed $(...) in front of a command does not stop it.
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
+        BWS_ACCESS_TOKEN="$token" \
         bws run -- sh -c 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
@@ -84,24 +91,11 @@ build *args:
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
 
-# The sandbox needs the proxy socket and the CA. The proxy units make them. This recipe checks that they exist.
-# It also stops if an older setup left a container named sandbox.
-# It is a dependency of `run` only. A check at the top of the file would also stop `rm` and `help` when the proxy is down.
+# Stops if an older setup left a container named sandbox. It must run podman, so it is a shell command.
+# It is a dependency of `run` only. `run` also needs the proxy socket and the CA: see `_needs`.
 [private]
 [no-exit-message]
 _check:
-    [ -S "$SANDBOX_SOCKET/proxy.sock" ] || { \
-        echo "sandbox: no proxy socket at $SANDBOX_SOCKET/proxy.sock."; \
-        echo "Start the proxy: systemctl --user start sandbox-proxy (see .sandbox/proxy/README.md)."; \
-        exit 1; \
-    } >&2
-
-    [ -f "$SANDBOX_CA" ] || { \
-        echo "sandbox: no CA at $SANDBOX_CA."; \
-        echo "Make the CA: see .sandbox/proxy/README.md."; \
-        exit 1; \
-    } >&2
-
     # A container named sandbox must come from this compose.yaml. An older setup left one with this name.
     [ -z "$(podman ps -a -q --filter name=^sandbox$)" ] || [ -n "$(podman ps -a -q --filter name=^sandbox$ --filter label=com.docker.compose.project=agent-sandbox)" ] || { \
         echo "sandbox: the container sandbox is from an older setup. It does not start as the user agent."; \
