@@ -21,15 +21,15 @@
 
 <rect x="250" y="90" width="320" height="398" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
 <line x1="250" y1="126" x2="570" y2="126" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="262" y="113.3">Agent container</text></g>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="262" y="113.3">Agent sandbox</text></g>
 
 <rect x="260" y="136" width="300" height="342" rx="12" fill="#ffffff" stroke="#666666" stroke-width="2"/>
 <line x1="260" y1="168" x2="560" y2="168" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="272" y="157.3">Podman, rootless, hardened</text></g>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="272" y="157.3">Podman - container</text></g>
 
 <rect x="270" y="176" width="280" height="292" rx="12" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
 <line x1="270" y1="208" x2="550" y2="208" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="282" y="197.3">gVisor: the userspace kernel</text></g>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="282" y="197.3">gVisor: userspace kernel</text></g>
 
 <rect x="285" y="222" width="250" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="410.0" y="251.8" font-weight="bold">Agent tools</text><text x="410.0" y="272.8">Claude, Qwen, Herdr, TTT</text></g>
