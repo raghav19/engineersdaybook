@@ -90,7 +90,7 @@ The connection changes its carrier at three points, and the bytes stay the same.
 | `nft` and `sudo` | The firewall rule needs root, once. | `nft --version` and `sudo -v` |
 | `git`, `openssl` and `systemd-creds` | The clone, the CA and the encrypted credential. | `git --version`, `openssl version` and `systemd-creds --version` |
 | `iron-proxy` and `bws`, installed with `mise install` | The proxy and its secret loader. Run `mise install` in your main checkout. | `iron-proxy --version` and `bws --version` |
-| `kubectl`, with the kubeconfig of your k3s cluster | `just sandbox setup` reads the CA of the cluster from it. `just sandbox token` makes the token with it. | `kubectl get --raw /version` |
+| `kubectl`, with the kubeconfig of your k3s cluster | `just sandbox setup` reads the CA of the cluster from it and makes the token with it. | `kubectl get --raw /version` |
 | Secrets in Bitwarden Secrets Manager | The proxy holds the real tokens. See [what the setup assumes](proxy/README.md#what-this-setup-assumes). | The four keys exist in your Bitwarden project |
 
 `just` stops with a message if a tool of the justfile is missing.
@@ -124,7 +124,7 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 | Stop the sandbox | `just sandbox rm`. The volume stays. |
 | Allow one more host | Add it to `proxy/iron-proxy.yaml`, then run `systemctl --user restart sandbox-proxy` |
 | Change a token of a service | Change the Bitwarden key, then run `systemctl --user restart sandbox-proxy` |
-| Renew the token of the cluster | `just sandbox token`. The token lasts one year. |
+| Renew the token of the cluster | Run `rm ~/.local/state/sandbox/tokens/k8s_dev`, then `just sandbox setup`. The token lasts one year. |
 | Change a tool of the image | Edit `image/`, then run `just sandbox build` and `just sandbox run` |
 | Change the unit or the limits | Edit `sandbox.container`, then run `just sandbox run` |
 | Start with an empty home | Run `just sandbox rm`, then `podman volume rm sandbox-home`. This removes the clone and the logins. |
@@ -157,7 +157,7 @@ kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml (a placeholder to
 - **One kubeconfig for the sandbox.** `cluster.yaml` has one context, `k8s_dev`. The server is `kubernetes.default.svc`, a name that every k3s certificate lists, so the file is the same on each host. `setup` links the file, and the unit mounts it read-only.
 - **A name for the local cluster.** The proxy needs a name and not an IP address, and it refuses `127.0.0.1`. So the proxy has its own hosts file, `proxy/hosts`, with one line. It maps `kubernetes.default.svc` to `10.42.0.1`, the address of the bridge `cni0`, where k3s listens too. That is the first address of the default pod range of k3s. The hosts file of your system does not change.
 - **One rule and one secret in the proxy.** They are plain text in `proxy/iron-proxy.yaml`. See [the k3s cluster](proxy/README.md#the-k3s-cluster).
-- **A token on the host.** `just sandbox token` makes a token for the ServiceAccount `sandbox-agent` with `kubectl create token`. It writes the token to `~/.local/state/sandbox/tokens/k8s_dev`, and the proxy reads that file. `setup` makes the token once. It lasts one year, and the sandbox never holds it. Run the recipe again to renew it.
+- **A token on the host.** `just sandbox setup` makes a token for the ServiceAccount `sandbox-agent` with `kubectl create token`. It writes the token to `~/.local/state/sandbox/tokens/k8s_dev`, and the proxy reads that file. `setup` makes the token once. It lasts one year, and the sandbox never holds it. Run the recipe again to renew it.
 - **RBAC is the limit.** The rule allows every method for this host, so the rights of the ServiceAccount decide. It reads the cluster, it cannot read Secrets, and it can write in the namespace `sandbox-dev`. To make the proxy stricter, remove methods from the rule.
 - **Another cluster** later means a second context in `cluster.yaml`, and a second rule and secret in `iron-proxy.yaml`.
 
@@ -233,7 +233,7 @@ flowchart TD
 | A tool reports `connection refused` or `no route` | The tool ignores `HTTPS_PROXY`. Set the proxy in its settings to `http://127.0.0.1:3128`. |
 | `claude mcp list` shows `github` as failed, with `Authorization header is badly formatted` | The header in `managed-settings.json` must hold `Bearer sandbox-placeholder-GH_TOKEN`, as text. See [Placeholders](proxy/README.md#placeholders). Run `just sandbox build`, then `just sandbox run`. |
 | `socat` reports `Cannot assign requested address` | `lo` is down. `ExecStartPost` did not run `ip link set lo up`. Run `journalctl --user -u sandbox` and check that `ip` and `nsenter` exist. |
-| `kubectl` answers `Unauthorized` | The token file is missing or expired. Run `just sandbox token`. |
+| `kubectl` answers `Unauthorized` | The token file is missing or expired. Remove `~/.local/state/sandbox/tokens/k8s_dev`, then run `just sandbox setup`. |
 | `kubectl` answers `bad gateway`, and the proxy log shows `x509: certificate signed by unknown authority` | The proxy does not trust the CA of the cluster. Run `just sandbox setup`. It builds `upstream-ca.pem` again from your kubeconfig. |
 | `kubectl` answers `Forbidden`, or the proxy log shows `rejected_by: allowlist` | `Forbidden` is the RBAC of the ServiceAccount. `rejected_by: allowlist` means the method is not in the rule of the host in `proxy/iron-proxy.yaml`. |
 | `kubectl` answers `bad gateway` with a dial error in the proxy log | k3s is down, or it does not listen on `10.42.0.1`. Start k3s. If your pod range is not `10.42.0.0/16`, change the address in `proxy/hosts` and restart `sandbox-proxy`. |

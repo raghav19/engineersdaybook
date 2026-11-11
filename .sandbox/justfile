@@ -6,7 +6,6 @@
 #   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags, the repo and the cluster file. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
-#   just sandbox token   make a one-year token for the k3s cluster. setup makes it once. The proxy keeps it on the host.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
@@ -88,9 +87,9 @@ setup:
     # The CA is public data in your kubeconfig. Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
     { cat /etc/ssl/certs/ca-certificates.crt
       kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d; } > "$state/upstream-ca.pem"
-    # The proxy reads the token of the cluster from this folder. `just sandbox token` makes it. A token that exists stays.
+    # The proxy reads the token of the cluster from this folder. The sandbox never holds it. It lasts one year. To renew it, delete the file and run setup again.
     mkdir -p -m 700 "$state/tokens"
-    [ -s "$state/tokens/k8s_dev" ] || just --justfile '{{ justfile() }}' token
+    [ -s "$state/tokens/k8s_dev" ] || (umask 077; kubectl create token sandbox-agent -n sandbox-agent --duration=8760h > "$state/tokens/k8s_dev")
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -127,18 +126,6 @@ setup:
     systemctl --user is-active --quiet sandbox-proxy.service \
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
     echo 'The proxy runs.'
-
-# Make a one-year token for the k3s cluster. The proxy swaps it in for the placeholder
-[script('bash')]
-token:
-    # The host makes the token and keeps it. The sandbox never holds it, and the proxy adds it to a request. It lasts one year. Run this again to renew it.
-    set -euo pipefail
-    umask 077
-    dir="$HOME/.local/state/sandbox/tokens"
-    mkdir -p "$dir"
-    kubectl create token sandbox-agent -n sandbox-agent --duration=8760h > "$dir/k8s_dev.new"
-    mv -f "$dir/k8s_dev.new" "$dir/k8s_dev"
-    echo "token written to $dir/k8s_dev"
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
