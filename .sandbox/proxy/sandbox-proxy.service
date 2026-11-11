@@ -25,6 +25,8 @@ ProtectHome=tmpfs
 BindReadOnlyPaths=%E/sandbox/iron-proxy.yaml
 BindReadOnlyPaths=%h/.local/state/sandbox/ca.crt %h/.local/state/sandbox/ca.key
 BindReadOnlyPaths=%h/.local/state/sandbox/upstream-ca.pem %h/.local/state/sandbox/tokens
+# The hosts file that setup writes. It has the line for kubernetes.default.svc. The proxy sees no other hosts file.
+BindReadOnlyPaths=%h/.local/state/sandbox/hosts:/etc/hosts
 BindReadOnlyPaths=%h/.local/share/mise %h/.config/sandbox/bin
 SystemCallFilter=@system-service
 SystemCallArchitectures=native

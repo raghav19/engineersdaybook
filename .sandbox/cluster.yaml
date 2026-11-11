@@ -1,15 +1,16 @@
 # The kubeconfig of the sandbox for the k3s cluster on this host. It holds no secret.
-# `just sandbox setup` replaces @K8S_HOST@ with the name of this host. It writes the result to ~/.local/state/sandbox/kube/cluster.yaml.
-# sandbox.container mounts that folder read-only, and KUBECONFIG points to the file, so a plain `kubectl` works in the sandbox.
+# `just sandbox setup` links it to ~/.config/sandbox/cluster.yaml. sandbox.container mounts the link read-only as /etc/sandbox/cluster.yaml.
+# KUBECONFIG points to it, so a plain `kubectl` works in the sandbox.
 # The token is a placeholder. The proxy swaps in the real token for this host only. See proxy/iron-proxy.yaml.
-# The server is a name and not an IP address, because the proxy needs the server name of the TLS handshake.
+# The server is kubernetes.default.svc, a name that every k3s certificate lists. It is the same on each host.
+# The sandbox has no network, so it does not resolve the name. The proxy resolves it. `setup` gives the proxy a hosts file for this.
 # The file has no CA. The sandbox trusts the CA of the proxy, and the proxy checks the certificate of the cluster.
 apiVersion: v1
 kind: Config
 clusters:
   - name: k8s_dev
     cluster:
-      server: https://@K8S_HOST@:6443
+      server: https://kubernetes.default.svc:6443
 users:
   - name: k8s_dev
     user:

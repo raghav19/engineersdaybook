@@ -96,10 +96,10 @@ transforms:
         - cloud.google.com
         # Other
         - crl.microsoft.com
-      # The k3s cluster on this host. setup replaces @K8S_HOST@ with the name of the host. The rule says which methods may pass.
+      # The k3s cluster on this host. The name kubernetes.default.svc points to it in the hosts file of the proxy. The rule says which methods may pass.
       # CONNECT is the setup of the tunnel. A method that is not listed gets 403 from the proxy. RBAC in the cluster is the second limit.
       rules:
-        - {host: "@K8S_HOST@", methods: [CONNECT, GET, POST, PUT, PATCH, DELETE]}
+        - {host: "kubernetes.default.svc", methods: [CONNECT, GET, POST, PUT, PATCH, DELETE]}
   - name: secrets
     config:
       secrets:
@@ -130,6 +130,6 @@ transforms:
         - source: {type: file, path: tokens/k8s_dev, ttl: 5m}
           replace: {proxy_value: sandbox-placeholder-K8S_DEV, match_headers: [Authorization]}
           rules:
-            - {host: "@K8S_HOST@"}
+            - {host: "kubernetes.default.svc"}
 log:
   level: info

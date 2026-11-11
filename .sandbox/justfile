@@ -3,10 +3,9 @@
 # The recipes run in this folder, so podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/ or cluster.yaml.
+#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags, the repo and the cluster file. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
-#   just sandbox config  render the proxy config and cluster.yaml again after you edit them, then restart the proxy.
 #   just sandbox token   make a token for the k3s cluster. The proxy keeps it on the host.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
@@ -54,9 +53,9 @@ help:
 
 # Run it in your main checkout, because the links of the units point to the files in this folder.
 # It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in proxy/README.md.
-# Install and start the host proxy. Run it again after you edit a file in proxy/ or cluster.yaml.
+# Install and start the host proxy. Run it again after you edit a file in proxy/.
 [script('bash')]
-setup: _render
+setup:
     set -euo pipefail
     proxy='{{ source_directory() }}/proxy'
     state="$HOME/.local/state/sandbox"
@@ -79,6 +78,26 @@ setup: _render
         chmod 0600 "$state/ca.key"
         chmod 0644 "$state/ca.crt"
     fi
+
+    # The proxy config and the kubeconfig of the sandbox are links to the files in this folder.
+    ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+    ln -sf '{{ source_directory() }}/cluster.yaml' "$HOME/.config/sandbox/cluster.yaml"
+
+    # The k3s cluster on this host. The sandbox and the proxy use the name kubernetes.default.svc, which every k3s certificate lists.
+    # The proxy refuses a loopback address, so the name points to the address of the bridge cni0. k3s listens there too.
+    # The proxy gets its own hosts file, so the hosts file of your system does not change. Run setup again if the address changes.
+    mkdir -p "$state/tokens"
+    chmod 700 "$state/tokens"
+    addr="$(ip -4 -o addr show dev cni0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1 || true)"
+    [ -n "$addr" ] || echo 'sandbox: no cni0 address. Is k3s running? The proxy cannot reach the cluster until you run setup again.' >&2
+    { cat /etc/hosts; [ -z "$addr" ] || echo "$addr kubernetes.default.svc"; } > "$state/hosts.new"
+    mv -f "$state/hosts.new" "$state/hosts"
+    # The proxy checks the certificate of k3s. k3s has a private CA, so the proxy needs it. The CA is public data in your kubeconfig.
+    # Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
+    ca="$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+    [ -n "$ca" ] || echo 'sandbox: no cluster CA in your kubeconfig. Set KUBECONFIG, then run setup again.' >&2
+    { cat /etc/ssl/certs/ca-certificates.crt; printf '%s\n' "$ca"; } > "$state/upstream-ca.pem.new"
+    mv -f "$state/upstream-ca.pem.new" "$state/upstream-ca.pem"
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -116,10 +135,6 @@ setup: _render
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
     echo 'The proxy runs.'
 
-# Render proxy/iron-proxy.yaml and cluster.yaml again after you edit them, then restart the proxy
-config: _render
-    systemctl --user restart sandbox-proxy.service
-
 # Make a token for the k3s cluster. The proxy swaps it in for the placeholder
 [script('bash')]
 token:
@@ -131,30 +146,6 @@ token:
     kubectl create token sandbox-agent -n sandbox-agent --duration=1h > "$dir/k8s_dev.new"
     mv -f "$dir/k8s_dev.new" "$dir/k8s_dev"
     echo "token written to $dir/k8s_dev"
-
-# Write the files that have the name of this host, and the CA bundle of the proxy. setup and `config` run it.
-[private]
-[script('bash')]
-_render:
-    set -euo pipefail
-    state="$HOME/.local/state/sandbox"
-    host="$(hostname)"
-    mkdir -p "$state/kube" "$state/tokens" "$HOME/.config/sandbox"
-    chmod 755 "$state/kube"
-    chmod 700 "$state/tokens"
-    # @K8S_HOST@ is the name of this host. The proxy needs a name and not an IP address. The certificate of k3s lists the name of the node.
-    # Each file is written to a new file and then moved. A move replaces a link, so the file in the repo does not change.
-    sed "s/@K8S_HOST@/$host/g" '{{ source_directory() }}/proxy/iron-proxy.yaml' > "$HOME/.config/sandbox/iron-proxy.yaml.new"
-    mv -f "$HOME/.config/sandbox/iron-proxy.yaml.new" "$HOME/.config/sandbox/iron-proxy.yaml"
-    sed "s/@K8S_HOST@/$host/g" '{{ source_directory() }}/cluster.yaml' > "$state/kube/cluster.yaml.new"
-    chmod 644 "$state/kube/cluster.yaml.new"
-    mv -f "$state/kube/cluster.yaml.new" "$state/kube/cluster.yaml"
-    # The proxy checks the certificate of k3s. k3s has a private CA, so the proxy needs it. The CA is public data in your kubeconfig.
-    # Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
-    ca="$(kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null | base64 -d 2>/dev/null || true)"
-    [ -n "$ca" ] || echo 'sandbox: no cluster CA in your kubeconfig. Set KUBECONFIG, then run just sandbox config.' >&2
-    { cat /etc/ssl/certs/ca-certificates.crt; printf '%s\n' "$ca"; } > "$state/upstream-ca.pem.new"
-    mv -f "$state/upstream-ca.pem.new" "$state/upstream-ca.pem"
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.

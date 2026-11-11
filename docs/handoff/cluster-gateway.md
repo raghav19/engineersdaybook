@@ -7,23 +7,23 @@ The owner wants the agent in the sandbox to reach the k3s cluster on the host wi
 ## The design
 
 ```text
-kubectl in the sandbox    KUBECONFIG=/etc/sandbox/kube/cluster.yaml (a placeholder token, no CA)
+kubectl in the sandbox    KUBECONFIG=/etc/sandbox/cluster.yaml (a placeholder token, no CA)
   → socat → proxy.sock → bridge → iron-proxy
       the rule:    the host of k3s, and the methods that may pass
       the secret:  tokens/k8s_dev (a file on the host) replaces the placeholder
   → the k3s API on this host
 ```
 
-- `.sandbox/cluster.yaml` is a plain kubeconfig with one context, `k8s_dev`. The server is `https://@K8S_HOST@:6443`.
-- `just sandbox setup` and `just sandbox config` replace `@K8S_HOST@` with `hostname`. They write `~/.config/sandbox/iron-proxy.yaml` and `~/.local/state/sandbox/kube/cluster.yaml`. They also build `upstream-ca.pem` from the system CAs and the CA in your kubeconfig.
+- `.sandbox/cluster.yaml` is a plain kubeconfig with one context, `k8s_dev`. The server is `https://kubernetes.default.svc:6443`. The name is the same on each host.
+- `just sandbox setup` links `iron-proxy.yaml` and `cluster.yaml` into `~/.config/sandbox`. It writes `~/.local/state/sandbox/hosts` (your `/etc/hosts` plus `<address of cni0> kubernetes.default.svc`) and builds `upstream-ca.pem` from the system CAs and the CA in your kubeconfig. The proxy unit binds the hosts file over `/etc/hosts`, so the system hosts file does not change.
 - `.sandbox/proxy/iron-proxy.yaml` holds one allowlist rule and one secret for that host, as plain text.
 - `just sandbox token` makes a one-hour token for the ServiceAccount `sandbox-agent` and writes it to `tokens/k8s_dev`. The proxy reads the file with a `ttl`.
-- The container mounts the folder `kube` read-only and sets `KUBECONFIG`. There is no generator and no copy at start.
+- The container mounts `~/.config/sandbox/cluster.yaml` read-only and sets `KUBECONFIG`. There is no generator, no render step and no copy at start.
 
 ## Decisions of the owner
 
 - No generator and no policy file for now. One cluster, one declarative file. A second cluster means a second block in two files.
-- Mount the kubeconfig. Do not bake it into the image. The only machine-specific value is the host name. In the k3s certificate, only the name of the node resolves to a non-loopback address. So a baked file would fit one host only.
+- Mount the kubeconfig. Do not bake it into the image. Use a fixed name that points to the local k3s, so no file has a host-specific value. Rule edits need only a restart of the proxy, so there is no `config` recipe.
 - Keep `kubectx` in the image. With one context it has nothing to switch, and the read-only mount blocks a switch.
 
 ## What changed
@@ -32,13 +32,13 @@ kubectl in the sandbox    KUBECONFIG=/etc/sandbox/kube/cluster.yaml (a placehold
 |---|---|
 | `.sandbox/cluster.yaml` | New. The kubeconfig of the sandbox. |
 | `.sandbox/proxy/iron-proxy.yaml` | One allowlist rule and one secret for the k3s host. |
-| `.sandbox/justfile` | A private recipe `_render`. `setup` runs it in place of a link to `iron-proxy.yaml`. New recipes `config` and `token`. |
-| `.sandbox/proxy/sandbox-proxy.service` | Sets `SSL_CERT_FILE` and binds `upstream-ca.pem` and the `tokens` folder. |
-| `.sandbox/sandbox.container` | Mounts the folder `kube` read-only and sets `KUBECONFIG`. |
+| `.sandbox/justfile` | `setup` links the two files, writes the hosts file and builds the CA bundle. New recipe `token`. |
+| `.sandbox/proxy/sandbox-proxy.service` | Sets `SSL_CERT_FILE`. Binds `upstream-ca.pem`, the `tokens` folder and the hosts file (over `/etc/hosts`). |
+| `.sandbox/sandbox.container` | Mounts `cluster.yaml` read-only and sets `KUBECONFIG`. |
 | `.sandbox/image/tools/infra.toml` | Adds `kubectx` 0.11. |
 | The READMEs | A "Clusters" section, the rules of the proxy explained, and the rows for daily use and failures. |
 
-The live proxy config is now a rendered file. After you edit `proxy/iron-proxy.yaml`, run `just sandbox config`. A plain restart does not read the edit.
+After you edit `proxy/iron-proxy.yaml`, run `systemctl --user restart sandbox-proxy`.
 
 A generator for several clusters (a shared policy, access profiles, a script) was built and tested first. It is in the first commit of the branch `sandbox-clusters` (`a13dcb9`). Use it as the base when a second cluster comes.
 
@@ -58,8 +58,8 @@ The tests ran on the host of the owner on 2026-11-11 against the real k3s (`v1.3
 | Token refresh with `ttl: 10s` | A bad token in the file gave `Unauthorized` after the ttl. The good token worked again after the next ttl. |
 | Method and path rules | `POST` and `DELETE` got `403` with `rejected_by: allowlist`. A path rule allowed `GET /version` and refused `GET /api`. |
 | The hardened unit | A transient unit with `ProtectHome=tmpfs`, the same binds, `SSL_CERT_FILE` and the syscall filter gave `200` for the cluster and `403` for a refused method. |
-| `_render` in a scratch HOME | No `@K8S_HOST@` is left. The kubeconfig has the host name, the placeholder and no CA. The modes are right (`kube` 755, `cluster.yaml` 644, `tokens` 700). The bundle is the system CAs plus the k3s CA. |
-| `_render` and an old link | The old link at the config path is replaced. The file that it pointed to did not change. |
+| The fixed name | A transient unit with `ProtectHome=tmpfs` and a scratch hosts file bound over `/etc/hosts` (`10.42.0.1 kubernetes.default.svc`) gave `200` for `GET /version`. A `POST` of a self-subject review showed `system:serviceaccount:sandbox-agent:sandbox-agent`. The placeholder was swapped, the certificate matched the name, and `example.com` got `403`. |
+| A symlinked kubeconfig as a file mount | In gVisor with `--network none`, `kubectl config view` read the file through a link on the host and showed the fixed server name. |
 | `token` | A file with mode 0600, written to a new file and then renamed. The ServiceAccount `sandbox-agent` already exists in the k3s. |
 | The end-to-end test in a renamed sandbox | A plain `kubectl` with no flag: the version, `auth whoami` as `system:serviceaccount:sandbox-agent:sandbox-agent`, `get nodes` and `get pods -A` work. `get secrets -A` is `Forbidden`. `can-i create deployments` is `yes` in `sandbox-dev` and `no` in `default`. No token in the environment or the kubeconfig. |
 | `kubectl config use-context` on the read-only file | `permission denied`. `kubectl` wants a lock file in the folder. |
@@ -68,12 +68,12 @@ The tests ran on the host of the owner on 2026-11-11 against the real k3s (`v1.3
 ## What was not tested
 
 - The `kubectx` binary. It is not on the host, and the image has no `kubectx` until the next build. The task `sandbox:completions` has no line for it, because I could not check whether it has a `completion` subcommand, and a wrong line breaks the build.
-- `just sandbox setup` and `just sandbox config` as real commands on the host. `_render` and `token` ran with a scratch HOME.
+- `just sandbox setup` as a real command on the host. Its new steps ran by hand with scratch paths.
 - An image build with the new tool.
 - `kubectl exec`, `port-forward`, `logs -f` and watches. They need a pod and a Role.
 - A path rule for one namespace, such as `/api/v1/namespaces/sandbox-dev/*`.
 - A timer that renews the token.
-- A machine with no k3s. `_render` prints a message if your kubeconfig has no CA, and the proxy then cannot reach a cluster.
+- A machine with no k3s. `setup` prints a message if `cni0` or the CA is missing, and the proxy then cannot reach a cluster.
 
 ## Open decisions (ask the owner)
 
