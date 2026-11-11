@@ -45,7 +45,7 @@ The recipe asks for the access token. Nothing shows as you type. It does these s
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
 3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
-4. Encrypts the access token with `systemd-creds` into `~/.config/sandbox/bws-token.cred`. It asks for the token only if the file is missing or cannot be read.
+4. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
 5. Links the three units, enables `sandbox-proxy.service` and restarts it.
 
 The recipe ends with `The proxy runs.`
@@ -149,7 +149,7 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 
 | Text | Cause | Fix |
 |---|---|---|
-| `Failed to read encrypted credential data: Invalid argument` | `bws-token.cred` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
+| `Failed to read encrypted credential data: Invalid argument` | `~/.config/credstore.encrypted/bws-token` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
 | `just sandbox setup` fails at `systemctl --user link` | The old transient `systemd-run` units `sandbox-proxy` and `sandbox-bridge` have the same names. | Run `systemctl --user stop sandbox-proxy sandbox-bridge`. Run `just sandbox setup` again. |
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |

@@ -29,7 +29,7 @@ registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
 # The tag of the image is the commit, as in .msb/justfile.
 commit := shell(git + ' rev-parse HEAD')
 # The Bitwarden access token of the proxy. `setup` makes it. `build` reads it, so there is no prompt.
-credential := home_directory() / '.config/sandbox/bws-token.cred'
+credential := config_directory() / 'credstore.encrypted/bws-token'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
 
@@ -79,6 +79,7 @@ setup:
 
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
 
+    mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
     if ! systemd-creds --user decrypt --name=bws-token '{{ credential }}' - >/dev/null 2>&1; then
         read -rsp 'Bitwarden access token: ' tok; echo
