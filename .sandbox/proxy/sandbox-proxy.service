@@ -1,4 +1,4 @@
-# iron-proxy, the only way out of the sandbox. See README.md in this folder for the one-time steps.
+# iron-proxy, the only way out of the sandbox. Run `just sandbox setup` to install it. See README.md in this folder.
 # bws run gives the real tokens to the proxy. The Bitwarden access token comes from the systemd credential bws-token,
 # so it is not in this file and not in the arguments.
 [Unit]

@@ -45,7 +45,7 @@ claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin in
 claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
   || echo "sandbox-start: warning: the TokenEconomizer plugin is not installed" >&2
 
-# The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `just sandbox down` stops it.
+# The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `podman stop sandbox` stops it.
 touch /tmp/sandbox-ready
 trap 'exit 0' TERM INT
 sleep infinity &
