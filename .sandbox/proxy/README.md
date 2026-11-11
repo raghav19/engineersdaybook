@@ -45,7 +45,7 @@ The recipe asks for your `sudo` password and for the access token. Nothing shows
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
-3. Runs `clusters.sh`. It writes `~/.config/sandbox/iron-proxy.yaml` (`iron-proxy.yaml` plus a rule and a secret for each cluster), the kubeconfig of the sandbox and the CA bundle of the proxy. See [Clusters](#clusters).
+3. Renders `iron-proxy.yaml` and `../cluster.yaml` with the name of this host, and builds the CA bundle of the proxy from your kubeconfig. `just sandbox config` does the same. See [The k3s cluster](#the-k3s-cluster).
 4. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
 5. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
 6. Links the three units, enables `sandbox-proxy.service` and restarts it.
@@ -94,32 +94,31 @@ What the rule does not do:
 
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `clusters.sh` adds the rules of the Kubernetes clusters. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. They are copied to `/etc`, not linked.
+`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. They are copied to `/etc`, not linked.
 
-## Clusters
+## The k3s cluster
 
-`clusters.sh` adds one rule and one secret to the proxy config for each cluster that [`../clusters.yaml`](../clusters.yaml) allows. These are the two entries for a cluster `k8s_dev`:
+`iron-proxy.yaml` has one rule and one secret for the k3s cluster on this host. `@K8S_HOST@` stands for the name of the host. `just sandbox setup` and `just sandbox config` replace it with the output of `hostname`.
 
 ```yaml
 - name: allowlist
   config:
     rules:
-      - {host: omarchy, methods: [CONNECT, GET, POST, PUT, PATCH, DELETE]}
+      - {host: "@K8S_HOST@", methods: [CONNECT, GET, POST, PUT, PATCH, DELETE]}
 - name: secrets
   config:
     secrets:
       - source: {type: file, path: tokens/k8s_dev, ttl: 5m}
         replace: {proxy_value: sandbox-placeholder-K8S_DEV, match_headers: [Authorization]}
-        rules: [{host: omarchy}]
+        rules: [{host: "@K8S_HOST@"}]
 ```
 
-- **The allowlist rule says who may connect and with which methods.** The proxy judges twice. First it judges the setup of the tunnel (`CONNECT`). Then it judges each request in the tunnel by its method and path. So a profile needs `CONNECT`, or nothing starts. A request that matches no rule gets `403` from the proxy, before the cluster sees it. The log shows `rejected_by: allowlist`. A rule can also have `paths`.
-- **The secret says where the real token is.** `type: file` reads the file `tokens/k8s_dev`, and it reads the file again after `ttl`. So `just sandbox token k8s_dev` renews the token with no restart. The path is relative to the working directory of the unit, `~/.local/state/sandbox`, so the config has no path of a home folder. The unit binds the `tokens` folder because the proxy sees an empty `/home`.
-- **The placeholder works for one host.** `rules: [{host: omarchy}]` limits the swap to that host. A request with the placeholder of another cluster is not swapped, and the cluster answers `401`.
-- **The proxy trusts the cluster through `SSL_CERT_FILE`.** Go reads this variable for its trust roots. `upstream-ca.pem` holds the system CAs and the CA of each cluster. Only the proxy uses the file, so your system trust does not change. Without it, the proxy answers `502` with `x509: certificate signed by unknown authority`.
-- **Use a host name, in lower case.** A client sends no server name for an IP address, and the proxy needs one (`no SNI provided`). A client may send the name in lower case, and the proxy compares the text (`SNI/Host mismatch`). `clusters.sh` writes the host in lower case.
-- **A loopback server is rewritten.** The proxy refuses an upstream on `127.0.0.0/8`. `clusters.sh` replaces `127.0.0.1` with the host name of the machine. The certificate of the cluster must list that name. k3s lists the node name.
-- **A client certificate cannot pass.** The proxy ends the TLS, so the cluster never sees the certificate. A cluster must accept a token. A missing token file logs a warning (`reading secret file`) and the proxy keeps running. The request has no token, and the cluster answers `401`.
+- **The rule says who may connect and with which methods.** The proxy judges twice. First it judges the setup of the tunnel (`CONNECT`). Then it judges each request in the tunnel by its method. So the list needs `CONNECT`, or nothing starts. A request that matches no rule gets `403` from the proxy, before the cluster sees it. The log shows `rejected_by: allowlist`. A rule can also have `paths`.
+- **The secret says where the real token is.** `type: file` reads the file `tokens/k8s_dev`, and it reads the file again after `ttl`. So `just sandbox token` renews the token with no restart. The path is relative to the working directory of the unit, `~/.local/state/sandbox`, so no path of a home folder is in the config. The unit binds the `tokens` folder, because the proxy sees an empty `/home`.
+- **The placeholder works for one host.** `rules: [{host: ...}]` limits the swap to that host. The cluster answers `401` to a request with a placeholder that the proxy did not swap.
+- **The proxy trusts the cluster through `SSL_CERT_FILE`.** Go reads this variable for its trust roots. `upstream-ca.pem` holds the system CAs and the CA of the cluster. `setup` builds it from your kubeconfig. Only the proxy uses the file, so your system trust does not change. Without it, the proxy answers `502` with `x509: certificate signed by unknown authority`.
+- **The server is a host name.** A client sends no server name for an IP address, and the proxy needs one (`no SNI provided`). The proxy also refuses an upstream on `127.0.0.0/8`, so `127.0.0.1` does not work. The name of the node resolves to a non-loopback address, and k3s lists it in its certificate. Use lower case: a client may send the name in lower case, and the proxy compares the text (`SNI/Host mismatch`).
+- **A client certificate cannot pass.** The proxy ends the TLS, so the cluster never sees the certificate. The cluster must accept a token. A missing token file logs a warning (`reading secret file`) and the proxy keeps running. The request has no token, and the cluster answers `401`.
 
 ## Why there is a bridge
 
@@ -135,7 +134,7 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 systemctl --user start sandbox-proxy.service     # starts the socket too
 systemctl --user stop sandbox-proxy.service      # stops the socket and the bridge too
 systemctl --user restart sandbox-proxy.service   # for example after you renew a token file
-just sandbox clusters                             # after you edit iron-proxy.yaml or clusters.yaml: writes the config, then restarts the proxy
+just sandbox config                               # after you edit iron-proxy.yaml or ../cluster.yaml: renders them again, then restarts the proxy
 systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 journalctl --user -u sandbox-proxy -f             # the audit log: one JSON line for each request
 ```
@@ -177,13 +176,13 @@ Check the result with `systemd-analyze --user security sandbox-proxy.service`. A
 
 The unit leaves out lines that do not lower the score of `systemd-analyze security`: `LockPersonality=`, `ProtectHostname=` and `UMask=`. It does not use `CapabilityBoundingSet=`, because a user unit has no capabilities. It does not use `MemoryDenyWriteExecute=`, because it can break programs that make code at run time.
 
-The unit cannot restrict the network. `IPAddressDeny=` does nothing in a user unit, and the proxy must reach the internet. The allowlist in `iron-proxy.yaml` and the policy in `clusters.yaml` are the control. Treat those files as the most important files of the proxy.
+The unit cannot restrict the network. `IPAddressDeny=` does nothing in a user unit, and the proxy must reach the internet. The allowlist in `iron-proxy.yaml` is the control. Treat that file as the most important file of the proxy.
 
 ### What the proxy sees in `/home`
 
 | Path | Why |
 |---|---|
-| `~/.config/sandbox/iron-proxy.yaml` | The config that `clusters.sh` writes. It is a file, not a link. |
+| `~/.config/sandbox/iron-proxy.yaml` | The config that `just sandbox setup` renders. It is a file, not a link. |
 | `~/.local/state/sandbox/upstream-ca.pem` | The CA bundle for the clusters. The unit sets `SSL_CERT_FILE` to it. |
 | `~/.local/state/sandbox/tokens` | The token files of the clusters. The proxy reads them by a relative path. |
 | `~/.local/state/sandbox/ca.crt` and `ca.key` | The CA. |
@@ -201,8 +200,8 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 | `Failed to read encrypted credential data: Invalid argument` | `~/.config/credstore.encrypted/bws-token` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
 | `just sandbox setup` stops at the firewall step | `sudo` refused the password, or `nft` could not load the rule. | Run `sudo -v`. Run `sudo nft -c -f /etc/sandbox-guard.nft` to check the file. Run `journalctl -u sandbox-guard`. Then run `just sandbox setup` again. |
 | `reading secret file "tokens/NAME": no such file` in the log | The token file of a cluster does not exist yet. | Run `just sandbox token NAME`. |
-| `502` and `x509: certificate signed by unknown authority` in the log | The proxy does not trust the CA of a cluster. | Run `just sandbox clusters`. |
-| `SNI/Host mismatch` in the log | The client sent the host name in a different case, or an IP address. | Use a lower-case host name in the kubeconfig. `clusters.sh` does this. |
+| `502` and `x509: certificate signed by unknown authority` in the log | The proxy does not trust the CA of a cluster. | Run `just sandbox config`. |
+| `SNI/Host mismatch` in the log | The client sent the host name in a different case, or an IP address. | Use a lower-case host name in `cluster.yaml`. |
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
 | `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |
