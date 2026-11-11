@@ -72,7 +72,7 @@ Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
 Volume=%t/sandbox:/run/sandbox/proxy:ro
 Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
 Volume=%h/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro
-# The name does not change, so the volume of the earlier setup keeps working.
+# The volume keeps the clone, the logins and the histories when the container is replaced.
 Volume=sandbox-home:/home/agent
 
 [Service]

@@ -67,7 +67,7 @@ setup:
         ln -sf "$tool" "$HOME/.config/sandbox/bin/$(basename "$tool")"
     done
 
-    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
+    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An existing CA stays.
     if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
         openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
             -subj '/CN=sandbox egress proxy CA' \
@@ -119,15 +119,15 @@ setup:
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
-    # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so it also replaces a container that an older setup left with the name sandbox.
+    # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so each run makes a new container.
     # daemon-reload makes systemd read an edit of sandbox.container.
     systemctl --user daemon-reload
     systemctl --user restart sandbox.service
 
     # Wait for the healthcheck in sandbox.container. `podman healthcheck run` runs the check at once and exits 0 when it passes.
     # If the container is not ready after 180 s, this stops the recipe. See then: podman logs sandbox
-    # --foreground and </dev/null keep podman away from your terminal. Without them, timeout runs podman in a background group.
-    # In a terminal, the kernel then stops podman for good, and a stopped podman holds the lock of the container, so every podman command hangs.
+    # --foreground and </dev/null keep podman in the foreground group of your terminal.
+    # A podman that touches the terminal from a background group is stopped by the kernel. It then holds the lock of the container, and every podman command hangs.
     timeout --foreground 180 sh -c 'until podman healthcheck run sandbox >/dev/null 2>&1 </dev/null; do sleep 2; done' \
         || { echo 'sandbox: the container is not healthy. See: podman logs sandbox' >&2; exit 1; }
 

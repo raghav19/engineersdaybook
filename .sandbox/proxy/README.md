@@ -59,7 +59,7 @@ systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock"
 ```
 
-The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#install-and-use) and run `just sandbox build`, then `just sandbox run`.
+The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#getting-started) and run `just sandbox build`, then `just sandbox run`.
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
@@ -91,7 +91,6 @@ What the rule does not do:
 
 - It separates users. It does not separate programs of the same user. A rootless container of your user with `pasta` networking can connect to the host loopback as your user. The sandbox has `Network=none`, so it cannot. Do not give another container of your user a route to these ports.
 - It does not guard `proxy.sock`. The folder `$XDG_RUNTIME_DIR` has the mode 0700 and guards the socket.
-- Tests of the rule ran in a temporary network namespace. See the handoff `docs/handoff/podman-gvisor-sandbox.md`.
 
 ## Files
 
@@ -121,7 +120,7 @@ systemd starts the bridge at the first connection, and the bridge starts the pro
 
 The sandbox holds the placeholder. The proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Any other host gets 403 at the CONNECT. These values must equal the `proxy_value` lines in `iron-proxy.yaml`.
 
-The GitHub MCP server of Claude Code is an exception. `image/configs/agents/managed-settings.json` holds `sandbox-placeholder-GH_TOKEN` as text in its `Authorization` header. Claude Code does not expand `$GH_TOKEN` there. It sends the text as it is, and GitHub answers `Authorization header is badly formatted`. With `${GH_TOKEN}`, Claude Code drops the server without a message. Qwen Code expands `$GH_TOKEN` itself, so `qwen-settings.json` keeps the variable.
+The GitHub MCP server of Claude Code is an exception. In `image/configs/agents/managed-settings.json`, its `Authorization` header holds `sandbox-placeholder-GH_TOKEN` as text, because Claude Code does not expand a variable in that header. Qwen Code expands `$GH_TOKEN` itself, so `qwen-settings.json` keeps the variable.
 
 | Placeholder in the sandbox | Variable of the proxy | Hosts |
 |---|---|---|
@@ -173,7 +172,6 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 |---|---|---|
 | `Failed to read encrypted credential data: Invalid argument` | `~/.config/credstore.encrypted/bws-token` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
 | `just sandbox setup` stops at the firewall step | `sudo` refused the password, or `nft` could not load the rule. | Run `sudo -v`. Run `sudo nft -c -f /etc/sandbox-guard.nft` to check the file. Run `journalctl -u sandbox-guard`. Then run `just sandbox setup` again. |
-| `just sandbox setup` fails at `systemctl --user link` | The old transient `systemd-run` units `sandbox-proxy` and `sandbox-bridge` have the same names. | Run `systemctl --user stop sandbox-proxy sandbox-bridge`. Run `just sandbox setup` again. |
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
 | `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |

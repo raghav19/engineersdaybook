@@ -1,5 +1,5 @@
 # The Unix socket that the sandbox mounts.
-# The agent in the sandbox is not the host user. In rootless Podman it is a subuid. The socket must accept it, so the mode is 0666.
+# The mode is 0666, so that any user id that the container maps can connect.
 # Only you and the containers that mount the folder reach the socket, because $XDG_RUNTIME_DIR has the mode 0700.
 [Unit]
 Description=Socket of the sandbox proxy bridge
@@ -12,5 +12,5 @@ SocketMode=0666
 DirectoryMode=0711
 # Remove the socket file at a stop, so that a missing file means the proxy is down.
 RemoveOnStop=yes
-# systemd sets DirectoryMode only for a folder that it makes. An old folder keeps the mode 0700, so set the mode after the start.
+# systemd sets DirectoryMode only for a folder that it makes. An existing folder keeps its mode, so set the mode after the start.
 ExecStartPost=/usr/bin/chmod 0711 %t/sandbox
