@@ -8,7 +8,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 |---|---|
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `compose.yaml` | The two containers: their environment, hardening flags, mounts and volumes. |
-| `justfile` | `run`, `rm` and `build`. `run` starts the container with `podman-compose up -d` and opens Herdr in it. |
+| `justfile` | `setup`, `run`, `rm` and `build`. `setup` installs the host proxy. `run` starts the container with `podman-compose up -d` and opens Herdr in it. |
 
 ## Architecture
 
@@ -31,11 +31,15 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 
 ## Install and use
 
-Do the [one-time setup of the host proxy](proxy/README.md#one-time-setup) first. It installs `iron-proxy` and `bws`, makes the CA, makes the encrypted credential for `just sandbox build`, and starts the proxy units. `just sandbox build` stops if the credential is missing. `just sandbox run` stops if the proxy socket or the CA is missing.
+The host needs `podman`, `podman-compose`, `git`, `mise`, `openssl` and `systemd-creds`. `just` stops with a message if one is missing. Follow these steps in your main checkout:
 
-The host needs `podman`, `podman-compose` (tested with version 1.6.0), `git`, `bws` and `systemd-creds`. `just` stops with a message if one is missing. Then build the image and run the sandbox:
+1. Make the Bitwarden access token. See [step 1 of the proxy guide](proxy/README.md#step-1-make-the-bitwarden-access-token).
+2. Set up the host proxy. It installs `iron-proxy` and `bws`, makes the CA, encrypts the token and starts the proxy units. Run it again after you edit a file in `proxy/`.
+3. Build the image.
+4. Run the sandbox.
 
 ```shell
+just sandbox setup   # asks for the access token, then installs and starts the host proxy
 just sandbox build   # builds the image, tags it with the commit and pushes it to ghcr.io. The first build takes several minutes.
 just sandbox run     # makes the container if it does not exist, starts it if it stopped, and opens Herdr
 ```
@@ -44,12 +48,13 @@ just sandbox run     # makes the container if it does not exist, starts it if it
 
 | Command | What it does |
 |---|---|
+| `just sandbox setup` | Installs and starts the host proxy. Asks for the Bitwarden access token if the credential is missing. Run it again after you edit a file in `proxy/`. |
 | `just sandbox run` | Makes the container if it does not exist, and starts it if it stopped. A running container stays as it is. Waits until the container is healthy, then opens Herdr with `podman-compose exec`. Close the terminal and the sandbox keeps running. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)` for the container. It is healthy after `sandbox-start` finishes. |
 | `podman logs -f sandbox` | Follows the log. |
 | `podman stop sandbox` | Stops the container. The next `run` starts the same container. |
 | `just sandbox rm` | Removes the container. The volume stays. Run it after you edit `compose.yaml` or rebuild the image, then run `just sandbox run`. |
-| `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. It needs the credential of the proxy (`proxy/README.md`, step 6) and asks for no password. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
+| `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. It needs the credential that `just sandbox setup` makes, and asks for no password. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
 
 ## Hardening
 
