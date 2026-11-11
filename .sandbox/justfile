@@ -3,12 +3,12 @@
 # The recipes run in this folder, so podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install and start the host proxy, link the container unit and register gVisor. Run it again after you edit a file in proxy/.
-#   just sandbox run     start the container if it is not running, and open Herdr in it.
+#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/.
+#   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
-# After you edit sandbox.container or build the image, run `just sandbox rm` and then `just sandbox run`.
+# After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -19,9 +19,11 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 bws            := require("bws")
 git            := require("git")
 iron_proxy     := require("iron-proxy")
+nft            := require("nft")
 openssl        := require("openssl")
 podman         := require("podman")
 runsc          := require("runsc")
+sudo           := require("sudo")
 systemd_creds  := require("systemd-creds")
 
 # --- Names and paths ---
@@ -36,9 +38,8 @@ proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
 # `run` checks that these two paths exist. They equal the Volume lines of sandbox.container.
 SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
 SANDBOX_SOCKET := env('XDG_RUNTIME_DIR') / 'sandbox'
-# The .git folder and the branch of the checkout that you run just in. `_checkout` gives them to the unit.
+# The .git folder of the repo that you run just in. `setup` links it to ~/.config/sandbox/repo.git, and the unit mounts that link.
 git_dir := shell(git + ' rev-parse --path-format=absolute --git-common-dir')
-branch := shell(git + ' branch --show-current')
 
 # Stops with a message if a file is missing. A recipe lists the files that it needs on its first line: `build: (_needs credential)`.
 _needs file:
@@ -79,15 +80,24 @@ setup:
 
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
 
-    # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor runtime from containers.conf.d/.
-    #   ignore-cgroups  rootless runsc cannot make a systemd scope. The service limits in sandbox.container replace the limits of Podman.
-    #   network=host    gVisor uses the empty network namespace of the container. With its own network stack, the guest has no loopback.
-    #   host-uds=open   the guest may connect to the proxy socket that the container mounts.
+    # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
+    # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
     mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
     ln -sf '{{ source_directory() }}/sandbox.container' "$HOME/.config/containers/systemd/sandbox.container"
-    printf '%s\n' '[engine.runtimes]' 'runsc = ["{{ runsc }}"]' '' '[engine.runtimes_flags]' \
-        'runsc = ["ignore-cgroups", "network=host", "host-uds=open"]' > "$HOME/.config/containers/containers.conf.d/runsc.conf"
+    ln -sf '{{ source_directory() }}/runsc.conf' "$HOME/.config/containers/containers.conf.d/runsc.conf"
+    ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
     systemctl --user daemon-reload
+
+    # The firewall rule. A TCP port on 127.0.0.1 has no check of the user, so any local user could use the proxy and its real tokens.
+    # The rule lets only your user connect to the proxy ports. nft needs root, so sudo asks for your password.
+    # The rule and the unit are copies that root owns. A link to a file in your repo would let you change what root runs.
+    # If a step fails, setup stops here and the proxy does not start.
+    echo 'sandbox: the firewall rule needs root. sudo asks for your password.'
+    sed "s/@UID@/$(id -u)/" "$proxy/sandbox-guard.nft" | sudo tee /etc/sandbox-guard.nft >/dev/null
+    sudo install -m 0644 "$proxy/sandbox-guard.service" /etc/systemd/system/sandbox-guard.service
+    sudo systemctl daemon-reload
+    sudo systemctl enable sandbox-guard.service
+    sudo systemctl restart sandbox-guard.service
 
     mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
@@ -106,11 +116,13 @@ setup:
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
     echo 'The proxy runs.'
 
-# Open Herdr in the clone. Close the terminal and the sandbox keeps running: run this again for the same session.
-# Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: _check (_needs proxy_socket) (_needs SANDBOX_CA) _checkout
-    # Start the container. A running container stays as it is. A container that stopped or was killed starts again.
-    systemctl --user start sandbox.service
+# Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
+# A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
+run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
+    # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so it also replaces a container that an older setup left with the name sandbox.
+    # daemon-reload makes systemd read an edit of sandbox.container.
+    systemctl --user daemon-reload
+    systemctl --user restart sandbox.service
 
     # Wait for the healthcheck in sandbox.container. `podman healthcheck run` runs the check at once and exits 0 when it passes.
     # If the container is not ready after 180 s, this stops the recipe. See then: podman logs sandbox
@@ -150,26 +162,3 @@ build *args: (_needs credential)
 
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
-
-# Stops if an older setup left a container named sandbox. It must run podman, so it is a shell command.
-# It is a dependency of `run` only. `run` also needs the proxy socket and the CA: see `_needs`.
-[private]
-[no-exit-message]
-_check:
-    # A container named sandbox must come from sandbox.container. An older setup (podman-compose, crun) left one with this name.
-    [ -z "$(podman ps -a -q --filter name=^sandbox$)" ] || [ -n "$(podman ps -a -q --filter name=^sandbox$ --filter label=PODMAN_SYSTEMD_UNIT=sandbox.service)" ] || { \
-        echo "sandbox: the container sandbox is from an older setup. It does not run in gVisor."; \
-        echo "Remove it: podman rm -f sandbox (the volumes stay). Then run this again."; \
-        exit 1; \
-    } >&2
-
-# Quadlet does not read shell variables. This writes the two values that depend on your checkout into a drop-in file of the unit.
-# It also reloads systemd, so an edit of sandbox.container takes effect at the next start.
-[private]
-[script('bash')]
-_checkout:
-    set -euo pipefail
-    dir="$HOME/.config/containers/systemd/sandbox.container.d"
-    mkdir -p "$dir"
-    printf '[Container]\nVolume=%s:/run/sandbox/source:ro\nEnvironment=SANDBOX_BRANCH=%s\n' '{{ git_dir }}' '{{ branch }}' > "$dir/checkout.conf"
-    systemctl --user daemon-reload

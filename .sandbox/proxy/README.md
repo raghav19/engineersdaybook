@@ -30,6 +30,7 @@ For another registry or another secret manager, change `iron-proxy.yaml`, `sandb
 | `iron-proxy` and `bws`, installed with `mise install` from `mise.toml` | The proxy and its secret loader. | `iron-proxy --version` and `bws --version` |
 | `openssl` | It makes the CA. | `openssl version` |
 | `podman`, `runsc` and `git` | `just` stops if one is missing. The proxy itself needs no Podman and no gVisor. | `podman --version` and `runsc --version` |
+| `sudo` and `nft` | The firewall rule needs root once. See [The firewall rule](#the-firewall-rule). `just` stops if one is missing. | `sudo -v` and `nft --version` |
 | Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
 
 ### Step 1: run the setup
@@ -40,13 +41,14 @@ Run this in your main checkout. The links of the units point to the files in thi
 just sandbox setup
 ```
 
-The recipe asks for the access token. Nothing shows as you type. It does these steps and skips a step that is already done.
+The recipe asks for your `sudo` password and for the access token. Nothing shows as you type. It does these steps and skips a step that is already done.
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
 3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
-4. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
-5. Links the three units, enables `sandbox-proxy.service` and restarts it.
+4. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
+5. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
+6. Links the three units, enables `sandbox-proxy.service` and restarts it.
 
 The recipe ends with `The proxy runs.`
 
@@ -73,9 +75,27 @@ This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 180
 | 18083 | metrics |
 | 18084 | DNS |
 
+## The firewall rule
+
+A TCP or UDP port on `127.0.0.1` has no check of the user. Without a rule, any local user, and any program that reaches the loopback of the host, can connect to these ports. It can use the proxy and send the placeholders to get the real tokens.
+
+`sandbox-guard.nft` is a rule of `nftables` for the range 18080 to 18089. It rejects every connection to that range from a user other than yours. The bridge runs as you, so it still connects.
+
+- `just sandbox setup` replaces `@UID@` with your user id and copies the rule to `/etc/sandbox-guard.nft`. It copies `sandbox-guard.service` to `/etc/systemd/system/`. The unit loads the rule at each boot, before the network.
+- The copies belong to root on purpose. A link to a file in your repo would let you change what root runs.
+- The rule is its own table, `inet sandbox_guard`. It does not change `ufw` or another firewall.
+- Check it with `sudo nft list table inet sandbox_guard` and `systemctl status sandbox-guard`.
+- Turn it off with `sudo systemctl disable --now sandbox-guard`. Then delete `/etc/sandbox-guard.nft` and `/etc/systemd/system/sandbox-guard.service`.
+
+What the rule does not do:
+
+- It separates users. It does not separate programs of the same user. A rootless container of your user with `pasta` networking can connect to the host loopback as your user. The sandbox has `Network=none`, so it cannot. Do not give another container of your user a route to these ports.
+- It does not guard `proxy.sock`. The folder `$XDG_RUNTIME_DIR` has the mode 0700 and guards the socket.
+- Tests of the rule ran in a temporary network namespace. See the handoff `docs/handoff/podman-gvisor-sandbox.md`.
+
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel.
+`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. They are copied to `/etc`, not linked.
 
 ## Why there is a bridge
 
@@ -150,6 +170,7 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 | Text | Cause | Fix |
 |---|---|---|
 | `Failed to read encrypted credential data: Invalid argument` | `~/.config/credstore.encrypted/bws-token` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
+| `just sandbox setup` stops at the firewall step | `sudo` refused the password, or `nft` could not load the rule. | Run `sudo -v`. Run `sudo nft -c -f /etc/sandbox-guard.nft` to check the file. Run `journalctl -u sandbox-guard`. Then run `just sandbox setup` again. |
 | `just sandbox setup` fails at `systemctl --user link` | The old transient `systemd-run` units `sandbox-proxy` and `sandbox-bridge` have the same names. | Run `systemctl --user stop sandbox-proxy sandbox-bridge`. Run `just sandbox setup` again. |
 | `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |

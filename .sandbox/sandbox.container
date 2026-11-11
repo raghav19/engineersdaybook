@@ -1,8 +1,7 @@
 # The agent sandbox, as a Quadlet unit. `just sandbox setup` links this file into ~/.config/containers/systemd/.
 # `just sandbox run` starts it. Quadlet turns it into the service sandbox.service.
 # The container has no network. The host proxy (.sandbox/proxy) is its only way out.
-# %h is your home folder. %t is $XDG_RUNTIME_DIR.
-# `just sandbox run` writes the drop-in file sandbox.container.d/checkout.conf. It holds the two values that depend on your checkout.
+# %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
 [Unit]
 Description=Agent sandbox (Podman and gVisor)
 
@@ -67,10 +66,11 @@ Environment=MISE_IGNORED_CONFIG_PATHS=/home/agent/engineersdaybook/mise.toml
 Environment=CLAUDE_CONFIG_DIR=/home/agent/.claude
 Environment=DISABLE_UPDATES=1
 Environment=HEADROOM_HARD_WATCHDOG_SECS=0
-# The first three mounts have the flag :ro. The agent cannot change the CA, the socket folder or the theme.
-# The checkout drop-in adds the fourth read-only mount, the .git folder of the repo.
+# The first four mounts have the flag :ro. The agent cannot change the CA, the socket folder, the repo or the theme.
+# repo.git is a link that `just sandbox setup` makes. It points to the .git folder of your main checkout.
 Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
 Volume=%t/sandbox:/run/sandbox/proxy:ro
+Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
 Volume=%h/.local/state/omarchy/current/theme:/home/agent/.omarchy-theme:ro
 # The name does not change, so the volume of the earlier setup keeps working.
 Volume=sandbox-home:/home/agent
