@@ -1,0 +1,5 @@
+# The hosts file of the proxy only. The unit binds it over /etc/hosts. The system hosts file does not change.
+# The sandbox and the proxy use the name kubernetes.default.svc, which every k3s certificate lists.
+# The proxy refuses a loopback address. 10.42.0.1 is the address of the bridge cni0, and k3s listens there too.
+# It is the first address of the default pod range 10.42.0.0/16 of k3s. Change it if your k3s uses another range.
+10.42.0.1 kubernetes.default.svc

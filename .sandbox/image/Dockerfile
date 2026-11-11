@@ -119,8 +119,8 @@ COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
 ENTRYPOINT ["sandbox-entry"]
 CMD ["sandbox-start"]
 
-# At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
-# as a skeleton. sandbox-start copies it into the tmpfs at each start.
+# At run time the root file system is read-only and /home/agent is the volume sandbox-home. Keep what the image put in /home/agent
+# as a skeleton. sandbox-start copies it into the volume at each start.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \
@@ -131,6 +131,9 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
+
+RUN mkdir -p /etc/sandbox && chmod 0755 /etc/sandbox
+COPY --chmod=0644 configs/tools/cluster.yaml /etc/sandbox/cluster.yaml
 
 RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 

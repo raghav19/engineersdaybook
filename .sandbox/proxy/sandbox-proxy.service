@@ -13,6 +13,8 @@ LoadCredentialEncrypted=bws-token
 # systemd starts this unit, not your shell, so mise is not active here. just sandbox setup links bws and iron-proxy into ~/.config/sandbox/bin.
 # systemd decrypts the credential to a file. bws reads its token only from the variable BWS_ACCESS_TOKEN, so the shell copies the file into the variable.
 Environment=PATH=%h/.config/sandbox/bin:/usr/bin:/bin
+# Go reads SSL_CERT_FILE for its trust roots. The file has the system CAs and the CA of each cluster, so the proxy trusts the clusters. Only the proxy uses it.
+Environment=SSL_CERT_FILE=%h/.local/state/sandbox/upstream-ca.pem
 ExecStart=/bin/sh -c 'BWS_ACCESS_TOKEN="$(cat "$CREDENTIALS_DIRECTORY/bws-token")" exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config %E/sandbox/iron-proxy.yaml'
 Restart=on-failure
 # Hardening. README.md in this folder says what each line does. Check the score: systemd-analyze --user security sandbox-proxy.service
@@ -22,6 +24,9 @@ PrivateTmp=yes
 ProtectHome=tmpfs
 BindReadOnlyPaths=%E/sandbox/iron-proxy.yaml
 BindReadOnlyPaths=%h/.local/state/sandbox/ca.crt %h/.local/state/sandbox/ca.key
+BindReadOnlyPaths=%h/.local/state/sandbox/upstream-ca.pem %h/.local/state/sandbox/tokens
+# The hosts file of the proxy. It maps kubernetes.default.svc to k3s. The proxy sees no other hosts file.
+BindReadOnlyPaths=%E/sandbox/hosts:/etc/hosts
 BindReadOnlyPaths=%h/.local/share/mise %h/.config/sandbox/bin
 SystemCallFilter=@system-service
 SystemCallArchitectures=native

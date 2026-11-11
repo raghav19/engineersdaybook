@@ -3,7 +3,7 @@
 # The recipes run in this folder, so podman build finds image/.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/.
+#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags, the repo and the cluster file. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
@@ -67,7 +67,7 @@ setup:
         ln -sf "$tool" "$HOME/.config/sandbox/bin/$(basename "$tool")"
     done
 
-    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
+    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An existing CA stays.
     if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
         openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
             -subj '/CN=sandbox egress proxy CA' \
@@ -78,7 +78,17 @@ setup:
         chmod 0644 "$state/ca.crt"
     fi
 
+    # The proxy config and the hosts file of the proxy are links to the files in this folder.
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+    ln -sf "$proxy/hosts" "$HOME/.config/sandbox/hosts"
+
+    # The k3s cluster on this host. The proxy checks the certificate of k3s, and k3s has a private CA, so the proxy needs the CA.
+    # The CA is public data in your kubeconfig. Go reads the bundle as SSL_CERT_FILE. Only the proxy uses it, so the trust of your system does not change.
+    { cat /etc/ssl/certs/ca-certificates.crt
+      kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d; } > "$state/upstream-ca.pem"
+    # The proxy reads the token of the cluster from this folder. The sandbox never holds it. It lasts one year. To renew it, delete the file and run setup again.
+    mkdir -p -m 700 "$state/tokens"
+    [ -s "$state/tokens/k8s_dev" ] || (umask 077; kubectl create token sandbox-agent -n sandbox-agent --duration=8760h > "$state/tokens/k8s_dev")
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -119,15 +129,15 @@ setup:
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
 run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
-    # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so it also replaces a container that an older setup left with the name sandbox.
+    # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so each run makes a new container.
     # daemon-reload makes systemd read an edit of sandbox.container.
     systemctl --user daemon-reload
     systemctl --user restart sandbox.service
 
     # Wait for the healthcheck in sandbox.container. `podman healthcheck run` runs the check at once and exits 0 when it passes.
     # If the container is not ready after 180 s, this stops the recipe. See then: podman logs sandbox
-    # --foreground and </dev/null keep podman away from your terminal. Without them, timeout runs podman in a background group.
-    # In a terminal, the kernel then stops podman for good, and a stopped podman holds the lock of the container, so every podman command hangs.
+    # --foreground and </dev/null keep podman in the foreground group of your terminal.
+    # A podman that touches the terminal from a background group is stopped by the kernel. It then holds the lock of the container, and every podman command hangs.
     timeout --foreground 180 sh -c 'until podman healthcheck run sandbox >/dev/null 2>&1 </dev/null; do sleep 2; done' \
         || { echo 'sandbox: the container is not healthy. See: podman logs sandbox' >&2; exit 1; }
 
