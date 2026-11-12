@@ -97,6 +97,7 @@ just sandbox queue-check   # prints ok or FAIL for each right of the agent and o
 | `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml` with `build/queue-acl.yq`, then starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
 | `just sandbox queue-check` | Tests the ACL from a gVisor client. It fails if one right is wrong. |
 | `just sandbox queue-down` | Stops and removes the container, and removes the ACL file. The waiting jobs are lost. |
+| `podman ps` | Shows `(healthy)` for `sandbox-queue` when the server answers. The check is in `build/compose.yaml`. |
 | `podman logs sandbox-queue` | Shows the log of Valkey. |
 
 The socket is `$XDG_RUNTIME_DIR/sandbox/valkey.sock`, in the folder of `proxy.sock`. The sandbox mounts that folder at `/run/sandbox/proxy`, so it sees the socket there and `sandbox.container` does not change. The ACL file is in `$XDG_RUNTIME_DIR/sandbox-queue/`. The sandbox does not mount that folder.

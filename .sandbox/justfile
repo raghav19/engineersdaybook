@@ -196,12 +196,14 @@ queue: (_needs credential)
         PW_HASH="$hash" '{{ yq }}' -r --from-file "$build/queue-acl.yq" "$build/queue-policy.yaml" > '{{ queue_acl }}'
     )
 
-    # --force-recreate makes a new container, so it reads the new ACL.
+    # Valkey reads the ACL file only when it starts. `up -d` alone keeps a running container, with its old ACL.
+    # --force-recreate makes a new container. It also applies an edit of compose.yaml (the image, the limits).
     QUEUE_SOCKET_DIR='{{ SANDBOX_SOCKET }}' QUEUE_ACL='{{ queue_acl }}' \
         '{{ podman_compose }}' -f "$build/compose.yaml" up -d --force-recreate
-    # A stale valkey.sock from an earlier run can exist, so ask the server. NOAUTH means that it runs and wants a login.
-    timeout 30 sh -c 'until podman exec sandbox-queue valkey-cli -s /run/valkey/valkey.sock ping 2>&1 | grep -qE "PONG|NOAUTH"; do sleep 1; done' \
-        || { echo 'sandbox: the queue did not start. See: podman logs sandbox-queue' >&2; exit 1; }
+    # Wait for the healthcheck in build/compose.yaml. `podman healthcheck run` runs the check at once and exits 0 when it passes.
+    # --foreground and </dev/null keep podman away from your terminal, as in the run recipe.
+    timeout --foreground 30 sh -c 'until podman healthcheck run sandbox-queue >/dev/null 2>&1 </dev/null; do sleep 1; done' \
+        || { echo 'sandbox: the queue is not healthy. See: podman logs sandbox-queue' >&2; exit 1; }
     echo 'The queue runs.'
 
 # The client is a gVisor container with no network. It has only the socket folder, as the sandbox has. The checks use the keys job:t1:*, and they remove them at the end.
