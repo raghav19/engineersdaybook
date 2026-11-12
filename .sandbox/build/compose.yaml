@@ -19,6 +19,12 @@ services:
     mem_limit: 512m
     pids_limit: 64
     restart: unless-stopped
+    # The server is ready when it answers. NOAUTH is an answer: the server runs and wants a login. A stale socket file refuses the connect.
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -s /run/valkey/valkey.sock ping 2>&1 | grep -qE 'PONG|NOAUTH'"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
     volumes:
       - ./valkey.conf:/conf/valkey.conf:ro
       - ${QUEUE_ACL}:/conf/users.acl:ro
