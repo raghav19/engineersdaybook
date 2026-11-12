@@ -59,7 +59,7 @@ systemctl --user status sandbox-proxy.service sandbox-bridge.socket
 ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock"
 ```
 
-The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#install-and-use) and run `just sandbox build`, then `just sandbox run`.
+The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#quick-start) and run `just sandbox build`, then `just sandbox run`.
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
