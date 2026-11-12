@@ -9,7 +9,7 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `sandbox.container` | The Quadlet unit of the container: its environment, hardening flags, mounts, volume and limits. |
 | `runsc.conf` | The gVisor flags for Podman, with the reason for each flag. |
-| `build/` | The build queue: `compose.yaml` (the Valkey container), `valkey.conf` and `queue-policy.yaml` (the rights of the agent and of the worker). |
+| `build/` | The build queue: `compose.yaml` (the Valkey container), `valkey.conf`, `queue-policy.yaml` (the rights of the agent and of the worker) and `queue-acl.yq` (the rules that turn the policy into an ACL). |
 | `justfile` | `setup`, `run`, `rm` and `build`. `setup` installs the host proxy and the firewall rule, and links the unit, the gVisor flags and the repo. `run` starts the unit and opens Herdr in the container. `queue`, `queue-check` and `queue-down` run the build queue. |
 
 ## Architecture
@@ -94,7 +94,7 @@ just sandbox queue-check   # prints ok or FAIL for each right of the agent and o
 
 | Command | What it does |
 |---|---|
-| `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml`, then starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
+| `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml` with `build/queue-acl.yq`, then starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
 | `just sandbox queue-check` | Tests the ACL from a gVisor client. It fails if one right is wrong. |
 | `just sandbox queue-down` | Stops and removes the container, and removes the ACL file. The waiting jobs are lost. |
 | `podman logs sandbox-queue` | Shows the log of Valkey. |

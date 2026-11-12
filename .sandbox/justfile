@@ -190,17 +190,10 @@ queue: (_needs credential)
     hash="$(BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- 'test "${#QUEUE_WORKER_PASSWORD}" -ge 24 && printf %s "$QUEUE_WORKER_PASSWORD" | sha256sum | cut -d" " -f1')" \
         || { echo 'sandbox: the Bitwarden secret QUEUE_WORKER_PASSWORD is missing or shorter than 24 characters.' >&2; exit 1; }
 
-    # Each user of the policy becomes one ACL line: write_only is %W~, read_only is %R~, read_write is ~, and each command is +command.
-    # A user with the password bitwarden gets the hash. The line -@all blocks every command that the policy does not list.
+    # build/queue-acl.yq turns the policy into the ACL. It needs the hash in PW_HASH.
     (
         umask 077
-        {
-            echo 'user default off'
-            PW_HASH="$hash" '{{ yq }}' -r '.users | to_entries[]
-                | "user " + .key + " on " + (if .value.password == "none" then "nopass" else "#" + env(PW_HASH) end)
-                + " " + ([(.value.write_only // [])[] | "%W~" + .] + [(.value.read_only // [])[] | "%R~" + .] + [(.value.read_write // [])[] | "~" + .] | join(" "))
-                + " -@all " + ([.value.commands[] | "+" + .] | join(" "))' "$build/queue-policy.yaml"
-        } > '{{ queue_acl }}'
+        PW_HASH="$hash" '{{ yq }}' -r --from-file "$build/queue-acl.yq" "$build/queue-policy.yaml" > '{{ queue_acl }}'
     )
 
     # --force-recreate makes a new container, so it reads the new ACL.
