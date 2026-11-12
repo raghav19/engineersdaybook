@@ -9,7 +9,8 @@ A sandbox for AI agents. The agent runs in a hardened, rootless Podman container
 | `image/` | The image, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `sandbox.container` | The Quadlet unit of the container: its environment, hardening flags, mounts, volume and limits. |
 | `runsc.conf` | The gVisor flags for Podman, with the reason for each flag. |
-| `justfile` | `setup`, `run`, `rm` and `build`. `setup` installs the host proxy and the firewall rule, and links the unit, the gVisor flags and the repo. `run` starts the unit and opens Herdr in the container. |
+| `build/` | The build queue: `compose.yaml` (the Valkey container), `valkey.conf` and `queue-policy.yaml` (the rights of the agent and of the worker). |
+| `justfile` | `setup`, `run`, `rm` and `build`. `setup` installs the host proxy and the firewall rule, and links the unit, the gVisor flags and the repo. `run` starts the unit and opens Herdr in the container. `queue`, `queue-check` and `queue-down` run the build queue. |
 
 ## Architecture
 
@@ -52,7 +53,7 @@ The connection changes its carrier at three points, and the bytes stay the same.
 
 ## Install and use
 
-The host needs `podman`, `runsc` (gVisor), `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`. `sudo` is for the firewall rule, once. The tests used `runsc` release 20261102.0 and Podman 6.1.4. The host also needs `iron-proxy` and `bws`: run `mise install` in your main checkout, because `mise.toml` lists them. `just` stops with a message if `runsc`, `iron-proxy`, `bws` or another tool of the justfile is missing. Follow these steps in your main checkout:
+The host needs `podman`, `runsc` (gVisor), `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`. `sudo` is for the firewall rule, once. The tests used `runsc` release 20261102.0 and Podman 6.1.4. The host also needs `podman-compose`. It needs `iron-proxy`, `bws` and `yq`: run `mise install` in your main checkout, because `mise.toml` lists them. `just` stops with a message if `runsc`, `iron-proxy`, `bws`, `podman-compose` or another tool of the justfile is missing. Follow these steps in your main checkout:
 
 1. Check [what the setup assumes](proxy/README.md#what-this-setup-assumes): the registry is `ghcr.io`, the secret manager is Bitwarden Secrets Manager, and the secrets are already there.
 2. Set up the host. It links `iron-proxy` and `bws`, makes the CA, and links the container unit, `runsc.conf` and the repo. It installs the firewall rule with `sudo`, encrypts the token and starts the proxy units. Run it again after you edit a file in `proxy/`, `runsc.conf` or `sandbox.container`.
@@ -76,6 +77,39 @@ just sandbox run     # restarts the container and opens Herdr. The volume keeps 
 | `systemctl --user status sandbox` | Shows the service. `failed` means a limit killed the sandbox. `just sandbox run` starts it again. |
 | `just sandbox rm` | Stops the service and removes the container. The volume stays. `podman stop sandbox` does the same, because the service removes a stopped container. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it to `ghcr.io`. The registry cache makes later builds faster. It needs the credential that `just sandbox setup` makes, and asks for no password. Flags go to `podman build`: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix. |
+
+## The build queue
+
+The agent sends a build to a queue, and a worker on the host takes the jobs one at a time. The queue is one Valkey container. This folder has only the queue. The worker, the builder and the `sandbox-build` command are not built yet.
+
+It assumes a secret `QUEUE_WORKER_PASSWORD` in Bitwarden Secrets Manager, in the project of your access token. The value has at least 24 characters. You make it and you change it there. Follow these steps in your main checkout:
+
+1. Start the queue. The recipe reads the secret and writes only its hash into the ACL. It stops with a message if the secret is missing or short.
+2. Test the rights. The test runs in a gVisor container with no network, as the sandbox does.
+
+```shell
+just sandbox queue         # starts Valkey in a rootless container with no network and no capability
+just sandbox queue-check   # prints ok or FAIL for each right of the agent and of the worker
+```
+
+| Command | What it does |
+|---|---|
+| `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml`, then starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
+| `just sandbox queue-check` | Tests the ACL from a gVisor client. It fails if one right is wrong. |
+| `just sandbox queue-down` | Stops and removes the container, and removes the ACL file. The waiting jobs are lost. |
+| `podman logs sandbox-queue` | Shows the log of Valkey. |
+
+The socket is `$XDG_RUNTIME_DIR/sandbox/valkey.sock`, in the folder of `proxy.sock`. The sandbox mounts that folder at `/run/sandbox/proxy`, so it sees the socket there and `sandbox.container` does not change. The ACL file is in `$XDG_RUNTIME_DIR/sandbox-queue/`. The sandbox does not mount that folder.
+
+| User | Password | Commands | Keys |
+|---|---|---|---|
+| `default` | The user is off. | None. | None. A connection that does not log in has no rights. |
+| `agent` | None. | `lpush`, `set`, `get` | Write only: `job:*:ctx`, `job:*:spec`, `build:queue`. Read only: `job:*:status`, `job:*:log`, `job:*:result`, `queue:epoch`. |
+| `worker` | The secret `QUEUE_WORKER_PASSWORD`. | `blmove`, `lrem`, `lrange`, `get`, `set`, `append`, `del` | Read and write: `job:*`, `build:queue`, `build:active`, `queue:epoch`. |
+
+The agent cannot read a context, cannot write a status, and cannot list the queue. Change a right in `build/queue-policy.yaml`. Then run `just sandbox queue` and `just sandbox queue-check`.
+
+The container is `docker.io/valkey/valkey:8` with a read-only root, `cap_drop: ALL`, `no-new-privileges`, `network_mode: none`, 512 MB of memory and 64 processes. The queue uses at most 256 MB for data, and a 64 MB value is the largest. When the memory is full, a `SET` fails and the queue keeps working. The queue writes no file, so a restart drops the waiting jobs. To change the password, change the secret in Bitwarden and run `just sandbox queue`.
 
 ## Hardening
 

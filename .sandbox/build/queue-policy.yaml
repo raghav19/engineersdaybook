@@ -1,0 +1,19 @@
+# Who can do what in the build queue. `just sandbox queue` turns this file into an ACL of Valkey.
+# The user default is always off. A connection that does not log in has no rights.
+#   commands:    the commands that the user may run. The user cannot run any other command.
+#   write_only:  keys that the user may only write.
+#   read_only:   keys that the user may only read.
+#   read_write:  keys that the user may read and write.
+#   password:    none = no password. bitwarden = the secret QUEUE_WORKER_PASSWORD. The ACL holds only its hash.
+users:
+  # The sandbox. It sends a build and reads the result. It cannot write a status, and it cannot read a context.
+  agent:
+    password: none
+    commands: [lpush, set, get]
+    write_only: [job:*:ctx, job:*:spec, build:queue]
+    read_only: [job:*:status, job:*:log, job:*:result, queue:epoch]
+  # The host worker. It takes a job, runs the builder and writes the result.
+  worker:
+    password: bitwarden
+    commands: [blmove, lrem, lrange, get, set, append, del]
+    read_write: [job:*, build:queue, build:active, queue:epoch]

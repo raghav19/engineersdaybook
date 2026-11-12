@@ -7,6 +7,9 @@
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
+#   just sandbox queue   start the build queue (Valkey). Run it again after you edit build/ or change the secret QUEUE_WORKER_PASSWORD.
+#   just sandbox queue-check   test the rights of the agent and of the worker in the queue.
+#   just sandbox queue-down    stop and remove the queue. The waiting jobs are lost.
 #
 # After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
 
@@ -15,16 +18,18 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws and iron-proxy come from mise.toml. Run `mise install` once.
+# bws, iron-proxy and yq come from mise.toml. Run `mise install` once.
 bws            := require("bws")
 git            := require("git")
 iron_proxy     := require("iron-proxy")
 nft            := require("nft")
 openssl        := require("openssl")
 podman         := require("podman")
+podman_compose := require("podman-compose")
 runsc          := require("runsc")
 sudo           := require("sudo")
 systemd_creds  := require("systemd-creds")
+yq             := require("yq")
 
 # --- Names and paths ---
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
@@ -34,6 +39,9 @@ commit := shell(git + ' rev-parse HEAD')
 credential := config_directory() / 'credstore.encrypted/bws-token'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
+
+# The ACL of the queue. `queue` renders it from build/queue-policy.yaml. It holds only the hash of the worker password. The folder is not in the sandbox.
+queue_acl := env('XDG_RUNTIME_DIR') / 'sandbox-queue/users.acl'
 
 # `run` checks that these two paths exist. They equal the Volume lines of sandbox.container.
 SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
@@ -164,3 +172,89 @@ build *args: (_needs credential)
 
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
+
+# The agent and the worker connect to $XDG_RUNTIME_DIR/sandbox/valkey.sock. The container is in build/compose.yaml.
+# The password of the worker is the Bitwarden secret QUEUE_WORKER_PASSWORD. You make it and rotate it there. The ACL holds only its hash.
+# Start the build queue (Valkey). Run it again after you edit a file in build/ or change the secret. A start drops the waiting jobs.
+[script('bash')]
+queue: (_needs credential)
+    set -euo pipefail
+    build='{{ source_directory() }}/build'
+    mkdir -p -m 0711 '{{ SANDBOX_SOCKET }}'
+    mkdir -p -m 0700 '{{ parent_directory(queue_acl) }}'
+
+    # The hash of the password. The password stays inside bws run.
+    # An empty or short secret stops the recipe. The hash of an empty password would be a valid login.
+    # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
+    hash="$(BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- 'test "${#QUEUE_WORKER_PASSWORD}" -ge 24 && printf %s "$QUEUE_WORKER_PASSWORD" | sha256sum | cut -d" " -f1')" \
+        || { echo 'sandbox: the Bitwarden secret QUEUE_WORKER_PASSWORD is missing or shorter than 24 characters.' >&2; exit 1; }
+
+    # Each user of the policy becomes one ACL line: write_only is %W~, read_only is %R~, read_write is ~, and each command is +command.
+    # A user with the password bitwarden gets the hash. The line -@all blocks every command that the policy does not list.
+    (
+        umask 077
+        {
+            echo 'user default off'
+            PW_HASH="$hash" '{{ yq }}' -r '.users | to_entries[]
+                | "user " + .key + " on " + (if .value.password == "none" then "nopass" else "#" + env(PW_HASH) end)
+                + " " + ([(.value.write_only // [])[] | "%W~" + .] + [(.value.read_only // [])[] | "%R~" + .] + [(.value.read_write // [])[] | "~" + .] | join(" "))
+                + " -@all " + ([.value.commands[] | "+" + .] | join(" "))' "$build/queue-policy.yaml"
+        } > '{{ queue_acl }}'
+    )
+
+    # --force-recreate makes a new container, so it reads the new ACL.
+    QUEUE_SOCKET_DIR='{{ SANDBOX_SOCKET }}' QUEUE_ACL='{{ queue_acl }}' \
+        '{{ podman_compose }}' -f "$build/compose.yaml" up -d --force-recreate
+    # A stale valkey.sock from an earlier run can exist, so ask the server. NOAUTH means that it runs and wants a login.
+    timeout 30 sh -c 'until podman exec sandbox-queue valkey-cli -s /run/valkey/valkey.sock ping 2>&1 | grep -qE "PONG|NOAUTH"; do sleep 1; done' \
+        || { echo 'sandbox: the queue did not start. See: podman logs sandbox-queue' >&2; exit 1; }
+    echo 'The queue runs.'
+
+# The client is a gVisor container with no network. It has only the socket folder, as the sandbox has. The checks use the keys job:t1:*, and they remove them at the end.
+# Test the rights of the agent and of the worker in the queue. Each line is ok or FAIL. The recipe fails if a line fails.
+[script('bash')]
+queue-check: (_needs queue_acl)
+    set -euo pipefail
+    check="$(mktemp -p '{{ parent_directory(queue_acl) }}')"
+    trap 'rm -f "$check"' EXIT
+    cat > "$check" <<'CHECKS'
+    sock=/run/valkey/valkey.sock
+    # a is the agent. w is the worker. The agent has no password, so any value logs it in.
+    a() { valkey-cli -s $sock --no-auth-warning --user agent --pass x "$@" 2>&1; }
+    w() { valkey-cli -s $sock --no-auth-warning --user worker --pass "$QUEUE_WORKER_PASSWORD" "$@" 2>&1; }
+    fail=0
+    expect() { if printf '%s' "$3" | grep -qE "$2"; then echo "ok    $1"; else echo "FAIL  $1 -> $3"; fail=1; fi; }
+    expect 'no login: refused'                'NOAUTH'     "$(valkey-cli -s $sock ping 2>&1)"
+    expect 'agent: SET context'               '^OK$'       "$(a SET job:t1:ctx abc EX 60)"
+    expect 'agent: SET spec'                  '^OK$'       "$(a SET job:t1:spec 'image=x tag=y')"
+    expect 'agent: LPUSH queue'               '^1$'        "$(a LPUSH build:queue t1)"
+    expect 'agent: read a missing status'     '^\[\]$'     "[$(a GET job:t1:status)]"
+    expect 'agent: GET context is blocked'    'NOPERM'     "$(a GET job:t1:ctx)"
+    expect 'agent: SET status is blocked'     'NOPERM'     "$(a SET job:t1:status done)"
+    expect 'agent: LRANGE queue is blocked'   'NOPERM'     "$(a LRANGE build:queue 0 -1)"
+    expect 'agent: KEYS is blocked'           'NOPERM'     "$(a KEYS '*')"
+    expect 'agent: CONFIG is blocked'         'NOPERM'     "$(a CONFIG GET dir)"
+    expect 'agent: EVAL is blocked'           'NOPERM'     "$(a EVAL 'return 1' 0)"
+    expect 'agent: FLUSHALL is blocked'       'NOPERM'     "$(a FLUSHALL)"
+    expect 'agent: DEL is blocked'            'NOPERM'     "$(a DEL job:t1:ctx)"
+    expect 'worker: wrong password fails'     'WRONGPASS'  "$(valkey-cli -s $sock --no-auth-warning --user worker --pass wrong ping 2>&1)"
+    expect 'worker: BLMOVE takes the job'     '^t1$'       "$(w BLMOVE build:queue build:active RIGHT LEFT 1)"
+    expect 'worker: GET context'              '^abc$'      "$(w GET job:t1:ctx)"
+    expect 'worker: SET status'               '^OK$'       "$(w SET job:t1:status running)"
+    expect 'agent: reads the status'          '^running$'  "$(a GET job:t1:status)"
+    expect 'worker: FLUSHALL is blocked'      'NOPERM'     "$(w FLUSHALL)"
+    expect 'worker: CONFIG is blocked'        'NOPERM'     "$(w CONFIG GET dir)"
+    w LREM build:active 1 t1 >/dev/null
+    w DEL job:t1:ctx job:t1:spec job:t1:status >/dev/null
+    exit $fail
+    CHECKS
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
+    BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- \
+        "test -n \"\$QUEUE_WORKER_PASSWORD\" && podman run --rm --runtime runsc --network none -v '{{ SANDBOX_SOCKET }}:/run/valkey:ro' -v '$check:/check.sh:ro' -e QUEUE_WORKER_PASSWORD --entrypoint sh docker.io/valkey/valkey:8 /check.sh"
+
+# Stop and remove the build queue. The waiting jobs are lost.
+queue-down:
+    QUEUE_SOCKET_DIR='{{ SANDBOX_SOCKET }}' QUEUE_ACL='{{ queue_acl }}' \
+        '{{ podman_compose }}' -f '{{ source_directory() }}/build/compose.yaml' down
+    rm -f '{{ queue_acl }}' '{{ SANDBOX_SOCKET }}/valkey.sock'

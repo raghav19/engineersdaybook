@@ -1,0 +1,25 @@
+# The build queue of the sandbox: one Valkey container. `just sandbox queue` starts it.
+# The agent and the host worker connect to its Unix socket. The container has no network.
+# The socket is in the folder of proxy.sock. The sandbox mounts that folder read-only, and a connect to a socket in it still works.
+# The justfile sets two variables: QUEUE_SOCKET_DIR (the folder of the socket) and QUEUE_ACL (the ACL file that the recipe renders).
+name: sandbox-build
+services:
+  queue:
+    image: docker.io/valkey/valkey:8
+    container_name: sandbox-queue
+    # The entrypoint of the image drops root with a helper that needs capabilities. This starts valkey-server directly.
+    entrypoint: ["valkey-server", "/conf/valkey.conf"]
+    # Root in a rootless container is your own user. The socket file is then yours, and Valkey needs no capability.
+    user: "0"
+    network_mode: none
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges]
+    mem_limit: 512m
+    pids_limit: 64
+    restart: unless-stopped
+    volumes:
+      - ./valkey.conf:/conf/valkey.conf:ro
+      - ${QUEUE_ACL}:/conf/users.acl:ro
+      - ${QUEUE_SOCKET_DIR}:/run/valkey
