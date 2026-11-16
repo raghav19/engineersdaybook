@@ -1,0 +1,112 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13.*"
+# dependencies = []
+# ///
+"""sandbox-build: ask the host to build a container image.
+
+Usage: sandbox-build IMAGE [--file Containerfile] [FOLDER]
+Example: sandbox-build app:dev --file Containerfile .
+
+The steps:
+1. Pack FOLDER into a tar. Leave out the .git folder.
+2. Push the tar to the registry as an image with one layer. Read its digest.
+3. Send the spec to the host over the socket build.sock.
+4. Print the log of the build line by line, as the host sends it.
+5. End with the exit code of the build.
+
+A build can wait behind the builds of other agents. Run this command in the background if it can take longer than the tool timeout.
+"""
+
+import argparse
+import json
+import os
+import secrets
+import socket
+import subprocess
+import sys
+import tarfile
+import tempfile
+from pathlib import Path
+
+SOCKET = os.environ.get("SANDBOX_BUILD_SOCKET", "/run/sandbox/proxy/build.sock")
+REGISTRY = os.environ.get("SANDBOX_BUILD_REGISTRY", "ghcr.io/raghav19/engineersdaybook")
+# The proxy replaces this placeholder with the real token. The sandbox never holds the token.
+PLACEHOLDER = os.environ.get("GHCR_PUSH_TOKEN", "sandbox-placeholder-GHCR_PUSH_TOKEN")
+MAX_BYTES = 64 * 1024 * 1024
+EXIT_PREFIX = "sandbox-build: exit "
+
+
+def say(text: str) -> None:
+    print(f"sandbox-build: {text}", flush=True)
+
+
+def pack(folder: Path, archive: Path) -> None:
+    """Write the folder as a tar. Leave out .git. Set owner and group to root, so the same files give the same tar."""
+
+    def clean(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
+        if info.name == "./.git" or info.name.startswith("./.git/"):
+            return None
+        info.uid = info.gid = 0
+        info.uname = info.gname = ""
+        return info
+
+    with tarfile.open(archive, "w") as tar:
+        tar.add(folder, arcname=".", filter=clean)
+    if archive.stat().st_size > MAX_BYTES:
+        sys.exit("sandbox-build: the folder is larger than 64 MB. Leave out the files that the build does not need.")
+
+
+def push(archive: Path, work: Path) -> str:
+    """Push the tar as an image with one layer. Return the name of the context with its digest."""
+    host, account = REGISTRY.split("/")[0], REGISTRY.split("/")[1]
+    # A private folder for the login. The agent keeps no login file in its home.
+    environment = {**os.environ, "DOCKER_CONFIG": str(work / "docker")}
+    tag = f"{REGISTRY}/build-context:{secrets.token_hex(8)}"
+    subprocess.run(
+        ["crane", "auth", "login", host, "-u", account, "--password-stdin"],
+        input=PLACEHOLDER.encode(), env=environment, check=True, capture_output=True,
+    )  # fmt: skip
+    subprocess.run(["crane", "append", "-f", str(archive), "-t", tag], env=environment, check=True, capture_output=True)
+    digest = subprocess.run(["crane", "digest", tag], env=environment, check=True, capture_output=True, text=True)
+    return f"{REGISTRY}/build-context@{digest.stdout.strip()}"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Ask the host to build a container image.")
+    parser.add_argument("image", help="the name and tag of the image, for example app:dev")
+    parser.add_argument("folder", nargs="?", default=".", help="the build context (default: the current folder)")
+    parser.add_argument("--file", default="Containerfile", help="the path of the Containerfile in the folder")
+    args = parser.parse_args()
+
+    with tempfile.TemporaryDirectory() as temp:
+        work = Path(temp)
+        say("pack the folder")
+        pack(Path(args.folder), work / "context.tar")
+        say("push the context to the registry")
+        try:
+            context = push(work / "context.tar", work)
+        except subprocess.CalledProcessError as error:
+            sys.exit(f"sandbox-build: {error.cmd[1]} failed: {error.stderr.decode().strip()}")
+
+    spec = {"image": args.image, "file": args.file, "context": context}
+    say("send the build to the host")
+    last = ""
+    with socket.socket(socket.AF_UNIX) as conn:
+        try:
+            conn.connect(SOCKET)
+        except OSError as error:
+            sys.exit(f"sandbox-build: no listener on {SOCKET} ({error}). Run on the host: just sandbox build-listen")
+        conn.sendall(json.dumps(spec).encode() + b"\n")
+        for line in conn.makefile("r", encoding="utf-8", errors="replace"):
+            print(line, end="", flush=True)
+            last = line
+    # The host writes the last line itself, after the build ends.
+    if not last.startswith(EXIT_PREFIX):
+        sys.exit("sandbox-build: the connection ended before the build finished")
+    code = last.removeprefix(EXIT_PREFIX).strip()
+    return int(code) if code.isdigit() else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

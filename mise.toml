@@ -13,6 +13,7 @@ flux2 = "2.10"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.17"
 uv = "0.13"
+crane = "0.22"  # pushes and exports the build context of sandbox-build (.sandbox/build/)
 ty = "0.0"
 k9s = "0.51"
 "github:dgunzy/flux9s" = { version = "1.5", asset_pattern = "flux9s-linux-x86_64-gnu.tar.gz" }
