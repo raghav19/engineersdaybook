@@ -9,10 +9,9 @@ services:
     container_name: sandbox-queue
     # The entrypoint of the image drops root with a helper that needs capabilities. This starts valkey-server directly.
     entrypoint: ["valkey-server", "/conf/valkey.conf"]
-    # Valkey runs as the user valkey (uid 999 in the image). keep-id maps your host user to uid 999 in the container.
-    # The socket file is then yours on the host, and the mode 700 of the socket lets you and the sandbox connect. Valkey needs no capability.
-    user: "999:999"
-    userns_mode: "keep-id:uid=999,gid=999"
+    # keep-id gives the container your uid and not root. Valkey runs as that uid.
+    # The socket file and the ACL file are then yours on the host. Without keep-id, a uid above 0 is a sub-uid that cannot read the ACL file.
+    userns_mode: keep-id
     network_mode: none
     read_only: true
     tmpfs: [/tmp]
