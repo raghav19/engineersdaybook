@@ -184,10 +184,14 @@ queue: (_needs credential)
     mkdir -p -m 0700 '{{ parent_directory(queue_acl) }}'
 
     # The hash of the password. The password stays inside bws run.
-    # An empty or short secret stops the recipe. The hash of an empty password would be a valid login.
-    # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
+    # bws run puts the secret in the variable QUEUE_WORKER_PASSWORD and runs one command string with a shell.
+    # Do not add sh -c: the shell then loses the quotes.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
-    hash="$(BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- 'test "${#QUEUE_WORKER_PASSWORD}" -ge 24 && printf %s "$QUEUE_WORKER_PASSWORD" | sha256sum | cut -d" " -f1')" \
+    # Step 1: stop if the secret is missing or has fewer than 24 characters. The hash of an empty password would be a valid login.
+    check_length='test "${#QUEUE_WORKER_PASSWORD}" -ge 24'
+    # Step 2: print the SHA-256 hash of the secret.
+    print_hash='printf %s "$QUEUE_WORKER_PASSWORD" | sha256sum | cut -d" " -f1'
+    hash="$(BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- "$check_length && $print_hash")" \
         || { echo 'sandbox: the Bitwarden secret QUEUE_WORKER_PASSWORD is missing or shorter than 24 characters.' >&2; exit 1; }
 
     # build/queue-acl.yq turns the policy into the ACL. It needs the hash in PW_HASH.
