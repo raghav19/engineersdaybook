@@ -1,7 +1,7 @@
 #!/bin/sh
 # The tests of the rights in the build queue. `just sandbox queue-check` runs this file in a container with no network.
 # Each line below is one test. "allowed" means the server runs the command. "blocked" means the server refuses it.
-# The script prints ok or FAIL for each test and exits 1 if one test fails. The tests use the keys job:t1:* and remove them at the end.
+# The script prints ok or FAIL for each test. It exits 1 if one test fails. The tests use the keys job:t1:* and remove them at the end.
 [ -n "$QUEUE_WORKER_PASSWORD" ] || { echo 'FAIL  QUEUE_WORKER_PASSWORD is empty'; exit 1; }
 
 # Example. This test line:
@@ -11,7 +11,7 @@
 # The test is ok if the server accepts the command. The agent has no password, so any password works.
 #
 # The functions below build the command for each user.
-cli()                 { valkey-cli -s /run/valkey/valkey.sock --no-auth-warning "$@" 2>&1; }
+cli()                   { valkey-cli -s /run/valkey/valkey.sock --no-auth-warning "$@" 2>&1; }
 nobody()                { cli "$@"; }
 agent()                 { cli --user agent --pass x "$@"; }
 worker()                { cli --user worker --pass "$QUEUE_WORKER_PASSWORD" "$@"; }
