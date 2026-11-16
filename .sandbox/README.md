@@ -79,12 +79,12 @@ The agent runs `sandbox-build` to build a container image on the host. The host 
 
 What happens in one build:
 
-1. `sandbox-build` packs the folder as a tar. It leaves out `.git`.
+1. `sandbox-build` runs the recipe in `image/build.just`. The recipe packs the folder as a tar. It leaves out `.git`.
 2. It pushes the tar with `crane` to `ghcr.io/raghav19/engineersdaybook/build-context` as an image with one layer. It reads the digest of the image.
 3. It sends one line of JSON to the socket `build.sock`. The line has the three fields below.
-4. The listener checks each field and exports the context by its digest. It unpacks the tar into a private folder. The data filter of `tarfile` refuses an absolute link or a special file.
-5. The listener runs the builder: `podman build` in a gVisor container with no network, as the user `agent` and with the capabilities `SETUID`, `SETGID` and `SYS_CHROOT`.
-6. The listener sends each line of the output to the agent. The last line is `sandbox-build: exit N`, and `sandbox-build` ends with that code.
+4. The listener checks each field and exports the context by its digest into a tar file. It stops at 64 MB. The host never reads the tar.
+5. The listener runs the builder in a gVisor container with no network, as the user `agent` and with the capabilities `SETUID`, `SETGID` and `SYS_CHROOT`. The builder unpacks the tar in its own container and runs `podman build`. A bad path or link in the tar can only harm that container, which is gone after the build.
+6. The output of the builder goes straight to the agent over the socket, line by line. The last line is `sandbox-build: exit N`, and `sandbox-build` ends with that code.
 
 | Field | What the listener checks |
 |---|---|
@@ -173,7 +173,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | `runsc.conf` | The gVisor flags for Podman. |
 | `justfile` | The `setup`, `run`, `rm`, `build`, `build-listen`, `queue`, `queue-check` and `queue-down` recipes. |
 | `build/` | `listener.py`, which takes the builds from the socket. Also the build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
-| `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start`, `sandbox-build` and the `mise` tasks. |
+| `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start`, `sandbox-build` with its recipe `build.just`, and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |
 
 ## References
