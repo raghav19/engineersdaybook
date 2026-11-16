@@ -140,7 +140,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
 | `runsc.conf` | The gVisor flags for Podman. |
 | `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
-| `build/` | The build queue: the Valkey container, its config, the ACL policy and the rules that render it. |
+| `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
 | `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |
 

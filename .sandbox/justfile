@@ -210,47 +210,15 @@ queue: (_needs credential)
         || { echo 'sandbox: the queue is not healthy. See: podman logs sandbox-queue' >&2; exit 1; }
     echo 'The queue runs.'
 
-# The client is a gVisor container with no network. It has only the socket folder, as the sandbox has. The checks use the keys job:t1:*, and they remove them at the end.
 # Test the rights of the agent and of the worker in the queue. Each line is ok or FAIL. The recipe fails if a line fails.
+# build/queue-check.sh has the tests. It runs in a gVisor container with no network and only the socket folder, as the sandbox does.
+# bws run puts the secret in QUEUE_WORKER_PASSWORD, and -e gives it to the container.
 [script('bash')]
 queue-check: (_needs queue_acl)
     set -euo pipefail
-    check="$(mktemp -p '{{ parent_directory(queue_acl) }}')"
-    trap 'rm -f "$check"' EXIT
-    cat > "$check" <<'CHECKS'
-    sock=/run/valkey/valkey.sock
-    # a is the agent. w is the worker. The agent has no password, so any value logs it in.
-    a() { valkey-cli -s $sock --no-auth-warning --user agent --pass x "$@" 2>&1; }
-    w() { valkey-cli -s $sock --no-auth-warning --user worker --pass "$QUEUE_WORKER_PASSWORD" "$@" 2>&1; }
-    fail=0
-    expect() { if printf '%s' "$3" | grep -qE "$2"; then echo "ok    $1"; else echo "FAIL  $1 -> $3"; fail=1; fi; }
-    expect 'no login: refused'                'NOAUTH'     "$(valkey-cli -s $sock ping 2>&1)"
-    expect 'agent: SET context'               '^OK$'       "$(a SET job:t1:ctx abc EX 60)"
-    expect 'agent: SET spec'                  '^OK$'       "$(a SET job:t1:spec 'image=x tag=y')"
-    expect 'agent: LPUSH queue'               '^1$'        "$(a LPUSH build:queue t1)"
-    expect 'agent: read a missing status'     '^\[\]$'     "[$(a GET job:t1:status)]"
-    expect 'agent: GET context is blocked'    'NOPERM'     "$(a GET job:t1:ctx)"
-    expect 'agent: SET status is blocked'     'NOPERM'     "$(a SET job:t1:status done)"
-    expect 'agent: LRANGE queue is blocked'   'NOPERM'     "$(a LRANGE build:queue 0 -1)"
-    expect 'agent: KEYS is blocked'           'NOPERM'     "$(a KEYS '*')"
-    expect 'agent: CONFIG is blocked'         'NOPERM'     "$(a CONFIG GET dir)"
-    expect 'agent: EVAL is blocked'           'NOPERM'     "$(a EVAL 'return 1' 0)"
-    expect 'agent: FLUSHALL is blocked'       'NOPERM'     "$(a FLUSHALL)"
-    expect 'agent: DEL is blocked'            'NOPERM'     "$(a DEL job:t1:ctx)"
-    expect 'worker: wrong password fails'     'WRONGPASS'  "$(valkey-cli -s $sock --no-auth-warning --user worker --pass wrong ping 2>&1)"
-    expect 'worker: BLMOVE takes the job'     '^t1$'       "$(w BLMOVE build:queue build:active RIGHT LEFT 1)"
-    expect 'worker: GET context'              '^abc$'      "$(w GET job:t1:ctx)"
-    expect 'worker: SET status'               '^OK$'       "$(w SET job:t1:status running)"
-    expect 'agent: reads the status'          '^running$'  "$(a GET job:t1:status)"
-    expect 'worker: FLUSHALL is blocked'      'NOPERM'     "$(w FLUSHALL)"
-    expect 'worker: CONFIG is blocked'        'NOPERM'     "$(w CONFIG GET dir)"
-    w LREM build:active 1 t1 >/dev/null
-    w DEL job:t1:ctx job:t1:spec job:t1:status >/dev/null
-    exit $fail
-    CHECKS
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
     BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- \
-        "test -n \"\$QUEUE_WORKER_PASSWORD\" && podman run --rm --runtime runsc --network none -v '{{ SANDBOX_SOCKET }}:/run/valkey:ro' -v '$check:/check.sh:ro' -e QUEUE_WORKER_PASSWORD --entrypoint sh docker.io/valkey/valkey:8 /check.sh"
+        "podman run --rm --runtime runsc --network none -v '{{ SANDBOX_SOCKET }}:/run/valkey:ro' -v '{{ source_directory() }}/build/queue-check.sh:/check.sh:ro' -e QUEUE_WORKER_PASSWORD --entrypoint sh docker.io/valkey/valkey:8 /check.sh"
 
 # Stop and remove the build queue. The waiting jobs are lost.
 queue-down:
