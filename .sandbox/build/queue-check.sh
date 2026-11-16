@@ -4,18 +4,13 @@
 # The script prints ok or FAIL for each test and exits 1 if one test fails. The tests use the keys job:t1:* and remove them at the end.
 [ -n "$QUEUE_WORKER_PASSWORD" ] || { echo 'FAIL  QUEUE_WORKER_PASSWORD is empty'; exit 1; }
 
-# How a test line becomes a command. Take this line:
+# Example. This test line:
 #   allowed agent LPUSH build:queue t1
-# 1. allowed runs its arguments as a command:
-#      agent LPUSH build:queue t1
-# 2. The function agent adds the user and the password:
-#      cli --user agent --pass x LPUSH build:queue t1
-# 3. The function cli adds the socket:
-#      valkey-cli -s /run/valkey/valkey.sock --no-auth-warning --user agent --pass x LPUSH build:queue t1
-# 4. allowed looks in the answer for a word of the list `refused` (see below). If the answer has one, the test is FAIL.
-#    blocked does the same, but the test is ok if the answer has one.
+# runs this command:
+#   valkey-cli -s /run/valkey/valkey.sock --no-auth-warning --user agent --pass x LPUSH build:queue t1
+# The test is ok if the server accepts the command. The agent has no password, so any password works.
 #
-# The functions below connect to the queue as one user. The agent has no password, so any password works.
+# The functions below build the command for each user.
 cli()                 { valkey-cli -s /run/valkey/valkey.sock --no-auth-warning "$@" 2>&1; }
 nobody()                { cli "$@"; }
 agent()                 { cli --user agent --pass x "$@"; }
