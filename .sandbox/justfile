@@ -7,6 +7,9 @@
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
+#   just sandbox queue   start the build queue (Valkey). Run it again after you edit build/ or change the secret QUEUE_WORKER_PASSWORD.
+#   just sandbox queue-check   test the rights of the agent and of the worker in the queue.
+#   just sandbox queue-down    stop and remove the queue. The waiting jobs are lost.
 #
 # After you edit sandbox.container or build the image, run `just sandbox run`. It makes a new container.
 
@@ -15,16 +18,18 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws and iron-proxy come from mise.toml. Run `mise install` once.
+# bws, iron-proxy and yq come from mise.toml. Run `mise install` once.
 bws            := require("bws")
 git            := require("git")
 iron_proxy     := require("iron-proxy")
 nft            := require("nft")
 openssl        := require("openssl")
 podman         := require("podman")
+podman_compose := require("podman-compose")
 runsc          := require("runsc")
 sudo           := require("sudo")
 systemd_creds  := require("systemd-creds")
+yq             := require("yq")
 
 # --- Names and paths ---
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
@@ -34,6 +39,9 @@ commit := shell(git + ' rev-parse HEAD')
 credential := config_directory() / 'credstore.encrypted/bws-token'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
+
+# The ACL of the queue. `queue` renders it from build/queue-policy.yaml. It holds only the hash of the worker password. The folder is not in the sandbox.
+queue_acl := env('XDG_RUNTIME_DIR') / 'sandbox-queue/users.acl'
 
 # `run` checks that these two paths exist. They equal the Volume lines of sandbox.container.
 SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
@@ -164,3 +172,56 @@ build *args: (_needs credential)
 
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
+
+# The agent and the worker connect to $XDG_RUNTIME_DIR/sandbox/valkey.sock. The container is in build/compose.yaml.
+# The password of the worker is the Bitwarden secret QUEUE_WORKER_PASSWORD. You make it and rotate it there. The ACL holds only its hash.
+# Start the build queue (Valkey). Run it again after you edit a file in build/ or change the secret. A start drops the waiting jobs.
+[script('bash')]
+queue: (_needs credential)
+    set -euo pipefail
+    build='{{ source_directory() }}/build'
+    mkdir -p -m 0711 '{{ SANDBOX_SOCKET }}'
+    mkdir -p -m 0700 '{{ parent_directory(queue_acl) }}'
+
+    # The hash of the password. The password stays inside bws run.
+    # bws run puts the secret in the variable QUEUE_WORKER_PASSWORD and runs one command string with a shell.
+    # Do not add sh -c: the shell then loses the quotes.
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
+    # Step 1: stop if the secret is missing or has fewer than 24 characters. The hash of an empty password would be a valid login.
+    check_length='test "${#QUEUE_WORKER_PASSWORD}" -ge 24'
+    # Step 2: print the SHA-256 hash of the secret.
+    print_hash='printf %s "$QUEUE_WORKER_PASSWORD" | sha256sum | cut -d" " -f1'
+    hash="$(BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- "$check_length && $print_hash")" \
+        || { echo 'sandbox: the Bitwarden secret QUEUE_WORKER_PASSWORD is missing or shorter than 24 characters.' >&2; exit 1; }
+
+    # build/queue-acl.yq turns the policy into the ACL. It needs the hash in PW_HASH.
+    (
+        umask 077
+        PW_HASH="$hash" '{{ yq }}' -r --from-file "$build/queue-acl.yq" "$build/queue-policy.yaml" > '{{ queue_acl }}'
+    )
+
+    # Valkey reads the ACL file only when it starts. `up -d` alone keeps a running container, with its old ACL.
+    # --force-recreate makes a new container. It also applies an edit of compose.yaml (the image, the limits).
+    QUEUE_SOCKET_DIR='{{ SANDBOX_SOCKET }}' QUEUE_ACL='{{ queue_acl }}' \
+        '{{ podman_compose }}' -f "$build/compose.yaml" up -d --force-recreate
+    # Wait for the healthcheck in build/compose.yaml. `podman healthcheck run` runs the check at once and exits 0 when it passes.
+    # --foreground and </dev/null keep podman away from your terminal, as in the run recipe.
+    timeout --foreground 30 sh -c 'until podman healthcheck run sandbox-queue >/dev/null 2>&1 </dev/null; do sleep 1; done' \
+        || { echo 'sandbox: the queue is not healthy. See: podman logs sandbox-queue' >&2; exit 1; }
+    echo 'The queue runs.'
+
+# Test the rights of the agent and of the worker in the queue. Each line is ok or FAIL. The recipe fails if a line fails.
+# build/queue-check.sh has the tests. It runs in a gVisor container with no network and only the socket folder, as the sandbox does.
+# bws run puts the secret in QUEUE_WORKER_PASSWORD, and -e gives it to the container.
+[script('bash')]
+queue-check: (_needs queue_acl)
+    set -euo pipefail
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
+    BWS_ACCESS_TOKEN="$token" '{{ bws }}' run -- \
+        "podman run --rm --runtime runsc --network none -v '{{ SANDBOX_SOCKET }}:/run/valkey:ro' -v '{{ source_directory() }}/build/queue-check.sh:/check.sh:ro' -e QUEUE_WORKER_PASSWORD --entrypoint sh docker.io/valkey/valkey:8 /check.sh"
+
+# Stop and remove the build queue. The waiting jobs are lost.
+queue-down:
+    QUEUE_SOCKET_DIR='{{ SANDBOX_SOCKET }}' QUEUE_ACL='{{ queue_acl }}' \
+        '{{ podman_compose }}' -f '{{ source_directory() }}/build/compose.yaml' down
+    rm -f '{{ queue_acl }}' '{{ SANDBOX_SOCKET }}/valkey.sock'

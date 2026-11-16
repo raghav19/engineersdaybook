@@ -1,0 +1,17 @@
+# The rules that turn queue-policy.yaml into an ACL of Valkey. `just sandbox queue` runs it with yq. It needs the variable PW_HASH.
+# Each user is one line: user NAME on PASSWORD KEYS -@all COMMANDS
+#   password:           none gives nopass. Any other value gives the hash PW_HASH, as #HASH.
+#   permissions.read:   %R~key
+#   permissions.write:  %W~key
+#   commands:           +command. The word -@all blocks every command that the policy does not list.
+# A key in both lists gets both rules, so the user may read and write it.
+# The first line makes the user default off, so a connection that does not log in has no rights.
+"user default off",
+(
+  .users | to_entries[] |
+  (.value.permissions.read // [] | map("%R~" + .)) as $read |
+  (.value.permissions.write // [] | map("%W~" + .)) as $write |
+  (.value.commands | map("+" + .)) as $commands |
+  (if .value.password == "none" then "nopass" else "#" + env(PW_HASH) end) as $password |
+  "user " + .key + " on " + $password + " " + (($read + $write) | join(" ")) + " -@all " + ($commands | join(" "))
+)

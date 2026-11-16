@@ -20,7 +20,7 @@ A fooled agent can use only what the sandbox allows.
 Run these steps in your main checkout.
 
 1. Read [what the setup assumes](proxy/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
-2. Run `mise install`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
+2. Run `mise install`. The host also needs `podman`, `podman-compose`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
 3. Run these commands:
 
 ```shell
@@ -43,6 +43,32 @@ just sandbox run     # start the container and open Herdr
 | `podman logs -f sandbox` | Follows the log of the container. |
 
 The volume `sandbox-home` keeps the clone, the logins and the histories. Each `run` stops the processes of the old container.
+
+## Build queue
+
+The agent sends a build to a queue, and a worker on the host takes the jobs one at a time. The queue is one Valkey container. The worker, the builder and the `sandbox-build` command are not built yet.
+
+The queue assumes a secret `QUEUE_WORKER_PASSWORD` in Bitwarden Secrets Manager, in the project of your access token. The value has at least 24 characters.
+
+1. Run `just sandbox queue`. It writes only the hash of the secret into the ACL. It stops with a message if the secret is missing or short.
+2. Run `just sandbox queue-check`. It tests the rights from a gVisor container with no network.
+
+| Command | What it does |
+|---|---|
+| `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml` and starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
+| `just sandbox queue-check` | Prints `ok` or `FAIL` for each right of the agent and of the worker. |
+| `just sandbox queue-down` | Removes the container, the ACL file and the socket. The waiting jobs are lost. |
+
+The socket is `$XDG_RUNTIME_DIR/sandbox/valkey.sock`, in the folder of `proxy.sock`. The sandbox sees it at `/run/sandbox/proxy/valkey.sock`. The ACL file is in `$XDG_RUNTIME_DIR/sandbox-queue/`. The sandbox does not mount that folder.
+
+The ACL gives each user only the commands and keys it needs. A connection that does not log in has no rights.
+
+| User | Password | Commands | Keys |
+|---|---|---|---|
+| `agent` | None. | `lpush`, `set`, `get` | Write only: `job:*:ctx`, `job:*:spec`, `build:queue`. Read only: `job:*:status`, `job:*:log`, `job:*:result`, `queue:epoch`. |
+| `worker` | `QUEUE_WORKER_PASSWORD` | `blmove`, `lrem`, `lrange`, `get`, `set`, `append`, `del` | Read and write: `job:*`, `build:queue`, `build:active`, `queue:epoch`. |
+
+The agent cannot read a context, cannot write a status and cannot list the queue. To change a right, edit `build/queue-policy.yaml`, run `just sandbox queue`, then run `just sandbox queue-check`.
 
 ## How it works
 
@@ -113,7 +139,8 @@ Each row is one attack of an injected agent and the control that stops it.
 |---|---|
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
 | `runsc.conf` | The gVisor flags for Podman. |
-| `justfile` | The `setup`, `run`, `rm` and `build` recipes. |
+| `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
+| `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
 | `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |
 
