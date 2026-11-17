@@ -51,20 +51,10 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 FROM stage1-base AS stage8-plugins
-# The same loop as the mise task fresh:plugins on the host. It reads the list and fetches each package at its pinned commit. The list has a theme package, and the host task does not know that kind.
-COPY configs/editor/fresh-plugins.list /tmp/plugins.list
-RUN set -eu; \
-    cfg=/home/agent/.config/fresh; \
-    while read -r kind name repo commit subdir; do \
-      case "$kind" in ""|"#"*) continue ;; esac; \
-      src=$(mktemp -d); \
-      git init -q "$src"; \
-      git -C "$src" fetch -q --depth 1 "$repo" "$commit"; \
-      git -C "$src" checkout -q FETCH_HEAD; \
-      mkdir -p "$cfg/${kind}s/packages"; \
-      cp -r "$src/${subdir:-.}" "$cfg/${kind}s/packages/$name"; \
-      rm -rf "$cfg/${kind}s/packages/$name/.git" "$src"; \
-    done < /tmp/plugins.list
+# The script is the mise task fresh:plugins of the host, with the kind theme added. It reads plugins.list and fetches each package at its pinned commit.
+COPY --chown=agent:agent configs/editor/fresh-plugins.list /home/agent/.config/fresh/plugins.list
+COPY configs/editor/fresh-plugins.sh /tmp/fresh-plugins.sh
+RUN bash /tmp/fresh-plugins.sh
 
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git

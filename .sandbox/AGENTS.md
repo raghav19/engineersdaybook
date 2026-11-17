@@ -18,4 +18,4 @@ When adding a language server to `image/tools/lsp.toml`, also add it to `image/c
 1. Add an entry to the list of the language under `lsp` with the command and `auto_start`
 2. If the tool is also a formatter, add it under `languages.<language>.formatter`
 
-`fresh-config.json` and `fresh-plugins.list` are copies of `~/.config/fresh/config.json` and `~/.config/fresh/plugins.list` on the host. Keep them the same as the host files. The list in the image also has one `theme` line for the `catppuccin` package. The theme `catppuccin-mocha` in the config comes from that package.
+`fresh-config.json` and `fresh-plugins.list` are copies of `~/.config/fresh/config.json` and `~/.config/fresh/plugins.list` on the host. Keep them the same as the host files. `fresh-plugins.sh` is a copy of `~/.mise/tasks/fresh/plugins.sh` with the kind `theme` added. The list in the image also has one `theme` line for the `catppuccin` package. The theme `catppuccin-mocha` in the config comes from that package.
