@@ -1,6 +1,6 @@
 # Agent Sandbox
 
-A sandbox for AI agents. It runs Claude Code, Qwen Code and the TTT editor in a hardened rootless Podman container with gVisor.
+A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in a hardened rootless Podman container with gVisor.
 
 ## The problem and the solution
 
