@@ -51,7 +51,7 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 FROM stage1-base AS stage8-plugins
-# The script is the mise task fresh:plugins of the host, with the kind theme added. It reads plugins.list and fetches each package at its pinned commit.
+# The script reads plugins.list and fetches each package at its pinned commit. It is a short form of the mise task fresh:plugins of the host.
 COPY --chown=agent:agent configs/editor/fresh-plugins.list /home/agent/.config/fresh/plugins.list
 COPY configs/editor/fresh-plugins.sh /tmp/fresh-plugins.sh
 RUN bash /tmp/fresh-plugins.sh
