@@ -75,8 +75,9 @@ RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The mise task fresh:plugins reads plugins.yaml with yq. It fetches each package at its pinned commit. It is a short form of the task of the host.
+# The mise task fresh:plugins runs fresh-plugins.sh. The script reads plugins.yaml with yq and fetches each package at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/plugins.yaml
+COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml

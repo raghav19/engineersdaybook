@@ -20,4 +20,4 @@ When adding a language server to `image/tools/lsp.toml`, also add it to `image/c
 
 `fresh-config.json` is a copy of `~/.config/fresh/config.json` on the host. Keep it the same as the host file.
 
-`fresh-plugins.yaml` lists the Fresh packages. The mise task `fresh:plugins` in `image/mise.toml` installs each one at its pinned commit. The theme `catppuccin-mocha` in the config comes from the `catppuccin` package.
+`fresh-plugins.yaml` lists the Fresh packages. The mise task `fresh:plugins` in `image/mise.toml` runs `fresh-plugins.sh`, which installs each one at its pinned commit. The theme `catppuccin-mocha` in the config comes from the `catppuccin` package.
