@@ -13,7 +13,9 @@ Each tool has a different completion command. Check `<tool> --help` to find the 
 
 ## LSP server coupling
 
-When adding a language server to `image/tools/lsp.toml`, also add it to `image/configs/editor/ttt-settings.json`:
+When adding a language server to `image/tools/lsp.toml`, also add it to `image/configs/editor/fresh-config.json`:
 
-1. Add an entry under `lsp.servers` with the command and language mappings
-2. If the tool is also a formatter, add it under `formatters`
+1. Add an entry to the list of the language under `lsp` with the command and `auto_start`
+2. If the tool is also a formatter, add it under `languages.<language>.formatter`
+
+`fresh-config.json` and `fresh-plugins.list` are copies of `~/.config/fresh/config.json` and `~/.config/fresh/plugins.list` on the host. `fresh-catppuccin-mocha.json` is a copy of `~/.config/fresh/themes/catppuccin-mocha.json`. Keep them the same as the host files.
