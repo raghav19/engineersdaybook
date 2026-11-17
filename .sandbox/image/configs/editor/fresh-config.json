@@ -1,0 +1,293 @@
+{
+  "theme": "builtin://gruvbox",
+  "active_keybinding_map": "vscode",
+  "keybindings": [
+    {
+      "key": "`",
+      "modifiers": ["ctrl"],
+      "action": "toggle_utility_dock",
+      "when": "normal"
+    },
+    {
+      "key": "p",
+      "modifiers": ["ctrl", "shift"],
+      "action": "command_palette",
+      "when": "global"
+    },
+    {
+      "key": "Tab",
+      "modifiers": ["ctrl"],
+      "action": "quick_open_buffers",
+      "when": "global"
+    }
+  ],
+  "editor": {
+    "completion_popup_auto_show": true,
+    "quick_suggestions": true,
+    "quick_suggestions_delay_ms": 100,
+    "suggest_on_trigger_characters": true,
+    "enable_inlay_hints": true,
+    "nerd_font_icons": true
+  },
+  "languages": {
+    "go": {
+      "format_on_save": true
+    },
+    "python": {
+      "format_on_save": true
+    },
+    "toml": {
+      "filenames": [
+        "Cargo.lock",
+        "uv.lock"
+      ],
+      "format_on_save": true
+    },
+    "bash": {
+      "formatter": {
+        "command": "shfmt",
+        "args": [],
+        "stdin": true,
+        "timeout_ms": 10000
+      },
+      "format_on_save": true
+    },
+    "json": {
+      "format_on_save": true
+    },
+    "jsonc": {
+      "format_on_save": true
+    }
+  },
+  "lsp": {
+    "go": [
+      {
+        "command": "gopls",
+        "auto_start": true,
+        "initialization_options": {
+          "usePlaceholders": true,
+          "completeUnimported": true,
+          "deepCompletion": true,
+          "matcher": "Fuzzy",
+          "staticcheck": true,
+          "hints": {
+            "parameterNames": true,
+            "assignVariableTypes": true,
+            "compositeLiteralFields": true,
+            "rangeVariableTypes": true
+          }
+        }
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "terraform": [
+      {
+        "name": "terraform-ls",
+        "command": "terraform-ls",
+        "args": [
+          "serve"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "tflint",
+        "command": "tflint",
+        "args": [
+          "--langserver"
+        ],
+        "auto_start": true,
+        "only_features": [
+          "diagnostics"
+        ]
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "markdown": [
+      {
+        "command": "marksman",
+        "args": [
+          "server"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "yaml": [
+      {
+        "command": "yaml-language-server",
+        "args": [
+          "--stdio"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "toml": [
+      {
+        "command": "taplo",
+        "args": [
+          "lsp",
+          "stdio"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "bash": [
+      {
+        "command": "bash-language-server",
+        "args": [
+          "start"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "dockerfile": [
+      {
+        "name": "docker-language-server",
+        "command": "docker-language-server",
+        "args": [
+          "start",
+          "--stdio"
+        ],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "json": [
+      {
+        "command": "vscode-json-language-server",
+        "args": [
+          "--stdio"
+        ],
+        "auto_start": true
+      }
+    ],
+    "jsonc": [
+      {
+        "command": "vscode-json-language-server",
+        "args": [
+          "--stdio"
+        ],
+        "auto_start": true
+      }
+    ],
+    "python": [
+      {
+        "name": "ruff",
+        "command": "ruff",
+        "args": [
+          "server"
+        ],
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action",
+          "format"
+        ]
+      },
+      {
+        "name": "ty",
+        "command": "ty",
+        "args": [
+          "server"
+        ],
+        "auto_start": true,
+        "except_features": [
+          "format",
+          "code_action"
+        ]
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ],
+    "justfile": [
+      {
+        "name": "just-lsp",
+        "command": "just-lsp",
+        "args": [],
+        "auto_start": true
+      },
+      {
+        "name": "typos",
+        "command": "typos-lsp",
+        "auto_start": true,
+        "only_features": [
+          "diagnostics",
+          "code_action"
+        ]
+      }
+    ]
+  },
+  "plugins": {
+    "orchestrator": {
+      "settings": {
+        "autoOpenDock": "never"
+      }
+    }
+  }
+}

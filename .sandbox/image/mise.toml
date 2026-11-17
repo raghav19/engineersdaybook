@@ -10,9 +10,6 @@
 EDITOR = "nano"
 LANG = "C.UTF-8"
 TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
-# TTT reads a config directory next to its own executable first, and that directory wins file by file with no merge.
-# The mise install path has no config/ today. This pins the directory the Dockerfile bakes, so that stays true.
-TTT_CONFIG_DIR = "{{env.HOME}}/.config/ttt"
 CHECKPOINT_DISABLE = "1"  # Terraform does not check its version at checkpoint-api.hashicorp.com
 COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/bash-completion/completions') }}"  # the Dockerfile sets the same path at build time
 # Headroom (sandbox-start starts it) sends no telemetry, makes no update check and downloads nothing from Hugging Face. huggingface.co is not in the egress allow list.
@@ -55,3 +52,8 @@ flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
+
+# The Dockerfile runs this task. The script is configs/editor/fresh-plugins.sh. The Dockerfile copies it to /usr/local/share/sandbox/.
+[tasks."fresh:plugins"]
+description = "Install the Fresh packages of plugins.yaml at their pinned commits"
+run = "bash /usr/local/share/sandbox/fresh-plugins.sh"

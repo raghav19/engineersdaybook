@@ -50,22 +50,6 @@ FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
-FROM stage1-base AS stage8-plugins
-ARG TTT_PLUGINS_URL=https://raw.githubusercontent.com/eugenioenko/ttt-plugins/main
-ARG HERDR_TTT_PLUGIN_URL=https://raw.githubusercontent.com/eugenioenko/ttt/main/herdr-plugin
-RUN set -eu; \
-    mkdir -p /home/agent/.cache/plugins-build/markdown-preview /home/agent/.cache/plugins-build/lang-just/syntaxes /home/agent/.cache/plugins-build/omarchy-theme /home/agent/.cache/plugins-build/herdr-ttt-plugin/scripts; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/markdown-preview/plugin.lua      "$TTT_PLUGINS_URL/markdown-preview/plugin.lua"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/markdown-preview/plugin.ttt.json "$TTT_PLUGINS_URL/markdown-preview/plugin.ttt.json"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/lang-just/plugin.ttt.json        "$TTT_PLUGINS_URL/lang-just/plugin.ttt.json"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/lang-just/syntaxes/just.tmLanguage.json "$TTT_PLUGINS_URL/lang-just/syntaxes/just.tmLanguage.json"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/omarchy-theme/init.lua           "$TTT_PLUGINS_URL/omarchy-theme/init.lua"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/omarchy-theme/plugin.ttt.json    "$TTT_PLUGINS_URL/omarchy-theme/plugin.ttt.json"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/herdr-ttt-plugin/herdr-plugin.toml "$HERDR_TTT_PLUGIN_URL/herdr-plugin.toml"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/herdr-ttt-plugin/scripts/install.sh "$HERDR_TTT_PLUGIN_URL/scripts/install.sh"; \
-    curl -fsSL -o /home/agent/.cache/plugins-build/herdr-ttt-plugin/scripts/open-worktree.sh "$HERDR_TTT_PLUGIN_URL/scripts/open-worktree.sh"; \
-    chmod +x /home/agent/.cache/plugins-build/herdr-ttt-plugin/scripts/*.sh
-
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
 RUN git clone $TE_REPO /home/agent/token-economizer \
@@ -89,27 +73,19 @@ COPY tools/ /etc/mise/conf.d/
 # mise creates shims from the installed tools. A mise task writes the bash completions.
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
-# Build-time proof that ttt runs. It prints the version and exits. This line sets PATH itself, because the ENV that adds the shims comes later.
-RUN PATH=/opt/mise/shims:$PATH ttt --version
-
 # Agent-level configs.
-COPY --chown=agent:agent configs/editor/ttt-settings.json /home/agent/.config/ttt/settings.json
-COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/markdown-preview/ /home/agent/.config/ttt/plugins/markdown-preview/
-COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/lang-just/ /home/agent/.config/ttt/plugins/lang-just/
-COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/omarchy-theme/ /home/agent/.config/ttt/plugins/omarchy-theme/
-COPY --from=stage8-plugins --chown=agent:agent /home/agent/.cache/plugins-build/herdr-ttt-plugin/ /home/agent/.config/herdr/plugins/ttt-editor/
-COPY --chown=agent:agent configs/editor/ttt-plugins.json /home/agent/.config/ttt/plugins.ttt.json
+COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
+# The mise task fresh:plugins runs fresh-plugins.sh. The script reads plugins.yaml with yq and fetches each package at its pinned commit.
+COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/plugins.yaml
+COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
+RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
-RUN mkdir -p /home/agent/.config/ttt/themes /home/agent/.tokeneconomizer /home/agent/.qwen
-# The justfile mounts the Omarchy theme of the host at ~/.omarchy-theme. TTT reads the theme at the path of Omarchy, so link it.
-# A mount below ~/.local would make root own the folders above it, and the agent could not write there.
-RUN mkdir -p /home/agent/.local/state/omarchy/current \
- && ln -s /home/agent/.omarchy-theme /home/agent/.local/state/omarchy/current/theme
+RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Root-only: sandbox-entry, managed settings.
 USER root
@@ -136,5 +112,5 @@ RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
-    EDITOR=ttt \
+    EDITOR=fresh \
     TMPDIR=/tmp
