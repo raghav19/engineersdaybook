@@ -1,21 +1,22 @@
 # The Fresh packages of the image. The task fresh:plugins (in mise.toml) installs each one at its pinned commit.
-# kind is plugin, language or theme. Set subdir only for a package in a folder of a monorepo.
-- kind: plugin
-  name: todo-highlighter
+# kind is plugin, language or theme. subdir is the folder of the package in the repo. Use . for the whole repo.
+todo-highlighter:
+  kind: plugin
   repo: https://github.com/sinelaw/fresh-plugins
   commit: 3f327361b8b64e6e192386e5badda9d22241c854
   subdir: todo-highlighter
-- kind: plugin
-  name: color-highlighter
+color-highlighter:
+  kind: plugin
   repo: https://github.com/sinelaw/fresh-plugins
   commit: 3f327361b8b64e6e192386e5badda9d22241c854
   subdir: color-highlighter
-- kind: language
-  name: dotfiles-fresh-language
+dotfiles-fresh-language:
+  kind: language
   repo: https://github.com/2fd/dotfiles-fresh-language
   commit: 2b8c0e58721001dba0b7f9bf7608ee8b52e04261
-- kind: theme
-  name: catppuccin
+  subdir: .
+catppuccin:
+  kind: theme
   repo: https://github.com/sinelaw/fresh-plugins
   commit: 3f327361b8b64e6e192386e5badda9d22241c854
   subdir: themes/catppuccin
