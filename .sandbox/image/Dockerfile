@@ -50,11 +50,6 @@ FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
-FROM stage1-base AS stage8-plugins
-# The mise task fresh:plugins (in mise.toml) reads plugins.list and fetches each package at its pinned commit. It is a short form of the task of the host.
-COPY --chown=agent:agent configs/editor/fresh-plugins.list /home/agent/.config/fresh/plugins.list
-RUN mise run fresh:plugins
-
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
 RUN git clone $TE_REPO /home/agent/token-economizer \
@@ -79,8 +74,10 @@ COPY tools/ /etc/mise/conf.d/
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
 # Agent-level configs.
-COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh/ /home/agent/.config/fresh/
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
+# The mise task fresh:plugins reads plugins.yaml with yq. It fetches each package at its pinned commit. It is a short form of the task of the host.
+COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/plugins.yaml
+RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml

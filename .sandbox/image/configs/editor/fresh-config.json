@@ -1,5 +1,5 @@
 {
-  "theme": "catppuccin-mocha",
+  "theme": "builtin://gruvbox",
   "active_keybinding_map": "vscode",
   "keybindings": [
     {
