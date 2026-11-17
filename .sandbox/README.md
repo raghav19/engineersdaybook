@@ -70,6 +70,38 @@ The ACL gives each user only the commands and keys it needs. A connection that d
 
 The agent cannot read a context, cannot write a status and cannot list the queue. To change a right, edit `build/queue-policy.yaml`, run `just sandbox queue`, then run `just sandbox queue-check`.
 
+## Build from the sandbox
+
+The agent runs `sandbox-build` to build a container image on the host. The host builds it in a gVisor container with no network. The log comes back to the agent line by line. This path does not use the queue above.
+
+1. Run `just sandbox build-listen` in a second terminal. Stop it with Ctrl-C. It needs the secret `GITHUB_TOKEN` (`write:packages`) from Bitwarden to read the context from `ghcr.io`.
+2. In the sandbox, go to the folder to build and run `sandbox-build app:dev`. Add `--file path/Containerfile` if the file has another name. The sandbox needs the image of this version: run `just sandbox build` and `just sandbox run`.
+
+What happens in one build:
+
+1. `sandbox-build` runs the recipe in `image/build.just`. The recipe packs the folder as a tar. It leaves out `.git`.
+2. It pushes the tar with `crane` to `ghcr.io/raghav19/engineersdaybook/build-context` as an image with one layer. It reads the digest of the image.
+3. It sends one line of JSON to the socket `build.sock`. The line has the three fields below.
+4. The listener checks each field and exports the context by its digest into a tar file. It stops at 64 MB. The host never reads the tar.
+5. The listener runs the builder in a gVisor container with no network, as the user `agent` and with the capabilities `SETUID`, `SETGID` and `SYS_CHROOT`. The builder unpacks the tar in its own container and runs `podman build`. A bad path or link in the tar can only harm that container, which is gone after the build.
+6. The output of the builder goes straight to the agent over the socket, line by line. The last line is `sandbox-build: exit N`, and `sandbox-build` ends with that code.
+
+| Field | What the listener checks |
+|---|---|
+| `image` | A name and a tag, such as `app:dev`. The name has lowercase letters, digits, dot, dash and underscore. It has no registry and no slash. |
+| `file` | A relative path in the context. It has no `..`. |
+| `context` | `ghcr.io/raghav19/engineersdaybook/build-context@sha256:` and 64 hex characters. The digest fixes the content, so the agent cannot change it after it sends the spec. |
+
+The agent chooses only these three values. The listener sets every flag of `podman`.
+
+This version has these limits:
+
+- The builder has no network. A build with `FROM scratch` works. A build with `FROM alpine` fails with `network is unreachable`. The builder does not push the image yet.
+- Builds run one at a time. The other agents wait in the listen queue of the socket, first in and first out. A waiting `sandbox-build` prints nothing, so run it in the background if the wait can be long.
+- The context has at most 64 MB. A build runs at most 30 minutes.
+- If the agent disconnects, the listener stops the build when the builder prints its next line.
+- The contexts stay in `ghcr.io`. Remove them there by hand.
+
 ## How it works
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
@@ -139,9 +171,9 @@ Each row is one attack of an injected agent and the control that stops it.
 |---|---|
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
 | `runsc.conf` | The gVisor flags for Podman. |
-| `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
-| `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
-| `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
+| `justfile` | The `setup`, `run`, `rm`, `build`, `build-listen`, `queue`, `queue-check` and `queue-down` recipes. |
+| `build/` | `listener.py`, which takes the builds from the socket. Also the build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
+| `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start`, `sandbox-build` with its recipe `build.just`, and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |
 
 ## References

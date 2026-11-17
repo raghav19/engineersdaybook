@@ -91,6 +91,8 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
+COPY --chmod=0755 sandbox-build /usr/local/bin/sandbox-build
+COPY --chmod=0644 build.just /usr/local/share/sandbox/build.just
 # The entry starts the relay to the proxy and runs the command. sandbox.container starts the container as the user agent. The default command is the start script.
 ENTRYPOINT ["sandbox-entry"]
 CMD ["sandbox-start"]

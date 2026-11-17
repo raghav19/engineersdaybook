@@ -8,5 +8,6 @@ ruff = "0.17"
 gitleaks = "8.30"
 yamlfmt = "0.21"
 shfmt = "3.14"
+crane = "0.22"  # sandbox-build pushes the build context with it
 ty = "0.0"
 "github:sinelaw/fresh" = "0.5"

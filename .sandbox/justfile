@@ -7,6 +7,7 @@
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container. The volume stays.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
+#   just sandbox build-listen   run the listener that takes the builds of the agent from the socket build.sock. Run it in a second terminal.
 #   just sandbox queue   start the build queue (Valkey). Run it again after you edit build/ or change the secret QUEUE_WORKER_PASSWORD.
 #   just sandbox queue-check   test the rights of the agent and of the worker in the queue.
 #   just sandbox queue-down    stop and remove the queue. The waiting jobs are lost.
@@ -18,8 +19,9 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws, iron-proxy and yq come from mise.toml. Run `mise install` once.
+# bws, crane, iron-proxy, uv and yq come from mise.toml. Run `mise install` once.
 bws            := require("bws")
+crane          := require("crane")
 git            := require("git")
 iron_proxy     := require("iron-proxy")
 nft            := require("nft")
@@ -29,6 +31,7 @@ podman_compose := require("podman-compose")
 runsc          := require("runsc")
 sudo           := require("sudo")
 systemd_creds  := require("systemd-creds")
+uv             := require("uv")
 yq             := require("yq")
 
 # --- Names and paths ---
@@ -172,6 +175,24 @@ build *args: (_needs credential)
 
     # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
     podman logout ghcr.io
+
+# The agent runs `sandbox-build` in the sandbox. That command pushes the build context to ghcr.io and sends a spec to the socket build.sock.
+# The listener (build/listener.py) takes one build at a time, runs the builder in gVisor and sends the log back over the socket.
+# It needs a login to ghcr.io to read the context. crane reads the login from a private folder that this recipe removes when it ends.
+# The login is GITHUB_TOKEN (write:packages) from Bitwarden. The token stays inside bws run, and then crane writes it to the file config.json in that private folder.
+# crane prints a warning about this file. The folder is mode 0700, and the recipe removes it when the listener ends.
+# Run the listener in a second terminal. Stop it with Ctrl-C.
+[script('bash')]
+build-listen: (_needs credential)
+    set -euo pipefail
+    mkdir -p -m 0711 '{{ SANDBOX_SOCKET }}'
+    config="$(mktemp -d)"
+    trap 'rm -rf "$config"' EXIT
+    token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)"
+    # bws run joins its arguments into one string and runs it with a shell. Do not add sh -c: the shell then loses the quotes.
+    DOCKER_CONFIG="$config" BWS_ACCESS_TOKEN="$token" \
+        '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | crane auth login ghcr.io -u raghav19 --password-stdin'
+    DOCKER_CONFIG="$config" '{{ uv }}' run --script '{{ source_directory() }}/build/listener.py'
 
 # The agent and the worker connect to $XDG_RUNTIME_DIR/sandbox/valkey.sock. The container is in build/compose.yaml.
 # The password of the worker is the Bitwarden secret QUEUE_WORKER_PASSWORD. You make it and rotate it there. The ACL holds only its hash.

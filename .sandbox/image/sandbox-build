@@ -1,0 +1,3 @@
+#!/bin/sh
+# sandbox-build IMAGE [FOLDER] [FILE]: ask the host to build a container image. The steps are in build.just.
+exec just --justfile /usr/local/share/sandbox/build.just build "$@"
