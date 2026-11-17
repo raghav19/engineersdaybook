@@ -7,6 +7,18 @@
       "modifiers": ["ctrl"],
       "action": "toggle_utility_dock",
       "when": "normal"
+    },
+    {
+      "key": "p",
+      "modifiers": ["ctrl", "shift"],
+      "action": "command_palette",
+      "when": "global"
+    },
+    {
+      "key": "Tab",
+      "modifiers": ["ctrl"],
+      "action": "quick_open_buffers",
+      "when": "global"
     }
   ],
   "editor": {
