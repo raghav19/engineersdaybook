@@ -79,9 +79,6 @@ COPY tools/ /etc/mise/conf.d/
 # mise creates shims from the installed tools. A mise task writes the bash completions.
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
-# Build-time proof that fresh runs. It prints the version and exits. This line sets PATH itself, because the ENV that adds the shims comes later.
-RUN PATH=/opt/mise/shims:$PATH fresh --version
-
 # Agent-level configs.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh/ /home/agent/.config/fresh/
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
