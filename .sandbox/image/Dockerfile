@@ -51,7 +51,7 @@ COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
 FROM stage1-base AS stage8-plugins
-# The same loop as the mise task fresh:plugins on the host. It reads the same list and fetches each package at its pinned commit.
+# The same loop as the mise task fresh:plugins on the host. It reads the list and fetches each package at its pinned commit. The list has a theme package, and the host task does not know that kind.
 COPY configs/editor/fresh-plugins.list /tmp/plugins.list
 RUN set -eu; \
     cfg=/home/agent/.config/fresh; \
@@ -95,7 +95,6 @@ RUN PATH=/opt/mise/shims:$PATH fresh --version
 # Agent-level configs.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh/ /home/agent/.config/fresh/
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-COPY --chown=agent:agent configs/editor/fresh-catppuccin-mocha.json /home/agent/.config/fresh/themes/catppuccin-mocha.json
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml

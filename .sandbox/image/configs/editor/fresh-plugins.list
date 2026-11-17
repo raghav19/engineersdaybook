@@ -5,6 +5,7 @@
 #
 #   - <kind>    plugin -> ~/.config/fresh/plugins/packages/<name>
 #               language -> ~/.config/fresh/languages/packages/<name>
+#               theme -> ~/.config/fresh/themes/packages/<name>
 #   - <commit>  full commit hash the package is pinned to (change it to upgrade)
 #   - <subdir>  set only for monorepo packages (e.g. sinelaw/fresh-plugins)
 #
@@ -14,3 +15,4 @@
 plugin    todo-highlighter         https://github.com/sinelaw/fresh-plugins  3f327361b8b64e6e192386e5badda9d22241c854  todo-highlighter
 plugin    color-highlighter        https://github.com/sinelaw/fresh-plugins  3f327361b8b64e6e192386e5badda9d22241c854  color-highlighter
 language  dotfiles-fresh-language  https://github.com/2fd/dotfiles-fresh-language  2b8c0e58721001dba0b7f9bf7608ee8b52e04261
+theme     catppuccin               https://github.com/sinelaw/fresh-plugins  3f327361b8b64e6e192386e5badda9d22241c854  themes/catppuccin
