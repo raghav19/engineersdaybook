@@ -14,6 +14,8 @@
 
 [![The agent sandbox and the builder](diagrams/architecture.png)](diagrams/architecture.svg)
 
+The architecture diagram names the files: the unit file of each container, the folder of its image, the proxy configs, the CA and the credential.
+
 The network path of the agent sandbox and the builder, inside gVisor:
 
 [![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
@@ -21,10 +23,6 @@ The network path of the agent sandbox and the builder, inside gVisor:
 Quadlet turns each `.container` file into a systemd service. The service holds the limits of the whole sandbox, because gVisor ignores the limits of Podman:
 
 [![How Quadlet controls the sandbox](diagrams/quadlet.png)](diagrams/quadlet.svg)
-
-How the files connect:
-
-[![How the files connect](diagrams/files.png)](diagrams/files.svg)
 
 ## The flows
 
