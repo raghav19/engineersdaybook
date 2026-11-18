@@ -8,5 +8,8 @@
 | `sandbox-network.drawio` | Source of the network diagram. Shows two lanes, one for the agent sandbox and one for the builder. Each lane has the network namespace, the sentry with the `socat` relay, the gofer, `proxy.sock`, the bridge and its proxy. The host proxy ends TLS (`mitm`). The builder proxy passes TLS through (`sni-only`). An arrow shows `docker build` from the agent sandbox to `buildkitd` over `buildkitd.sock`. Each line names its carrier. A red box shows the firewall rule for both proxies. |
 | `sandbox-network.svg` | The network diagram as a plain SVG, drawn in the same way. |
 | `sandbox-network.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white sandbox-network.svg -o sandbox-network.png`. |
+| `build-push.drawio` | Source of the build and push diagram. Shows the path of `docker build` from the agent sandbox to the builder, the tar file, and the path of `crane push` through the host proxy to `ghcr.io`. |
+| `build-push.svg` | The build and push diagram as a plain SVG, drawn in the same way. |
+| `build-push.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white build-push.svg -o build-push.png`. |
 
 After an edit of a `.drawio` file, change the SVG in the same way, then make the PNG again. The flows are mermaid diagrams in `../internals.md`.
