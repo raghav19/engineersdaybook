@@ -9,3 +9,5 @@ terraform = "1.16"
 flux2 = "2.10"
 "github:home-operations/flate" = "0.6"
 "github:fluxcd/flux-schema" = "0.17"
+# buildctl is the client of the builder. It has no completion command.
+"github:moby/buildkit" = "0.35"

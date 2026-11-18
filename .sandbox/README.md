@@ -20,7 +20,7 @@ A fooled agent can use only what the sandbox allows.
 Run these steps in your main checkout.
 
 1. Read [what the setup assumes](proxy/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
-2. Run `mise install`. The host also needs `podman`, `podman-compose`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
+2. Run `mise install`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
 3. Run these commands:
 
 ```shell
@@ -29,7 +29,7 @@ just sandbox build   # build the image and push it to ghcr.io (the first build t
 just sandbox run     # start the container and open Herdr
 ```
 
-`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `runsc.conf` or `sandbox.container`.
+`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
 
 ## Commands
 
@@ -37,38 +37,39 @@ just sandbox run     # start the container and open Herdr
 |---|---|
 | `just sandbox setup` | Installs the host proxy, the firewall rule, the container unit and the gVisor flags. |
 | `just sandbox run` | Makes a new container from the image and opens Herdr. Add a command to run it in place of Herdr. |
-| `just sandbox rm` | Stops the service and removes the container. The volume stays. |
+| `just sandbox rm` | Stops the service and removes the container and the builder. The volume stays. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it. `just sandbox build --no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox` | Follows the log of the container. |
 
 The volume `sandbox-home` keeps the clone, the logins and the histories. Each `run` stops the processes of the old container.
 
-## Build queue
+## Builder
 
-The agent sends a build to a queue, and a worker on the host takes the jobs one at a time. The queue is one Valkey container. The worker, the builder and the `sandbox-build` command are not built yet.
+The agent builds an image with `buildctl`. `buildctl` sends the build to BuildKit (`buildkitd`), which runs in a second container, the builder. The builder has its own gVisor container, has no network and holds no secret.
 
-The queue assumes a secret `QUEUE_WORKER_PASSWORD` in Bitwarden Secrets Manager, in the project of your access token. The value has at least 24 characters.
+1. `sandbox.service` requires `sandbox-builder.service`. The builder starts first.
+2. `buildkitd` makes the socket `$XDG_RUNTIME_DIR/sandbox/buildkit/buildkitd.sock` in a folder on the host.
+3. The sandbox mounts the folder read-only at `/run/sandbox/buildkit`. `BUILDKIT_HOST` points there, so `buildctl build` needs no `--addr`.
+4. A stop or a restart of `sandbox.service` stops the builder. The state of `buildkitd` is in memory, so the cache and every file of the build are gone.
 
-1. Run `just sandbox queue`. It writes only the hash of the secret into the ACL. It stops with a message if the secret is missing or short.
-2. Run `just sandbox queue-check`. It tests the rights from a gVisor container with no network.
+The Podman health check of the builder runs `buildctl debug workers`. If it fails at the start, `just sandbox run` fails. If it fails later, Podman stops the builder and systemd restarts it with an empty cache.
 
-| Command | What it does |
+This build sends an OCI tar back to the sandbox. The base image comes from the client, because the builder has no network:
+
+```shell
+buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
+  --oci-layout base=/path/to/oci-layout --opt context:base=oci-layout:base@sha256:<DIGEST> \
+  --output type=oci,dest=/tmp/image.tar
+```
+
+| Fact | Detail |
 |---|---|
-| `just sandbox queue` | Renders the ACL from `build/queue-policy.yaml` and starts the container `sandbox-queue`. Run it again after you edit a file in `build/` or change the secret. A start drops the waiting jobs. |
-| `just sandbox queue-check` | Prints `ok` or `FAIL` for each right of the agent and of the worker. |
-| `just sandbox queue-down` | Removes the container, the ACL file and the socket. The waiting jobs are lost. |
-
-The socket is `$XDG_RUNTIME_DIR/sandbox/valkey.sock`, in the folder of `proxy.sock`. The sandbox sees it at `/run/sandbox/proxy/valkey.sock`. The ACL file is in `$XDG_RUNTIME_DIR/sandbox-queue/`. The sandbox does not mount that folder.
-
-The ACL gives each user only the commands and keys it needs. A connection that does not log in has no rights.
-
-| User | Password | Commands | Keys |
-|---|---|---|---|
-| `agent` | None. | `lpush`, `set`, `get` | Write only: `job:*:ctx`, `job:*:spec`, `build:queue`. Read only: `job:*:status`, `job:*:log`, `job:*:result`, `queue:epoch`. |
-| `worker` | `QUEUE_WORKER_PASSWORD` | `blmove`, `lrem`, `lrange`, `get`, `set`, `append`, `del` | Read and write: `job:*`, `build:queue`, `build:active`, `queue:epoch`. |
-
-The agent cannot read a context, cannot write a status and cannot list the queue. To change a right, edit `build/queue-policy.yaml`, run `just sandbox queue`, then run `just sandbox queue-check`.
+| Who may connect | Any process that reaches the socket. BuildKit has no authorization. The agent and the builder use the same subuid, and no other user reaches the folder. |
+| What a build step can do | Run any command as root in the builder. The wall is the builder container: no network, no secret, no host mount except the socket folder. |
+| What stays off | The entitlements `network.host`, `security.insecure` and `device`. BuildKit denies them by default. Do not enable them. |
+| Limits | 2 GB of memory with no swap, 1 GB of cache in `tmpfs`, 1024 host threads, 2 CPUs. A build that fills the cache fails with "No space left on device". The builder stays up. |
+| Image pulls | Not possible yet. A `FROM` that is not in an OCI layout fails. A relay to the proxy is the next step. |
 
 ## How it works
 
@@ -80,6 +81,75 @@ The agent cannot read a context, cannot write a status and cannot list the queue
 4. iron-proxy checks the host. An unlisted host gets `403`. For a listed host, iron-proxy replaces each placeholder with the real token and sends the request.
 
 For the details, see [How it works in detail](docs/internals.md).
+
+### Setup
+
+`just sandbox setup` runs once. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
+
+```mermaid
+flowchart TD
+    A["just sandbox setup"] --> B["Link bws and iron-proxy, make the CA if it is missing"]
+    B --> C["Link the sandbox unit, the builder unit, runsc.conf and repo.git"]
+    C --> D["Install the firewall rule with sudo"]
+    D --> E["Encrypt the Bitwarden token if it is missing"]
+    E --> F["Link, enable and restart the proxy units"]
+    F --> G{"sandbox-proxy.service active?"}
+    G -->|yes| H["The proxy runs"]
+    G -->|no| I["Stop with an error"]
+```
+
+If a step fails, `setup` stops. The proxy does not start after a failed firewall step.
+
+### Run
+
+`just sandbox run` starts a new sandbox and a new builder.
+
+```mermaid
+sequenceDiagram
+    participant You
+    participant just
+    participant systemd
+    participant Builder
+    participant Sandbox
+    You->>just: just sandbox run
+    just->>just: check that proxy.sock and ca.crt exist
+    just->>systemd: daemon-reload, restart sandbox.service
+    systemd->>Builder: start sandbox-builder.service, a new builder
+    Builder-->>systemd: the health check passes, or the start fails
+    systemd->>Sandbox: podman run --replace with runsc and no network
+    just->>Sandbox: podman healthcheck run, up to 180 s
+    just->>Sandbox: podman exec herdr, or your command
+```
+
+The builder starts first. If its health check fails, the start fails and `run` stops with an error.
+
+### Build the image
+
+`just sandbox build` builds the image of the sandbox and pushes it to `ghcr.io`.
+
+```mermaid
+flowchart TD
+    A["just sandbox build"] --> B["Check that the credential exists"]
+    B --> C["Log in to ghcr.io with the token from Bitwarden"]
+    C --> D["podman build, with the stage cache in ghcr.io"]
+    D --> E["Push the commit tag"]
+    E --> F["Log out of ghcr.io"]
+    D -->|fails| G["The login stays until you run podman logout ghcr.io"]
+```
+
+### Build in the sandbox
+
+The agent builds an image with `buildctl`. The builder runs the build. See [One build](docs/internals.md#one-build) for the steps in order.
+
+```mermaid
+flowchart TD
+    A["The agent runs buildctl build"] --> B["buildctl sends the context and the base image to buildkitd.sock"]
+    B --> C["buildkitd runs each build step in the builder"]
+    C --> D{"Build passes?"}
+    D -->|yes| E["The OCI tar is in the sandbox, exit code 0"]
+    D -->|no| F["Exit code is not 0, the log shows the failed step"]
+    E --> G["The sandbox pushes the tar through the proxy, not tested"]
+```
 
 ## Security controls
 
@@ -114,7 +184,7 @@ Each row is one attack of an injected agent and the control that stops it.
 
 ## Limits
 
-- No `podman`, `docker` or `buildah` in the sandbox. Build and run images on the host with `podman build`. Read a Containerfile before you build it, because a `RUN` step uses the network of the host and not the proxy.
+- Build images with `buildctl`. See [Builder](#builder). A build step has no network, so send the base image with `--oci-layout`.
 - No SSH and no raw TCP. Use HTTPS remotes. A tool that ignores `HTTPS_PROXY` has no route.
 - No `sudo` and no package install. Change the image.
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
@@ -129,6 +199,7 @@ Each row is one attack of an injected agent and the control that stops it.
 |---|---|
 | `run` says `proxy.sock` is missing | Run `systemctl --user start sandbox-proxy`. |
 | `run` says the container is not healthy | Run `podman logs sandbox`. |
+| `run` fails and the builder is not healthy | Run `podman logs sandbox-builder`. |
 | `systemctl --user status sandbox` shows `failed` | A limit killed the sandbox. Run `just sandbox run`. The clone stays in the volume. |
 | A tool fails with a connection error | The tool ignores `HTTPS_PROXY` and has no route. |
 | You made a new CA | Restart the sandbox with `just sandbox run`. |
@@ -138,9 +209,9 @@ Each row is one attack of an injected agent and the control that stops it.
 | Path | Content |
 |---|---|
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
-| `runsc.conf` | The gVisor flags for Podman. |
-| `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
-| `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
+| `runsc.conf` | The gVisor flags for Podman, for the sandbox (`runsc`) and for the builder (`runsc-builder`). |
+| `builder/` | The builder: the Quadlet unit `sandbox-builder.container`. |
+| `justfile` | The `setup`, `run`, `rm` and `build` recipes. |
 | `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |
 
