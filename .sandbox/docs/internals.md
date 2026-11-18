@@ -8,28 +8,19 @@
 - The host proxy holds the real tokens. The builder proxy holds none.
 - Both proxies allow listed hosts only.
 - The agent sandbox sends a build to the builder through a socket in a shared folder.
+- Quadlet turns each container file into a systemd service. The service limits memory, CPU and threads.
 
 ## The picture
 
 [![The agent sandbox and the builder](diagrams/architecture.png)](diagrams/architecture.svg)
 
-Both containers use one model for each call to the outside:
-
-```mermaid
-flowchart LR
-    subgraph AS["Agent sandbox"]
-        T["Agent tools"] -->|HTTPS_PROXY| R1["relay 127.0.0.1:3128"]
-    end
-    subgraph BU["Builder"]
-        B["buildkitd and build steps"] -->|HTTPS_PROXY| R2["relay 127.0.0.1:3129"]
-    end
-    R1 -->|Unix socket| BR1["bridge"] --> HP["Host proxy: allowlist and token swap"] --> NET["Internet"]
-    R2 -->|Unix socket| BR2["bridge"] --> BP["Builder proxy: host names only"] --> NET
-```
-
 The network path of the agent sandbox, inside gVisor:
 
 [![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
+
+Quadlet turns each `.container` file into a systemd service. The service holds the limits of the whole sandbox, because gVisor ignores the limits of Podman:
+
+[![How Quadlet controls the sandbox](diagrams/quadlet.png)](diagrams/quadlet.svg)
 
 ## The cast
 

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1300" height="830" viewBox="0 0 1300 830" font-family="Helvetica, Arial, sans-serif">
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
+<marker id="s" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M10,0 L0,5 L10,10 z" fill="#333333"/></marker>
+</defs>
+<rect x="0" y="0" width="1300" height="830" fill="#ffffff"/>
+<text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">How Quadlet controls the sandbox</text>
+
+<rect x="20" y="210" width="230" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="135" y="242.8" font-weight="bold">sandbox-agent.container</text><text x="135" y="263.8">Quadlet unit file</text></g>
+
+<rect x="20" y="590" width="230" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="135" y="622.8" font-weight="bold">sandbox-builder.container</text><text x="135" y="643.8">Quadlet unit file</text></g>
+
+<rect x="310" y="398" width="230" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="425" y="424.3" font-weight="bold">Quadlet generator</text><text x="425" y="445.3">reads the .container files</text><text x="425" y="466.3">writes the .service files</text></g>
+
+<rect x="20" y="720" width="400" height="84" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="220" y="746.3" font-weight="bold">Podman limits are not used</text><text x="220" y="767.3">--memory and --cpus: gVisor ignores them</text><text x="220" y="788.3">(runsc.conf: ignore-cgroups)</text></g>
+
+<rect x="620" y="90" width="660" height="310" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<line x1="620" y1="130" x2="1280" y2="130" stroke="#82b366" stroke-width="1"/>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="632" y="115.3">sandbox-agent.service: one cgroup for the whole sandbox</text></g>
+
+<rect x="640" y="150" width="620" height="84" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="950" y="186.8" font-weight="bold">Limits of the service</text><text x="950" y="207.8">MemoryMax=3G   MemorySwapMax=0   TasksMax=2048   CPUQuota=400%</text></g>
+
+<rect x="640" y="274" width="200" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="740" y="306.8" font-weight="bold">podman run</text><text x="740" y="327.8">--cgroups=split</text></g>
+
+<rect x="890" y="274" width="120" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="950" y="306.8" font-weight="bold">conmon</text><text x="950" y="327.8">in the cgroup</text></g>
+
+<rect x="1060" y="274" width="200" height="76" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1160" y="296.3" font-weight="bold">Container</text><text x="1160" y="317.3">runtime runsc</text><text x="1160" y="338.3">sentry and gofer</text></g>
+
+<rect x="620" y="470" width="660" height="310" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<line x1="620" y1="510" x2="1280" y2="510" stroke="#82b366" stroke-width="1"/>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="632" y="495.3">sandbox-builder.service: one cgroup for the whole sandbox</text></g>
+
+<rect x="640" y="530" width="620" height="84" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="950" y="566.8" font-weight="bold">Limits of the service</text><text x="950" y="587.8">MemoryMax=2G   MemorySwapMax=0   TasksMax=1024   CPUQuota=200%</text></g>
+
+<rect x="640" y="654" width="200" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="740" y="686.8" font-weight="bold">podman run</text><text x="740" y="707.8">--cgroups=split</text></g>
+
+<rect x="890" y="654" width="120" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="950" y="686.8" font-weight="bold">conmon</text><text x="950" y="707.8">in the cgroup</text></g>
+
+<rect x="1060" y="654" width="200" height="76" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1160" y="676.3" font-weight="bold">Container</text><text x="1160" y="697.3">runtime runsc-builder</text><text x="1160" y="718.3">sentry and gofer</text></g>
+
+<path d="M250,248 L425,248 L425,398" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M250,628 L425,628 L425,482" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M540,423 L580,423 L580,245 L620,245" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M540,457 L580,457 L580,625 L620,625" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M800,400 L800,470" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1100,470 L1100,400" fill="none" stroke="#333333" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#a)"/>
+<path d="M840,312 L890,312" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1010,312 L1060,312" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M840,692 L890,692" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1010,692 L1060,692" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<text x="340" y="232" font-size="14" text-anchor="middle" fill="#000000">daemon-reload</text>
+<text x="812" y="440" font-size="14" text-anchor="start" fill="#000000">Requires, After</text>
+<text x="1112" y="440" font-size="14" text-anchor="start" fill="#000000">PartOf</text>
+<text x="865" y="300" font-size="14" text-anchor="middle" fill="#000000">starts</text>
+<text x="1035" y="300" font-size="14" text-anchor="middle" fill="#000000">runs</text>
+<text x="865" y="680" font-size="14" text-anchor="middle" fill="#000000">starts</text>
+<text x="1035" y="680" font-size="14" text-anchor="middle" fill="#000000">runs</text>
+</svg>
