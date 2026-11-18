@@ -1,5 +1,5 @@
 # The builder proxy for the builder. It holds no token, so it needs no credential and no bws.
-# `just sandbox setup` links this file with systemctl --user link.
+# `just sandbox setup` links this file as sandbox-builder-proxy.service in ~/.config/systemd/user.
 [Unit]
 Description=iron-proxy: builder proxy of the sandbox builder (host names only, no tokens)
 Wants=sandbox-builder-proxy-bridge.socket

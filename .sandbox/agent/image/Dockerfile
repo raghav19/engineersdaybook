@@ -74,7 +74,7 @@ RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
 USER root
 # The config of docker is read-only at run time. It has the placeholder login of ghcr.io, the proxy settings of the build steps and the definition of the builder.
-# docker finds the plugin buildx through cliPluginsExtraDirs. crane reads the login from this file. The placeholder must equal the proxy_value line of proxy/iron-proxy.yaml. It is not a secret.
+# docker finds the plugin buildx through cliPluginsExtraDirs. crane reads the login from this file. The placeholder must equal the proxy_value line of agent/proxy/iron-proxy.yaml. It is not a secret.
 # buildx create only writes the definition. It does not connect. The endpoint is the socket that the sandbox mounts.
 COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
