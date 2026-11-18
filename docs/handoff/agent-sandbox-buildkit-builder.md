@@ -10,10 +10,10 @@ The owner wants the agent to build images with no custom build code and no build
 
 ## State of the repo
 
-- PR #317 (branch `sandbox-builder-buildkit`) is open. It adds the builder, the health check, the diagram and the research note, and it removes `.sandbox/build/` (Valkey). It keeps the `nftables` rule.
+- PR #317 (branch `sandbox-builder-buildkit`) is merged into `main`. It added the builder, the health check, the diagram and the research note, and it removes `.sandbox/build/` (Valkey). It keeps the `nftables` rule.
 - The research note is `docs/research/remote-buildkit-for-agent-sandbox.md`. It has the sources and the spike results.
 - The Go listener in `code/agent-sandbox/builder/` and the handoff `go-build-socket-listener.md` are untracked and obsolete.
-- The host has no part of PR #317 installed. After the merge, run `just sandbox setup` and `just sandbox build`.
+- The host had no part of PR #317 installed when this was written. Run `just sandbox setup` and `just sandbox build`.
 
 ## The design as built
 
