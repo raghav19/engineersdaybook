@@ -2,6 +2,8 @@
 
 Written on 2026-11-11. The index of all handoff documents is `docs/handoff.md`. This document continues [podman-gvisor-sandbox.md](podman-gvisor-sandbox.md).
 
+> **Update of 2026-11-18.** The owner dropped the Valkey design. Builds use BuildKit in a second gVisor container. See [agent-sandbox-buildkit-builder.md](agent-sandbox-buildkit-builder.md). Read this document only for the spike results: the `RUN` build in gVisor, the failure of `ReadOnly=true` and the Valkey tests.
+
 The owner wants the agent in the sandbox to build container images and push them to a registry. The agent sandbox must stay hardened and must not hold build capabilities. The first target is the owner laptop. The later target is a remote system at scale. No code for this is merged. One session ran spikes and compared designs. A fresh session continues with "Next steps".
 
 ## State of the repo

@@ -2,6 +2,8 @@
 
 Written on 2026-11-11. The index of all handoff documents is `docs/handoff.md`. This document continues [podman-sandbox-merged.md](podman-sandbox-merged.md). That document parked gVisor. This one unparks it.
 
+> **Update of 2026-11-18.** The change is merged. The sandbox is a Quadlet unit on `main`. PR #317 adds a BuildKit builder next to it. See [agent-sandbox-buildkit-builder.md](agent-sandbox-buildkit-builder.md). The branch `sandbox-gvisor` and the `podman-compose` text below are out of date.
+
 The change is on the branch `sandbox-gvisor`. The host of the owner still runs the crun container from `podman-compose`. A fresh session continues with "Next steps".
 
 ## Goal
