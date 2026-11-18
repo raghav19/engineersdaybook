@@ -1,16 +1,16 @@
 # The builder: BuildKit (buildkitd) in a rootless gVisor container. `just sandbox setup` links this file for Quadlet.
-# The builder reaches the internet only through the build proxy, which checks host names and holds no token.
-# The agent runs buildctl in the sandbox. It connects to the socket that buildkitd makes in %t/sandbox/buildkit.
+# The builder reaches the internet only through the builder proxy, which checks host names and holds no token.
+# The agent runs docker build in the sandbox. docker connects to the socket that buildkitd makes in %t/sandbox/buildkit.
 # The builder lives as long as the sandbox. A stop removes the container and its tmpfs, so the cache is gone.
 # It has no network device and no secret. Any holder of the socket can run any build step, so the container is the wall.
 # %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable.
 [Unit]
 Description=Builder of the agent sandbox (BuildKit and gVisor)
-# The build proxy socket must exist before the container mounts its folder.
-Requires=sandbox-bridge-build.socket
-After=sandbox-bridge-build.socket
-# A stop or a restart of sandbox.service stops or restarts the builder.
-PartOf=sandbox.service
+# The builder proxy socket must exist before the container mounts its folder.
+Requires=sandbox-builder-bridge.socket
+After=sandbox-builder-bridge.socket
+# A stop or a restart of sandbox-agent.service stops or restarts the builder.
+PartOf=sandbox-agent.service
 
 # No network at start. This drops the wait for network-online.
 [Quadlet]
@@ -37,13 +37,13 @@ Exec=--addr unix:///run/buildkit/buildkitd.sock --oci-worker-no-process-sandbox 
 Tmpfs=/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g
 # buildkitd makes its socket here. The sandbox mounts this folder read-only.
 Volume=%t/sandbox/buildkit:/run/buildkit
-# The socket of the build proxy. The folder holds nothing else.
-Volume=%t/sandbox-build:/run/sandbox/proxy:ro
-# buildkitd and the build steps use the relay in the builder. The build proxy passes TLS through, so no CA is needed.
+# The socket of the builder proxy. The folder holds nothing else.
+Volume=%t/sandbox-builder-proxy:/run/sandbox/proxy:ro
+# buildkitd and the build steps use the relay in the builder. The builder proxy passes TLS through, so no CA is needed.
 Environment=HTTPS_PROXY=http://127.0.0.1:3129
 Environment=HTTP_PROXY=http://127.0.0.1:3129
 Environment=NO_PROXY=localhost,127.0.0.1
-# Ready when buildkitd lists a worker. sandbox.service starts after that. A builder that is not ready fails the start.
+# Ready when buildkitd lists a worker. sandbox-agent.service starts after that. A builder that is not ready fails the start.
 HealthCmd=buildctl --addr unix:///run/buildkit/buildkitd.sock debug workers
 HealthInterval=5s
 HealthTimeout=5s

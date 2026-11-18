@@ -8,7 +8,7 @@ ENV MISE_DATA_DIR=/opt/mise \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
     COMPLETIONS_DIR=/home/agent/.local/share/bash-completion/completions
 
-# The image has no podman. The sandbox builds with docker and buildx in the builder and pushes with skopeo.
+# The image has no podman. The sandbox builds with docker and buildx in the builder and pushes with crane.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client nano \
@@ -50,15 +50,6 @@ FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
 RUN mise install --yes
 
-# The Debian package of skopeo pulls gnupg and iptables. This stage installs it, and the final stage copies only the binary, its libraries and the policy files.
-FROM debian:trixie-slim AS stage8-skopeo
-RUN apt-get update \
- && apt-get install -y --no-install-recommends skopeo \
- && mkdir -p /out/etc \
- && ldd /usr/bin/skopeo | awk '/=> \//{print $3}' | grep -v -E '/(libc|libm|libdl|libpthread|libresolv)\.so' | sort -u > /libs.txt \
- && cp --parents -L /usr/bin/skopeo $(cat /libs.txt) /out/ \
- && cp -r /etc/containers /out/etc/containers
-
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
 RUN git clone $TE_REPO /home/agent/token-economizer \
@@ -69,7 +60,6 @@ USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends binutils socat \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=stage8-skopeo /out/ /
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
@@ -82,13 +72,9 @@ COPY tools/ /etc/mise/conf.d/
 # mise creates shims from the installed tools. A mise task writes the bash completions.
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
-# buildx is the build client. The plugin needs the fixed name docker-buildx. The checksum comes from the release.
 USER root
-RUN set -eu; v=0.39.0; f="buildx-v${v}.linux-amd64"; u="https://github.com/docker/buildx/releases/download/v${v}"; \
-    curl -fsSL -o "/tmp/${f}" "${u}/${f}"; curl -fsSL -o /tmp/checksums.txt "${u}/checksums.txt"; \
-    (cd /tmp && sha256sum -c --ignore-missing checksums.txt); \
-    install -D -m 0755 "/tmp/${f}" /usr/local/lib/docker/cli-plugins/docker-buildx; rm -f "/tmp/${f}" /tmp/checksums.txt
-# The config of docker is read-only at run time. It has the proxy settings of the build steps and the definition of the builder.
+# The config of docker is read-only at run time. It has the placeholder login of ghcr.io, the proxy settings of the build steps and the definition of the builder.
+# docker finds the plugin buildx through cliPluginsExtraDirs. crane reads the login from this file. The placeholder must equal the proxy_value line of proxy/iron-proxy.yaml. It is not a secret.
 # buildx create only writes the definition. It does not connect. The endpoint is the socket that the sandbox mounts.
 COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
@@ -114,7 +100,7 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 USER root
 COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# The entry starts the relay to the proxy and runs the command. sandbox.container starts the container as the user agent. The default command is the start script.
+# The entry starts the relay to the proxy and runs the command. sandbox-agent.container starts the container as the user agent. The default command is the start script.
 ENTRYPOINT ["sandbox-entry"]
 CMD ["sandbox-start"]
 

@@ -1,17 +1,17 @@
-# The build proxy for the builder. It holds no token, so it needs no credential and no bws.
+# The builder proxy for the builder. It holds no token, so it needs no credential and no bws.
 # `just sandbox setup` links this file with systemctl --user link.
 [Unit]
-Description=iron-proxy: build proxy of the sandbox builder (host names only, no tokens)
-Wants=sandbox-bridge-build.socket
+Description=iron-proxy: builder proxy of the sandbox builder (host names only, no tokens)
+Wants=sandbox-builder-bridge.socket
 
 [Service]
 Environment=PATH=%h/.config/sandbox/bin:/usr/bin:/bin
-ExecStart=%h/.config/sandbox/bin/iron-proxy -config %E/sandbox/iron-proxy-build.yaml
+ExecStart=%h/.config/sandbox/bin/iron-proxy -config %E/sandbox/iron-proxy-builder.yaml
 Restart=on-failure
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=tmpfs
-BindReadOnlyPaths=%E/sandbox/iron-proxy-build.yaml
+BindReadOnlyPaths=%E/sandbox/iron-proxy-builder.yaml
 BindReadOnlyPaths=%h/.local/share/mise %h/.config/sandbox/bin
 SystemCallFilter=@system-service
 SystemCallArchitectures=native

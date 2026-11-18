@@ -1,4 +1,4 @@
 #!/bin/sh
-# Copy the bytes of 127.0.0.1:3129 to the socket of the build proxy. Then start buildkitd with the arguments of the unit.
+# Copy the bytes of 127.0.0.1:3129 to the socket of the builder proxy. Then start buildkitd with the arguments of the unit.
 socat TCP-LISTEN:3129,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:/run/sandbox/proxy/proxy.sock &
 exec rootlesskit buildkitd "$@"
