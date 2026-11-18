@@ -2,21 +2,78 @@
 
 A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in a hardened rootless Podman container with gVisor. A second container, the builder, builds images for the agent.
 
-## What it does
+## The problem
 
-A coding agent reads text that you did not write. That text can hold a prompt injection, and a fooled agent runs commands with your rights. The sandbox limits what the agent can do, not what it chooses to do:
+You let a coding agent work on your repository. The agent has three abilities. They are dangerous together:
 
-| Limit | What it does |
+- **Untrusted content.** The agent reads text that you did not write: web pages, issues, packages and code.
+- **Private data.** The agent reaches your repository, your files and your tokens.
+- **Outside communication.** The agent can send data out with a `git push`, an API call or a web request.
+
+A prompt injection hides an instruction in the text that the agent reads. A fooled agent then runs commands with your rights. It can send your private data to an attacker. Simon Willison calls this combination the [lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/). A filter that stops most attacks is not enough, because one missed attack is enough.
+
+You cannot remove the first ability, because the agent must read. You cannot remove all outside communication, because the agent must work. In this repository the agent must:
+
+- clone, commit and push to GitHub
+- call the APIs of the models (Claude and Qwen), which need tokens
+- install tools and read documentation
+- build container images, with no Docker daemon and no root on your host
+
+The sandbox must run on one Linux machine with rootless Podman. It must start with one command.
+
+## The solution
+
+The sandbox keeps the agent useful and limits what a fooled agent can do. It has one step for each ability:
+
+| Ability | What the sandbox does |
 |---|---|
-| No network | Each container has no route out. The only way out is a proxy container with an allowlist. |
-| No real token | The agent sandbox holds placeholders. Only the host proxy holds the real tokens. |
-| A private clone | The agent works on a clone of your repo. It cannot write to your repo. |
-| Narrow writes | GitHub accepts a push and a REST write on issues and pull requests from the agent in this repository only. `ghcr.io` accepts a write in the namespace `raghav19` only. |
-| A hardened container | gVisor, no capability, a read-only root file system and limits on memory, CPU and threads. |
+| Private data | The agent works in a private clone. It holds placeholders, not real tokens. The real tokens stay in the proxy. |
+| Untrusted content | The sandbox cannot stop it, because the agent must read. The other two steps limit the damage. |
+| Outside communication | The agent has no network device. The only way out is a file that leads to a proxy. The proxy allows listed hosts, methods and paths only. |
+
+Builds follow the same model. A second container, the builder, runs the build steps. It has no token, no network device and its own proxy.
+
+The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea. Internet access goes only through a socket to a proxy outside the sandbox. That proxy enforces approved domains.
+
+## What is out of scope
+
+The sandbox limits what a fooled agent can do. Other layers handle the rest. These risks are out of scope:
+
+| Risk | Who handles it |
+|---|---|
+| A prompt injection changes what the agent tries to do | The model and the client. The sandbox limits only the damage. |
+| A tool of the MCP server writes outside this repository | The central MCP gateway. The proxy does not read MCP calls. |
+| A write goes to `main` | Branch protection on GitHub. A rule in the proxy cannot see the branch. |
+| A token has more scope than the agent needs | The scope of the token. Use a fine-grained token for one repository. |
+| A pushed branch holds bad code | You. Read the diff before you merge or check it out. |
+| Data leaves through a listed host | The allowlists. Keep them short. |
+
+The sandbox has two limits of its own:
+
+- The proxy reads every request of the agent. A bug in the proxy can expose the real tokens.
+- gVisor is not a microVM. A bug in gVisor can give an attacker your host user.
 
 ## Architecture
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
+
+## Security controls
+
+The baseline is rootless Podman and limits on memory and threads for every container. The agent sandbox also has a user that is not root, no capability, `no-new-privileges` and a read-only root file system. The proxies have the same, except the user. The builder keeps three capabilities and has no `no-new-privileges`, because `rootlesskit` needs them. An agent needs more. These controls are specific to a sandbox for an agent:
+
+| Control | What it stops |
+|---|---|
+| No network device in the agent sandbox and the builder | A tool or a build step that ignores the proxy settings has no route out. |
+| One way out: a socket to a proxy container | The agent reaches only the tunnel port of the proxy. It cannot see the files, the process or the other ports of the proxy. |
+| Placeholders in the agent, real tokens in the proxy | A fooled agent cannot read a token. The proxy swaps a token in for the listed hosts only. |
+| Tokens outside the Podman storage | The proxy reads a systemd credential. The real tokens are in memory only while a session runs. |
+| Rules for the host, the method and the path | A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`. |
+| gVisor for the agent sandbox and the builder | A system call of a hostile command reaches gVisor, not the host kernel. |
+| A private clone, with your `.git` mounted read-only | The agent cannot plant a git hook or change your repository. A push goes to GitHub, and you read the branch. |
+| A separate builder for build steps | A `RUN` step runs as root in a container with no token and no network device. The agent has no Docker daemon. |
+| Read-only policy: `/etc/docker` and the managed settings | The agent cannot add a builder, change the endpoint or edit its own policy. |
+| A new builder and new proxies for each session | The cache and the tokens in memory end with the session. |
+| An audit log in the proxy | Each request is one JSON line in `journalctl --user -u sandbox-proxy`. |
 
 ## What the agent can reach
 
