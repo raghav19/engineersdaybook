@@ -1,0 +1,8 @@
+# The builder image: BuildKit and a relay to the builder proxy. `just sandbox build` builds it as localhost/sandbox-builder.
+# BuildKit v0.35.0, rootless, pinned by digest.
+FROM docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
+USER root
+RUN apk add --no-cache socat
+COPY --chmod=0755 relay-entry /usr/local/bin/relay-entry
+USER 1000:1000
+ENTRYPOINT ["relay-entry"]

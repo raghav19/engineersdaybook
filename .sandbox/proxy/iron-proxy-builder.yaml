@@ -1,0 +1,42 @@
+# The config of the builder proxy. The builder reaches the internet through it. It runs as the user service sandbox-builder-proxy.service.
+# It holds no token and no CA. The mode sni-only passes TLS through to the real host and checks only the host name.
+# A build step cannot get a token from it. The proxy of the sandbox (iron-proxy.yaml) holds the tokens, and the builder cannot reach it.
+# Ports: this proxy uses 18085 to 18089 on 127.0.0.1. The proxy of the sandbox uses 18080 to 18084.
+dns:
+  listen: "127.0.0.1:18089"
+  proxy_ip: "127.0.0.1"
+proxy:
+  http_listen: "127.0.0.1:18086"
+  https_listen: "127.0.0.1:18087"
+  # The tunnel takes CONNECT. sandbox-builder-bridge.socket joins it to the Unix socket that the builder mounts.
+  tunnel_listen: "127.0.0.1:18085"
+tls:
+  mode: sni-only
+metrics:
+  listen: "127.0.0.1:18088"
+transforms:
+  - name: allowlist
+    config:
+      domains:
+        # Image registries for FROM
+        - registry-1.docker.io
+        - auth.docker.io
+        - "*.docker.com"
+        - ghcr.io
+        - pkg-containers.githubusercontent.com
+        - quay.io
+        - "*.quay.io"
+        # Packages for RUN
+        - proxy.golang.org
+        - sum.golang.org
+        - registry.npmjs.org
+        - pypi.org
+        - files.pythonhosted.org
+        - releases.hashicorp.com
+        - deb.debian.org
+        - security.debian.org
+        - dl-cdn.alpinelinux.org
+        # Source and release downloads
+        - github.com
+        - api.github.com
+        - "*.githubusercontent.com"

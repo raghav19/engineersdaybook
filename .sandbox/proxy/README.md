@@ -1,109 +1,120 @@
-# The host proxy of the sandbox
+# The proxies of the sandbox
 
-iron-proxy runs on the host as a systemd user service. It is the only way out of the sandbox. It checks each request against an allowlist and replaces placeholders with real tokens. The sandbox has no network and holds no real token.
+Two iron-proxy instances run on the host as systemd user services. They are the only way out of the containers. Neither container has a network. For the terms, see [The names](../docs/internals.md#the-names).
 
-```text
-sandbox (no network) -> relay -> proxy.sock -> sandbox-bridge -> iron-proxy (127.0.0.1:18080) -> allowed hosts
+```mermaid
+flowchart LR
+    AS["Agent sandbox"] -->|relay, proxy.sock| B1["bridge"] --> HP["Host proxy 127.0.0.1:18080: allowlist, TLS, tokens"]
+    BU["Builder"] -->|relay, proxy.sock| B2["bridge"] --> BP["Builder proxy 127.0.0.1:18085: host names only"]
+    HP --> NET["Listed hosts"]
+    BP --> NET
+    FW["nftables rule"] -.->|only your user connects| HP
+    FW -.-> BP
 ```
 
-## Set up the proxy
+| | Host proxy | Builder proxy |
+|---|---|---|
+| Serves | The agent sandbox | The builder |
+| Config | `iron-proxy.yaml` | `iron-proxy-builder.yaml` |
+| Unit | `sandbox-proxy.service` | `sandbox-builder-proxy.service` |
+| Socket | `$XDG_RUNTIME_DIR/sandbox/proxy.sock` | `$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock` |
+| TLS | Ends it with the CA of the sandbox | Passes it through (`sni-only`) |
+| Tokens | Real tokens from Bitwarden | None |
+
+## Set up the proxies
 
 Do these steps once. After you edit a file in this folder, run `just sandbox setup` again.
 
 ### What this setup assumes
 
-This is a personal setup. Other people can use other tools. The guide assumes:
+This is a personal setup. Other people can use other tools.
 
-- The image registry is the GitHub Container Registry (`ghcr.io`).
-- The secret manager is Bitwarden Secrets Manager.
-- The secrets are already in a Bitwarden project: `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`. `just sandbox build` uses it to push to `ghcr.io`. [Placeholders](#placeholders) shows which host each secret is for.
-- You have the access token of a machine account that can read that project. `just sandbox setup` asks for it. Do not paste the token into a chat or a file.
+- The image registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager.
+- The Bitwarden project holds `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`.
+- You have the access token of a machine account that reads that project. `just sandbox setup` asks for it. Do not paste it into a chat or a file.
 
-For another registry or another secret manager, change `iron-proxy.yaml`, `sandbox-proxy.service` and the `build` recipe in `justfile`.
+For another registry or secret manager, change `iron-proxy.yaml`, `sandbox-proxy.service` and the `build` recipe.
 
 ### Before you start
 
-| Need | Why | Check |
-|---|---|---|
-| A Linux host with a systemd user manager | It runs the units and decrypts the credential. | `systemctl --user is-system-running` |
-| `systemd-creds` and `systemd-socket-proxyd` (in the `systemd` package) | The credential and the bridge. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. Change the path if your distribution puts the file elsewhere. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
-| `iron-proxy` and `bws`, installed with `mise install` from `mise.toml` | The proxy and its secret loader. | `iron-proxy --version` and `bws --version` |
-| `openssl` | It makes the CA. | `openssl version` |
-| `podman`, `runsc` and `git` | `just` stops if one is missing. The proxy itself needs no Podman and no gVisor. | `podman --version` and `runsc --version` |
-| `sudo` and `nft` | The firewall rule needs root once. See [The firewall rule](#the-firewall-rule). `just` stops if one is missing. | `sudo -v` and `nft --version` |
-| Linger for your user (optional) | The proxy keeps running after you log out. | `loginctl enable-linger "$USER"` |
+| Need | Check |
+|---|---|
+| A Linux host with a systemd user manager | `systemctl --user is-system-running` |
+| `systemd-creds` and `systemd-socket-proxyd`. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
+| `iron-proxy` and `bws` from `mise install` | `iron-proxy --version` and `bws --version` |
+| `openssl`, to make the CA | `openssl version` |
+| `podman`, `runsc` and `git`. `just` stops if one is missing. | `podman --version` and `runsc --version` |
+| `sudo` and `nft`, for the firewall rule | `sudo -v` and `nft --version` |
+| Linger for your user (optional). The proxies keep running after you log out. | `loginctl enable-linger "$USER"` |
 
 ### Step 1: run the setup
-
-Run this in your main checkout. The links of the units point to the files in this folder.
 
 ```bash
 just sandbox setup
 ```
 
-The recipe asks for your `sudo` password. It asks for the access token only if the credential is missing or unreadable. Nothing shows as you type. It does these steps and skips a step that is already done.
+It asks for your `sudo` password, and for the access token only if the credential is missing. Nothing shows as you type. The recipe skips a step that you already did.
 
-1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
-2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
-3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
-4. Links the container units, `runsc.conf` and `repo.git` for the sandbox. The proxy does not use them.
-5. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
-6. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
-7. Links the three units, enables `sandbox-proxy.service` and restarts it.
-
-The recipe ends with `The proxy runs.`
-
-### Step 2: check the proxy
-
-```bash
-systemctl --user status sandbox-proxy.service sandbox-bridge.socket
-ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock"
+```mermaid
+flowchart TD
+    A["Link iron-proxy and bws into ~/.config/sandbox/bin"] --> B["Make the CA in ~/.local/state/sandbox"]
+    B --> C["Link both configs into ~/.config/sandbox"]
+    C --> D["Link the container units, runsc.conf and repo.git"]
+    D --> E["Install the firewall rule with sudo"]
+    E --> F["Encrypt the access token with systemd-creds"]
+    F --> G["Link, enable and restart both proxy units"]
+    G --> H["The proxy and the builder proxy run"]
 ```
 
-The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#quick-start) and run `just sandbox build`, then `just sandbox run`.
+If the firewall step fails, the recipe stops and the proxies do not start.
 
-If something fails, see [Troubleshooting](#troubleshooting).
+### Step 2: check the proxies
+
+```bash
+systemctl --user status sandbox-proxy.service sandbox-bridge.socket sandbox-builder-proxy.service sandbox-builder-bridge.socket
+ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock" "$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock"
+```
+
+The status shows `active`, and both socket files exist. Next, run `just sandbox build` and `just sandbox run` from the [README](../README.md#quick-start).
 
 ## Ports
 
-This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 18080 to 18084. The sandbox uses only the tunnel.
+The two proxies reserve **18080 to 18089 on 127.0.0.1**. The containers use only the tunnel of their proxy.
 
 | Port | Listener |
 |---|---|
-| 18080 | tunnel (CONNECT), TCP |
-| 18081 | HTTP, TCP |
-| 18082 | HTTPS, TCP |
-| 18083 | metrics, TCP |
-| 18084 | DNS, UDP |
+| 18080 to 18084 | Host proxy: tunnel (TCP 18080), HTTP (18081), HTTPS (18082), metrics (18083), DNS (UDP 18084). |
+| 18085 to 18089 | Builder proxy: tunnel (TCP 18085), HTTP (18086), HTTPS (18087), metrics (18088), DNS (UDP 18089). |
 
 ## The firewall rule
 
-A TCP or UDP port on `127.0.0.1` has no check of the user. Without a rule, any local user, and any program that reaches the loopback of the host, can connect to these ports. It can use the proxy and send the placeholders to get the real tokens.
+A TCP or UDP port on `127.0.0.1` has no user check. Without a rule, any local program can connect and send the placeholders to get the real tokens from the host proxy.
 
-`sandbox-guard.nft` is a rule of `nftables` with one clause for each protocol, as in `iron-proxy.yaml`: TCP 18080 to 18083 (tunnel, HTTP, HTTPS and metrics) and UDP 18084 (DNS). It rejects every connection to those ports from a user other than yours. The spare ports 18085 to 18089 have no listener. If you add one, add it to the right clause. The bridge runs as you, so it still connects.
+`sandbox-guard.nft` rejects each connection to the ports above from a user other than yours. The TCP clause covers 18080 to 18083 and 18085 to 18088. The UDP clause covers 18084 and 18089. The bridges run as you, so they still connect. If you add a listener, add it to the right clause.
 
-- `just sandbox setup` replaces `@UID@` with your user id and copies the rule to `/etc/sandbox-guard.nft`. It copies `sandbox-guard.service` to `/etc/systemd/system/`. The unit loads the rule at each boot, before the network.
-- The copies belong to root on purpose. A link to a file in your repo would let you change what root runs.
-- The rule is its own table, `inet sandbox_guard`. It does not change `ufw` or another firewall.
-- Check it with `sudo nft list table inet sandbox_guard` and `systemctl status sandbox-guard`.
-- Turn it off with `sudo systemctl disable --now sandbox-guard`. Then delete `/etc/sandbox-guard.nft` and `/etc/systemd/system/sandbox-guard.service`.
-
-What the rule does not do:
-
-- It separates users. It does not separate programs of the same user. A rootless container of your user with `pasta` networking can connect to the host loopback as your user. The sandbox has `Network=none`, so it cannot. Do not give another container of your user a route to these ports.
-- It does not guard `proxy.sock`. The folder `$XDG_RUNTIME_DIR` has the mode 0700 and guards the socket.
+| Topic | Detail |
+|---|---|
+| Install | `just sandbox setup` replaces `@UID@`, copies the rule to `/etc/sandbox-guard.nft` and `sandbox-guard.service` to `/etc/systemd/system/`. The unit loads the rule at each boot, before the network. |
+| Owner | The copies belong to root. A link to your repo would let you change what root runs. |
+| Table | Its own table, `inet sandbox_guard`. It does not change `ufw` or another firewall. |
+| Check | `sudo nft list table inet sandbox_guard` and `systemctl status sandbox-guard`. |
+| Remove | `sudo systemctl disable --now sandbox-guard`. Remove `/etc/sandbox-guard.nft` and `/etc/systemd/system/sandbox-guard.service`. |
+| Not covered | Programs of the same user. A rootless container of your user with `pasta` networking can reach the host loopback. Do not give another container a route to these ports. |
+| Not covered | `proxy.sock`. The mode 0700 of `$XDG_RUNTIME_DIR` guards it. |
 
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. `just sandbox setup` copies them to `/etc` and does not link them.
+| File | Job |
+|---|---|
+| `iron-proxy.yaml` | Allowlist and secret rules of the host proxy. |
+| `sandbox-proxy.service` | Starts the host proxy with the real tokens from Bitwarden. |
+| `sandbox-bridge.socket` and `.service` | Make `proxy.sock` (mode 0666, folder mode 0711) and join it to the tunnel. |
+| `iron-proxy-builder.yaml` | Host names and the mode `sni-only` of the builder proxy. |
+| `sandbox-builder-proxy.service` | Starts the builder proxy. No token and no `bws`. |
+| `sandbox-builder-bridge.socket` and `.service` | The same bridge for the builder proxy. |
+| `sandbox-guard.nft` and `sandbox-guard.service` | The firewall rule. `setup` copies them to `/etc`. |
 
-## Why there is a bridge
-
-The sandbox has no network, so only a Unix socket file can reach the host. iron-proxy listens on TCP only. `systemd-socket-proxyd` joins the socket to the tunnel. If iron-proxy later listens on a Unix socket, delete `sandbox-bridge.socket` and `sandbox-bridge.service` and set `tunnel_listen` to the socket path.
-
-## How the sandbox uses it
-
-`.sandbox/sandbox.container` defines the container, and `just sandbox run` starts it. `run` does not start the proxy. It stops if the proxy socket is missing. Start the proxy first with `systemctl --user start sandbox-proxy.service`. The container has `Network=none`. It mounts `$XDG_RUNTIME_DIR/sandbox` and `ca.crt`, and nothing else from this folder.
+The bridge exists because the containers have no network and iron-proxy listens on TCP only. If iron-proxy later listens on a Unix socket, remove the bridge files and set `tunnel_listen` to the socket path.
 
 ## Daily use
 
@@ -111,70 +122,66 @@ The sandbox has no network, so only a Unix socket file can reach the host. iron-
 systemctl --user start sandbox-proxy.service     # starts the socket too
 systemctl --user stop sandbox-proxy.service      # stops the socket and the bridge too
 systemctl --user restart sandbox-proxy.service   # also after you edit iron-proxy.yaml
-systemctl --user status sandbox-proxy.service sandbox-bridge.socket
-journalctl --user -u sandbox-proxy -f             # the audit log: one JSON line for each request
+journalctl --user -u sandbox-proxy -f            # the audit log: one JSON line for each request
 ```
 
-systemd starts the bridge at the first connection, and the bridge starts the proxy. The first connection can fail while the proxy starts. The second one works.
+Use the same commands with `sandbox-builder-proxy` for the builder proxy. systemd starts the bridge at the first connection, and the bridge starts the proxy. The first connection can fail while the proxy starts.
+
+`just sandbox run` does not start a proxy. It stops if a proxy socket is missing.
 
 ## Placeholders
 
-The sandbox holds the placeholder. The proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Any other host gets 403 at the CONNECT. These values must equal the `proxy_value` lines in `iron-proxy.yaml`.
+The agent sandbox holds the placeholder. The host proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Any other host gets `403` at the CONNECT. Each value must equal a `proxy_value` line in `iron-proxy.yaml`.
 
-The GitHub MCP server of Claude Code is an exception. `image/configs/agents/managed-settings.json` holds `sandbox-placeholder-GH_TOKEN` as text in its `Authorization` header. Claude Code does not expand `$GH_TOKEN` there. It sends the text as it is, and GitHub answers `Authorization header is badly formatted`. With `${GH_TOKEN}`, Claude Code drops the server without a message. Qwen Code expands `$GH_TOKEN` itself, so `qwen-settings.json` keeps the variable.
+| Placeholder, and the variable of the proxy | Hosts |
+|---|---|
+| `sandbox-placeholder-GH_TOKEN`, from `GH_TOKEN` | `github.com`, `api.github.com`, `api.githubcopilot.com` |
+| `sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN`, from `CLAUDE_CODE_OAUTH_TOKEN` | `api.anthropic.com` |
+| `sandbox-placeholder-QWEN_API_KEY`, from `QWEN_API_KEY` | `token-plan.ap-southeast-1.maas.aliyuncs.com` |
+| `sandbox-placeholder-GHCR_PUSH_TOKEN`, from `GITHUB_TOKEN`. The login is in `/etc/docker/config.json`. | `ghcr.io` |
 
-| Placeholder in the sandbox | Variable of the proxy | Hosts |
-|---|---|---|
-| `sandbox-placeholder-GH_TOKEN` | `GH_TOKEN` | `github.com`, `api.github.com`, `api.githubcopilot.com` |
-| `sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN` | `CLAUDE_CODE_OAUTH_TOKEN` | `api.anthropic.com` |
-| `sandbox-placeholder-QWEN_API_KEY` | `QWEN_API_KEY` | `token-plan.ap-southeast-1.maas.aliyuncs.com` |
-| `sandbox-placeholder-GHCR_PUSH_TOKEN` | `GITHUB_TOKEN` | `ghcr.io` |
+Claude Code does not expand `$GH_TOKEN` in its GitHub MCP header. `image/configs/agents/managed-settings.json` holds the placeholder text. Qwen Code expands the variable itself.
 
-## Hardening of the proxy unit
+## Hardening of the proxy units
 
-iron-proxy reads requests that the agent controls, and it holds the real tokens. If someone finds a bug in it, the attacker gets the rights of your user. The lines in `sandbox-proxy.service` limit what the proxy can do. The proxy runs as your user, so these lines do not give it a second account. They give the proxy only the powers that it needs.
+The proxies read requests that the agent controls, and the host proxy holds the real tokens. A bug gives an attacker the rights of your user. The lines in the units limit what a proxy can do. Check the result with `systemd-analyze --user security sandbox-proxy.service`. A lower score is better.
 
-Check the result with `systemd-analyze --user security sandbox-proxy.service`. A lower score is better.
+| Directive | Effect |
+|---|---|
+| `NoNewPrivileges=yes` | No gain of rights through a setuid program. |
+| `PrivateTmp=yes` | A private `/tmp`. No read of the temporary files of other programs. |
+| `ProtectHome=tmpfs` | An empty `/home`. No read of `~/.ssh`, other repos or browser data. |
+| `BindReadOnlyPaths=` | Adds back only the files that the proxy needs, read-only. |
+| `SystemCallFilter=@system-service` | Only the system calls of a normal service. Blocks `ptrace`, `mount`, module loading, `reboot` and `unshare`. |
+| `SystemCallArchitectures=native` | No 32-bit calls on a 64-bit host. Closes a way around the filter. |
+| `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | No raw packet sockets and no netlink sockets. |
+| `RestrictNamespaces=yes` | No new namespace. Many exploits start with one. |
+| `RestrictRealtime=yes` | No real-time scheduling. A real-time process can freeze the desktop. |
+| `ProtectKernelTunables=yes`, `ProtectKernelModules=yes` | No write to `/proc/sys` or `/sys`. No kernel module. |
+| `ProtectControlGroups=yes`, `ProtectClock=yes` | No change of the control group tree or the clock. |
 
-| Directive | What it does | What it stops |
-|---|---|---|
-| `NoNewPrivileges=yes` | The proxy cannot gain rights through a setuid program. | A step from a bug to more rights. |
-| `PrivateTmp=yes` | The proxy has its own `/tmp`. | Reading the temporary files of other programs. |
-| `ProtectHome=tmpfs` | The proxy sees an empty `/home`. | Reading `~/.ssh`, other repos and browser data. |
-| `BindReadOnlyPaths=` | Adds back only the files that the proxy needs, read-only. | Access to any other file. |
-| `SystemCallFilter=@system-service` | The proxy can use only the system calls of a normal service. A system call is a request to the kernel. | `ptrace` (spy on a process), `mount`, loading a kernel module, `reboot` and `unshare`. Most kernel exploits use such calls. |
-| `SystemCallArchitectures=native` | The proxy cannot make 32-bit calls on a 64-bit host. | A way around the filter. |
-| `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | The proxy can open only IPv4 sockets, IPv6 sockets and local (Unix) sockets. | Raw packet sockets (sniffing) and netlink sockets (a change of the network setup of the kernel). |
-| `RestrictNamespaces=yes` | The proxy cannot make a namespace. A namespace is a private view of files, network or users. | Many exploits start with a new namespace. |
-| `RestrictRealtime=yes` | The proxy cannot ask for real-time scheduling. | A real-time process runs before all normal processes. It can use a whole CPU core, so the desktop freezes. |
-| `ProtectKernelTunables=yes`, `ProtectKernelModules=yes` | The proxy cannot write to `/proc/sys` and `/sys`. It cannot load kernel modules. | A change of the kernel settings. |
-| `ProtectControlGroups=yes`, `ProtectClock=yes` | The proxy cannot change the control group tree or the clock. | A change of the system setup. |
+The units leave out lines that do not lower the score: `LockPersonality=`, `ProtectHostname=` and `UMask=`. They have no `CapabilityBoundingSet=`, because a user unit has no capabilities. They have no `MemoryDenyWriteExecute=`, because it can break programs that make code at run time. A user unit cannot restrict the network, because `IPAddressDeny=` does nothing there and the proxy must reach the internet. The allowlist is the control. Treat `iron-proxy.yaml` and `iron-proxy-builder.yaml` as the most important files.
 
-The unit leaves out lines that do not lower the score of `systemd-analyze security`: `LockPersonality=`, `ProtectHostname=` and `UMask=`. It does not use `CapabilityBoundingSet=`, because a user unit has no capabilities. It does not use `MemoryDenyWriteExecute=`, because it can break programs that make code at run time.
-
-The unit cannot restrict the network. `IPAddressDeny=` does nothing in a user unit, and the proxy must reach the internet. The allowlist in `iron-proxy.yaml` is the control. Treat that file as the most important file of the proxy.
-
-### What the proxy sees in `/home`
+The proxy sees only these paths in `/home`:
 
 | Path | Why |
 |---|---|
-| `~/.config/sandbox/iron-proxy.yaml` | The config. It is a link to the file in the repo. The bind gives the file that the link points to. |
-| `~/.local/state/sandbox/ca.crt` and `ca.key` | The CA. |
-| `~/.local/share/mise` | The installed tools. |
-| `~/.config/sandbox/bin` | The links to `iron-proxy` and `bws`. |
+| `~/.config/sandbox/iron-proxy.yaml` and `iron-proxy-builder.yaml` | The configs. They are links, and the bind gives the files that they point to. |
+| `~/.local/state/sandbox/ca.crt` and `ca.key` | The CA. Only the host proxy uses it. |
+| `~/.local/share/mise` and `~/.config/sandbox/bin` | The installed tools and the links to `iron-proxy` and `bws`. |
 
-If you point the config at another file, for example a `file` secret source, add a `BindReadOnlyPaths=` line for it in the unit.
+If you point a config at another file, add a `BindReadOnlyPaths=` line for it in the unit.
 
-### Troubleshooting
+## Troubleshooting
 
-Run `journalctl --user -u sandbox-proxy` and look for the text in the first column. The first two rows come from `just`, not from the proxy.
+Run `journalctl --user -u sandbox-proxy`. The first two rows come from `just`, not from the proxy.
 
-| Text | Cause | Fix |
-|---|---|---|
-| `Failed to read encrypted credential data: Invalid argument` | `~/.config/credstore.encrypted/bws-token` holds the plain token. `systemd-creds` has no password. It reads only a file that `systemd-creds encrypt` made. | Run `just sandbox setup`. It finds that it cannot read the file and asks for the token again. |
-| `just sandbox setup` stops at the firewall step | `sudo` refused the password, or `nft` could not load the rule. | Run `sudo -v`. Run `sudo nft -c -f /etc/sandbox-guard.nft` to check the file. Run `journalctl -u sandbox-guard`. Then run `just sandbox setup` again. |
-| `just sandbox setup` fails at `systemctl --user link` | The old transient `systemd-run` units `sandbox-proxy` and `sandbox-bridge` have the same names. | Run `systemctl --user stop sandbox-proxy sandbox-bridge`. Run `just sandbox setup` again. |
-| `Bad system call` | The proxy used a call that the filter bans. | Add the group that you need to `SystemCallFilter=`, for example `@network-io`. Keep the filter. |
-| An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
-| `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |
-| `No such file or directory` for `~/.config/sandbox/bin/bws` or `iron-proxy` | The links are missing or point to an old version. | Run `mise install`, then `just sandbox setup`. |
+| Text | Fix |
+|---|---|
+| `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again. |
+| `just sandbox setup` stops at the firewall step | `sudo` refused or `nft` could not load the rule. Run `sudo -v`, then `sudo nft -c -f /etc/sandbox-guard.nft` and `journalctl -u sandbox-guard`. Run `setup` again. |
+| `just sandbox setup` fails at `systemctl --user link` | Old transient units `sandbox-proxy` and `sandbox-bridge` have the same names. Run `systemctl --user stop sandbox-proxy sandbox-bridge`, then `setup` again. |
+| `Bad system call` | The filter bans a call. Add the group that you need to `SystemCallFilter=`, for example `@network-io`. |
+| An address family error | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
+| `No such file or directory` for a path in `/home` | Add the path to a `BindReadOnlyPaths=` line. |
+| `No such file or directory` for `~/.config/sandbox/bin/bws` or `iron-proxy` | Run `mise install`, then `just sandbox setup`. |

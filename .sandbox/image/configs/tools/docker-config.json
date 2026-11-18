@@ -1,0 +1,15 @@
+{
+  "cliPluginsExtraDirs": ["/opt/mise/shims"],
+  "auths": {
+    "ghcr.io": {
+      "auth": "cmFnaGF2MTk6c2FuZGJveC1wbGFjZWhvbGRlci1HSENSX1BVU0hfVE9LRU4="
+    }
+  },
+  "proxies": {
+    "default": {
+      "httpProxy": "http://127.0.0.1:3129",
+      "httpsProxy": "http://127.0.0.1:3129",
+      "noProxy": "localhost,127.0.0.1"
+    }
+  }
+}

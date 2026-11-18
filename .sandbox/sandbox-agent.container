@@ -1,5 +1,5 @@
 # The agent sandbox, as a Quadlet unit. `just sandbox setup` links this file into ~/.config/containers/systemd/.
-# `just sandbox run` starts it. Quadlet turns it into the service sandbox.service.
+# `just sandbox run` starts it. Quadlet turns it into the service sandbox-agent.service.
 # The container has no network. The host proxy (.sandbox/proxy) is its only way out.
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
 [Unit]
@@ -13,7 +13,7 @@ After=sandbox-builder.service
 DefaultDependencies=false
 
 [Container]
-ContainerName=sandbox
+ContainerName=sandbox-agent
 Image=localhost/sandbox-dev:latest
 # gVisor. `just sandbox setup` registers runsc in ~/.config/containers/containers.conf.d/runsc.conf.
 PodmanArgs=--runtime=runsc
@@ -34,14 +34,18 @@ DropCapability=ALL
 NoNewPrivileges=true
 Tmpfs=/tmp
 Tmpfs=/run
+# buildx writes its activity and its refs here. The rest of /etc/docker is read-only.
+Tmpfs=/etc/docker/buildx/activity
+Tmpfs=/etc/docker/buildx/refs
 # The environment of the container. The values are not secrets.
 # The placeholders: the proxy swaps in the real tokens. They must equal the proxy_value lines of the proxy config.
 Environment=GH_TOKEN=sandbox-placeholder-GH_TOKEN
 Environment=CLAUDE_CODE_OAUTH_TOKEN=sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
 Environment=QWEN_API_KEY=sandbox-placeholder-QWEN_API_KEY
-Environment=GHCR_PUSH_TOKEN=sandbox-placeholder-GHCR_PUSH_TOKEN
-# buildctl connects to the socket of the builder.
-Environment=BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock
+# docker reads its config and the definition of the builder in this folder. The folder is read-only.
+Environment=DOCKER_CONFIG=/etc/docker
+# docker build uses this builder. Its endpoint is the socket of the builder.
+Environment=BUILDX_BUILDER=sandbox
 # The relay in sandbox-entry listens here. A tool that ignores these variables has no route.
 Environment=HTTP_PROXY=http://127.0.0.1:3128
 Environment=HTTPS_PROXY=http://127.0.0.1:3128
@@ -92,4 +96,4 @@ TasksMax=2048
 CPUQuota=400%
 # gVisor does not let the guest bring up its loopback interface. The host does it in the network namespace of the container.
 # The relay in sandbox-entry can bind before this runs. The connect works after it.
-ExecStartPost=/bin/sh -c 'pid=$(podman inspect -f "{{.State.Pid}}" sandbox) && podman unshare nsenter --net=/proc/$pid/ns/net ip link set lo up'
+ExecStartPost=/bin/sh -c 'pid=$(podman inspect -f "{{.State.Pid}}" sandbox-agent) && podman unshare nsenter --net=/proc/$pid/ns/net ip link set lo up'
