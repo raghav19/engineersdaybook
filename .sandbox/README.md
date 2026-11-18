@@ -35,12 +35,22 @@ Builds follow the same model. A second container, the builder, runs the build st
 
 The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea. Internet access goes only through a socket to a proxy outside the sandbox. That proxy enforces approved domains.
 
-## What the sandbox does not solve
+## What is out of scope
 
-- The agent still reads untrusted text. A prompt injection can still change what the agent tries to do.
-- A listed host can receive data from the agent. Keep the allowlists short.
-- The host proxy does not read MCP calls. The settings of the client limit the tools.
-- A write can go to any branch of this repository. Protect `main` on GitHub.
+The sandbox limits what a fooled agent can do. Other layers handle the rest. These risks are out of scope:
+
+| Risk | Who handles it |
+|---|---|
+| A prompt injection changes what the agent tries to do | The model and the client. The sandbox limits only the damage. |
+| A tool of the MCP server writes outside this repository | The central MCP gateway. The proxy does not read MCP calls. |
+| A write goes to `main` | Branch protection on GitHub. A rule in the proxy cannot see the branch. |
+| A token has more scope than the agent needs | The scope of the token. Use a fine-grained token for one repository. |
+| A pushed branch holds bad code | You. Read the diff before you merge or check it out. |
+| Data leaves through a listed host | The allowlists. Keep them short. |
+
+The sandbox has two limits of its own:
+
+- The proxy reads every request of the agent. A bug in the proxy can expose the real tokens.
 - gVisor is not a microVM. A bug in gVisor can give an attacker your host user.
 
 ## Architecture
