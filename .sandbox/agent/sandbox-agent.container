@@ -1,6 +1,6 @@
 # The agent sandbox, as a Quadlet unit. `just sandbox setup` links this file into ~/.config/containers/systemd/.
 # `just sandbox run` starts it. Quadlet turns it into the service sandbox-agent.service.
-# The container has no network. The host proxy (.sandbox/proxy) is its only way out.
+# The container has no network. The host proxy (.sandbox/agent/proxy) is its only way out.
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
 [Unit]
 Description=Agent sandbox (Podman and gVisor)
@@ -15,7 +15,7 @@ DefaultDependencies=false
 [Container]
 ContainerName=sandbox-agent
 Image=localhost/sandbox-dev:latest
-# gVisor. `just sandbox setup` registers runsc in ~/.config/containers/containers.conf.d/runsc.conf.
+# gVisor. `just sandbox setup` registers runsc in ~/.config/containers/containers.conf.d/sandbox-agent-runsc.conf.
 PodmanArgs=--runtime=runsc
 Network=none
 # The container starts as the user agent. In rootless Podman, that user is a subuid, not you.

@@ -97,7 +97,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     A["just sandbox setup"] --> B["Make the CA if it is missing"]
-    A --> C["Link the units, runsc.conf and repo.git"]
+    A --> C["Link the units, the gVisor flags and repo.git"]
     A --> D["Install the firewall rule with sudo"]
     A --> E["Encrypt the Bitwarden token if it is missing"]
     B --> F["Link, enable and restart both proxies"]
@@ -117,7 +117,7 @@ flowchart TD
 flowchart TD
     A["just sandbox build"] --> B["Log in to ghcr.io with the token from Bitwarden"]
     B --> C["podman build of the agent sandbox image, stage cache in ghcr.io"]
-    C --> D["podman build of the builder image from builder/Containerfile"]
+    C --> D["podman build of the builder image from builder/image/Containerfile"]
     D --> E["Push the commit tag of the agent sandbox image"]
     E --> F["Log out of ghcr.io"]
 ```
@@ -220,8 +220,8 @@ The builder never pushes and holds no login.
 | Choice | Reason |
 |---|---|
 | `--network none` | The container has an empty network namespace. Only a file in a mounted folder crosses. |
-| `network=host` in `runsc.conf` (agent sandbox) | gVisor then uses that empty namespace. Its own stack has no loopback. |
-| `network=none` in `runsc-builder` | The builder has no network device. The relay needs only the gVisor loopback. |
+| `network=host` in `agent/runsc.conf` | gVisor then uses that empty namespace. Its own stack has no loopback. |
+| `network=none` in `builder/runsc.conf` | The builder has no network device. The relay needs only the gVisor loopback. |
 | The host brings up `lo` | gVisor does not let the guest bring up the loopback. `ExecStartPost` runs `ip link set lo up`. |
 | `host-uds` flags | gVisor blocks a connect to a host Unix socket by default. The agent sandbox uses `open`. The builder uses `all`: it makes `buildkitd.sock` and connects to its proxy socket. |
 | A relay in each container | Tools need a TCP proxy address. The relay turns it into the socket. It runs without a capability. |
@@ -312,7 +312,7 @@ The host proxy checks the `CONNECT` first, before it sees a path. So `ghcr.io` h
 
 ### Placeholders
 
-The agent sandbox holds a placeholder. The host proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Each value must equal a `proxy_value` line in `proxy/iron-proxy.yaml`.
+The agent sandbox holds a placeholder. The host proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Each value must equal a `proxy_value` line in `agent/proxy/iron-proxy.yaml`.
 
 | Placeholder, and the variable of the proxy | Hosts |
 |---|---|
@@ -321,7 +321,7 @@ The agent sandbox holds a placeholder. The host proxy replaces it in the `Author
 | `sandbox-placeholder-QWEN_API_KEY`, from `QWEN_API_KEY` | `token-plan.ap-southeast-1.maas.aliyuncs.com` |
 | `sandbox-placeholder-GHCR_PUSH_TOKEN`, from `GITHUB_TOKEN`. The login is in `/etc/docker/config.json`. | `ghcr.io` |
 
-`image/configs/agents/managed-settings.json` holds the text of the placeholder for the GitHub MCP server, because Claude Code does not expand `$GH_TOKEN` in a header. Qwen Code expands the variable itself.
+`agent/image/configs/agents/managed-settings.json` holds the text of the placeholder for the GitHub MCP server, because Claude Code does not expand `$GH_TOKEN` in a header. Qwen Code expands the variable itself.
 
 ### Hardening of the proxy units
 
@@ -371,15 +371,28 @@ The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbo
 
 ## Where each part is in the repo
 
-| Path | Part |
-|---|---|
-| [`sandbox-agent.container`](../sandbox-agent.container) | The unit of the agent sandbox. |
-| [`builder/`](../builder) | The builder: unit, `Containerfile` and `relay-entry`. |
-| [`runsc.conf`](../runsc.conf) | The gVisor flags of both containers. |
-| [`image/`](../image) | `sandbox-entry` (relay), `sandbox-start` and `configs/tools/docker-config.json`. |
-| [`proxy/`](../proxy) | The proxies, the bridges and the firewall rule. |
-| [`justfile`](../justfile) | `setup`, `run`, `rm` and `build`. |
+Each part has its own folder. The firewall rule and the setup guide are on the host, so they have a folder of their own.
+
+```text
+.sandbox/
+  agent/
+    sandbox-agent.container     the unit of the agent sandbox
+    runsc.conf                  the gVisor flags of runsc
+    image/                      the Dockerfile, sandbox-entry, sandbox-start, mise.toml, tools, configs
+    proxy/                      the host proxy: iron-proxy.yaml, sandbox-proxy.service, sandbox-proxy-bridge.*
+  builder/
+    sandbox-builder.container   the unit of the builder
+    runsc.conf                  the gVisor flags of runsc-builder
+    image/                      the Containerfile and relay-entry
+    proxy/                      the builder proxy: iron-proxy-builder.yaml, sandbox-builder-proxy.service, sandbox-builder-proxy-bridge.*
+  host/
+    sandbox-guard.nft           the firewall rule for both proxies
+    sandbox-guard.service       loads the rule
+    README.md                   the guide to set up the proxies
+  docs/                         this document and the diagrams
+  justfile                      setup, run, rm and build
+```
 
 ## What comes next
 
-Read the [guide to set up the proxies](../proxy/README.md) for the steps and the daily commands.
+Read the [guide to set up the proxies](../host/README.md) for the steps and the daily commands.

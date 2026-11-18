@@ -23,7 +23,7 @@ For the parts, the flows, the controls and the limits, read [How the sandbox wor
 
 Run these steps in your main checkout.
 
-1. Read [what the setup assumes](proxy/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
+1. Read [what the setup assumes](host/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
 2. Run `mise install`. It installs `bws` and `iron-proxy`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `systemd-socket-proxyd`, `ip`, `nsenter`, `nft` and `sudo`. The agent sandbox needs 3 GB of memory and the builder needs 2 GB.
 3. Run these commands:
 
@@ -33,7 +33,7 @@ just sandbox build   # build the images and push the agent sandbox image to ghcr
 just sandbox run     # start the builder and the agent sandbox, and open Herdr
 ```
 
-`setup` asks for your `sudo` password. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox-agent.container`.
+`setup` asks for your `sudo` password. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/`, `builder/` or `host/`.
 
 ## Commands
 
@@ -66,7 +66,7 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 
 | Topic | Detail |
 |---|---|
-| Hosts | A `FROM` or `RUN` step reaches the `domains` of `proxy/iron-proxy-builder.yaml`. An unlisted host gets `403`. To add a host, edit the file and run `just sandbox setup`. |
+| Hosts | A `FROM` or `RUN` step reaches the `domains` of `builder/proxy/iron-proxy-builder.yaml`. An unlisted host gets `403`. To add a host, edit the file and run `just sandbox setup`. |
 | Push | `crane` uses the placeholder login of `ghcr.io`. The host proxy allows writes in the namespace `raghav19` only. |
 | Private base image | Run `crane pull --format oci REF /tmp/base`. Then add `--build-context NAME=oci-layout:///tmp/base@sha256:DIGEST`. |
 | Health | A failed health check of the builder at the start fails `run`. A later failure restarts the builder with an empty cache. |
@@ -80,7 +80,7 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 | `run` says the agent sandbox is not healthy | Run `podman logs sandbox-agent`. |
 | `run` says the builder is not healthy | Run `podman logs sandbox-builder`. |
 | `docker build` says `failed to connect to the docker API` | `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`. |
-| A `FROM` or a `RUN` step gets `403` | The host is not in `proxy/iron-proxy-builder.yaml`. Add it and run `just sandbox setup`. |
+| A `FROM` or a `RUN` step gets `403` | The host is not in `builder/proxy/iron-proxy-builder.yaml`. Add it and run `just sandbox setup`. |
 | `crane push` gets `403` | The namespace is not `raghav19`. |
 | `status sandbox-agent` shows `failed` | A limit killed it. Run `just sandbox run`. The clone stays in the volume. |
 | `status sandbox-builder` shows `failed` after `just sandbox rm` | Normal. `buildkitd` exits with code 1 when it stops. |
@@ -91,9 +91,8 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 
 | Path | Content |
 |---|---|
-| `sandbox-agent.container` | The Quadlet unit of the agent sandbox. |
-| `builder/` | The builder: the unit `sandbox-builder.container`, the `Containerfile` and `relay-entry`. |
-| `runsc.conf` | The gVisor flags for `runsc` (agent sandbox) and `runsc-builder`. |
-| `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
-| `proxy/` | Both proxies, their bridges and the firewall rule. See [`proxy/README.md`](proxy/README.md). |
+| `agent/` | The agent sandbox: the unit `sandbox-agent.container`, `runsc.conf`, `image/` and `proxy/` (the host proxy and its bridge). |
+| `builder/` | The builder: the unit `sandbox-builder.container`, `runsc.conf`, `image/` (the `Containerfile` and `relay-entry`) and `proxy/` (the builder proxy and its bridge). |
+| `host/` | The firewall rule for both proxies and the [guide to set up the proxies](host/README.md). |
+| `docs/` | [How the sandbox works in detail](docs/internals.md) and the diagrams. |
 | `justfile` | The recipes `setup`, `run`, `rm` and `build`. |

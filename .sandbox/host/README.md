@@ -45,7 +45,7 @@ It asks for your `sudo` password, and for the access token only if the credentia
 flowchart TD
     A["Link iron-proxy and bws into ~/.config/sandbox/bin"] --> B["Make the CA in ~/.local/state/sandbox"]
     B --> C["Link both configs into ~/.config/sandbox"]
-    C --> D["Link the container units, runsc.conf and repo.git"]
+    C --> D["Link the container units, the gVisor flags and repo.git"]
     D --> E["Install the firewall rule with sudo"]
     E --> F["Encrypt the access token with systemd-creds"]
     F --> G["Link, enable and restart both proxy units"]

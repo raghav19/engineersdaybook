@@ -18,9 +18,9 @@ DefaultDependencies=false
 
 [Container]
 ContainerName=sandbox-builder
-# `just sandbox build` builds this image from builder/Containerfile.
+# `just sandbox build` builds this image from builder/image/Containerfile.
 Image=localhost/sandbox-builder:latest
-# runsc-builder has its flags in runsc.conf.
+# runsc-builder has its flags in builder/runsc.conf.
 PodmanArgs=--runtime=runsc-builder
 Network=none
 # User 1000 is a subuid. It is the same subuid as the user agent, so the agent may connect.
