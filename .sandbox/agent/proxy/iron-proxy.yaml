@@ -110,9 +110,9 @@ transforms:
         - {host: api.github.com, methods: [CONNECT]}
         - {host: api.github.com, methods: [GET, HEAD]}
         - {host: api.github.com, methods: [POST, PATCH, PUT, DELETE], paths: ["/repos/raghav19/engineersdaybook/*"]}
-      # The GitHub MCP server in the read-only mode. The URL /mcp/readonly has the read tools only. The default URL /mcp/ has write tools for any repository that the token reaches, so it gets 403.
+      # The GitHub MCP server. Only the URL /mcp/ is open, and the section mcp below limits the tools.
         - {host: api.githubcopilot.com, methods: [CONNECT]}
-        - {host: api.githubcopilot.com, methods: [GET, POST, DELETE], paths: ["/mcp/readonly", "/mcp/readonly/*"]}
+        - {host: api.githubcopilot.com, methods: [GET, POST, DELETE], paths: ["/mcp", "/mcp/"]}
   - name: secrets
     config:
       secrets:
@@ -138,5 +138,90 @@ transforms:
           replace: {proxy_value: sandbox-placeholder-GHCR_PUSH_TOKEN, match_headers: [Authorization]}
           rules:
             - {host: ghcr.io}
+# The policy of the GitHub MCP server. It covers the toolsets in X-MCP-Toolsets of the settings files: context, issues, pull_requests and repos.
+# A tool that is not listed gets an error, and tools/list hides it. The tools merge_pull_request, delete_file, delete_repository, create_repository and fork_repository stay out of the list.
+# A read tool works in any repository. A write tool works in raghav19/engineersdaybook only.
+mcp:
+  servers:
+    - name: github
+      rules:
+        - {host: api.githubcopilot.com, paths: ["/mcp", "/mcp/"]}
+      tools:
+        - {name: get_me}
+        - {name: get_team_members}
+        - {name: get_teams}
+        - {name: issue_read}
+        - {name: list_issues}
+        - {name: search_issues}
+        - {name: list_issue_types}
+        - {name: list_issue_fields}
+        - {name: list_pull_requests}
+        - {name: pull_request_read}
+        - {name: search_pull_requests}
+        - {name: get_commit}
+        - {name: get_file_contents}
+        - {name: get_latest_release}
+        - {name: get_release_by_tag}
+        - {name: get_tag}
+        - {name: list_branches}
+        - {name: list_commits}
+        - {name: list_releases}
+        - {name: list_repository_collaborators}
+        - {name: list_tags}
+        - {name: search_code}
+        - {name: search_commits}
+        - {name: search_repositories}
+        - name: add_issue_comment
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: issue_write
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: sub_issue_write
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: update_issue_comment
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: add_comment_to_pending_review
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: add_reply_to_pull_request_comment
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: create_pull_request
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: pull_request_review_write
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: update_pull_request
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: update_pull_request_branch
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: create_branch
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: create_or_update_file
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
+        - name: push_files
+          when:
+            - {path: owner, equals: raghav19}
+            - {path: repo, equals: engineersdaybook}
 log:
   level: info

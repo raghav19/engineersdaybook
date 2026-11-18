@@ -242,7 +242,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | Send data to an unlisted host | No network. The proxies answer `403`. |
 | Push to a registry namespace that is not yours | The host proxy answers `403` for a write outside `raghav19`. |
 | Write to another GitHub repository, a gist or a fork | The host proxy answers `403`. A write is possible in `raghav19/engineersdaybook` only. |
-| Write through the GitHub MCP server | The MCP URL is read-only (`/mcp/readonly`). The default URL gets `403`. |
+| Write through the GitHub MCP server | The policy `mcp` allows a write tool in `raghav19/engineersdaybook` only. Other calls get an error. |
 | Get a token through a build step | The builder cannot reach the host proxy. The builder proxy holds no token. |
 | Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
 | Reach a proxy port from the host | No port exists on the host. The ports are inside the proxy containers. |
@@ -302,10 +302,22 @@ The host proxy checks the `CONNECT` first, before it sees a path. So each of the
 | `github.com` | `POST` on `/raghav19/engineersdaybook/git-receive-pack`, with and without `.git` | A push to this repository only. |
 | `api.github.com` | `GET`, `HEAD` | Reads in any repository. |
 | `api.github.com` | `POST`, `PATCH`, `PUT`, `DELETE` on `/repos/raghav19/engineersdaybook/*` | Writes in this repository only. A gist, a fork, an issue elsewhere and GraphQL get `403`. |
-| `api.githubcopilot.com` | `GET`, `POST`, `DELETE` on `/mcp/readonly` and `/mcp/readonly/*` | The read tools of the GitHub MCP server. The default URL `/mcp/` has write tools for any repository, so it gets `403`. |
+| `api.githubcopilot.com` | `GET`, `POST`, `DELETE` on `/mcp` and `/mcp/` | The GitHub MCP server. The section `mcp` limits the tools. See [The MCP policy](#the-mcp-policy). |
 | `*.githubusercontent.com`, `github.githubassets.com`, `www.githubstatus.com` | `GET`, `HEAD` | Reads only. |
 
 To use another repository, change the three paths with `raghav19/engineersdaybook` in `agent/proxy/iron-proxy.yaml`. The builder proxy allows the GitHub hosts in full, because it cannot see a path. It holds no token, so GitHub refuses a write from it.
+
+### The MCP policy
+
+The section `mcp` of `agent/proxy/iron-proxy.yaml` covers the toolsets in `X-MCP-Toolsets` of the settings files: `context`, `issues`, `pull_requests` and `repos`. The proxy reads each `tools/call` and checks the tool name and its arguments. It also hides the tools that it denies from `tools/list`.
+
+| Group | Tools | Rule |
+|---|---|---|
+| Read | 24 tools, for example `get_file_contents`, `issue_read`, `list_pull_requests`, `search_code` | Any repository. |
+| Write | 13 tools: `add_issue_comment`, `issue_write`, `sub_issue_write`, `update_issue_comment`, `create_pull_request`, `update_pull_request`, `update_pull_request_branch`, `pull_request_review_write`, `add_comment_to_pending_review`, `add_reply_to_pull_request_comment`, `create_branch`, `create_or_update_file`, `push_files` | The arguments `owner` and `repo` must equal `raghav19` and `engineersdaybook`. |
+| Denied | `merge_pull_request`, `delete_file`, `delete_repository`, `create_repository`, `fork_repository`, and every tool of another toolset | Not in the list. The call gets an error, and the tool is hidden. |
+
+The five denied tools are also in the `deny` list of `managed-settings.json`. That list is a setting of Claude Code. The proxy rule holds even for a call that does not come from Claude Code.
 
 ### Placeholders
 
@@ -343,7 +355,8 @@ The host proxy sees only these files: its config, `ca.crt`, `ca.key`, the creden
 - Commits use the name `agent` and the email `agent@localhost`. To commit as yourself, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in the shell.
 - Listed hosts can receive data from the agent. Keep both allowlists short.
 - The project repository accepts writes. The agent can push a branch and write an issue or a comment there. Read the branch and the text before you trust them.
-- The MCP server is read-only. The agent cannot create a pull request or a comment through it. Push a branch and create the pull request yourself.
+- The MCP policy lists tools by name. A new tool in the four toolsets stays denied until you list it.
+- A write tool and `git push` can write to any branch of the project repository, `main` included. Protect `main` on GitHub.
 - A rule sees the host, the method and the path, not the body. `gh` is not in the image. Its GraphQL calls would get `403`.
 - The proxy parses every request of the agent. A bug in iron-proxy can give an attacker the real tokens of the host proxy. Pin the image by digest.
 - A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out.
