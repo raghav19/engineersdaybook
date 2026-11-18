@@ -82,6 +82,75 @@ buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
 
 For the details, see [How it works in detail](docs/internals.md).
 
+### Setup
+
+`just sandbox setup` runs once. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
+
+```mermaid
+flowchart TD
+    A["just sandbox setup"] --> B["Link bws and iron-proxy, make the CA if it is missing"]
+    B --> C["Link the sandbox unit, the builder unit, runsc.conf and repo.git"]
+    C --> D["Install the firewall rule with sudo"]
+    D --> E["Encrypt the Bitwarden token if it is missing"]
+    E --> F["Link, enable and restart the proxy units"]
+    F --> G{"sandbox-proxy.service active?"}
+    G -->|yes| H["The proxy runs"]
+    G -->|no| I["Stop with an error"]
+```
+
+If a step fails, `setup` stops. The proxy does not start after a failed firewall step.
+
+### Run
+
+`just sandbox run` starts a new sandbox and a new builder.
+
+```mermaid
+sequenceDiagram
+    participant You
+    participant just
+    participant systemd
+    participant Builder
+    participant Sandbox
+    You->>just: just sandbox run
+    just->>just: check that proxy.sock and ca.crt exist
+    just->>systemd: daemon-reload, restart sandbox.service
+    systemd->>Builder: start sandbox-builder.service, a new builder
+    Builder-->>systemd: the health check passes, or the start fails
+    systemd->>Sandbox: podman run --replace with runsc and no network
+    just->>Sandbox: podman healthcheck run, up to 180 s
+    just->>Sandbox: podman exec herdr, or your command
+```
+
+The builder starts first. If its health check fails, the start fails and `run` stops with an error.
+
+### Build the image
+
+`just sandbox build` builds the image of the sandbox and pushes it to `ghcr.io`.
+
+```mermaid
+flowchart TD
+    A["just sandbox build"] --> B["Check that the credential exists"]
+    B --> C["Log in to ghcr.io with the token from Bitwarden"]
+    C --> D["podman build, with the stage cache in ghcr.io"]
+    D --> E["Push the commit tag"]
+    E --> F["Log out of ghcr.io"]
+    D -->|fails| G["The login stays until you run podman logout ghcr.io"]
+```
+
+### Build in the sandbox
+
+The agent builds an image with `buildctl`. The builder runs the build. See [One build](docs/internals.md#one-build) for the steps in order.
+
+```mermaid
+flowchart TD
+    A["The agent runs buildctl build"] --> B["buildctl sends the context and the base image to buildkitd.sock"]
+    B --> C["buildkitd runs each build step in the builder"]
+    C --> D{"Build passes?"}
+    D -->|yes| E["The OCI tar is in the sandbox, exit code 0"]
+    D -->|no| F["Exit code is not 0, the log shows the failed step"]
+    E --> G["The sandbox pushes the tar through the proxy, not tested"]
+```
+
 ## Security controls
 
 Each row is one attack of an injected agent and the control that stops it.
