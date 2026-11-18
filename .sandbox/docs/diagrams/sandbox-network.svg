@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1140" height="740" viewBox="0 0 1140 740" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1140" height="580" viewBox="0 0 1140 580" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
-<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b85450"/></marker>
 </defs>
-<rect x="0" y="0" width="1140" height="740" fill="#ffffff"/>
+<rect x="0" y="0" width="1140" height="580" fill="#ffffff"/>
 <text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Network path of the sandbox with gVisor</text>
 
 <rect x="20" y="90" width="480" height="230" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
@@ -36,16 +35,12 @@
 <rect x="330" y="457" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="390.0" y="483.8" font-weight="bold">Internet</text><text x="390.0" y="504.8">allowed hosts</text></g>
 
-<rect x="665" y="614" width="290" height="84" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="810.0" y="637.3" font-weight="bold">nftables rule</text><text x="810.0" y="658.3">only your user may connect</text><text x="810.0" y="679.3">to TCP 18080-18083, UDP 18084</text></g>
-
 <path d="M210,248 L270,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M460,248 L600,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M780,248 L890,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1000,298 L1000,450" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M890,492 L730,492" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M530,492 L450,492" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M810,614 L810,497" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
 <text x="240.0" y="240.0" font-size="14" text-anchor="middle" fill="#000000">TCP</text>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="550.0" y="226.0">connect</text><text x="550.0" y="242.0">Unix socket</text></g>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="835.0" y="226.0">opens</text><text x="835.0" y="242.0">Unix socket</text></g>

@@ -4,7 +4,6 @@
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
-<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b85450"/></marker>
 <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666666"/></marker>
 </defs>
 <rect x="0" y="0" width="1480" height="700" fill="#ffffff"/>
@@ -61,9 +60,6 @@
 <rect x="1080" y="167" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="190.3" font-weight="bold">Host proxy</text><text x="1180.0" y="211.3">allowlist, TLS,</text><text x="1180.0" y="232.3">token swap</text></g>
 
-<rect x="1040" y="384" width="280" height="84" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="407.3" font-weight="bold">nftables rule</text><text x="1180.0" y="428.3">only your user connects</text><text x="1180.0" y="449.3">to TCP 18080-18083, UDP 18084</text></g>
-
 <rect x="1340" y="174" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="1400.0" y="200.8" font-weight="bold">Internet</text><text x="1400.0" y="221.8">allowed hosts</text></g>
 
@@ -73,7 +69,6 @@
 <path d="M1280,209 L1340,209" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M410,298 L410,378" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1180,70 L1180,167" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
-<path d="M1180,384 L1180,255" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
 <path d="M410,590 L410,492" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
 <path d="M570,379 L700,379" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M850,590 L850,512" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>

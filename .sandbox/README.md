@@ -20,22 +20,22 @@ A fooled agent can use only what the sandbox allows.
 Run these steps in your main checkout.
 
 1. Read [what the setup assumes](proxy/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
-2. Run `mise install`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
+2. Run `mise install`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip` and `nsenter`.
 3. Run these commands:
 
 ```shell
-just sandbox setup   # install the host proxy, the firewall rule and the container unit
+just sandbox setup   # install the host proxy and the container units
 just sandbox build   # build the image and push it to ghcr.io (the first build takes several minutes)
 just sandbox run     # start the container and open Herdr
 ```
 
-`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
+`setup` asks for the Bitwarden access token. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `just sandbox setup` | Installs the host proxy, the firewall rule, the container unit and the gVisor flags. |
+| `just sandbox setup` | Installs the host proxy, the container units and the gVisor flags. |
 | `just sandbox run` | Makes a new container from the image and opens Herdr. Add a command to run it in place of Herdr. |
 | `just sandbox rm` | Stops the service and removes the container and the builder. The volume stays. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it. `just sandbox build --no-cache` updates the pinned tools. |
@@ -92,7 +92,6 @@ Each row is one attack of an injected agent and the control that stops it.
 | Steal a token | The container holds placeholders. The real tokens stay on the host. |
 | Send data to an unlisted host | The container has no network. The proxy answers `403` for a host that is not on the allowlist. |
 | Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
-| Use the proxy from another process | The firewall rule lets only your user connect to the proxy ports. |
 | Move code to your host | The only way out is a `git push` to GitHub through the proxy. You read the branch before you check it out. |
 | Use all memory, CPU or threads | The service limits. The kernel kills the sandbox, not the host. |
 
@@ -111,7 +110,6 @@ Each row is one attack of an injected agent and the control that stops it.
 | `User=agent` (uid 1000) | The container starts as `agent`, not as root. In rootless Podman, `agent` is a subuid, not your host user. The sentry and the gofer run as your host user. |
 | `MemoryMax`, `MemorySwapMax`, `TasksMax`, `CPUQuota` in `[Service]` | 3 GB of memory with no swap, 2048 host threads, 4 CPUs. gVisor ignores the limits of Podman, so they are on the service. The kernel kills a sandbox that goes over a limit. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
-| The nftables rule `proxy/sandbox-guard.nft` | Only your user may connect to the TCP ports 18080 to 18083 and the UDP port 18084 of the proxy, on `127.0.0.1`. It separates users, not programs of the same user. `just sandbox setup` installs it with `sudo`. |
 
 ## Limits
 
@@ -119,7 +117,7 @@ Each row is one attack of an injected agent and the control that stops it.
 - No SSH and no raw TCP. Use HTTPS remotes. A tool that ignores `HTTPS_PROXY` has no route.
 - No `sudo` and no package install. Change the image.
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
-- The firewall rule separates users only. A rootless container of your user that has a route to the host loopback can still connect to the proxy ports.
+- Any local user can connect to the proxy ports on `127.0.0.1` and use the real tokens through the placeholders. Use this setup on a host with one user.
 - The clone starts on the current branch of your repo. Its git identity is `agent`. Set yours with `git config` in the clone.
 - Listed hosts can receive data from the agent. Keep the allowlist short.
 - A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out on the host.
