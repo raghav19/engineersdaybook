@@ -1,12 +1,12 @@
 # The Podman sandbox: a hardened rootless container for Claude Code, Qwen Code and the Fresh editor. ../justfile loads this file as `mod sandbox`.
-# The container runs in gVisor and has no network. The host proxy (.sandbox/agent/proxy) is its only way out. agent/sandbox-agent.container defines the container.
+# The container runs in gVisor and has no network. The host proxy container (.sandbox/agent/proxy) is its only way out. agent/sandbox-agent.container defines the container.
 # The recipes run in this folder. podman build uses agent/image and builder/image.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in agent/, builder/ or host/.
+#   just sandbox setup   make the CA and the credential. Link the container units, the gVisor flags and the repo. Run it again after you edit a file in agent/ or builder/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
-#   just sandbox rm      stop and remove the container and the builder. The volume stays.
-#   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
+#   just sandbox rm      stop and remove the container, the builder and both proxies. The volume stays.
+#   just sandbox build   build the four images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit agent/sandbox-agent.container or build the image, run `just sandbox run`. It makes a new container.
 
@@ -15,15 +15,12 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws and iron-proxy come from mise.toml. Run `mise install` once.
+# bws comes from mise.toml. Run `mise install` once.
 bws            := require("bws")
 git            := require("git")
-iron_proxy     := require("iron-proxy")
-nft            := require("nft")
 openssl        := require("openssl")
 podman         := require("podman")
 runsc          := require("runsc")
-sudo           := require("sudo")
 systemd_creds  := require("systemd-creds")
 
 # --- Names and paths ---
@@ -33,12 +30,8 @@ commit := shell(git + ' rev-parse HEAD')
 # The Bitwarden access token of the proxy. `setup` makes it. `build` reads it, so there is no prompt.
 credential := config_directory() / 'credstore.encrypted/bws-token'
 
-proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
-builder_proxy_socket := env('XDG_RUNTIME_DIR') / 'sandbox-builder-proxy/proxy.sock'
-
-# `run` checks that these two paths exist. They equal the Volume lines of agent/sandbox-agent.container.
+# `run` checks that this path exists. It equals a Volume line of agent/sandbox-agent.container.
 SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
-SANDBOX_SOCKET := env('XDG_RUNTIME_DIR') / 'sandbox'
 # The .git folder of the repo that you run just in. `setup` links it to ~/.config/sandbox/repo.git, and the unit mounts that link.
 git_dir := shell(git + ' rev-parse --path-format=absolute --git-common-dir')
 
@@ -53,20 +46,13 @@ help:
 
 # Run it in your main checkout, because the links of the units point to the files in this folder.
 # It asks for the access token of a Bitwarden machine account. See Prerequisites in README.md.
-# Install and start both proxies. Run it again after you edit a file in agent/, builder/ or host/.
+# Make the CA and the credential. Link the units. Run it again after you edit a file in agent/ or builder/.
 [script('bash')]
 setup:
     set -euo pipefail
     src='{{ source_directory() }}'
     state="$HOME/.local/state/sandbox"
     mkdir -p "$state" "$HOME/.config/sandbox"
-
-    # The unit runs the real binaries, not the mise shims. A shim needs the mise.toml of the repo, and the proxy does not see it.
-    mkdir -p "$HOME/.config/sandbox/bin"
-    for tool in '{{ bws }}' '{{ iron_proxy }}'; do
-        case "$tool" in */shims/*) echo "sandbox: $tool is a mise shim. Activate mise in this shell and run this again." >&2; exit 1 ;; esac
-        ln -sf "$tool" "$HOME/.config/sandbox/bin/$(basename "$tool")"
-    done
 
     # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
     if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
@@ -79,30 +65,9 @@ setup:
         chmod 0644 "$state/ca.crt"
     fi
 
+    # The proxy containers mount these two configs.
     ln -sf "$src/agent/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
     ln -sf "$src/builder/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy-builder.yaml"
-
-    # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see agent/runsc.conf and builder/runsc.conf).
-    # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
-    mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
-    ln -sf "$src/agent/sandbox-agent.container" "$HOME/.config/containers/systemd/sandbox-agent.container"
-    # The builder starts and stops with the sandbox.
-    ln -sf "$src/builder/sandbox-builder.container" "$HOME/.config/containers/systemd/sandbox-builder.container"
-    ln -sf "$src/agent/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-agent-runsc.conf"
-    ln -sf "$src/builder/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-builder-runsc.conf"
-    ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
-    systemctl --user daemon-reload
-
-    # The firewall rule. A TCP port on 127.0.0.1 has no check of the user, so any local user could use the proxy and its real tokens.
-    # The rule lets only your user connect to the proxy ports. nft needs root, so sudo asks for your password.
-    # The rule and the unit are copies that root owns. A link to a file in your repo would let you change what root runs.
-    # If a step fails, setup stops here and the proxy does not start.
-    echo 'sandbox: the firewall rule needs root. sudo asks for your password.'
-    sed "s/@UID@/$(id -u)/" "$src/host/sandbox-guard.nft" | sudo tee /etc/sandbox-guard.nft >/dev/null
-    sudo install -m 0644 "$src/host/sandbox-guard.service" /etc/systemd/system/sandbox-guard.service
-    sudo systemctl daemon-reload
-    sudo systemctl enable sandbox-guard.service
-    sudo systemctl restart sandbox-guard.service
 
     mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
@@ -113,26 +78,23 @@ setup:
         chmod 0400 '{{ credential }}'
     fi
 
-    # Both folders use the same file names. The link name has the prefix sandbox- for the agent sandbox and sandbox-builder- for the builder.
-    # ln -sf replaces a link that points to an old path. The builder proxy holds no token. The builder reaches the internet through it.
-    mkdir -p "$HOME/.config/systemd/user"
-    for f in proxy.service proxy-bridge.service proxy-bridge.socket; do
-        ln -sf "$src/agent/proxy/$f" "$HOME/.config/systemd/user/sandbox-$f"
-        ln -sf "$src/builder/proxy/$f" "$HOME/.config/systemd/user/sandbox-builder-$f"
-    done
+    # The containers. Quadlet reads the units from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see agent/runsc.conf and builder/runsc.conf).
+    # The two proxy folders have the same file names. The link name has the prefix sandbox- or sandbox-builder-.
+    # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
+    mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
+    ln -sf "$src/agent/sandbox-agent.container" "$HOME/.config/containers/systemd/sandbox-agent.container"
+    ln -sf "$src/agent/proxy/proxy.container" "$HOME/.config/containers/systemd/sandbox-proxy.container"
+    ln -sf "$src/builder/sandbox-builder.container" "$HOME/.config/containers/systemd/sandbox-builder.container"
+    ln -sf "$src/builder/proxy/proxy.container" "$HOME/.config/containers/systemd/sandbox-builder-proxy.container"
+    ln -sf "$src/agent/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-agent-runsc.conf"
+    ln -sf "$src/builder/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-builder-runsc.conf"
+    ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
     systemctl --user daemon-reload
-    systemctl --user enable sandbox-proxy.service sandbox-builder-proxy.service
-    systemctl --user restart sandbox-proxy.service sandbox-builder-proxy.service
-    sleep 2
-    systemctl --user is-active --quiet sandbox-proxy.service \
-        || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
-    systemctl --user is-active --quiet sandbox-builder-proxy.service \
-        || { echo 'sandbox: the builder proxy did not start. See: journalctl --user -u sandbox-builder-proxy' >&2; exit 1; }
-    echo 'The proxy and the builder proxy run.'
+    echo 'Next: just sandbox build, then just sandbox run.'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: (_needs proxy_socket) (_needs builder_proxy_socket) (_needs SANDBOX_CA)
+run *command: (_needs SANDBOX_CA)
     # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so it also replaces a container that an older setup left with the name sandbox.
     # daemon-reload makes systemd read an edit of sandbox-agent.container.
     systemctl --user daemon-reload
@@ -152,7 +114,7 @@ run *command: (_needs proxy_socket) (_needs builder_proxy_socket) (_needs SANDBO
         {{ if command == '' { 'herdr' } else { command } }}
 
 # Stop and remove the container. The volume sandbox-home stays, so the clone and the logins stay.
-# The builder stops too.
+# The builder and both proxies stop too.
 rm:
     systemctl --user stop sandbox-agent.service
 
@@ -178,6 +140,10 @@ build *args: (_needs credential)
 
     # The builder image: BuildKit and the relay to the builder proxy. The unit sandbox-builder.container runs it.
     podman build builder/image -t localhost/sandbox-builder:latest
+
+    # The proxy images: iron-proxy and socat. The host proxy image also has bws. The units sandbox-proxy and sandbox-builder-proxy run them.
+    podman build agent/proxy -t localhost/sandbox-proxy:latest
+    podman build builder/proxy -t localhost/sandbox-builder-proxy:latest
 
     # Push the commit tag.
     podman push {{ registry }}:{{ commit }}

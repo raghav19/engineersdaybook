@@ -8,7 +8,7 @@ A coding agent reads text that you did not write. That text can hold a prompt in
 
 | Limit | What it does |
 |---|---|
-| No network | Each container has no route out. The only way out is a proxy on the host with an allowlist. |
+| No network | Each container has no route out. The only way out is a proxy container with an allowlist. |
 | No real token | The agent sandbox holds placeholders. Only the host proxy holds the real tokens. |
 | A private clone | The agent works on a clone of your repo. It cannot write to your repo. |
 | A hardened container | gVisor, no capability, a read-only root file system and limits on memory, CPU and threads. |
@@ -29,49 +29,50 @@ What the setup assumes:
 - The Bitwarden project holds `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`.
 - You have the access token of a machine account that reads that project. `just sandbox setup` asks for it. Do not paste it into a chat or a file.
 
-For another registry or secret manager, change `agent/proxy/iron-proxy.yaml`, `agent/proxy/proxy.service` and the `build` recipe.
+For another registry or secret manager, change `agent/proxy/iron-proxy.yaml`, `agent/proxy/proxy.container` and the `build` recipe.
 
 What the host needs:
 
 | Need | Check |
 |---|---|
 | A Linux host with a systemd user manager | `systemctl --user is-system-running` |
-| `systemd-creds` and `systemd-socket-proxyd`. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
-| `iron-proxy` and `bws`, from `mise install` | `iron-proxy --version` and `bws --version` |
+| `systemd-creds`, to keep the Bitwarden access token | `command -v systemd-creds` |
+| `bws`, from `mise install`. `build` uses it to log in to `ghcr.io`. | `bws --version` |
 | `openssl`, to make the CA | `openssl version` |
 | `podman`, `runsc` and `git`. `just` stops if one is missing. | `podman --version` and `runsc --version` |
 | `ip` and `nsenter`, to bring up the loopback of the container | `ip -V` and `nsenter --version` |
-| `sudo` and `nft`, for the firewall rule | `sudo -v` and `nft --version` |
-| 5 GB of free memory: 3 GB for the agent sandbox and 2 GB for the builder | `free -h` |
-| Linger for your user (optional). The proxies keep running after you log out. | `loginctl enable-linger "$USER"` |
+| 6 GB of free memory: 3 GB for the agent sandbox, 2 GB for the builder and less than 1 GB for the two proxies | `free -h` |
+| Linger for your user (optional). The sandbox keeps running after you log out. | `loginctl enable-linger "$USER"` |
 
 ## Quick start
 
 Run these steps in your main checkout.
 
-1. Run `mise install`. It installs `bws` and `iron-proxy`.
+1. Run `mise install`. It installs `bws`.
 2. Run these commands:
 
 ```shell
-just sandbox setup   # install the proxies, the firewall rule and the container units
-just sandbox build   # build the images and push the agent sandbox image to ghcr.io
-just sandbox run     # start the builder and the agent sandbox, and open Herdr
+just sandbox setup   # make the CA and the credential, and link the container units
+just sandbox build   # build the four images and push the agent sandbox image to ghcr.io
+just sandbox run     # start the proxies, the builder and the agent sandbox, and open Herdr
 ```
 
-`setup` asks for your `sudo` password. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/`, `builder/` or `host/`.
+`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/` or `builder/`.
 
-For the commands of the proxy units and the firewall rule, read the [guide to the proxies](host/README.md).
+`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. Each unit starts the next one, so you start no proxy by hand.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `just sandbox setup` | Installs both proxies, the firewall rule, the container units and the gVisor flags. |
-| `just sandbox run` | Makes a new agent sandbox and a new builder. Opens Herdr. Add a command to run it in place of Herdr. |
-| `just sandbox rm` | Removes the agent sandbox and the builder. The volume stays. |
-| `just sandbox build` | Builds both images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
+| `just sandbox setup` | Makes the CA and the credential. Links the container units and the gVisor flags. |
+| `just sandbox run` | Makes a new agent sandbox, a new builder and two new proxies. Opens Herdr. Add a command to run it in place of Herdr. |
+| `just sandbox rm` | Removes the agent sandbox, the builder and both proxies. The volume stays. |
+| `just sandbox build` | Builds the four images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
+| `journalctl --user -u sandbox-proxy -f` | Follows the audit log of the host proxy: one JSON line for each request. |
+| `podman logs -f sandbox-builder-proxy` | Follows the log of the builder proxy. |
 
 The volume `sandbox-home` keeps the clone, the logins and the histories.
 
@@ -101,8 +102,10 @@ Rules:
 
 ## Troubleshooting
 
-- **`run` says `proxy.sock` is missing.** Run `systemctl --user start sandbox-proxy`. After a start limit, run `systemctl --user reset-failed sandbox-proxy` first. Then run `just sandbox setup`.
-- **`run` says `sandbox-builder-proxy/proxy.sock` is missing.** Run `systemctl --user start sandbox-builder-proxy`, or run `just sandbox setup`.
+- **`run` fails at the start.** A failed step of a unit fails the start. Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`.
+- **`run` says that the credential is missing.** Run `just sandbox setup`.
+- **`Failed to read encrypted credential data: Invalid argument`.** `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again.
+- **`podman logs sandbox-proxy` shows a Bitwarden error.** The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`.
 - **`run` says the agent sandbox is not healthy.** Run `podman logs sandbox-agent`.
 - **`run` says the builder is not healthy.** Run `podman logs sandbox-builder`.
 - **`docker build` says `failed to connect to the docker API`.** `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.
@@ -110,5 +113,6 @@ Rules:
 - **`crane push` gets `403`.** The namespace is not `raghav19`.
 - **`status sandbox-agent` shows `failed`.** A limit killed it. Run `just sandbox run`. The clone stays in the volume.
 - **`status sandbox-builder` shows `failed` after `just sandbox rm`.** This is normal. `buildkitd` exits with code 1 when it stops.
+- **`run` stops at a `Credential` error of the proxy.** The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.
 - **A tool fails with a connection error.** The tool ignores `HTTPS_PROXY`.
 - **You made a new CA.** Run `just sandbox run`.

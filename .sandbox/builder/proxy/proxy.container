@@ -1,0 +1,34 @@
+# The builder proxy: iron-proxy in a rootless container. `just sandbox setup` links this file as sandbox-builder-proxy.container for Quadlet.
+# The builder reaches the internet only through it. It holds no token and no CA, so it needs no credential and no bws.
+# The builder connects to the Unix socket proxy.sock in %t/sandbox-builder-proxy. socat in this container joins the socket to the tunnel port of iron-proxy.
+# %h is your home folder. %t is $XDG_RUNTIME_DIR.
+[Unit]
+Description=Builder proxy of the agent sandbox (iron-proxy in a container, host names only)
+# A stop or a restart of sandbox-agent.service stops or restarts this unit.
+PartOf=sandbox-agent.service
+
+# No wait for network-online.
+[Quadlet]
+DefaultDependencies=false
+
+[Container]
+ContainerName=sandbox-builder-proxy
+Image=localhost/sandbox-builder-proxy:latest
+ReadOnly=true
+DropCapability=ALL
+NoNewPrivileges=true
+Tmpfs=/tmp
+WorkingDir=/etc/iron-proxy
+Volume=%h/.config/sandbox/iron-proxy-builder.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
+# The folder of proxy.sock. The builder mounts the same folder. It holds nothing else.
+Volume=%t/sandbox-builder-proxy:/run/sandbox
+Exec=iron-proxy -config /etc/iron-proxy/iron-proxy.yaml
+
+[Service]
+MemoryMax=256M
+MemorySwapMax=0
+TasksMax=256
+ExecStartPre=/usr/bin/mkdir -p -m 0711 %t/sandbox-builder-proxy
+# socat listens on proxy.sock. The mode 0666 lets the builder connect, because it is a subuid in rootless Podman.
+ExecStartPost=/usr/bin/podman exec -d sandbox-builder-proxy socat UNIX-LISTEN:/run/sandbox/proxy.sock,fork,mode=0666,unlink-early TCP:127.0.0.1:18080
+Restart=on-failure

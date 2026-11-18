@@ -1,12 +1,12 @@
 # The agent sandbox, as a Quadlet unit. `just sandbox setup` links this file into ~/.config/containers/systemd/.
 # `just sandbox run` starts it. Quadlet turns it into the service sandbox-agent.service.
-# The container has no network. The host proxy (.sandbox/agent/proxy) is its only way out.
+# The container has no network. The host proxy container (.sandbox/agent/proxy) is its only way out.
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
 [Unit]
 Description=Agent sandbox (Podman and gVisor)
-# The builder starts first. A stop or a restart of this unit stops it, so each session has a new builder.
-Requires=sandbox-builder.service
-After=sandbox-builder.service
+# The builder and the host proxy start first. A stop or a restart of this unit stops them, so each session has a new builder and a new proxy.
+Requires=sandbox-builder.service sandbox-proxy.service
+After=sandbox-builder.service sandbox-proxy.service
 
 # The container needs no network at start. This drops the wait for network-online that Quadlet adds.
 [Quadlet]
@@ -94,6 +94,8 @@ Volume=sandbox-home:/home/agent
 # A sandbox that goes over a limit is killed, and the service shows failed. `just sandbox run` starts it again.
 # MemorySwapMax=0 is needed. Without it, swap hides the memory limit.
 # gVisor counts host threads, and an idle sandbox uses about 50. Raise TasksMax if a heavy job hits it.
+# A stop ends sleep with the signal TERM, which is the exit code 143. This is a normal stop. A kill by a limit (137) still shows failed.
+SuccessExitStatus=143
 MemoryMax=3G
 MemorySwapMax=0
 TasksMax=2048

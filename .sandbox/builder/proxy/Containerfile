@@ -1,0 +1,6 @@
+# The image of the builder proxy: iron-proxy and socat. It has no bws, because the builder proxy holds no token.
+# `just sandbox build` builds it as localhost/sandbox-builder-proxy. The base image is pinned by digest.
+FROM docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+RUN apk add --no-cache socat
+# The unit sets the command.
+ENTRYPOINT []
