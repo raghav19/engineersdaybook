@@ -25,7 +25,7 @@ Run these steps in your main checkout.
 
 ```shell
 just sandbox setup   # install the host proxy, the firewall rule and the container unit
-just sandbox build   # build the image and push it to ghcr.io (the first build takes about 15 minutes)
+just sandbox build   # build the image and push it to ghcr.io
 just sandbox run     # start the container and open Herdr
 ```
 
