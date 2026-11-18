@@ -126,3 +126,26 @@ Rules:
 - **`run` stops at a `Credential` error of the proxy.** The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.
 - **A tool fails with a connection error.** The tool ignores `HTTPS_PROXY`.
 - **You made a new CA.** Run `just sandbox run`.
+
+## Where the files are
+
+Each part has its own folder, with its proxy.
+
+```text
+.sandbox/
+  agent/
+    sandbox-agent.container     the unit of the agent sandbox
+    runsc.conf                  the gVisor flags of runsc
+    image/                      the Dockerfile, sandbox-start, mise.toml, tools, configs
+    proxy/                      the host proxy: iron-proxy.yaml, proxy.container and Containerfile (iron-proxy, socat, bws)
+  builder/
+    sandbox-builder.container   the unit of the builder
+    runsc.conf                  the gVisor flags of runsc-builder
+    image/                      the Containerfile
+    proxy/                      the builder proxy: iron-proxy.yaml, proxy.container and Containerfile (iron-proxy, socat)
+  docs/                         how the sandbox works in detail, and the diagrams
+  justfile                      setup, run, rm and build
+  AGENTS.md                     the rules for an agent that edits the image
+```
+
+The two `proxy/` folders have the same file names. The builder `Containerfile` has no `bws`. `just sandbox setup` links the units into `~/.config/containers/systemd` as `sandbox-proxy.container` for the agent sandbox and `sandbox-builder-proxy.container` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
