@@ -14,5 +14,8 @@
 | `quadlet.drawio` | Source of the Quadlet diagram. Shows the four `.container` files, the Quadlet generator, and the four services in one box. Each service shows its limits. A `Requires` arrow joins each service to the service that it needs. Two notes say that the limits are in the service and that the builder and both proxies are part of the agent. |
 | `quadlet.svg` | The Quadlet diagram as a plain SVG, drawn in the same way. |
 | `quadlet.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white quadlet.svg -o quadlet.png`. |
+| `files.drawio` | Source of the diagram of the files. Shows the repo files of each part, what `just sandbox build` and `setup` make on your host, and the four containers that run. Arrows show `build, link` and `run`. A `Requires` arrow joins each container to the one that it needs. A note says which files hold the placeholders. |
+| `files.svg` | The files diagram as a plain SVG, drawn in the same way. |
+| `files.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white files.svg -o files.png`. |
 
 After an edit of a `.drawio` file, change the SVG in the same way, then make the PNG again. The flows are mermaid diagrams in `../internals.md`.
