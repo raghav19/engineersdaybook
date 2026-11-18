@@ -38,7 +38,6 @@ just sandbox run     # start the container and open Herdr
 | `just sandbox setup` | Installs the host proxy, the firewall rule, the container unit and the gVisor flags. |
 | `just sandbox run` | Makes a new container from the image and opens Herdr. Add a command to run it in place of Herdr. |
 | `just sandbox rm` | Stops the service and removes the container and the builder. The volume stays. |
-| `just sandbox builder-check` | Lists the BuildKit worker from the sandbox. It tests the socket of the builder. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it. `just sandbox build --no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox` | Follows the log of the container. |
@@ -80,7 +79,7 @@ The agent builds an image with `buildctl`. `buildctl` sends the build to BuildKi
 3. The sandbox mounts the folder read-only at `/run/sandbox/buildkit`. `BUILDKIT_HOST` points there, so `buildctl build` needs no `--addr`.
 4. A stop or a restart of `sandbox.service` stops the builder. The state of `buildkitd` is in memory, so the cache and every file of the build are gone.
 
-Run `just sandbox builder-check` to test the socket. It lists one BuildKit worker.
+The Podman health check of the builder runs `buildctl debug workers`. If it fails at the start, `just sandbox run` fails. If it fails later, Podman stops the builder and systemd restarts it with an empty cache.
 
 This build sends an OCI tar back to the sandbox. The base image comes from the client, because the builder has no network:
 
@@ -157,6 +156,7 @@ Each row is one attack of an injected agent and the control that stops it.
 |---|---|
 | `run` says `proxy.sock` is missing | Run `systemctl --user start sandbox-proxy`. |
 | `run` says the container is not healthy | Run `podman logs sandbox`. |
+| `run` fails and the builder is not healthy | Run `podman logs sandbox-builder`. |
 | `systemctl --user status sandbox` shows `failed` | A limit killed the sandbox. Run `just sandbox run`. The clone stays in the volume. |
 | A tool fails with a connection error | The tool ignores `HTTPS_PROXY` and has no route. |
 | You made a new CA | Restart the sandbox with `just sandbox run`. |
@@ -168,7 +168,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
 | `runsc.conf` | The gVisor flags for Podman, for the sandbox (`runsc`) and for the builder (`runsc-builder`). |
 | `builder/` | The builder: the Quadlet unit `sandbox-builder.container`. |
-| `justfile` | The `setup`, `run`, `rm`, `builder-check`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
+| `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
 | `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
 | `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |

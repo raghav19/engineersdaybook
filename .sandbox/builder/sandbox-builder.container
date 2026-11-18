@@ -33,13 +33,15 @@ Exec=--addr unix:///run/buildkit/buildkitd.sock --oci-worker-no-process-sandbox 
 Tmpfs=/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g
 # buildkitd makes its socket here. The sandbox mounts this folder read-only.
 Volume=%t/sandbox/buildkit:/run/buildkit
-# Ready when buildkitd lists a worker. sandbox.service starts after that.
+# Ready when buildkitd lists a worker. sandbox.service starts after that. A builder that is not ready fails the start.
 HealthCmd=buildctl --addr unix:///run/buildkit/buildkitd.sock debug workers
 HealthInterval=5s
 HealthTimeout=5s
-HealthRetries=3
+HealthRetries=6
 HealthStartPeriod=60s
 Notify=healthy
+# An unhealthy builder stops. systemd then restarts it with an empty cache.
+HealthOnFailure=kill
 
 [Service]
 # gVisor ignores the limits of Podman, so the service holds them.

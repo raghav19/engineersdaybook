@@ -6,7 +6,6 @@
 #   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container and the builder. The volume stays.
-#   just sandbox builder-check   list the BuildKit worker from the sandbox. It tests the socket of the builder.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #   just sandbox queue   start the build queue (Valkey). Run it again after you edit build/ or change the secret QUEUE_WORKER_PASSWORD.
 #   just sandbox queue-check   test the rights of the agent and of the worker in the queue.
@@ -152,10 +151,6 @@ run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
 # The builder stops too.
 rm:
     systemctl --user stop sandbox.service
-
-# Test the builder from the sandbox. One listed worker means that the socket works.
-builder-check:
-    podman exec sandbox buildctl debug workers
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 build *args: (_needs credential)
