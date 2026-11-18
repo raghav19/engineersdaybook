@@ -115,7 +115,7 @@ Each row is one attack of an injected agent and the control that stops it.
 
 ## Limits
 
-- No `podman`, `docker` or `buildah` in the sandbox. Build and run images on the host with `podman build`. Read a Containerfile before you build it, because a `RUN` step uses the network of the host and not the proxy.
+- Build images with `buildctl`. See [Builder](#builder). A build step has no network, so send the base image with `--oci-layout`.
 - No SSH and no raw TCP. Use HTTPS remotes. A tool that ignores `HTTPS_PROXY` has no route.
 - No `sudo` and no package install. Change the image.
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
