@@ -34,7 +34,7 @@ AddCapability=SYS_CHROOT
 # The native snapshotter works in gVisor (tested on 2026-11-18).
 Exec=--addr unix:///run/buildkit/buildkitd.sock --oci-worker-no-process-sandbox --oci-worker-snapshotter=native
 # The state of buildkitd (cache, layers) is in memory. It counts against MemoryMax. size= is the cap of the cache.
-Tmpfs=/home/user/.local/share/buildkit:rw,exec,mode=1777,size=2g
+Tmpfs=/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g
 # The socket folder. buildkitd makes buildkitd.sock here. The sandbox mounts the same folder, read-only.
 Volume=%t/sandbox/buildkit:/run/buildkit
 # The unit is ready when buildkitd lists a worker. sandbox.service starts after that.
@@ -47,11 +47,12 @@ Notify=healthy
 
 [Service]
 # gVisor ignores the limits of Podman. These service limits apply to the whole builder.
+# Measured on 2026-11-18: idle, about 75 host threads and 230 MB. A small build, about 95 threads and 300 MB. Raise a limit if a large build hits it.
 # Set MemorySwapMax=0. Without it, swap hides the memory limit.
-MemoryMax=4G
+MemoryMax=2G
 MemorySwapMax=0
-TasksMax=2048
-CPUQuota=400%
+TasksMax=512
+CPUQuota=200%
 # The folder must belong to the user 1000 of the container. A subuid owns it, so chown runs in the user namespace of Podman.
 # The mode 0700 keeps other host users out. The folder is under $XDG_RUNTIME_DIR, which is also 0700.
 ExecStartPre=/usr/bin/mkdir -p -m 0711 %t/sandbox
