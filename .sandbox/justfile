@@ -154,10 +154,12 @@ build *args: (_needs credential)
         '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
 
     # Build. Each stage is an image in {{ registry }}-cache, so a stage that did not change comes from there.
+    # --jobs 4 builds the stages that do not depend on each other at the same time. The default is 1.
     # localhost/sandbox-dev:latest is the tag that sandbox.container uses.
     podman build image \
         -t localhost/sandbox-dev:latest \
         -t {{ registry }}:{{ commit }} \
+        --jobs 4 \
         --cache-from {{ registry }}-cache \
         --cache-to {{ registry }}-cache \
         {{ args }}

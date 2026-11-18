@@ -8,10 +8,10 @@ ENV MISE_DATA_DIR=/opt/mise \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
     COMPLETIONS_DIR=/home/agent/.local/share/bash-completion/completions
 
+# The image has no podman. The sandbox builds with buildctl in the builder.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client nano \
-      podman podman-docker uidmap passt \
  && rm -rf /var/lib/apt/lists/* \
  && ldconfig
 
@@ -59,7 +59,6 @@ FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends binutils socat \
- && apt-get purge -y podman-docker \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
