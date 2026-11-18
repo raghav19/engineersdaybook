@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1540" height="900" viewBox="0 0 1540 900" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1720" height="900" viewBox="0 0 1720 900" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
 <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
@@ -7,7 +7,7 @@
 <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b85450"/></marker>
 <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666666"/></marker>
 </defs>
-<rect x="0" y="0" width="1540" height="900" fill="#ffffff"/>
+<rect x="0" y="0" width="1720" height="900" fill="#ffffff"/>
 <text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Agent Sandbox and Builder with Podman and gVisor</text>
 
 <rect x="20" y="378" width="170" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
@@ -61,47 +61,55 @@
 <rect x="660" y="770" width="380" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="850" y="802.8" font-weight="bold">Quadlet service sandbox-builder.service</text><text x="850" y="823.8">limits: 2 GB, 2 CPUs</text></g>
 
-<rect x="1120" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1240" y="50.3" font-weight="bold">Bitwarden Secrets Manager</text></g>
+<rect x="1290" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="50.3" font-weight="bold">Bitwarden Secrets Manager</text></g>
 
-<rect x="1110" y="198" width="280" height="330" rx="12" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4"/>
+<rect x="1270" y="198" width="280" height="330" rx="12" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4"/>
 
-<rect x="1130" y="218" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1250" y="244.3" font-weight="bold">Host proxy container</text><text x="1250" y="265.3">allowlist, path rules,</text><text x="1250" y="286.3">TLS, token swap</text></g>
+<rect x="1040" y="230" width="160" height="60" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1120" y="254.8" font-weight="bold">proxy.sock</text><text x="1120" y="275.8">Unix socket file</text></g>
 
-<rect x="1130" y="424" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1250" y="450.3" font-weight="bold">Builder proxy container</text><text x="1250" y="471.3">host names only,</text><text x="1250" y="492.3">no tokens</text></g>
+<rect x="1040" y="436" width="160" height="60" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1120" y="460.8" font-weight="bold">proxy.sock</text><text x="1120" y="481.8">Unix socket file</text></g>
 
-<rect x="1090" y="590" width="320" height="84" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1250" y="616.3" font-weight="bold">Quadlet services of the proxies</text><text x="1250" y="637.3">sandbox-proxy.service: 512 MB</text><text x="1250" y="658.3">sandbox-builder-proxy.service: 256 MB</text></g>
+<rect x="1290" y="218" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="244.3" font-weight="bold">Host proxy container</text><text x="1410" y="265.3">allowlist, path rules,</text><text x="1410" y="286.3">TLS, token swap</text></g>
 
-<rect x="1420" y="225" width="110" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1475" y="254.8" font-weight="bold">Internet</text><text x="1475" y="275.8">allowed hosts</text></g>
+<rect x="1290" y="424" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="450.3" font-weight="bold">Builder proxy container</text><text x="1410" y="471.3">host names only,</text><text x="1410" y="492.3">no tokens</text></g>
+
+<rect x="1250" y="590" width="320" height="84" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="616.3" font-weight="bold">Quadlet services of the proxies</text><text x="1410" y="637.3">sandbox-proxy.service: 512 MB</text><text x="1410" y="658.3">sandbox-builder-proxy.service: 256 MB</text></g>
+
+<rect x="1580" y="225" width="110" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1635" y="254.8" font-weight="bold">Internet</text><text x="1635" y="275.8">allowed hosts</text></g>
 
 <path d="M190,416 L285,416" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M190,572 L285,572" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M535,260 L1130,260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1370,260 L1420,260" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1250,70 L1250,218" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
+<path d="M535,260 L1040,260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M1200,260 L1290,260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M1530,260 L1580,260" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1410,70 L1410,218" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
 <path d="M410,454 L410,534" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M410,378 L410,298" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1250,590 L1250,528" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
+<path d="M1410,590 L1410,528" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
 <path d="M410,770 L410,646" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
 <path d="M570,600 L700,600" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M850,770 L850,712" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
 <path d="M570,808 L660,808" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
-<path d="M965,466 L1130,466" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1370,466 L1475,466 L1475,295" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M965,466 L1040,466" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M1200,466 L1290,466" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
+<path d="M1530,466 L1611,466 Q1635,466 1635,442 L1635,295" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M850,584 L850,504" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <text x="237.5" y="406" font-size="14" text-anchor="middle" fill="#000000">runs</text>
 <text x="237.5" y="562" font-size="14" text-anchor="middle" fill="#000000">clone</text>
-<text x="850" y="250" font-size="14" text-anchor="middle" fill="#000000">Unix socket</text>
-<rect x="1201.2" y="130.5" width="97.6" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="1250" y="148.7">real tokens</text></g>
+<text x="790" y="250" font-size="14" text-anchor="middle" fill="#000000">connect</text>
+<rect x="1361.2" y="130.5" width="97.6" height="24" fill="#ffffff"/>
+<g font-size="14" text-anchor="middle" fill="#000000"><text x="1410" y="148.7">real tokens</text></g>
 <text x="422" y="498" font-size="14" text-anchor="start" fill="#000000">reads and writes</text>
 <text x="422" y="342" font-size="14" text-anchor="start" fill="#000000">HTTPS_PROXY</text>
-<rect x="1201.2" y="545.5" width="72" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="1250" y="563.7">limits</text></g>
+<rect x="1361.2" y="545.5" width="72" height="24" fill="#ffffff"/>
+<g font-size="14" text-anchor="middle" fill="#000000"><text x="1410" y="563.7">limits</text></g>
 <rect x="361.2" y="702.5" width="72" height="24" fill="#ffffff"/>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="410" y="720.7">limits</text></g>
 <text x="635" y="565" font-size="14" text-anchor="middle" fill="#000000">docker over</text>
@@ -109,6 +117,5 @@
 <rect x="801.2" y="727.5" width="72" height="24" fill="#ffffff"/>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="850" y="745.7">limits</text></g>
 <text x="615" y="798" font-size="14" text-anchor="middle" fill="#000000">requires</text>
-<text x="1070" y="456" font-size="14" text-anchor="middle" fill="#000000">Unix socket</text>
 <text x="862" y="548" font-size="14" text-anchor="start" fill="#000000">HTTPS_PROXY</text>
 </svg>

@@ -85,8 +85,8 @@
 <path d="M980,1030 L980,1114" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M350,252 L870,252" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M520,1022 L460,1022" fill="none" stroke="#333333" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#a)"/>
-<path d="M240,1214 L240,1365 L520,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,1214 L980,1365 L700,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M240,1214 L240,1341 Q240,1365 264,1365 L520,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,1214 L980,1341 Q980,1365 956,1365 L700,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <text x="252" y="338" font-size="14" text-anchor="start" fill="#000000">TCP</text>
 <text x="252" y="508" font-size="14" text-anchor="start" fill="#000000">connect</text>
 <text x="252" y="526" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
