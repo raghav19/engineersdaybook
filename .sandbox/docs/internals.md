@@ -4,7 +4,7 @@
 
 - Each container has no network. Only a file can cross to the host.
 - A relay in the container turns the proxy address that tools expect into that file.
-- On the host, a bridge joins the file to a proxy.
+- Each proxy runs in its own container. A `socat` there joins the file to the proxy.
 - The host proxy holds the real tokens. The builder proxy holds none.
 - Both proxies allow listed hosts only.
 - The agent sandbox sends a build to the builder through a socket in a shared folder.
@@ -49,37 +49,36 @@ In gVisor, on the host, as your user:
 | sentry | The guest kernel. Runs the system calls. |
 | gofer | A helper. Opens host files for the sentry. |
 
+In each proxy container:
+
+| Part | Job |
+|---|---|
+| `socat` | Started by `ExecStartPost`. Listens on `proxy.sock`. Copies the bytes to the tunnel port `127.0.0.1:18080` of `iron-proxy`. |
+| `iron-proxy` | The proxy. The host proxy holds the real tokens. The builder proxy checks host names only. |
+| `bws` | In the host proxy only. Gets the real tokens from Bitwarden. It reads the credential `bws-token`. |
+
 On the host:
 
 | Part | Job |
 |---|---|
-| `sandbox-agent.service` | The Quadlet unit of the agent sandbox. Requires the builder. |
-| `sandbox-builder.service` | The Quadlet unit of the builder. |
-| `sandbox-proxy-bridge.socket` and `.service` | Make `proxy.sock` and copy its bytes to the host proxy. |
-| `sandbox-proxy.service` | The host proxy: iron-proxy with the real tokens from Bitwarden. |
-| `sandbox-builder-proxy-bridge.socket` and `.service` | Make the second `proxy.sock` and copy its bytes to the builder proxy. |
-| `sandbox-builder-proxy.service` | The builder proxy: iron-proxy in the mode `sni-only`, with no token. |
-| `sandbox-guard.service` | Loads the firewall rule `sandbox-guard.nft`. |
+| `sandbox-agent.service` | The Quadlet unit of the agent sandbox. Requires the builder and the host proxy. |
+| `sandbox-builder.service` | The Quadlet unit of the builder. Requires the builder proxy. |
+| `sandbox-proxy.service` | The Quadlet unit of the host proxy container. |
+| `sandbox-builder-proxy.service` | The Quadlet unit of the builder proxy container. It uses the mode `sni-only` and holds no token. |
 
-The units of one proxy share a name prefix. `systemctl --user status 'sandbox-proxy*'` shows the host proxy and its bridge. `systemctl --user status 'sandbox-builder-proxy*'` shows the builder proxy and its bridge.
-
-The dependencies of the units:
+Each unit is a Quadlet `.container` file. The dependencies of the units:
 
 ```mermaid
 flowchart LR
     AG["sandbox-agent.service"] -- "Requires, After" --> BU["sandbox-builder.service"]
-    BU -- "Requires, After" --> BS["sandbox-builder-proxy-bridge.socket"]
-    BS -- "first connection starts" --> BB["sandbox-builder-proxy-bridge.service"]
-    BB -- "Requires, After" --> BP["sandbox-builder-proxy.service"]
-    BP -- "Wants" --> BS
-    BS -. "PartOf" .-> BP
-    HS["sandbox-proxy-bridge.socket"] -- "first connection starts" --> HB["sandbox-proxy-bridge.service"]
-    HB -- "Requires, After" --> HP["sandbox-proxy.service"]
-    HP -- "Wants" --> HS
-    HS -. "PartOf" .-> HP
+    AG -- "Requires, After" --> HP["sandbox-proxy.service"]
+    BU -- "Requires, After" --> BP["sandbox-builder-proxy.service"]
+    BU -. "PartOf" .-> AG
+    HP -. "PartOf" .-> AG
+    BP -. "PartOf" .-> AG
 ```
 
-`Requires` and `After` start the target first. `Wants` starts the target with the unit. `PartOf` passes a stop or a restart of the target to the unit. The agent sandbox does not require the host proxy. `just sandbox run` checks that its socket exists.
+`Requires` and `After` start the target first. `PartOf` passes a stop or a restart of the target to the unit. A stop of the agent sandbox stops the builder and both proxies. The real tokens are in memory only while a sandbox runs.
 
 ## The flow in phases
 
@@ -88,19 +87,12 @@ flowchart LR
 ```mermaid
 flowchart TD
     A["just sandbox setup"] --> B["Make the CA if it is missing"]
-    A --> C["Link the units, the gVisor flags and repo.git"]
-    A --> D["Install the firewall rule with sudo"]
-    A --> E["Encrypt the Bitwarden token if it is missing"]
-    B --> F["Link, enable and restart both proxies"]
-    C --> F
-    D --> F
-    E --> F
-    F --> G{"Both proxies active?"}
-    G -->|yes| H["Done"]
-    G -->|no| I["Stop with an error"]
+    A --> C["Link the configs of the proxies"]
+    A --> D["Encrypt the Bitwarden token if it is missing"]
+    A --> E["Link the container units, the gVisor flags and repo.git"]
 ```
 
-`setup` stops at the first failed step. The proxies do not start after a failed firewall step.
+`setup` needs no root and starts no container. Run `just sandbox build` next.
 
 ### Build the images
 
@@ -109,7 +101,8 @@ flowchart TD
     A["just sandbox build"] --> B["Log in to ghcr.io with the token from Bitwarden"]
     B --> C["podman build of the agent sandbox image, stage cache in ghcr.io"]
     C --> D["podman build of the builder image from builder/image/Containerfile"]
-    D --> E["Push the commit tag of the agent sandbox image"]
+    D --> P["podman build of the proxy image from host/proxy-image/Containerfile"]
+    P --> E["Push the commit tag of the agent sandbox image"]
     E --> F["Log out of ghcr.io"]
 ```
 
@@ -120,10 +113,12 @@ sequenceDiagram
     participant You
     participant just
     participant systemd
+    participant Proxies as Proxy containers
     participant Builder
     participant Agent as Agent sandbox
     You->>just: just sandbox run
     just->>systemd: daemon-reload, restart sandbox-agent.service
+    systemd->>Proxies: start both proxies, ExecStartPost: socat on proxy.sock
     systemd->>Builder: start a new builder
     Builder-->>systemd: the health check passes
     systemd->>Builder: ExecStartPost: start the relay
@@ -133,7 +128,7 @@ sequenceDiagram
     just->>Agent: check the health, then run herdr
 ```
 
-The builder starts first. A failed health check fails the start. The start of each unit has `ExecStartPost` steps, and a failed step fails the start. The agent sandbox is active after `sandbox-start` ends. It is healthy after `sandbox-start` writes `/tmp/sandbox-ready`.
+The proxies and the builder start first. A failed health check fails the start. The start of each unit has `ExecStartPost` steps, and a failed step fails the start. The agent sandbox is active after `sandbox-start` ends. It is healthy after `sandbox-start` writes `/tmp/sandbox-ready`.
 
 ### One call to the outside
 
@@ -144,13 +139,13 @@ sequenceDiagram
     participant Tool
     participant Relay as relay socat
     participant gVisor
-    participant Bridge as bridge
-    participant Proxy as proxy
+    participant Socat as socat in the proxy container
+    participant Proxy as iron-proxy
     participant Host as Listed host
     Tool->>Relay: connect to 127.0.0.1:3128 or :3129
     Relay->>gVisor: connect to proxy.sock
-    gVisor->>Bridge: the gofer opens proxy.sock
-    Bridge->>Proxy: copy the bytes to 127.0.0.1:18080 or :18085
+    gVisor->>Socat: the gofer opens proxy.sock
+    Socat->>Proxy: copy the bytes to 127.0.0.1:18080
     alt the host is listed
         Proxy->>Host: send the request, host proxy swaps the placeholder
     else the host is not listed
@@ -158,7 +153,7 @@ sequenceDiagram
     end
 ```
 
-The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the bridge, and TCP to the proxy. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
+The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the `socat` in the proxy container, and TCP to the proxy. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
 
 ### One build
 
@@ -205,8 +200,9 @@ The builder never pushes and holds no login.
 | Builder | New for each sandbox session. A stop or a restart of `sandbox-agent.service` removes it. |
 | Cache of the builder | `tmpfs`. Lives as long as the builder. |
 | CA | Made by `setup` for 365 days. `setup` keeps an existing CA. After a new CA, run `just sandbox run`. |
-| Bitwarden access token | Encrypted with `systemd-creds` in `~/.config/credstore.encrypted/bws-token`, mode 0400. |
-| Firewall rule | `sandbox-guard.service` loads it at each boot, before the network. |
+| Proxies | New for each sandbox session. A stop or a restart of `sandbox-agent.service` removes them. |
+| Bitwarden access token | Encrypted with `systemd-creds` in `~/.config/credstore.encrypted/bws-token`, mode 0400. systemd decrypts it to memory for the host proxy. |
+| Real tokens | In the memory of the host proxy only, while a sandbox runs. They are not on disk. |
 
 ## Why the design looks like this
 
@@ -219,12 +215,14 @@ The builder never pushes and holds no login.
 | `host-uds` flags | gVisor blocks a connect to a host Unix socket by default. The agent sandbox uses `open`. The builder uses `all`: it makes `buildkitd.sock` and connects to its proxy socket. |
 | A relay in each container | Tools need a TCP proxy address. The relay turns it into the socket. It runs without a capability. |
 | Socket mode 0666 | In rootless Podman, the container user is a subuid. `$XDG_RUNTIME_DIR` has mode 0700, so only you and the mounting containers reach it. |
-| A bridge on the host | iron-proxy listens on TCP only. `systemd-socket-proxyd` joins the socket to it. The host needs no `socat`. |
+| A `socat` in each proxy container | iron-proxy listens on TCP only. `socat` joins the Unix socket to it. |
+| No port on the host | The tunnel port exists only in the network namespace of the proxy container. No other program on the host reaches it, so the port needs no firewall rule. |
+| The proxies are containers | One kind of unit for every part. A container limits what a proxy bug can reach. |
+| The tokens stay out of the Podman storage | The unit mounts the systemd credential `bws-token`. `bws` puts the real tokens in the environment of `iron-proxy` only. `podman run -e` would write them into the config of the container. |
 | The CA is a mount | The root file system takes no writes. The unit mounts `ca.crt` read-only. It never mounts `ca.key`. |
-| The firewall rule | A TCP port on `127.0.0.1` has no user check. See [The firewall rule](#the-firewall-rule). |
 | Limits on the service | gVisor ignores the limits of Podman. `[Service]` holds `MemoryMax`, `MemorySwapMax`, `TasksMax` and `CPUQuota`. |
 | A second container for builds | A build step runs as root, and the agent can send any step. The wall is the builder container. |
-| A second proxy for the builder | The host proxy ends TLS with its own CA, which a base image does not trust. `sni-only` is global in iron-proxy, so the builder needs its own instance. |
+| A second proxy for the builder | The host proxy ends TLS with its own CA, which a base image does not trust. `sni-only` is global in iron-proxy, so the builder needs its own instance. Each proxy has its own network namespace, so both use the same ports. |
 | The builder cannot reach the host proxy | It mounts only its own socket folder. A hostile step cannot get a swapped token. |
 | `/etc/docker` is read-only | The agent cannot add a builder or change the endpoint. `buildx` writes only to two `tmpfs` folders. |
 | The push runs in the agent sandbox | `docker` cannot push a tar without a daemon, and the builder holds no login. |
@@ -245,7 +243,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | Push to a registry namespace that is not yours | The host proxy answers `403` for a write outside `raghav19`. |
 | Get a token through a build step | The builder cannot reach the host proxy. The builder proxy holds no token. |
 | Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
-| Use a proxy from another process | The firewall rule lets only your user connect to the proxy ports. |
+| Reach a proxy port from the host | No port exists on the host. The ports are inside the proxy containers. |
 | Move code to your host | The only way out is a `git push` to GitHub. You read the branch before you check it out. |
 | Use all memory, CPU or threads | The service limits. The kernel kills the container, not the host. |
 
@@ -269,29 +267,15 @@ The builder has the same model with other values: `runsc-builder`, three capabil
 
 ### Ports
 
-The two proxies reserve **18080 to 18089 on 127.0.0.1**. The containers use only the tunnel of their proxy.
+Both proxies use the same ports on `127.0.0.1`. Each proxy runs in its own container, so the ports exist only inside it and not on the host. The agent sandbox and the builder use only the tunnel.
 
 | Port | Listener |
 |---|---|
-| 18080 to 18084 | Host proxy: tunnel (TCP 18080), HTTP (18081), HTTPS (18082), metrics (18083), DNS (UDP 18084). |
-| 18085 to 18089 | Builder proxy: tunnel (TCP 18085), HTTP (18086), HTTPS (18087), metrics (18088), DNS (UDP 18089). |
-
-### The firewall rule
-
-A TCP or UDP port on `127.0.0.1` has no user check. Without a rule, any local program could connect and send placeholders to get real tokens.
-
-```mermaid
-flowchart LR
-    C["Connection to 127.0.0.1, port 18080 to 18088"] --> Q{"User is you?"}
-    Q -->|yes, a bridge| OK["Accepted"]
-    Q -->|no| NO["Rejected by sandbox-guard.nft"]
-```
-
-- `sandbox-guard.nft` has one clause for TCP (18080 to 18083, 18085 to 18088) and one for UDP (18084, 18089).
-- `just sandbox setup` copies the rule to `/etc/sandbox-guard.nft` and the unit to `/etc/systemd/system/`. Root owns the copies. The unit loads the rule at each boot, before the network.
-- The table is `inet sandbox_guard`. It does not change `ufw` or another firewall.
-- It separates users, not programs of one user. A rootless container of your user with a route to the host loopback can still connect.
-- `$XDG_RUNTIME_DIR` has mode 0700 and guards `proxy.sock`.
+| 18080 | The tunnel (TCP). `socat` connects to it. |
+| 18081 | HTTP |
+| 18082 | HTTPS |
+| 18083 | Metrics |
+| 18084 | DNS (UDP) |
 
 ### The rules for ghcr.io
 
@@ -316,22 +300,20 @@ The agent sandbox holds a placeholder. The host proxy replaces it in the `Author
 
 `agent/image/configs/agents/managed-settings.json` holds the text of the placeholder for the GitHub MCP server, because Claude Code does not expand `$GH_TOKEN` in a header. Qwen Code expands the variable itself.
 
-### Hardening of the proxy units
+### Hardening of the proxy containers
 
-The proxies read requests that the agent controls. A bug gives an attacker the rights of your user. The units limit what a proxy can do. Check the score with `systemd-analyze --user security sandbox-proxy.service`.
+The proxies read requests that the agent controls. A bug gives an attacker what the container holds. This is the mounted files, the network of the container and, in the host proxy, the real tokens in memory. The units limit this.
 
-| Directive | Effect |
+| Setting | Effect |
 |---|---|
-| `NoNewPrivileges=yes` | No gain of rights through a setuid program. |
-| `PrivateTmp=yes` | A private `/tmp`. |
-| `ProtectHome=tmpfs` | An empty `/home`. `BindReadOnlyPaths=` adds back only the files that the proxy needs. |
-| `SystemCallFilter=@system-service` | Only the system calls of a normal service. No `ptrace`, `mount`, module loading, `reboot` or `unshare`. |
-| `SystemCallArchitectures=native` | No 32-bit calls on a 64-bit host. |
-| `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | No raw packet sockets and no netlink sockets. |
-| `RestrictNamespaces=yes`, `RestrictRealtime=yes` | No new namespace. No real-time scheduling. |
-| `ProtectKernelTunables=yes`, `ProtectKernelModules=yes`, `ProtectControlGroups=yes`, `ProtectClock=yes` | No change of kernel settings, modules, control groups or the clock. |
+| `ReadOnly=true` | No write to the root file system. `/tmp` is a `tmpfs`. |
+| `DropCapability=ALL`, `NoNewPrivileges=true` | No capability. A setuid program cannot raise a privilege. |
+| Rootless Podman | The container runs in a user namespace. It has no file of another user. |
+| Read-only mounts | The config and the CA. The host proxy also gets the credential `bws-token`. |
+| `RunInit=true` (host proxy) | An init process passes the stop signal to `bws`. Without it, the stop waits for a kill. |
+| `MemoryMax`, `MemorySwapMax`, `TasksMax` | 512 MB (host proxy) or 256 MB (builder proxy) with no swap. |
 
-The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbox`, the CA in `~/.local/state/sandbox` (the host proxy only), `~/.local/share/mise` and `~/.config/sandbox/bin`. A user unit cannot restrict the network, so the allowlist is the control. Treat `iron-proxy.yaml` and `iron-proxy-builder.yaml` as the most important files.
+The host proxy sees only these files: its config, `ca.crt`, `ca.key`, the credential and the folder of `proxy.sock`. The builder proxy sees its config and its socket folder. A container cannot restrict its own network, so the allowlist is the control. Treat `iron-proxy.yaml` and `iron-proxy-builder.yaml` as the most important files.
 
 ## Limits
 
@@ -340,6 +322,7 @@ The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbo
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
 - Commits use the name `agent` and the email `agent@localhost`. To commit as yourself, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in the shell.
 - Listed hosts can receive data from the agent. Keep both allowlists short.
+- The proxy parses every request of the agent. A bug in iron-proxy can give an attacker the real tokens of the host proxy. Pin the image by digest.
 - A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out.
 - A build step runs any command as root in the builder. It reaches only the hosts of the builder proxy.
 - BuildKit has no authorization. Any process that mounts `buildkitd.sock` can send a build.
@@ -351,11 +334,10 @@ The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbo
 |---|---|
 | agent sandbox | The container `sandbox-agent`. It runs the agent and its tools. |
 | builder | The container `sandbox-builder`. It runs `buildkitd`. New for each sandbox session. |
-| host proxy | iron-proxy with the allowlist and the real tokens. `sandbox-proxy.service`. |
-| builder proxy | A second iron-proxy for the builder. Checks host names only. Holds no token. |
-| relay | `socat` in a container. Copies a local TCP port to `proxy.sock`. |
-| bridge | A socket unit and `systemd-socket-proxyd` on the host. Joins `proxy.sock` to a proxy. |
-| tunnel | The CONNECT port of a proxy: `127.0.0.1:18080` (host proxy) or `:18085` (builder proxy). |
+| host proxy | The container `sandbox-proxy`: iron-proxy with the allowlist and the real tokens. |
+| builder proxy | The container `sandbox-builder-proxy`: a second iron-proxy for the builder. Checks host names only. Holds no token. |
+| relay | `socat` in the agent sandbox or the builder. Copies a local TCP port to `proxy.sock`. |
+| tunnel | The CONNECT port of a proxy: `127.0.0.1:18080` inside the proxy container. `socat` in that container joins `proxy.sock` to it. |
 | placeholder | The text `sandbox-placeholder-<NAME>`. The agent sandbox holds it in place of a token. |
 | Quadlet | A Podman feature. Turns a `.container` file into a systemd service. |
 | BuildKit | The build engine. `buildkitd` is its daemon, `buildx` is the client plugin of `docker`. |
@@ -364,7 +346,7 @@ The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbo
 
 ## Where each part is in the repo
 
-Each part has its own folder. The firewall rule and the setup guide are on the host, so they have a folder of their own.
+Each part has its own folder. Both lanes use the proxy image and the setup guide, so they have a folder of their own.
 
 ```text
 .sandbox/
@@ -372,21 +354,20 @@ Each part has its own folder. The firewall rule and the setup guide are on the h
     sandbox-agent.container     the unit of the agent sandbox
     runsc.conf                  the gVisor flags of runsc
     image/                      the Dockerfile, sandbox-start, mise.toml, tools, configs
-    proxy/                      the host proxy: iron-proxy.yaml, proxy.service, proxy-bridge.socket, proxy-bridge.service
+    proxy/                      the host proxy: iron-proxy.yaml and proxy.container
   builder/
     sandbox-builder.container   the unit of the builder
     runsc.conf                  the gVisor flags of runsc-builder
     image/                      the Containerfile
-    proxy/                      the builder proxy: the same four file names
+    proxy/                      the builder proxy: iron-proxy.yaml and proxy.container
   host/
-    sandbox-guard.nft           the firewall rule for both proxies
-    sandbox-guard.service       loads the rule
+    proxy-image/Containerfile   the image of both proxies: iron-proxy, socat and bws
     README.md                   the guide to set up the proxies
   docs/                         this document and the diagrams
   justfile                      setup, run, rm and build
 ```
 
-The two `proxy/` folders have the same file names. `just sandbox setup` links the units into `~/.config/systemd/user` as `sandbox-proxy*` for the agent sandbox and `sandbox-builder-proxy*` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
+The two `proxy/` folders have the same file names. `just sandbox setup` links the units into `~/.config/containers/systemd` as `sandbox-proxy.container` for the agent sandbox and `sandbox-builder-proxy.container` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
 
 ## What comes next
 
