@@ -6,9 +6,9 @@
 # %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable.
 [Unit]
 Description=Builder of the agent sandbox (BuildKit and gVisor)
-# The builder proxy socket must exist before the container mounts its folder.
-Requires=sandbox-builder-proxy-bridge.socket
-After=sandbox-builder-proxy-bridge.socket
+# The builder proxy must run before the container mounts the folder of its socket.
+Requires=sandbox-builder-proxy.service
+After=sandbox-builder-proxy.service
 # A stop or a restart of sandbox-agent.service stops or restarts the builder.
 PartOf=sandbox-agent.service
 

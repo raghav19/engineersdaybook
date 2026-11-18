@@ -1,0 +1,8 @@
+# The image of both proxies: iron-proxy, socat and bws. The host proxy uses bws to fetch the real tokens. The builder proxy does not use it.
+# `just sandbox build` builds it as localhost/sandbox-proxy. Both base images are pinned by digest.
+FROM ghcr.io/bitwarden/bws:2.1.0@sha256:3927158c53ac5a17d6cbe59fc3e1353e426f168bf246dbfe3668f6de5eaa107f AS bws
+FROM docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+RUN apk add --no-cache socat
+COPY --from=bws /bin/bws /usr/local/bin/bws
+# The units of the two proxies set the command.
+ENTRYPOINT []
