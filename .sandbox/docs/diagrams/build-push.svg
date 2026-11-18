@@ -34,7 +34,7 @@
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="995" y="329.8" font-weight="bold">Allowed hosts</text><text x="995" y="350.8">base images, packages</text></g>
 
 <rect x="470" y="600" width="250" height="70" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="595" y="629.8" font-weight="bold">Host proxy</text><text x="595" y="650.8">swaps in the real token</text></g>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="595" y="629.8" font-weight="bold">Host proxy</text><text x="595" y="650.8">path rules, token swap</text></g>
 
 <rect x="870" y="600" width="250" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="995" y="629.8" font-weight="bold">ghcr.io</text><text x="995" y="650.8">raghav19/NAME:TAG</text></g>

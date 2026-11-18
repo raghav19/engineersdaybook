@@ -18,6 +18,14 @@ A coding agent reads text that you did not write. That text can hold a prompt in
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
+## What the agent can reach
+
+- **GitHub.** The agent reads any repository. A push and a REST write (issues, comments, pull requests, reviews) go to this repository only. A merge, a file write, a removal, a gist, a fork and GraphQL get `403`.
+- **GitHub MCP server.** The proxy opens the URL. The toolsets and the `deny` list in the settings files limit the tools. You plan a central gateway for this.
+- **`ghcr.io`.** The agent reads any namespace and writes in the namespace `raghav19` only.
+- **Other hosts.** The agent reaches the hosts in `agent/proxy/iron-proxy.yaml`. Any other host gets `403`.
+- **Builds.** A `FROM` or `RUN` step reaches the hosts in `builder/proxy/iron-proxy.yaml`, with no token.
+
 For the parts, the flows, the controls and the limits, read [How the sandbox works in detail](docs/internals.md). The terms are in [The names](docs/internals.md#the-names).
 
 ## Prerequisites
