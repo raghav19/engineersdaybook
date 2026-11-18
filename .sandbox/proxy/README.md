@@ -57,7 +57,7 @@ If the firewall step fails, the recipe stops and the proxies do not start.
 ## Step 2: check the proxies
 
 ```bash
-systemctl --user status sandbox-proxy.service sandbox-bridge.socket sandbox-builder-proxy.service sandbox-builder-bridge.socket
+systemctl --user status sandbox-proxy.service sandbox-proxy-bridge.socket sandbox-builder-proxy.service sandbox-builder-proxy-bridge.socket
 ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock" "$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock"
 ```
 

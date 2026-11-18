@@ -64,11 +64,31 @@ On the host:
 |---|---|
 | `sandbox-agent.service` | The Quadlet unit of the agent sandbox. Requires the builder. |
 | `sandbox-builder.service` | The Quadlet unit of the builder. |
-| `sandbox-bridge.socket` and `.service` | Make `proxy.sock` and copy its bytes to the host proxy. |
+| `sandbox-proxy-bridge.socket` and `.service` | Make `proxy.sock` and copy its bytes to the host proxy. |
 | `sandbox-proxy.service` | The host proxy: iron-proxy with the real tokens from Bitwarden. |
-| `sandbox-builder-bridge.socket` and `.service` | Make the second `proxy.sock` and copy its bytes to the builder proxy. |
+| `sandbox-builder-proxy-bridge.socket` and `.service` | Make the second `proxy.sock` and copy its bytes to the builder proxy. |
 | `sandbox-builder-proxy.service` | The builder proxy: iron-proxy in the mode `sni-only`, with no token. |
 | `sandbox-guard.service` | Loads the firewall rule `sandbox-guard.nft`. |
+
+The units of one proxy share a name prefix. `systemctl --user status 'sandbox-proxy*'` shows the host proxy and its bridge. `systemctl --user status 'sandbox-builder-proxy*'` shows the builder proxy and its bridge.
+
+The dependencies of the units:
+
+```mermaid
+flowchart LR
+    AG["sandbox-agent.service"] -- "Requires, After" --> BU["sandbox-builder.service"]
+    BU -- "Requires, After" --> BS["sandbox-builder-proxy-bridge.socket"]
+    BS -- "first connection starts" --> BB["sandbox-builder-proxy-bridge.service"]
+    BB -- "Requires, After" --> BP["sandbox-builder-proxy.service"]
+    BP -- "Wants" --> BS
+    BS -. "PartOf" .-> BP
+    HS["sandbox-proxy-bridge.socket"] -- "first connection starts" --> HB["sandbox-proxy-bridge.service"]
+    HB -- "Requires, After" --> HP["sandbox-proxy.service"]
+    HP -- "Wants" --> HS
+    HS -. "PartOf" .-> HP
+```
+
+`Requires` and `After` start the target first. `Wants` starts the target with the unit. `PartOf` passes a stop or a restart of the target to the unit. The agent sandbox does not require the host proxy. `just sandbox run` checks that its socket exists.
 
 ## The flow in phases
 

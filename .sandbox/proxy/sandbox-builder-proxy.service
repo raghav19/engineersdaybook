@@ -2,7 +2,7 @@
 # `just sandbox setup` links this file with systemctl --user link.
 [Unit]
 Description=iron-proxy: builder proxy of the sandbox builder (host names only, no tokens)
-Wants=sandbox-builder-bridge.socket
+Wants=sandbox-builder-proxy-bridge.socket
 
 [Service]
 Environment=PATH=%h/.config/sandbox/bin:/usr/bin:/bin

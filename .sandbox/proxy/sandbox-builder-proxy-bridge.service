@@ -1,4 +1,4 @@
-# Joins the socket of sandbox-builder-bridge.socket to the tunnel of the builder proxy. systemd starts it at the first connection.
+# Joins the socket of sandbox-builder-proxy-bridge.socket to the tunnel of the builder proxy. systemd starts it at the first connection.
 [Unit]
 Description=Bridge from the builder socket to the builder proxy
 Requires=sandbox-builder-proxy.service

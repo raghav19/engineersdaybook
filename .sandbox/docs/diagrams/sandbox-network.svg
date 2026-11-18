@@ -24,11 +24,11 @@
 <rect x="150" y="570" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="596.3" font-weight="bold">gVisor gofer</text><text x="240" y="617.3">opens the socket</text><text x="240" y="638.3">for the sentry</text></g>
 
-<rect x="105" y="754" width="270" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="777.8" font-weight="bold">proxy.sock</text><text x="240" y="798.8">Unix socket file,</text><text x="240" y="819.8">owned by</text><text x="240" y="840.8">sandbox-bridge.socket</text></g>
+<rect x="90" y="754" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="777.8" font-weight="bold">proxy.sock</text><text x="240" y="798.8">Unix socket file,</text><text x="240" y="819.8">owned by</text><text x="240" y="840.8">sandbox-proxy-bridge.socket</text></g>
 
-<rect x="90" y="954" width="300" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="990.8" font-weight="bold">sandbox-bridge.service</text><text x="240" y="1011.8">systemd-socket-proxyd</text></g>
+<rect x="70" y="954" width="340" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="990.8" font-weight="bold">sandbox-proxy-bridge.service</text><text x="240" y="1011.8">systemd-socket-proxyd</text></g>
 
 <rect x="115" y="1138" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="1164.3" font-weight="bold">Host proxy</text><text x="240" y="1185.3">iron-proxy, mitm</text><text x="240" y="1206.3">allowlist, token swap</text></g>
@@ -50,11 +50,11 @@
 <rect x="890" y="570" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="596.3" font-weight="bold">gVisor gofer</text><text x="980" y="617.3">opens the socket</text><text x="980" y="638.3">for the sentry</text></g>
 
-<rect x="845" y="754" width="270" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="777.8" font-weight="bold">proxy.sock</text><text x="980" y="798.8">Unix socket file,</text><text x="980" y="819.8">owned by</text><text x="980" y="840.8">sandbox-builder-bridge.socket</text></g>
+<rect x="830" y="754" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="777.8" font-weight="bold">proxy.sock</text><text x="980" y="798.8">Unix socket file,</text><text x="980" y="819.8">owned by</text><text x="980" y="840.8">sandbox-builder-proxy-bridge.socket</text></g>
 
-<rect x="830" y="954" width="300" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="990.8" font-weight="bold">sandbox-builder-bridge.service</text><text x="980" y="1011.8">systemd-socket-proxyd</text></g>
+<rect x="810" y="954" width="340" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="990.8" font-weight="bold">sandbox-builder-proxy-bridge.service</text><text x="980" y="1011.8">systemd-socket-proxyd</text></g>
 
 <rect x="855" y="1138" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="1164.3" font-weight="bold">Builder proxy</text><text x="980" y="1185.3">iron-proxy, sni-only</text><text x="980" y="1206.3">host names, no token</text></g>

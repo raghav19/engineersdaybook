@@ -4,7 +4,7 @@
 [Unit]
 Description=iron-proxy: egress proxy of the sandbox
 # Wants= starts the socket of the bridge with the proxy. The socket has PartOf=, so a stop or a restart of the proxy reaches it.
-Wants=sandbox-bridge.socket
+Wants=sandbox-proxy-bridge.socket
 
 [Service]
 WorkingDirectory=%h/.local/state/sandbox
