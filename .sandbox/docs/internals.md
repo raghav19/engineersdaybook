@@ -69,13 +69,19 @@ On the host:
 Each unit is a Quadlet `.container` file. The dependencies of the units:
 
 ```mermaid
-flowchart LR
-    AG["sandbox-agent.service"] -- "Requires, After" --> BU["sandbox-builder.service"]
-    AG -- "Requires, After" --> HP["sandbox-proxy.service"]
-    BU -- "Requires, After" --> BP["sandbox-builder-proxy.service"]
-    BU -. "PartOf" .-> AG
-    HP -. "PartOf" .-> AG
-    BP -. "PartOf" .-> AG
+sequenceDiagram
+    participant Agent as sandbox-agent.service
+    participant HP as sandbox-proxy.service
+    participant Builder as sandbox-builder.service
+    participant BP as sandbox-builder-proxy.service
+    Note over Agent,BP: A start of the agent sandbox
+    Agent->>HP: Requires, After: start the host proxy first
+    Agent->>Builder: Requires, After: start the builder first
+    Builder->>BP: Requires, After: start the builder proxy first
+    Note over Agent,BP: A stop or a restart of the agent sandbox
+    Agent-->>HP: PartOf: stop or restart the host proxy
+    Agent-->>Builder: PartOf: stop or restart the builder
+    Agent-->>BP: PartOf: stop or restart the builder proxy
 ```
 
 `Requires` and `After` start the target first. `PartOf` passes a stop or a restart of the target to the unit. A stop of the agent sandbox stops the builder and both proxies. The real tokens are in memory only while a sandbox runs.
@@ -85,11 +91,21 @@ flowchart LR
 ### Setup, once
 
 ```mermaid
-flowchart TD
-    A["just sandbox setup"] --> B["Make the CA if it is missing"]
-    A --> C["Link the configs of the proxies"]
-    A --> D["Encrypt the Bitwarden token if it is missing"]
-    A --> E["Link the container units, the gVisor flags and repo.git"]
+sequenceDiagram
+    participant You
+    participant just
+    participant Files as Your files
+    participant systemd
+    You->>just: just sandbox setup
+    just->>Files: make the CA in ~/.local/state/sandbox if it is missing
+    just->>Files: link the two configs of the proxies into ~/.config/sandbox
+    opt the credential is missing
+        just->>You: ask for the Bitwarden access token
+        You-->>just: the token
+        just->>Files: encrypt it with systemd-creds into bws-token
+    end
+    just->>Files: link the four container units, the gVisor flags and repo.git
+    just->>systemd: daemon-reload
 ```
 
 `setup` needs no root and starts no container. Run `just sandbox build` next.
@@ -97,13 +113,21 @@ flowchart TD
 ### Build the images
 
 ```mermaid
-flowchart TD
-    A["just sandbox build"] --> B["Log in to ghcr.io with the token from Bitwarden"]
-    B --> C["podman build of the agent sandbox image, stage cache in ghcr.io"]
-    C --> D["podman build of the builder image from builder/image/Containerfile"]
-    D --> P["podman build of the two proxy images from agent/proxy and builder/proxy"]
-    P --> E["Push the commit tag of the agent sandbox image"]
-    E --> F["Log out of ghcr.io"]
+sequenceDiagram
+    participant You
+    participant just
+    participant bws as Bitwarden
+    participant podman
+    participant ghcr as ghcr.io
+    You->>just: just sandbox build
+    just->>bws: read GITHUB_TOKEN
+    just->>podman: log in to ghcr.io
+    just->>podman: build the agent sandbox image
+    podman->>ghcr: pull and push the stage cache
+    just->>podman: build the builder image
+    just->>podman: build the two proxy images
+    just->>ghcr: push the commit tag of the agent sandbox image
+    just->>podman: log out of ghcr.io
 ```
 
 ### Each run
@@ -156,16 +180,23 @@ sequenceDiagram
 The host proxy judges each request in this order:
 
 ```mermaid
-flowchart TD
-    R["Request in the tunnel"] --> H{"Host in the allowlist or in a rule?"}
-    H -->|no| D1["403"]
-    H -->|yes| M{"Method and path match?"}
-    M -->|no| D2["403"]
-    M -->|yes| P{"Placeholder in a header, and host in its rule?"}
-    P -->|yes| S["Replace it with the real token"]
-    P -->|no| F["Send the request as it is"]
-    S --> U["Send the request to the host"]
-    F --> U
+sequenceDiagram
+    participant Tool
+    participant Proxy as host proxy
+    participant Host as The host
+    Tool->>Proxy: a request in the tunnel
+    alt the host is not in the allowlist or in a rule
+        Proxy-->>Tool: 403
+    else the method and the path match no rule
+        Proxy-->>Tool: 403
+    else a rule matches
+        opt a placeholder is in a header and the host is in its rule
+            Proxy->>Proxy: replace the placeholder with the real token
+        end
+        Proxy->>Host: send the request
+        Host-->>Proxy: the response
+        Proxy-->>Tool: the response
+    end
 ```
 
 A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules. The builder proxy has no path rules, because it cannot see a path.
