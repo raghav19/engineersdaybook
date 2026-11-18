@@ -11,7 +11,7 @@ A coding agent reads text that you did not write. That text can hold a prompt in
 | No network | Each container has no route out. The only way out is a proxy container with an allowlist. |
 | No real token | The agent sandbox holds placeholders. Only the host proxy holds the real tokens. |
 | A private clone | The agent works on a clone of your repo. It cannot write to your repo. |
-| Narrow writes | GitHub accepts a write from the agent in this repository only. `ghcr.io` accepts a write in the namespace `raghav19` only. A write tool of the MCP server works in this repository only. |
+| Narrow writes | GitHub accepts a push and a REST write on issues and pull requests from the agent in this repository only. `ghcr.io` accepts a write in the namespace `raghav19` only. |
 | A hardened container | gVisor, no capability, a read-only root file system and limits on memory, CPU and threads. |
 
 ## Architecture
@@ -112,7 +112,7 @@ Rules:
 - **`docker build` says `failed to connect to the docker API`.** `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.
 - **A `FROM` or a `RUN` step gets `403`.** The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`.
 - **`crane push` gets `403`.** The namespace is not `raghav19`.
-- **A GitHub call gets `403`.** The host proxy allows a push to `raghav19/engineersdaybook` and the write tools of the MCP server there. It denies a write through the REST API and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
+- **A GitHub call gets `403`.** The host proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
 - **`status sandbox-agent` shows `failed`.** A limit killed it. Run `just sandbox run`. The clone stays in the volume.
 - **`status sandbox-builder` shows `failed` after `just sandbox rm`.** This is normal. `buildkitd` exits with code 1 when it stops.
 - **`run` stops at a `Credential` error of the proxy.** The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.
