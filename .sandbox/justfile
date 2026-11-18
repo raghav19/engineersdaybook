@@ -52,7 +52,7 @@ help:
     just --list --unsorted
 
 # Run it in your main checkout, because the links of the units point to the files in this folder.
-# It asks for the access token of a Bitwarden machine account. See "What this setup assumes" in host/README.md.
+# It asks for the access token of a Bitwarden machine account. See Prerequisites in README.md.
 # Install and start both proxies. Run it again after you edit a file in agent/, builder/ or host/.
 [script('bash')]
 setup:

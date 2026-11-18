@@ -1,6 +1,6 @@
 # The proxies of the sandbox
 
-Two iron-proxy instances run on the host as systemd user services. They are the only way out of the containers. This guide sets them up. For the ports, the firewall rule, the placeholders and the hardening, read [The proxies](../docs/internals.md#the-proxies).
+Two iron-proxy instances run on the host as systemd user services. They are the only way out of the containers. Read the [Prerequisites](../README.md#prerequisites) first. This guide sets them up. For the ports, the firewall rule, the placeholders and the hardening, read [The proxies](../docs/internals.md#the-proxies).
 
 | | Host proxy | Builder proxy |
 |---|---|---|
@@ -10,28 +10,6 @@ Two iron-proxy instances run on the host as systemd user services. They are the 
 | Socket | `$XDG_RUNTIME_DIR/sandbox/proxy.sock` | `$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock` |
 | TLS | Ends it with the CA of the sandbox | Passes it through (`sni-only`) |
 | Tokens | Real tokens from Bitwarden | None |
-
-## What this setup assumes
-
-This is a personal setup. Other people can use other tools.
-
-- The image registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager.
-- The Bitwarden project holds `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`.
-- You have the access token of a machine account that reads that project. `just sandbox setup` asks for it. Do not paste it into a chat or a file.
-
-For another registry or secret manager, change `iron-proxy.yaml`, `sandbox-proxy.service` and the `build` recipe.
-
-## Before you start
-
-| Need | Check |
-|---|---|
-| A Linux host with a systemd user manager | `systemctl --user is-system-running` |
-| `systemd-creds` and `systemd-socket-proxyd`. The unit uses `/usr/lib/systemd/systemd-socket-proxyd`. | `command -v systemd-creds` and `ls /usr/lib/systemd/systemd-socket-proxyd` |
-| `iron-proxy` and `bws` from `mise install` | `iron-proxy --version` and `bws --version` |
-| `openssl`, to make the CA | `openssl version` |
-| `podman`, `runsc` and `git`. `just` stops if one is missing. | `podman --version` and `runsc --version` |
-| `sudo` and `nft`, for the firewall rule | `sudo -v` and `nft --version` |
-| Linger for your user (optional). The proxies keep running after you log out. | `loginctl enable-linger "$USER"` |
 
 ## Step 1: run the setup
 
