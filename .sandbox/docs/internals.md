@@ -241,6 +241,9 @@ Each row is one attack of an injected agent and the control that stops it.
 | Steal a token | The agent sandbox holds placeholders. The real tokens stay on the host. |
 | Send data to an unlisted host | No network. The proxies answer `403`. |
 | Push to a registry namespace that is not yours | The host proxy answers `403` for a write outside `raghav19`. |
+| Write to another GitHub repository, a gist or a fork | The host proxy answers `403`. A push and a REST write go to `raghav19/engineersdaybook` only. |
+| Merge a pull request or remove a file through the REST API | The host proxy answers `403`. The REST rule allows `POST` and `PATCH` on issues and pull requests only. |
+| Use a tool that the settings do not allow in the GitHub MCP server | `X-MCP-Toolsets` and the deny list in the settings files limit Claude Code. The proxy does not read MCP calls. See [Limits](#limits). |
 | Get a token through a build step | The builder cannot reach the host proxy. The builder proxy holds no token. |
 | Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
 | Reach a proxy port from the host | No port exists on the host. The ports are inside the proxy containers. |
@@ -287,15 +290,23 @@ Both proxies use the same ports on `127.0.0.1`. Each proxy runs in its own conta
 | 18083 | Metrics |
 | 18084 | DNS (UDP) |
 
-### The rules for ghcr.io
+### The rules for GitHub and ghcr.io
 
-The host proxy checks the `CONNECT` first, before it sees a path. So `ghcr.io` has a rule for each step:
+The host proxy checks the `CONNECT` first, before it sees a path. So each of these hosts has a `CONNECT` rule. Reads are open. Writes go to one place, so an injected agent cannot send data to another repository, a gist or a fork.
 
-| Rule | Allows |
-|---|---|
-| `CONNECT` | The tunnel to `ghcr.io`. |
-| `GET`, `HEAD` on `/token`, `/v2/` and `/v2/*` | The login and reads in any namespace. |
-| `POST`, `PATCH`, `PUT` on `/v2/raghav19/*` | Writes in the namespace `raghav19` only. |
+| Host | Rule | Allows |
+|---|---|---|
+| `ghcr.io` | `GET`, `HEAD` on `/token`, `/v2/` and `/v2/*` | The login and reads in any namespace. |
+| `ghcr.io` | `POST`, `PATCH`, `PUT` on `/v2/raghav19/*` | Writes in the namespace `raghav19` only. |
+| `github.com` | `GET`, `HEAD` | Clone, pull and release downloads. |
+| `github.com` | `POST` on `/*/*/git-upload-pack` | A clone or a pull in any repository. |
+| `github.com` | `POST` on `/raghav19/engineersdaybook/git-receive-pack`, with and without `.git` | A push to this repository only. |
+| `api.github.com` | `GET`, `HEAD` | Reads in any repository. |
+| `api.github.com` | `POST`, `PATCH` on `/repos/raghav19/engineersdaybook/issues`, `/issues/*`, `/pulls` and `/pulls/*` | An issue, a comment, a label, a pull request, a review. A merge is a `PUT`, so it gets `403`. A file write, a removal, a branch, a release, a workflow, a fork, a gist and GraphQL get `403`. |
+| `api.githubcopilot.com` | `GET`, `POST`, `DELETE` on `/mcp` and `/mcp/` | The GitHub MCP server. The proxy does not limit the tools. |
+| `*.githubusercontent.com`, `github.githubassets.com`, `www.githubstatus.com` | `GET`, `HEAD` | Reads only. |
+
+To use another repository, change the three paths with `raghav19/engineersdaybook` in `agent/proxy/iron-proxy.yaml`. The builder proxy allows the GitHub hosts in full, because it cannot see a path. It holds no token, so GitHub refuses a write from it.
 
 ### Placeholders
 
@@ -332,6 +343,10 @@ The host proxy sees only these files: its config, `ca.crt`, `ca.key`, the creden
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
 - Commits use the name `agent` and the email `agent@localhost`. To commit as yourself, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in the shell.
 - Listed hosts can receive data from the agent. Keep both allowlists short.
+- The project repository accepts writes. The agent can push a branch and write an issue or a comment there. Read the branch and the text before you trust them.
+- The proxy does not read MCP calls. `X-MCP-Toolsets` and the `deny` list are settings of the client. An agent that calls `/mcp/` with `curl` can use any tool that the token reaches. A central gateway is the control for this.
+- A write tool and `git push` can write to any branch of the project repository, `main` included. Protect `main` on GitHub.
+- A rule sees the host, the method and the path, not the body. `gh` is not in the image. Its GraphQL calls would get `403`.
 - The proxy parses every request of the agent. A bug in iron-proxy can give an attacker the real tokens of the host proxy. Pin the image by digest.
 - A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out.
 - A build step runs any command as root in the builder. It reaches only the hosts of the builder proxy.
