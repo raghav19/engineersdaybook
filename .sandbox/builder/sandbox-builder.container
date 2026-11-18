@@ -7,8 +7,8 @@
 [Unit]
 Description=Builder of the agent sandbox (BuildKit and gVisor)
 # The builder proxy socket must exist before the container mounts its folder.
-Requires=sandbox-builder-bridge.socket
-After=sandbox-builder-bridge.socket
+Requires=sandbox-builder-proxy-bridge.socket
+After=sandbox-builder-proxy-bridge.socket
 # A stop or a restart of sandbox-agent.service stops or restarts the builder.
 PartOf=sandbox-agent.service
 

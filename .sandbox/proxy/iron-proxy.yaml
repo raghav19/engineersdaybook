@@ -13,7 +13,7 @@ dns:
 proxy:
   http_listen: "127.0.0.1:18081"
   https_listen: "127.0.0.1:18082"
-  # The tunnel takes CONNECT and SOCKS5. sandbox-bridge.socket joins it to the Unix socket that the sandbox mounts.
+  # The tunnel takes CONNECT and SOCKS5. sandbox-proxy-bridge.socket joins it to the Unix socket that the sandbox mounts.
   tunnel_listen: "127.0.0.1:18080"
 tls:
   ca_cert: ca.crt

@@ -113,8 +113,8 @@ setup:
     fi
 
     # The builder proxy holds no token. The builder reaches the internet through it.
-    systemctl --user link "$proxy"/sandbox-{proxy.service,bridge.service,bridge.socket}
-    systemctl --user link "$proxy"/sandbox-builder-{proxy.service,bridge.service,bridge.socket}
+    systemctl --user link "$proxy"/sandbox-{proxy.service,proxy-bridge.service,proxy-bridge.socket}
+    systemctl --user link "$proxy"/sandbox-builder-{proxy.service,proxy-bridge.service,proxy-bridge.socket}
     systemctl --user enable sandbox-proxy.service sandbox-builder-proxy.service
     systemctl --user restart sandbox-proxy.service sandbox-builder-proxy.service
     sleep 2
