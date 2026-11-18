@@ -32,13 +32,7 @@ transforms:
         - code.claude.com
         # Qwen Code: the Token Plan (international, Singapore) endpoint
         - token-plan.ap-southeast-1.maas.aliyuncs.com
-        # GitHub: git, API, release downloads and the GitHub MCP server
-        - github.com
-        - api.github.com
-        - api.githubcopilot.com
-        - "*.githubusercontent.com"
-        - github.githubassets.com
-        - www.githubstatus.com
+        # GitHub is in rules below, not here: reads are open and writes are limited to one repository.
         # MCP servers
         - mcp.draw.io
         - schemas.fluxoperator.dev
@@ -101,6 +95,24 @@ transforms:
         - {host: ghcr.io, methods: [CONNECT]}
         - {host: ghcr.io, methods: [GET, HEAD], paths: ["/token", "/v2/", "/v2/*"]}
         - {host: ghcr.io, methods: [POST, PATCH, PUT], paths: ["/v2/raghav19/*"]}
+      # GitHub. Reads are open. Writes go to the repository raghav19/engineersdaybook only, so an injected agent cannot send data to another repository, a gist or an issue elsewhere.
+      # Each host needs a CONNECT rule, because the proxy decides at the CONNECT. The proxy cannot read the body of a request.
+      # Static hosts: reads only.
+        - {host: "*.githubusercontent.com", methods: [CONNECT, GET, HEAD]}
+        - {host: github.githubassets.com, methods: [CONNECT, GET, HEAD]}
+        - {host: www.githubstatus.com, methods: [CONNECT, GET, HEAD]}
+      # Git over HTTPS and release downloads. A clone or a pull is a POST of git-upload-pack and reads any repository. A push is a POST of git-receive-pack in the repository of this project only.
+        - {host: github.com, methods: [CONNECT]}
+        - {host: github.com, methods: [GET, HEAD]}
+        - {host: github.com, methods: [POST], paths: ["/*/*/git-upload-pack"]}
+        - {host: github.com, methods: [POST], paths: ["/raghav19/engineersdaybook/git-receive-pack", "/raghav19/engineersdaybook.git/git-receive-pack"]}
+      # The REST API. A write is possible in the repository of this project only. A gist, a fork or an issue in another repository gets 403. GraphQL gets 403, because its path does not show what a query writes.
+        - {host: api.github.com, methods: [CONNECT]}
+        - {host: api.github.com, methods: [GET, HEAD]}
+        - {host: api.github.com, methods: [POST, PATCH, PUT, DELETE], paths: ["/repos/raghav19/engineersdaybook/*"]}
+      # The GitHub MCP server in the read-only mode. The URL /mcp/readonly has the read tools only. The default URL /mcp/ has write tools for any repository that the token reaches, so it gets 403.
+        - {host: api.githubcopilot.com, methods: [CONNECT]}
+        - {host: api.githubcopilot.com, methods: [GET, POST, DELETE], paths: ["/mcp/readonly", "/mcp/readonly/*"]}
   - name: secrets
     config:
       secrets:

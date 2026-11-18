@@ -26,7 +26,7 @@
       "httpUrl": "https://schemas.fluxoperator.dev/mcp"
     },
     "github": {
-      "httpUrl": "https://api.githubcopilot.com/mcp/",
+      "httpUrl": "https://api.githubcopilot.com/mcp/readonly",
       "headers": {
         "Authorization": "Bearer $GH_TOKEN",
         "X-MCP-Toolsets": "context,issues,pull_requests,repos"
