@@ -11,5 +11,8 @@
 | `build-push.drawio` | Source of the build and push diagram. Shows the path of `docker build` from the agent sandbox to the builder, the tar file, and the path of `crane push` through the host proxy to `ghcr.io`. |
 | `build-push.svg` | The build and push diagram as a plain SVG, drawn in the same way. |
 | `build-push.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white build-push.svg -o build-push.png`. |
+| `quadlet.drawio` | Source of the Quadlet diagram. Shows the two `.container` files, the Quadlet generator, and the two services. Each service is one cgroup with its limits, `podman run --cgroups=split`, `conmon` and the gVisor container. The agent service requires the builder. The builder is part of the agent service. |
+| `quadlet.svg` | The Quadlet diagram as a plain SVG, drawn in the same way. |
+| `quadlet.png` | The PNG of that SVG, made with `rsvg-convert -z 2 -b white quadlet.svg -o quadlet.png`. |
 
 After an edit of a `.drawio` file, change the SVG in the same way, then make the PNG again. The flows are mermaid diagrams in `../internals.md`.
