@@ -6,7 +6,7 @@ Written on 2026-11-18. The index of all handoff documents is `docs/handoff.md`. 
 
 - [PR #323](https://github.com/raghav19/engineersdaybook/pull/323) is in `main` (commit `b4c9525`). It holds the code, the three rewritten docs and the new diagram. The body of the PR has the test evidence.
 - The host has not run the new setup, as far as this session knows. See "Next steps".
-- A research note on build capability in agent sandboxes is in progress. The owner asked for it at the end of the session. The target file is `docs/research/agent-sandbox-build-capability.md`. A background agent writes it in the worktree `research-agent-build-capability`. The note may not be on `main` yet. Check the open PRs.
+- The research note on build capability in agent sandboxes is in [PR #325](https://github.com/raghav19/engineersdaybook/pull/325). The file is `docs/research/agent-sandbox-build-capability.md`. The owner asked what sources recommend. The short answer: sources rarely cover builds. Code builds stay in the sandbox with a host allowlist. For image builds, sources ship from a trusted CI, or use a microVM with its own daemon. No source describes a separate disposable builder for an untrusted agent. Read the note for the ranking and the gaps of this design.
 - The worktree `sandbox-docker-buildx` still holds a git stash, `option B: registry proxy for builder push`. The owner rejected that design. Do not apply it.
 
 ## The design in one view
@@ -55,14 +55,15 @@ Not tested:
 3. Template units for the proxies (`sandbox-proxy@.service` and the bridge units). They save about 3 files. The owner deferred this. Do not start it without a request.
 4. The Dockerfile stage numbers skip 8. This gap is old, and it is not part of this work.
 5. The open decisions of the earlier handoff are still open. They are: three stale untracked files, two untracked handoffs to commit or keep, and the Go listener in `code/agent-sandbox/builder/`.
-6. The result of the build capability research. The owner asked what the sources recommend. Read the note, then decide if the design needs a change.
+6. The research note lists ten open questions. The main ones: who signs a pushed image, and does the agent need to ship images or only test them.
+7. The host proxy swaps the `ghcr.io` token for any path of `ghcr.io`. The earlier plan had a path rule for `/v2/raghav19/sandbox-builds/**`. Decide on a path rule in `proxy/iron-proxy.yaml`, and check the scope of the `GITHUB_TOKEN` behind the placeholder.
 
 ## Next steps
 
 1. On the host, stop the old unit and remove its link: `systemctl --user stop sandbox.service`, then remove `~/.config/containers/systemd/sandbox.container`. Then run `just sandbox setup`, `just sandbox build` and `just sandbox run`. Remove a stale `$XDG_RUNTIME_DIR/sandbox/build.sock` if it exists.
 2. Build and push a real repo from the agent sandbox with `docker build --output type=docker` and `crane push`. Check the proxy log for the token swap.
 3. Remove the test package `sandbox-readme-validate` in the GitHub package settings. The token of the session cannot remove it.
-4. Read the research note and the comparison with this design. Write a decision in the handoff index or in an ADR.
+4. Read the research note and its comparison with this design. Answer the open questions. Write the decision in an ADR.
 5. Test `network=none` for the agent container and a real package install in a `RUN` step.
 
 ## Rules and traps for the next session
@@ -92,5 +93,5 @@ Not tested:
 
 - PR: [#323](https://github.com/raghav19/engineersdaybook/pull/323) (docker, crane and the builder proxy). Earlier: [#317](https://github.com/raghav19/engineersdaybook/pull/317) (the builder).
 - Sandbox docs: `.sandbox/README.md`, `.sandbox/docs/internals.md`, `.sandbox/proxy/README.md`.
-- Research: `docs/research/remote-buildkit-for-agent-sandbox.md`. In progress: `docs/research/agent-sandbox-build-capability.md`.
+- Research: `docs/research/remote-buildkit-for-agent-sandbox.md` and `docs/research/agent-sandbox-build-capability.md` (PR #325).
 - Memory of the project: `sandbox-buildkit-builder-2026-11-18` and `sandbox-owner-working-style`.
