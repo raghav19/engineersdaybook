@@ -112,7 +112,7 @@ Rules:
 - **`docker build` says `failed to connect to the docker API`.** `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.
 - **A `FROM` or a `RUN` step gets `403`.** The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`.
 - **`crane push` gets `403`.** The namespace is not `raghav19`.
-- **A GitHub call gets `403`.** The host proxy allows a write in `raghav19/engineersdaybook` only, and a write tool of the MCP server works in this repository only. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
+- **A GitHub call gets `403`.** The host proxy allows a push to `raghav19/engineersdaybook` and the write tools of the MCP server there. It denies a write through the REST API and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
 - **`status sandbox-agent` shows `failed`.** A limit killed it. Run `just sandbox run`. The clone stays in the volume.
 - **`status sandbox-builder` shows `failed` after `just sandbox rm`.** This is normal. `buildkitd` exits with code 1 when it stops.
 - **`run` stops at a `Credential` error of the proxy.** The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.

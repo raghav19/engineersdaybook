@@ -241,7 +241,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | Steal a token | The agent sandbox holds placeholders. The real tokens stay on the host. |
 | Send data to an unlisted host | No network. The proxies answer `403`. |
 | Push to a registry namespace that is not yours | The host proxy answers `403` for a write outside `raghav19`. |
-| Write to another GitHub repository, a gist or a fork | The host proxy answers `403`. A write is possible in `raghav19/engineersdaybook` only. |
+| Write to another GitHub repository, a gist or a fork | The host proxy answers `403`. A push goes to `raghav19/engineersdaybook` only. The REST API takes no write. |
 | Write through the GitHub MCP server | The policy `mcp` allows a write tool in `raghav19/engineersdaybook` only. Other calls get an error. |
 | Get a token through a build step | The builder cannot reach the host proxy. The builder proxy holds no token. |
 | Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
@@ -301,7 +301,7 @@ The host proxy checks the `CONNECT` first, before it sees a path. So each of the
 | `github.com` | `POST` on `/*/*/git-upload-pack` | A clone or a pull in any repository. |
 | `github.com` | `POST` on `/raghav19/engineersdaybook/git-receive-pack`, with and without `.git` | A push to this repository only. |
 | `api.github.com` | `GET`, `HEAD` | Reads in any repository. |
-| `api.github.com` | `POST`, `PATCH`, `PUT`, `DELETE` on `/repos/raghav19/engineersdaybook/*` | Writes in this repository only. A gist, a fork, an issue elsewhere and GraphQL get `403`. |
+| `api.github.com` | No rule for `POST`, `PATCH`, `PUT` and `DELETE` | A write through the REST API and GraphQL get `403`. A path rule cannot allow a comment and deny a merge, so every write goes through the MCP tools. |
 | `api.githubcopilot.com` | `GET`, `POST`, `DELETE` on `/mcp` and `/mcp/` | The GitHub MCP server. The section `mcp` limits the tools. See [The MCP policy](#the-mcp-policy). |
 | `*.githubusercontent.com`, `github.githubassets.com`, `www.githubstatus.com` | `GET`, `HEAD` | Reads only. |
 
