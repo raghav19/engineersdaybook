@@ -2,6 +2,8 @@
 
 Written on 2026-11-10. The index of all handoff documents is `docs/handoff.md`. This document continues [podman-plain-sandbox.md](podman-plain-sandbox.md). Where the two differ, this one is right.
 
+> **Update of 2026-11-18.** [podman-gvisor-sandbox.md](podman-gvisor-sandbox.md) and `.sandbox/docs/internals.md` are newer. The runtime is gVisor, and the sandbox is a Quadlet unit. The proxy and the secrets (Bitwarden) of this document are still current.
+
 The owner merged both PRs of the new sandbox: [#291](https://github.com/raghav19/engineersdaybook/pull/291) (the host proxy) and [#292](https://github.com/raghav19/engineersdaybook/pull/292) (the sandbox). `main` is at `7c2fe93`. The host of the owner still runs the old design. A fresh session continues with the README PR, the host bring-up and the open decisions. This handoff lets it start without the old conversation. Read it, then read "Next steps".
 
 ## Goal
