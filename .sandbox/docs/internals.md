@@ -11,9 +11,25 @@
 
 ## The picture
 
-[![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
-
 [![The agent sandbox and the builder](diagrams/architecture.png)](diagrams/architecture.svg)
+
+Both containers use one model for each call to the outside:
+
+```mermaid
+flowchart LR
+    subgraph AS["Agent sandbox"]
+        T["Agent tools"] -->|HTTPS_PROXY| R1["relay 127.0.0.1:3128"]
+    end
+    subgraph BU["Builder"]
+        B["buildkitd and build steps"] -->|HTTPS_PROXY| R2["relay 127.0.0.1:3129"]
+    end
+    R1 -->|Unix socket| BR1["bridge"] --> HP["Host proxy: allowlist and token swap"] --> NET["Internet"]
+    R2 -->|Unix socket| BR2["bridge"] --> BP["Builder proxy: host names only"] --> NET
+```
+
+The network path of the agent sandbox, inside gVisor:
+
+[![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
 
 ## The cast
 
@@ -73,7 +89,7 @@ flowchart TD
     G -->|no| I["Stop with an error"]
 ```
 
-`setup` stops at the first failed step. The proxies do not start after a failed firewall step. It asks for the Bitwarden token only if the credential is missing or unreadable.
+`setup` stops at the first failed step. The proxies do not start after a failed firewall step.
 
 ### Build the images
 
@@ -192,17 +208,129 @@ The builder never pushes and holds no login.
 | Socket mode 0666 | In rootless Podman, the container user is a subuid. `$XDG_RUNTIME_DIR` has mode 0700, so only you and the mounting containers reach it. |
 | A bridge on the host | iron-proxy listens on TCP only. `systemd-socket-proxyd` joins the socket to it. The host needs no `socat`. |
 | The CA is a mount | The root file system takes no writes. The unit mounts `ca.crt` read-only. It never mounts `ca.key`. |
-| The firewall rule | A TCP port on `127.0.0.1` has no user check. Without the rule, any local user could use the proxies. |
+| The firewall rule | A TCP port on `127.0.0.1` has no user check. See [The firewall rule](#the-firewall-rule). |
 | Limits on the service | gVisor ignores the limits of Podman. `[Service]` holds `MemoryMax`, `MemorySwapMax`, `TasksMax` and `CPUQuota`. |
 | A second container for builds | A build step runs as root, and the agent can send any step. The wall is the builder container. |
 | A second proxy for the builder | The host proxy ends TLS with its own CA, which a base image does not trust. `sni-only` is global in iron-proxy, so the builder needs its own instance. |
 | The builder cannot reach the host proxy | It mounts only its own socket folder. A hostile step cannot get a swapped token. |
 | `/etc/docker` is read-only | The agent cannot add a builder or change the endpoint. `buildx` writes only to two `tmpfs` folders. |
 | The push runs in the agent sandbox | `docker` cannot push a tar without a daemon, and the builder holds no login. |
-| `no-new-privileges` off in the builder | `newuidmap` needs it. With it on, `rootlesskit` hangs. |
+| `no-new-privileges` off in the builder | `newuidmap` needs it. |
 | The socket folder belongs to subuid 1000 | The builder and the agent share that subuid. The folder has mode 0700. |
 | The cache is in `tmpfs` | A stop removes it. It counts against `MemoryMax`. |
 | The health check fails the start | `Notify=healthy` holds `sandbox-agent.service`. `HealthOnFailure=kill` replaces a bad builder. |
+
+## Security controls
+
+Each row is one attack of an injected agent and the control that stops it.
+
+| If the agent tries to | What stops it |
+|---|---|
+| Plant a git hook or a config change in your repo | It works in a clone. The `.git` folder of your repo is a read-only mount. |
+| Steal a token | The agent sandbox holds placeholders. The real tokens stay on the host. |
+| Send data to an unlisted host | No network. The proxies answer `403`. |
+| Push to a registry namespace that is not yours | The host proxy answers `403` for a write outside `raghav19`. |
+| Get a token through a build step | The builder cannot reach the host proxy. The builder proxy holds no token. |
+| Break out of the container | gVisor, no capability, `no-new-privileges` and a user that is not root. |
+| Use a proxy from another process | The firewall rule lets only your user connect to the proxy ports. |
+| Move code to your host | The only way out is a `git push` to GitHub. You read the branch before you check it out. |
+| Use all memory, CPU or threads | The service limits. The kernel kills the container, not the host. |
+
+`sandbox-agent.container` sets these controls for the agent sandbox:
+
+| Control | Effect |
+|---|---|
+| `--runtime=runsc --network=none` | gVisor runs the system calls. The network namespace has only the loopback. |
+| `--read-only` | No write to `/etc`, `/usr`, `/opt/mise`, the policy of Claude Code or the CA. |
+| tmpfs on `/tmp` and `/run` | Scratch space. A restart empties it. |
+| Volume `sandbox-home` at `/home/agent` | Keeps the clone, the logins and the histories. |
+| The repo in clone mode | The unit mounts `.git` read-only at `/run/sandbox/source`. `sandbox-start` clones it into the volume. |
+| `--cap-drop=ALL`, `no-new-privileges` | No capability. A setuid program cannot raise a privilege. |
+| `User=agent` (uid 1000) | A subuid in rootless Podman, not your host user. |
+| `MemoryMax`, `MemorySwapMax`, `TasksMax`, `CPUQuota` | 3 GB with no swap, 2048 threads, 4 CPUs. |
+| Read-only mounts | The CA, the socket folders, the `.git` of the repo and the theme. |
+
+The builder has the same model with other values: `runsc-builder`, three capabilities, 2 GB with no swap, 1024 threads, 2 CPUs and a 1 GB `tmpfs` cache.
+
+## The proxies
+
+### Ports
+
+The two proxies reserve **18080 to 18089 on 127.0.0.1**. The containers use only the tunnel of their proxy.
+
+| Port | Listener |
+|---|---|
+| 18080 to 18084 | Host proxy: tunnel (TCP 18080), HTTP (18081), HTTPS (18082), metrics (18083), DNS (UDP 18084). |
+| 18085 to 18089 | Builder proxy: tunnel (TCP 18085), HTTP (18086), HTTPS (18087), metrics (18088), DNS (UDP 18089). |
+
+### The firewall rule
+
+A TCP or UDP port on `127.0.0.1` has no user check. Without a rule, any local program could connect and send placeholders to get real tokens.
+
+```mermaid
+flowchart LR
+    C["Connection to 127.0.0.1, port 18080 to 18088"] --> Q{"User is you?"}
+    Q -->|yes, a bridge| OK["Accepted"]
+    Q -->|no| NO["Rejected by sandbox-guard.nft"]
+```
+
+- `sandbox-guard.nft` has one clause for TCP (18080 to 18083, 18085 to 18088) and one for UDP (18084, 18089).
+- `just sandbox setup` copies the rule to `/etc/sandbox-guard.nft` and the unit to `/etc/systemd/system/`. Root owns the copies. The unit loads the rule at each boot, before the network.
+- The table is `inet sandbox_guard`. It does not change `ufw` or another firewall.
+- It separates users, not programs of one user. A rootless container of your user with a route to the host loopback can still connect.
+- `$XDG_RUNTIME_DIR` has mode 0700 and guards `proxy.sock`.
+
+### The rules for ghcr.io
+
+The host proxy checks the `CONNECT` first, before it sees a path. So `ghcr.io` has a rule for each step:
+
+| Rule | Allows |
+|---|---|
+| `CONNECT` | The tunnel to `ghcr.io`. |
+| `GET`, `HEAD` on `/token`, `/v2/` and `/v2/*` | The login and reads in any namespace. |
+| `POST`, `PATCH`, `PUT` on `/v2/raghav19/*` | Writes in the namespace `raghav19` only. |
+
+### Placeholders
+
+The agent sandbox holds a placeholder. The host proxy replaces it in the `Authorization` header of a request to the hosts of its rule. Each value must equal a `proxy_value` line in `proxy/iron-proxy.yaml`.
+
+| Placeholder, and the variable of the proxy | Hosts |
+|---|---|
+| `sandbox-placeholder-GH_TOKEN`, from `GH_TOKEN` | `github.com`, `api.github.com`, `api.githubcopilot.com` |
+| `sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN`, from `CLAUDE_CODE_OAUTH_TOKEN` | `api.anthropic.com` |
+| `sandbox-placeholder-QWEN_API_KEY`, from `QWEN_API_KEY` | `token-plan.ap-southeast-1.maas.aliyuncs.com` |
+| `sandbox-placeholder-GHCR_PUSH_TOKEN`, from `GITHUB_TOKEN`. The login is in `/etc/docker/config.json`. | `ghcr.io` |
+
+`image/configs/agents/managed-settings.json` holds the text of the placeholder for the GitHub MCP server, because Claude Code does not expand `$GH_TOKEN` in a header. Qwen Code expands the variable itself.
+
+### Hardening of the proxy units
+
+The proxies read requests that the agent controls. A bug gives an attacker the rights of your user. The units limit what a proxy can do. Check the score with `systemd-analyze --user security sandbox-proxy.service`.
+
+| Directive | Effect |
+|---|---|
+| `NoNewPrivileges=yes` | No gain of rights through a setuid program. |
+| `PrivateTmp=yes` | A private `/tmp`. |
+| `ProtectHome=tmpfs` | An empty `/home`. `BindReadOnlyPaths=` adds back only the files that the proxy needs. |
+| `SystemCallFilter=@system-service` | Only the system calls of a normal service. No `ptrace`, `mount`, module loading, `reboot` or `unshare`. |
+| `SystemCallArchitectures=native` | No 32-bit calls on a 64-bit host. |
+| `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX` | No raw packet sockets and no netlink sockets. |
+| `RestrictNamespaces=yes`, `RestrictRealtime=yes` | No new namespace. No real-time scheduling. |
+| `ProtectKernelTunables=yes`, `ProtectKernelModules=yes`, `ProtectControlGroups=yes`, `ProtectClock=yes` | No change of kernel settings, modules, control groups or the clock. |
+
+The proxy sees only these paths in `/home`: the two configs in `~/.config/sandbox`, the CA in `~/.local/state/sandbox` (the host proxy only), `~/.local/share/mise` and `~/.config/sandbox/bin`. A user unit cannot restrict the network, so the allowlist is the control. Treat `iron-proxy.yaml` and `iron-proxy-builder.yaml` as the most important files.
+
+## Limits
+
+- Use HTTPS remotes. There is no SSH and no raw TCP. A tool that ignores `HTTPS_PROXY` has no route.
+- No `sudo` and no package install in the agent sandbox. Change the image.
+- gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
+- Commits use the name `agent` and the email `agent@localhost`. To commit as yourself, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in the shell.
+- Listed hosts can receive data from the agent. Keep both allowlists short.
+- A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out.
+- A build step runs any command as root in the builder. It reaches only the hosts of the builder proxy.
+- BuildKit has no authorization. Any process that mounts `buildkitd.sock` can send a build.
+- `--output type=docker` supports one platform. The cache of the builder ends with the builder.
 
 ## The names
 
@@ -234,4 +362,4 @@ The builder never pushes and holds no login.
 
 ## What comes next
 
-Read the [README of the proxies](../proxy/README.md) for the ports, the placeholders and the hardening of the proxy unit.
+Read the [guide to set up the proxies](../proxy/README.md) for the steps and the daily commands.
