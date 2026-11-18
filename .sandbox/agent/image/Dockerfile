@@ -96,13 +96,10 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
-# Root-only: sandbox-entry, managed settings.
+# Root-only: the start script, managed settings.
 USER root
-COPY --chmod=0755 sandbox-entry /usr/local/bin/sandbox-entry
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# The entry starts the relay to the proxy and runs the command. sandbox-agent.container starts the container as the user agent. The default command is the start script.
-ENTRYPOINT ["sandbox-entry"]
-CMD ["sandbox-start"]
+# The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
 
 # At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
 # as a skeleton. sandbox-start copies it into the tmpfs at each start.

@@ -92,7 +92,7 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 | Path | Content |
 |---|---|
 | `agent/` | The agent sandbox: the unit `sandbox-agent.container`, `runsc.conf`, `image/` and `proxy/` (the host proxy and its bridge). |
-| `builder/` | The builder: the unit `sandbox-builder.container`, `runsc.conf`, `image/` (the `Containerfile` and `relay-entry`) and `proxy/` (the builder proxy and its bridge). |
+| `builder/` | The builder: the unit `sandbox-builder.container`, `runsc.conf`, `image/` (the `Containerfile`) and `proxy/` (the builder proxy and its bridge). |
 | `host/` | The firewall rule for both proxies and the [guide to set up the proxies](host/README.md). |
 | `docs/` | [How the sandbox works in detail](docs/internals.md) and the diagrams. |
 | `justfile` | The recipes `setup`, `run`, `rm` and `build`. |
