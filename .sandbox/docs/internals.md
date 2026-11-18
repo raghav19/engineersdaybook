@@ -6,7 +6,7 @@
 - A relay in the container turns the proxy address that tools expect into that file.
 - Each proxy runs in its own container. A `socat` there joins the file to the proxy.
 - The host proxy holds the real tokens. The builder proxy holds none.
-- Both proxies allow listed hosts only.
+- Both proxies allow listed hosts only. The host proxy also checks the method and the path, so a write goes to one GitHub repository only.
 - The agent sandbox sends a build to the builder through a socket in a shared folder.
 - Quadlet turns each container file into a systemd service. The service limits memory, CPU and threads.
 
@@ -146,12 +146,29 @@ sequenceDiagram
     Relay->>gVisor: connect to proxy.sock
     gVisor->>Socat: the gofer opens proxy.sock
     Socat->>Proxy: copy the bytes to 127.0.0.1:18080
-    alt the host is listed
+    alt a rule matches the host, the method and the path
         Proxy->>Host: send the request, host proxy swaps the placeholder
-    else the host is not listed
+    else no rule matches
         Proxy-->>Tool: 403
     end
 ```
+
+The host proxy judges each request in this order:
+
+```mermaid
+flowchart TD
+    R["Request in the tunnel"] --> H{"Host in the allowlist or in a rule?"}
+    H -->|no| D1["403"]
+    H -->|yes| M{"Method and path match?"}
+    M -->|no| D2["403"]
+    M -->|yes| P{"Placeholder in a header, and host in its rule?"}
+    P -->|yes| S["Replace it with the real token"]
+    P -->|no| F["Send the request as it is"]
+    S --> U["Send the request to the host"]
+    F --> U
+```
+
+A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules. The builder proxy has no path rules, because it cannot see a path.
 
 The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the `socat` in the proxy container, and TCP to the proxy. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
 
