@@ -101,7 +101,7 @@ flowchart TD
     A["just sandbox build"] --> B["Log in to ghcr.io with the token from Bitwarden"]
     B --> C["podman build of the agent sandbox image, stage cache in ghcr.io"]
     C --> D["podman build of the builder image from builder/image/Containerfile"]
-    D --> P["podman build of the proxy image from host/proxy-image/Containerfile"]
+    D --> P["podman build of the two proxy images from agent/proxy and builder/proxy"]
     P --> E["Push the commit tag of the agent sandbox image"]
     E --> F["Log out of ghcr.io"]
 ```
@@ -346,7 +346,7 @@ The host proxy sees only these files: its config, `ca.crt`, `ca.key`, the creden
 
 ## Where each part is in the repo
 
-Each part has its own folder. Both lanes use the proxy image and the setup guide, so they have a folder of their own.
+Each part has its own folder, with its proxy. The setup guide is on the host, so it has a folder of its own.
 
 ```text
 .sandbox/
@@ -354,20 +354,19 @@ Each part has its own folder. Both lanes use the proxy image and the setup guide
     sandbox-agent.container     the unit of the agent sandbox
     runsc.conf                  the gVisor flags of runsc
     image/                      the Dockerfile, sandbox-start, mise.toml, tools, configs
-    proxy/                      the host proxy: iron-proxy.yaml and proxy.container
+    proxy/                      the host proxy: iron-proxy.yaml, proxy.container and Containerfile (iron-proxy, socat, bws)
   builder/
     sandbox-builder.container   the unit of the builder
     runsc.conf                  the gVisor flags of runsc-builder
     image/                      the Containerfile
-    proxy/                      the builder proxy: iron-proxy.yaml and proxy.container
+    proxy/                      the builder proxy: iron-proxy.yaml, proxy.container and Containerfile (iron-proxy, socat)
   host/
-    proxy-image/Containerfile   the image of both proxies: iron-proxy, socat and bws
     README.md                   the guide to set up the proxies
   docs/                         this document and the diagrams
   justfile                      setup, run, rm and build
 ```
 
-The two `proxy/` folders have the same file names. `just sandbox setup` links the units into `~/.config/containers/systemd` as `sandbox-proxy.container` for the agent sandbox and `sandbox-builder-proxy.container` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
+The two `proxy/` folders have the same file names. The builder `Containerfile` has no `bws`. `just sandbox setup` links the units into `~/.config/containers/systemd` as `sandbox-proxy.container` for the agent sandbox and `sandbox-builder-proxy.container` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
 
 ## What comes next
 

@@ -13,7 +13,7 @@ DefaultDependencies=false
 
 [Container]
 ContainerName=sandbox-builder-proxy
-Image=localhost/sandbox-proxy:latest
+Image=localhost/sandbox-builder-proxy:latest
 ReadOnly=true
 DropCapability=ALL
 NoNewPrivileges=true

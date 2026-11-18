@@ -6,7 +6,7 @@
 #   just sandbox setup   make the CA and the credential. Link the container units, the gVisor flags and the repo. Run it again after you edit a file in agent/, builder/ or host/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container, the builder and both proxies. The volume stays.
-#   just sandbox build   build the three images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
+#   just sandbox build   build the four images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit agent/sandbox-agent.container or build the image, run `just sandbox run`. It makes a new container.
 
@@ -141,8 +141,9 @@ build *args: (_needs credential)
     # The builder image: BuildKit and the relay to the builder proxy. The unit sandbox-builder.container runs it.
     podman build builder/image -t localhost/sandbox-builder:latest
 
-    # The proxy image: iron-proxy, socat and bws. The units sandbox-proxy and sandbox-builder-proxy run it.
-    podman build host/proxy-image -t localhost/sandbox-proxy:latest
+    # The proxy images: iron-proxy and socat. The host proxy image also has bws. The units sandbox-proxy and sandbox-builder-proxy run them.
+    podman build agent/proxy -t localhost/sandbox-proxy:latest
+    podman build builder/proxy -t localhost/sandbox-builder-proxy:latest
 
     # Push the commit tag.
     podman push {{ registry }}:{{ commit }}

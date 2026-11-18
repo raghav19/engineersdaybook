@@ -53,7 +53,7 @@ Run these steps in your main checkout.
 
 ```shell
 just sandbox setup   # make the CA and the credential, and link the container units
-just sandbox build   # build the three images and push the agent sandbox image to ghcr.io
+just sandbox build   # build the four images and push the agent sandbox image to ghcr.io
 just sandbox run     # start the proxies, the builder and the agent sandbox, and open Herdr
 ```
 
@@ -68,7 +68,7 @@ For the daily commands of the proxies, read the [guide to the proxies](host/READ
 | `just sandbox setup` | Makes the CA and the credential. Links the container units and the gVisor flags. |
 | `just sandbox run` | Makes a new agent sandbox, a new builder and two new proxies. Opens Herdr. Add a command to run it in place of Herdr. |
 | `just sandbox rm` | Removes the agent sandbox, the builder and both proxies. The volume stays. |
-| `just sandbox build` | Builds the three images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
+| `just sandbox build` | Builds the four images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
 

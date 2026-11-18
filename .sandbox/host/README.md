@@ -12,7 +12,7 @@ Two iron-proxy containers run on the host as Quadlet units. They are the only wa
 | TLS | Ends it with the CA of the sandbox | Passes it through (`sni-only`) |
 | Tokens | Real tokens from Bitwarden | None |
 
-Both containers use the image `localhost/sandbox-proxy`. `host/proxy-image/Containerfile` builds it.
+The host proxy uses the image `localhost/sandbox-proxy`. The builder proxy uses `localhost/sandbox-builder-proxy`, which has no `bws`. Each `proxy/` folder has the `Containerfile` of its image.
 
 ## Step 1: run the setup
 
@@ -35,7 +35,7 @@ flowchart TD
 just sandbox build
 ```
 
-This builds the agent sandbox image, the builder image and the proxy image.
+This builds the agent sandbox image, the builder image and the two proxy images.
 
 ## Step 3: start and check
 
@@ -64,5 +64,5 @@ Run `journalctl --user -u sandbox-proxy`. The first two items come from `just` a
 - **`Failed to read encrypted credential data: Invalid argument`.** `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again.
 - **The unit says `Failed to load credential bws-token`.** The file `~/.config/credstore.encrypted/bws-token` is missing. Run `just sandbox setup`.
 - **`podman logs sandbox-proxy` shows a Bitwarden error.** The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`.
-- **`Error: localhost/sandbox-proxy:latest: image not known`.** Run `just sandbox build`.
+- **`Error: localhost/sandbox-proxy:latest: image not known`.** The same error can name `sandbox-builder-proxy`. Run `just sandbox build`.
 - **`status sandbox-builder` shows `failed` after `just sandbox rm`.** This is normal. `buildkitd` exits with code 1 when it stops.
