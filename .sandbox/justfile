@@ -3,7 +3,7 @@
 # The recipes run in this folder. podman build uses agent/image and builder/image.
 # A backslash at the end of a line continues the command on the next line. Each line of a recipe is one command.
 #
-#   just sandbox setup   make the CA and the credential. Link the container units, the gVisor flags and the repo. Run it again after you edit a file in agent/, builder/ or host/.
+#   just sandbox setup   make the CA and the credential. Link the container units, the gVisor flags and the repo. Run it again after you edit a file in agent/ or builder/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
 #   just sandbox rm      stop and remove the container, the builder and both proxies. The volume stays.
 #   just sandbox build   build the four images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
@@ -46,7 +46,7 @@ help:
 
 # Run it in your main checkout, because the links of the units point to the files in this folder.
 # It asks for the access token of a Bitwarden machine account. See Prerequisites in README.md.
-# Make the CA and the credential. Link the units. Run it again after you edit a file in agent/, builder/ or host/.
+# Make the CA and the credential. Link the units. Run it again after you edit a file in agent/ or builder/.
 [script('bash')]
 setup:
     set -euo pipefail

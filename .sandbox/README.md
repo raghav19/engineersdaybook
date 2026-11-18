@@ -57,9 +57,9 @@ just sandbox build   # build the four images and push the agent sandbox image to
 just sandbox run     # start the proxies, the builder and the agent sandbox, and open Herdr
 ```
 
-`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/`, `builder/` or `host/`.
+`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/` or `builder/`.
 
-For the daily commands of the proxies, read the [guide to the proxies](host/README.md).
+`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. Each unit starts the next one, so you start no proxy by hand.
 
 ## Commands
 
@@ -71,6 +71,8 @@ For the daily commands of the proxies, read the [guide to the proxies](host/READ
 | `just sandbox build` | Builds the four images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
+| `journalctl --user -u sandbox-proxy -f` | Follows the audit log of the host proxy: one JSON line for each request. |
+| `podman logs -f sandbox-builder-proxy` | Follows the log of the builder proxy. |
 
 The volume `sandbox-home` keeps the clone, the logins and the histories.
 
@@ -102,6 +104,8 @@ Rules:
 
 - **`run` fails at the start.** A failed step of a unit fails the start. Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`.
 - **`run` says that the credential is missing.** Run `just sandbox setup`.
+- **`Failed to read encrypted credential data: Invalid argument`.** `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again.
+- **`podman logs sandbox-proxy` shows a Bitwarden error.** The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`.
 - **`run` says the agent sandbox is not healthy.** Run `podman logs sandbox-agent`.
 - **`run` says the builder is not healthy.** Run `podman logs sandbox-builder`.
 - **`docker build` says `failed to connect to the docker API`.** `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.

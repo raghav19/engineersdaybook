@@ -265,6 +265,16 @@ The builder has the same model with other values: `runsc-builder`, three capabil
 
 ## The proxies
 
+| | Host proxy | Builder proxy |
+|---|---|---|
+| Serves | The agent sandbox | The builder |
+| Files | `agent/proxy/` | `builder/proxy/` |
+| Unit and container | `sandbox-proxy` | `sandbox-builder-proxy` |
+| Image | `localhost/sandbox-proxy`: `iron-proxy`, `socat`, `bws` | `localhost/sandbox-builder-proxy`: `iron-proxy`, `socat` |
+| Socket | `$XDG_RUNTIME_DIR/sandbox/proxy.sock` | `$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock` |
+| TLS | Ends it with the CA of the sandbox | Passes it through (`sni-only`) |
+| Tokens | Real tokens from Bitwarden | None |
+
 ### Ports
 
 Both proxies use the same ports on `127.0.0.1`. Each proxy runs in its own container, so the ports exist only inside it and not on the host. The agent sandbox and the builder use only the tunnel.
@@ -346,7 +356,7 @@ The host proxy sees only these files: its config, `ca.crt`, `ca.key`, the creden
 
 ## Where each part is in the repo
 
-Each part has its own folder, with its proxy. The setup guide is on the host, so it has a folder of its own.
+Each part has its own folder, with its proxy.
 
 ```text
 .sandbox/
@@ -360,14 +370,8 @@ Each part has its own folder, with its proxy. The setup guide is on the host, so
     runsc.conf                  the gVisor flags of runsc-builder
     image/                      the Containerfile
     proxy/                      the builder proxy: iron-proxy.yaml, proxy.container and Containerfile (iron-proxy, socat)
-  host/
-    README.md                   the guide to set up the proxies
   docs/                         this document and the diagrams
   justfile                      setup, run, rm and build
 ```
 
 The two `proxy/` folders have the same file names. The builder `Containerfile` has no `bws`. `just sandbox setup` links the units into `~/.config/containers/systemd` as `sandbox-proxy.container` for the agent sandbox and `sandbox-builder-proxy.container` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
-
-## What comes next
-
-Read the [guide to set up the proxies](../host/README.md) for the steps and the daily commands.
