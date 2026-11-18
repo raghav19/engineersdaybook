@@ -34,6 +34,7 @@ commit := shell(git + ' rev-parse HEAD')
 credential := config_directory() / 'credstore.encrypted/bws-token'
 
 proxy_socket := SANDBOX_SOCKET / 'proxy.sock'
+build_proxy_socket := env('XDG_RUNTIME_DIR') / 'sandbox-build/proxy.sock'
 
 # `run` checks that these two paths exist. They equal the Volume lines of sandbox.container.
 SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
@@ -79,6 +80,7 @@ setup:
     fi
 
     ln -sf "$proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
+    ln -sf "$proxy/iron-proxy-build.yaml" "$HOME/.config/sandbox/iron-proxy-build.yaml"
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -110,17 +112,21 @@ setup:
         chmod 0400 '{{ credential }}'
     fi
 
+    # The build proxy holds no token. The builder reaches the internet through it.
     systemctl --user link "$proxy"/sandbox-{proxy.service,bridge.service,bridge.socket}
-    systemctl --user enable sandbox-proxy.service
-    systemctl --user restart sandbox-proxy.service
+    systemctl --user link "$proxy"/sandbox-{proxy-build.service,bridge-build.service,bridge-build.socket}
+    systemctl --user enable sandbox-proxy.service sandbox-proxy-build.service
+    systemctl --user restart sandbox-proxy.service sandbox-proxy-build.service
     sleep 2
     systemctl --user is-active --quiet sandbox-proxy.service \
         || { echo 'sandbox: the proxy did not start. See: journalctl --user -u sandbox-proxy' >&2; exit 1; }
-    echo 'The proxy runs.'
+    systemctl --user is-active --quiet sandbox-proxy-build.service \
+        || { echo 'sandbox: the build proxy did not start. See: journalctl --user -u sandbox-proxy-build' >&2; exit 1; }
+    echo 'The proxy and the build proxy run.'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
+run *command: (_needs proxy_socket) (_needs build_proxy_socket) (_needs SANDBOX_CA)
     # restart stops the unit if it runs, and starts it. The unit runs `podman run --replace`, so it also replaces a container that an older setup left with the name sandbox.
     # daemon-reload makes systemd read an edit of sandbox.container.
     systemctl --user daemon-reload
@@ -163,6 +169,9 @@ build *args: (_needs credential)
         --cache-from {{ registry }}-cache \
         --cache-to {{ registry }}-cache \
         {{ args }}
+
+    # The builder image: BuildKit and the relay to the build proxy. The unit sandbox-builder.container runs it.
+    podman build builder -t localhost/sandbox-builder:latest
 
     # Push the commit tag.
     podman push {{ registry }}:{{ commit }}

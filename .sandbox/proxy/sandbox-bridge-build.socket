@@ -1,0 +1,12 @@
+# The Unix socket that the builder mounts. It is in its own folder, so the builder cannot see proxy.sock of the sandbox.
+# The builder is a subuid in rootless Podman, so the socket needs the mode 0666. $XDG_RUNTIME_DIR has the mode 0700.
+[Unit]
+Description=Socket of the build proxy bridge
+PartOf=sandbox-proxy-build.service
+
+[Socket]
+ListenStream=%t/sandbox-build/proxy.sock
+SocketMode=0666
+DirectoryMode=0711
+RemoveOnStop=yes
+ExecStartPost=/usr/bin/chmod 0711 %t/sandbox-build

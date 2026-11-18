@@ -45,42 +45,47 @@ The recipe asks for your `sudo` password. It asks for the access token only if t
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
-3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
+3. Links `iron-proxy.yaml` and `iron-proxy-build.yaml` into `~/.config/sandbox`.
 4. Links the container units, `runsc.conf` and `repo.git` for the sandbox. The proxy does not use them.
 5. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
 6. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
-7. Links the three units, enables `sandbox-proxy.service` and restarts it.
+7. Links the units of the proxy and of the build proxy, enables `sandbox-proxy.service` and `sandbox-proxy-build.service`, and restarts them.
 
-The recipe ends with `The proxy runs.`
+The recipe ends with `The proxy and the build proxy run.`
 
 ### Step 2: check the proxy
 
 ```bash
-systemctl --user status sandbox-proxy.service sandbox-bridge.socket
-ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock"
+systemctl --user status sandbox-proxy.service sandbox-bridge.socket sandbox-proxy-build.service sandbox-bridge-build.socket
+ls "$XDG_RUNTIME_DIR/sandbox/proxy.sock" "$XDG_RUNTIME_DIR/sandbox-build/proxy.sock"
 ```
 
-The status shows `active`, and the socket file exists. Next, go to the [README of the sandbox](../README.md#quick-start) and run `just sandbox build`, then `just sandbox run`.
+The status shows `active`, and the two socket files exist. Next, go to the [README of the sandbox](../README.md#quick-start) and run `just sandbox build`, then `just sandbox run`.
 
 If something fails, see [Troubleshooting](#troubleshooting).
 
 ## Ports
 
-This proxy reserves the range **18080 to 18089 on 127.0.0.1**. The files use 18080 to 18084. The sandbox uses only the tunnel.
+The two proxies reserve the range **18080 to 18089 on 127.0.0.1**. The proxy of the sandbox uses 18080 to 18084, and the sandbox uses only the tunnel. The build proxy (for the builder) uses 18085 to 18089.
 
-| Port | Listener |
-|---|---|
-| 18080 | tunnel (CONNECT), TCP |
-| 18081 | HTTP, TCP |
-| 18082 | HTTPS, TCP |
-| 18083 | metrics, TCP |
-| 18084 | DNS, UDP |
+| Port | Listener | Proxy |
+|---|---|---|
+| 18080 | tunnel (CONNECT), TCP | sandbox |
+| 18081 | HTTP, TCP | sandbox |
+| 18082 | HTTPS, TCP | sandbox |
+| 18083 | metrics, TCP | sandbox |
+| 18084 | DNS, UDP | sandbox |
+| 18085 | tunnel (CONNECT), TCP | build |
+| 18086 | HTTP, TCP | build |
+| 18087 | HTTPS, TCP | build |
+| 18088 | metrics, TCP | build |
+| 18089 | DNS, UDP | build |
 
 ## The firewall rule
 
 A TCP or UDP port on `127.0.0.1` has no check of the user. Without a rule, any local user, and any program that reaches the loopback of the host, can connect to these ports. It can use the proxy and send the placeholders to get the real tokens.
 
-`sandbox-guard.nft` is a rule of `nftables` with one clause for each protocol, as in `iron-proxy.yaml`: TCP 18080 to 18083 (tunnel, HTTP, HTTPS and metrics) and UDP 18084 (DNS). It rejects every connection to those ports from a user other than yours. The spare ports 18085 to 18089 have no listener. If you add one, add it to the right clause. The bridge runs as you, so it still connects.
+`sandbox-guard.nft` is a rule of `nftables` with one clause for each protocol, as in `iron-proxy.yaml` and `iron-proxy-build.yaml`. The TCP clause covers 18080 to 18083 and 18085 to 18088 (tunnel, HTTP, HTTPS and metrics). The UDP clause covers 18084 and 18089 (DNS). It rejects every connection to those ports from a user other than yours. The range has no spare port. If you add a listener, add it to the right clause. The bridge runs as you, so it still connects.
 
 - `just sandbox setup` replaces `@UID@` with your user id and copies the rule to `/etc/sandbox-guard.nft`. It copies `sandbox-guard.service` to `/etc/systemd/system/`. The unit loads the rule at each boot, before the network.
 - The copies belong to root on purpose. A link to a file in your repo would let you change what root runs.
@@ -95,7 +100,7 @@ What the rule does not do:
 
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. `just sandbox setup` copies them to `/etc` and does not link them.
+`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. The build proxy has its own files: `iron-proxy-build.yaml` (the host names and the mode `sni-only`), `sandbox-proxy-build.service` (no token, no `bws`), `sandbox-bridge-build.socket` (`$XDG_RUNTIME_DIR/sandbox-build/proxy.sock`) and `sandbox-bridge-build.service`. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. `just sandbox setup` copies them to `/etc` and does not link them.
 
 ## Why there is a bridge
 

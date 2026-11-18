@@ -8,7 +8,7 @@ ENV MISE_DATA_DIR=/opt/mise \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
     COMPLETIONS_DIR=/home/agent/.local/share/bash-completion/completions
 
-# The image has no podman. The sandbox builds with buildctl in the builder and pushes with skopeo.
+# The image has no podman. The sandbox builds with docker and buildx in the builder and pushes with skopeo.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       curl ca-certificates git xz-utils bzip2 bash-completion tar gzip libstdc++6 procps less openssh-client nano \
@@ -81,6 +81,20 @@ COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 # mise creates shims from the installed tools. A mise task writes the bash completions.
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
+
+# buildx is the build client. The plugin needs the fixed name docker-buildx. The checksum comes from the release.
+USER root
+RUN set -eu; v=0.39.0; f="buildx-v${v}.linux-amd64"; u="https://github.com/docker/buildx/releases/download/v${v}"; \
+    curl -fsSL -o "/tmp/${f}" "${u}/${f}"; curl -fsSL -o /tmp/checksums.txt "${u}/checksums.txt"; \
+    (cd /tmp && sha256sum -c --ignore-missing checksums.txt); \
+    install -D -m 0755 "/tmp/${f}" /usr/local/lib/docker/cli-plugins/docker-buildx; rm -f "/tmp/${f}" /tmp/checksums.txt
+# The config of docker is read-only at run time. It has the proxy settings of the build steps and the definition of the builder.
+# buildx create only writes the definition. It does not connect. The endpoint is the socket that the sandbox mounts.
+COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
+RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
+ && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker buildx create --name sandbox \
+ && chmod -R a+rX /etc/docker
+USER agent
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json

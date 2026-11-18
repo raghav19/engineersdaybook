@@ -53,7 +53,7 @@
 <g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="732" y="357.3">gVisor: userspace kernel</text></g>
 
 <rect x="735" y="382" width="230" height="92" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="409.3" font-weight="bold">BuildKit (buildkitd)</text><text x="850.0" y="430.3">rootless, no network</text><text x="850.0" y="451.3">cache in tmpfs</text></g>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="409.3" font-weight="bold">BuildKit (buildkitd)</text><text x="850.0" y="430.3">no secret, cache in tmpfs</text><text x="850.0" y="451.3">relay to build proxy</text></g>
 
 <rect x="660" y="590" width="380" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="619.8" font-weight="bold">Quadlet service sandbox-builder.service</text><text x="850.0" y="640.8">limits: 2 GB, 2 CPUs</text></g>
@@ -61,8 +61,10 @@
 <rect x="1080" y="167" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="190.3" font-weight="bold">Host proxy</text><text x="1180.0" y="211.3">allowlist, TLS,</text><text x="1180.0" y="232.3">token swap</text></g>
 
-<rect x="1040" y="384" width="280" height="84" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="407.3" font-weight="bold">nftables rule</text><text x="1180.0" y="428.3">only your user connects</text><text x="1180.0" y="449.3">to TCP 18080-18083, UDP 18084</text></g>
+<rect x="1080" y="300" width="200" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="323.3" font-weight="bold">Build proxy</text><text x="1180.0" y="344.3">host names only,</text><text x="1180.0" y="365.3">no tokens</text></g>
+<rect x="1040" y="470" width="280" height="84" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="1180.0" y="493.3" font-weight="bold">nftables rule</text><text x="1180.0" y="514.3">only your user connects</text><text x="1180.0" y="535.3">to both proxies</text></g>
 
 <rect x="1340" y="174" width="120" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="1400.0" y="200.8" font-weight="bold">Internet</text><text x="1400.0" y="221.8">allowed hosts</text></g>
@@ -71,9 +73,11 @@
 <path d="M190,416 L285,416" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M570,209 L1080,209" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
 <path d="M1280,209 L1340,209" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1000,342 L1080,342" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M1280,342 L1400,342 L1400,248" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M410,298 L410,378" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M1180,70 L1180,167" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
-<path d="M1180,384 L1180,255" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
+<path d="M1180,470 L1180,388" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
 <path d="M410,590 L410,492" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
 <path d="M570,379 L700,379" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M850,590 L850,512" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
@@ -87,9 +91,10 @@
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="1180.0" y="120.7">real tokens</text></g>
 <rect x="374.0" y="529.0" width="72.0" height="24" fill="#ffffff"/>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="410.0" y="545.2">limits</text></g>
-<text x="635.0" y="351.0" font-size="14" text-anchor="middle" fill="#000000">buildctl over</text>
+<text x="635.0" y="351.0" font-size="14" text-anchor="middle" fill="#000000">docker over</text>
 <text x="635.0" y="369.0" font-size="14" text-anchor="middle" fill="#000000">buildkitd.sock</text>
 <rect x="814.0" y="539.0" width="72.0" height="24" fill="#ffffff"/>
 <g font-size="14" text-anchor="middle" fill="#000000"><text x="850.0" y="555.2">limits</text></g>
 <text x="615.0" y="618.0" font-size="14" text-anchor="middle" fill="#000000">requires</text>
+<text x="1040.0" y="332.0" font-size="14" text-anchor="middle" fill="#000000">relay</text>
 </svg>
