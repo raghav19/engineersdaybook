@@ -93,7 +93,7 @@ setup:
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
     mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
     ln -sf '{{ source_directory() }}/sandbox.container' "$HOME/.config/containers/systemd/sandbox.container"
-    # The builder is a second unit. sandbox.container requires it, so it starts and stops with the sandbox.
+    # The builder starts and stops with the sandbox.
     ln -sf '{{ source_directory() }}/builder/sandbox-builder.container' "$HOME/.config/containers/systemd/sandbox-builder.container"
     ln -sf '{{ source_directory() }}/runsc.conf' "$HOME/.config/containers/containers.conf.d/runsc.conf"
     ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
@@ -149,11 +149,11 @@ run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
         {{ if command == '' { 'herdr' } else { command } }}
 
 # Stop and remove the container. The volume sandbox-home stays, so the clone and the logins stay.
-# The builder stops with the sandbox, and its cache is gone.
+# The builder stops too.
 rm:
     systemctl --user stop sandbox.service
 
-# Test the builder from the sandbox. The output lists one worker. A list means that the socket and buildkitd work.
+# Test the builder from the sandbox. One listed worker means that the socket works.
 builder-check:
     podman exec sandbox buildctl debug workers
 
