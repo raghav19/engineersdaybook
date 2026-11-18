@@ -5,7 +5,7 @@ Two iron-proxy instances run on the host as systemd user services. They are the 
 | | Host proxy | Builder proxy |
 |---|---|---|
 | Serves | The agent sandbox | The builder |
-| Config | `iron-proxy.yaml` | `iron-proxy-builder.yaml` |
+| Config | `agent/proxy/iron-proxy.yaml` | `builder/proxy/iron-proxy.yaml` |
 | Unit | `sandbox-proxy.service` | `sandbox-builder-proxy.service` |
 | Socket | `$XDG_RUNTIME_DIR/sandbox/proxy.sock` | `$XDG_RUNTIME_DIR/sandbox-builder-proxy/proxy.sock` |
 | TLS | Ends it with the CA of the sandbox | Passes it through (`sni-only`) |

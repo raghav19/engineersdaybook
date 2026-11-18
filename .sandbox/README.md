@@ -66,7 +66,7 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 
 | Topic | Detail |
 |---|---|
-| Hosts | A `FROM` or `RUN` step reaches the `domains` of `builder/proxy/iron-proxy-builder.yaml`. An unlisted host gets `403`. To add a host, edit the file and run `just sandbox setup`. |
+| Hosts | A `FROM` or `RUN` step reaches the `domains` of `builder/proxy/iron-proxy.yaml`. An unlisted host gets `403`. To add a host, edit the file and run `just sandbox setup`. |
 | Push | `crane` uses the placeholder login of `ghcr.io`. The host proxy allows writes in the namespace `raghav19` only. |
 | Private base image | Run `crane pull --format oci REF /tmp/base`. Then add `--build-context NAME=oci-layout:///tmp/base@sha256:DIGEST`. |
 | Health | A failed health check of the builder at the start fails `run`. A later failure restarts the builder with an empty cache. |
@@ -80,7 +80,7 @@ crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 | `run` says the agent sandbox is not healthy | Run `podman logs sandbox-agent`. |
 | `run` says the builder is not healthy | Run `podman logs sandbox-builder`. |
 | `docker build` says `failed to connect to the docker API` | `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`. |
-| A `FROM` or a `RUN` step gets `403` | The host is not in `builder/proxy/iron-proxy-builder.yaml`. Add it and run `just sandbox setup`. |
+| A `FROM` or a `RUN` step gets `403` | The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`. |
 | `crane push` gets `403` | The namespace is not `raghav19`. |
 | `status sandbox-agent` shows `failed` | A limit killed it. Run `just sandbox run`. The clone stays in the volume. |
 | `status sandbox-builder` shows `failed` after `just sandbox rm` | Normal. `buildkitd` exits with code 1 when it stops. |

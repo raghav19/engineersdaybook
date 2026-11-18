@@ -80,7 +80,7 @@ setup:
     fi
 
     ln -sf "$src/agent/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
-    ln -sf "$src/builder/proxy/iron-proxy-builder.yaml" "$HOME/.config/sandbox/iron-proxy-builder.yaml"
+    ln -sf "$src/builder/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy-builder.yaml"
 
     # The container. Quadlet reads the unit from ~/.config/containers/systemd/. Podman reads the gVisor flags from containers.conf.d/ (see agent/runsc.conf and builder/runsc.conf).
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
@@ -113,9 +113,14 @@ setup:
         chmod 0400 '{{ credential }}'
     fi
 
-    # --force replaces a link that points to an old path. The builder proxy holds no token. The builder reaches the internet through it.
-    systemctl --user link --force "$src"/agent/proxy/sandbox-{proxy.service,proxy-bridge.service,proxy-bridge.socket}
-    systemctl --user link --force "$src"/builder/proxy/sandbox-builder-{proxy.service,proxy-bridge.service,proxy-bridge.socket}
+    # Both folders use the same file names. The link name has the prefix sandbox- for the agent sandbox and sandbox-builder- for the builder.
+    # ln -sf replaces a link that points to an old path. The builder proxy holds no token. The builder reaches the internet through it.
+    mkdir -p "$HOME/.config/systemd/user"
+    for f in proxy.service proxy-bridge.service proxy-bridge.socket; do
+        ln -sf "$src/agent/proxy/$f" "$HOME/.config/systemd/user/sandbox-$f"
+        ln -sf "$src/builder/proxy/$f" "$HOME/.config/systemd/user/sandbox-builder-$f"
+    done
+    systemctl --user daemon-reload
     systemctl --user enable sandbox-proxy.service sandbox-builder-proxy.service
     systemctl --user restart sandbox-proxy.service sandbox-builder-proxy.service
     sleep 2

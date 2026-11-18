@@ -379,12 +379,12 @@ Each part has its own folder. The firewall rule and the setup guide are on the h
     sandbox-agent.container     the unit of the agent sandbox
     runsc.conf                  the gVisor flags of runsc
     image/                      the Dockerfile, sandbox-entry, sandbox-start, mise.toml, tools, configs
-    proxy/                      the host proxy: iron-proxy.yaml, sandbox-proxy.service, sandbox-proxy-bridge.*
+    proxy/                      the host proxy: iron-proxy.yaml, proxy.service, proxy-bridge.socket, proxy-bridge.service
   builder/
     sandbox-builder.container   the unit of the builder
     runsc.conf                  the gVisor flags of runsc-builder
     image/                      the Containerfile and relay-entry
-    proxy/                      the builder proxy: iron-proxy-builder.yaml, sandbox-builder-proxy.service, sandbox-builder-proxy-bridge.*
+    proxy/                      the builder proxy: the same four file names
   host/
     sandbox-guard.nft           the firewall rule for both proxies
     sandbox-guard.service       loads the rule
@@ -392,6 +392,8 @@ Each part has its own folder. The firewall rule and the setup guide are on the h
   docs/                         this document and the diagrams
   justfile                      setup, run, rm and build
 ```
+
+The two `proxy/` folders have the same file names. `just sandbox setup` links the units into `~/.config/systemd/user` as `sandbox-proxy*` for the agent sandbox and `sandbox-builder-proxy*` for the builder. It links the builder config as `iron-proxy-builder.yaml`.
 
 ## What comes next
 
