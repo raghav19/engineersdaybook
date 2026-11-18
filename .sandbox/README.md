@@ -26,7 +26,7 @@ A coding agent reads text that you did not write. That text can hold a prompt in
 - **Other hosts.** The agent reaches the hosts in `agent/proxy/iron-proxy.yaml`. Any other host gets `403`.
 - **Builds.** A `FROM` or `RUN` step reaches the hosts in `builder/proxy/iron-proxy.yaml`, with no token.
 
-For the parts, the flows, the controls and the limits, read [How the sandbox works in detail](docs/internals.md). The terms are in [The names](docs/internals.md#the-names).
+For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
 
 ## Prerequisites
 
