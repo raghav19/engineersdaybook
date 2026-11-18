@@ -95,7 +95,7 @@ buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
 | Who may connect | Any process that reaches the socket. BuildKit has no authorization. The agent and the builder use the same subuid, and no other user reaches the folder. |
 | What a build step can do | Run any command as root in the builder. The wall is the builder container: no network, no secret, no host mount except the socket folder. |
 | What stays off | The entitlements `network.host`, `security.insecure` and `device`. BuildKit denies them by default. Do not enable them. |
-| Limits | 2 GB of memory with no swap, 1 GB of cache in `tmpfs`, 512 host threads, 2 CPUs. A build that fills the cache fails with "No space left on device". The builder stays up. |
+| Limits | 2 GB of memory with no swap, 1 GB of cache in `tmpfs`, 1024 host threads, 2 CPUs. A build that fills the cache fails with "No space left on device". The builder stays up. |
 | Image pulls | Not possible yet. A `FROM` that is not in an OCI layout fails. A relay to the proxy is the next step. |
 
 ## How it works
