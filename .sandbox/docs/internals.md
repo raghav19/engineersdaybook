@@ -125,7 +125,7 @@ sequenceDiagram
     buildctl-->>Agent: exit code 0, the tar is in the sandbox
 ```
 
-`buildctl` waits until the build ends. A failed build gives a code other than 0. The builder has no network, so a build step cannot reach a host. Send the base image from the client with `--oci-layout`. The sandbox pushes the OCI tar through the proxy. The builder never pushes.
+`buildctl` waits until the build ends. A failed build gives a code other than 0. The builder has no network, so a build step cannot reach a host. Send the base image from the client with `--oci-layout`. The sandbox pushes the OCI tar with `skopeo`, through the proxy. The builder never pushes.
 
 ## Lifetimes
 
