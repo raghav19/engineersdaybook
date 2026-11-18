@@ -14,8 +14,6 @@
 
 [![The agent sandbox and the builder](diagrams/architecture.png)](diagrams/architecture.svg)
 
-The architecture diagram names the files: the unit file of each container, the folder of its image, the proxy configs, the CA and the credential.
-
 The network path of the agent sandbox and the builder, inside gVisor:
 
 [![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
