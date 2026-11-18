@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1220" height="1420" viewBox="0 0 1220 1420" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1220" height="1440" viewBox="0 0 1220 1440" font-family="Helvetica, Arial, sans-serif">
 <defs>
 <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
-<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b85450"/></marker>
+<marker id="s" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M10,0 L0,5 L10,10 z" fill="#333333"/></marker>
 </defs>
-<rect x="0" y="0" width="1220" height="1420" fill="#ffffff"/>
+<rect x="0" y="0" width="1220" height="1440" fill="#ffffff"/>
 <text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Network path of the agent sandbox and the builder with gVisor</text>
 
 <rect x="20" y="90" width="440" height="380" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
@@ -21,17 +21,21 @@
 <rect x="130" y="374" width="220" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="406.8" font-weight="bold">socat relay</text><text x="240" y="427.8">127.0.0.1:3128</text></g>
 
-<rect x="150" y="570" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="596.3" font-weight="bold">gVisor gofer</text><text x="240" y="617.3">opens the socket</text><text x="240" y="638.3">for the sentry</text></g>
+<rect x="150" y="550" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="576.3" font-weight="bold">gVisor gofer</text><text x="240" y="597.3">opens the socket</text><text x="240" y="618.3">for the sentry</text></g>
 
-<rect x="90" y="754" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="777.8" font-weight="bold">proxy.sock</text><text x="240" y="798.8">Unix socket file,</text><text x="240" y="819.8">owned by</text><text x="240" y="840.8">sandbox-proxy-bridge.socket</text></g>
+<rect x="90" y="714" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="737.8" font-weight="bold">proxy.sock</text><text x="240" y="758.8">Unix socket file,</text><text x="240" y="779.8">owned by the proxy container</text><text x="240" y="800.8">folder: sandbox</text></g>
 
-<rect x="70" y="954" width="340" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="990.8" font-weight="bold">sandbox-proxy-bridge.service</text><text x="240" y="1011.8">systemd-socket-proxyd</text></g>
+<rect x="20" y="894" width="440" height="340" rx="12" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<line x1="20" y1="934" x2="460" y2="934" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="32" y="919.3">Host proxy container</text></g>
 
-<rect x="115" y="1138" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="1164.3" font-weight="bold">Host proxy</text><text x="240" y="1185.3">iron-proxy, mitm</text><text x="240" y="1206.3">allowlist, token swap</text></g>
+<rect x="130" y="954" width="220" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="986.8" font-weight="bold">socat</text><text x="240" y="1007.8">Unix socket to TCP</text></g>
+
+<rect x="115" y="1114" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="240" y="1140.3" font-weight="bold">iron-proxy, mitm</text><text x="240" y="1161.3">allowlist, token swap</text><text x="240" y="1182.3">tunnel 127.0.0.1:18080</text></g>
 
 <rect x="760" y="90" width="440" height="380" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
 <line x1="760" y1="150" x2="1200" y2="150" stroke="#82b366" stroke-width="1"/>
@@ -47,61 +51,62 @@
 <rect x="870" y="374" width="220" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="406.8" font-weight="bold">socat relay</text><text x="980" y="427.8">127.0.0.1:3129</text></g>
 
-<rect x="890" y="570" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="596.3" font-weight="bold">gVisor gofer</text><text x="980" y="617.3">opens the socket</text><text x="980" y="638.3">for the sentry</text></g>
+<rect x="890" y="550" width="180" height="84" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="576.3" font-weight="bold">gVisor gofer</text><text x="980" y="597.3">opens the socket</text><text x="980" y="618.3">for the sentry</text></g>
 
-<rect x="830" y="754" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="777.8" font-weight="bold">proxy.sock</text><text x="980" y="798.8">Unix socket file,</text><text x="980" y="819.8">owned by</text><text x="980" y="840.8">sandbox-builder-proxy-bridge.socket</text></g>
+<rect x="830" y="714" width="300" height="100" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="737.8" font-weight="bold">proxy.sock</text><text x="980" y="758.8">Unix socket file,</text><text x="980" y="779.8">owned by the proxy container</text><text x="980" y="800.8">folder: sandbox-builder-proxy</text></g>
 
-<rect x="810" y="954" width="340" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="990.8" font-weight="bold">sandbox-builder-proxy-bridge.service</text><text x="980" y="1011.8">systemd-socket-proxyd</text></g>
+<rect x="760" y="894" width="440" height="340" rx="12" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<line x1="760" y1="934" x2="1200" y2="934" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="772" y="919.3">Builder proxy container</text></g>
 
-<rect x="855" y="1138" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="1164.3" font-weight="bold">Builder proxy</text><text x="980" y="1185.3">iron-proxy, sni-only</text><text x="980" y="1206.3">host names, no token</text></g>
+<rect x="870" y="954" width="220" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="986.8" font-weight="bold">socat</text><text x="980" y="1007.8">Unix socket to TCP</text></g>
 
-<rect x="510" y="1053" width="200" height="110" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="610" y="1081.8" font-weight="bold">nftables rule</text><text x="610" y="1102.8">only your user</text><text x="610" y="1123.8">connects to the ports</text><text x="610" y="1144.8">of both proxies</text></g>
+<rect x="855" y="1114" width="250" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="980" y="1140.3" font-weight="bold">iron-proxy, sni-only</text><text x="980" y="1161.3">host names, no token</text><text x="980" y="1182.3">tunnel 127.0.0.1:18080</text></g>
 
-<rect x="520" y="1302" width="180" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="610" y="1331.8" font-weight="bold">Internet</text><text x="610" y="1352.8">allowed hosts</text></g>
+<rect x="520" y="980" width="180" height="84" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="610" y="1016.8" font-weight="bold">systemd credential</text><text x="610" y="1037.8">bws-token, in RAM</text></g>
+
+<rect x="520" y="1330" width="180" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="610" y="1359.8" font-weight="bold">Internet</text><text x="610" y="1380.8">allowed hosts</text></g>
 
 <path d="M240,294 L240,374" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M240,450 L240,570" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M240,654 L240,754" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M240,854 L240,954" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M240,1038 L240,1138" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M240,450 L240,550" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M240,634 L240,714" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M240,814 L240,954" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M240,1030 L240,1114" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M980,294 L980,374" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,450 L980,570" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,654 L980,754" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,854 L980,954" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,1038 L980,1138" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,450 L980,550" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,634 L980,714" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,814 L980,954" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,1030 L980,1114" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <path d="M350,252 L870,252" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M510,1108 L248,1108" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
-<path d="M710,1108 L972,1108" fill="none" stroke="#b85450" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#r)"/>
-<path d="M240,1222 L240,1337 L520,1337" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M980,1222 L980,1337 L700,1337" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M520,1022 L460,1022" fill="none" stroke="#333333" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#a)"/>
+<path d="M240,1198 L240,1365 L520,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
+<path d="M980,1198 L980,1365 L700,1365" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
 <text x="252" y="338" font-size="14" text-anchor="start" fill="#000000">TCP</text>
-<text x="252" y="515" font-size="14" text-anchor="start" fill="#000000">connect</text>
-<text x="252" y="533" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="252" y="699" font-size="14" text-anchor="start" fill="#000000">opens</text>
-<text x="252" y="717" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="252" y="890" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="252" y="908" font-size="14" text-anchor="start" fill="#000000">first connection</text>
-<text x="252" y="926" font-size="14" text-anchor="start" fill="#000000">starts the service</text>
-<text x="252" y="1080" font-size="14" text-anchor="start" fill="#000000">TCP 127.0.0.1:18080</text>
+<text x="252" y="508" font-size="14" text-anchor="start" fill="#000000">connect</text>
+<text x="252" y="526" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="252" y="668" font-size="14" text-anchor="start" fill="#000000">opens</text>
+<text x="252" y="686" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="252" y="880" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="252" y="1076" font-size="14" text-anchor="start" fill="#000000">TCP 127.0.0.1:18080</text>
 <text x="992" y="338" font-size="14" text-anchor="start" fill="#000000">TCP</text>
-<text x="992" y="515" font-size="14" text-anchor="start" fill="#000000">connect</text>
-<text x="992" y="533" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="992" y="699" font-size="14" text-anchor="start" fill="#000000">opens</text>
-<text x="992" y="717" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="992" y="890" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
-<text x="992" y="908" font-size="14" text-anchor="start" fill="#000000">first connection</text>
-<text x="992" y="926" font-size="14" text-anchor="start" fill="#000000">starts the service</text>
-<text x="992" y="1080" font-size="14" text-anchor="start" fill="#000000">TCP 127.0.0.1:18085</text>
+<text x="992" y="508" font-size="14" text-anchor="start" fill="#000000">connect</text>
+<text x="992" y="526" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="992" y="668" font-size="14" text-anchor="start" fill="#000000">opens</text>
+<text x="992" y="686" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="992" y="880" font-size="14" text-anchor="start" fill="#000000">Unix socket</text>
+<text x="992" y="1076" font-size="14" text-anchor="start" fill="#000000">TCP 127.0.0.1:18080</text>
 <text x="610" y="222" font-size="14" text-anchor="middle" fill="#000000">docker build</text>
 <text x="610" y="240" font-size="14" text-anchor="middle" fill="#000000">buildkitd.sock</text>
-<text x="380" y="1305" font-size="14" text-anchor="middle" fill="#000000">HTTPS</text>
-<text x="380" y="1323" font-size="14" text-anchor="middle" fill="#000000">new TLS session</text>
-<text x="840" y="1305" font-size="14" text-anchor="middle" fill="#000000">HTTPS</text>
-<text x="840" y="1323" font-size="14" text-anchor="middle" fill="#000000">TLS passes through</text>
+<text x="490" y="992" font-size="14" text-anchor="middle" fill="#000000">mounted</text>
+<text x="490" y="1010" font-size="14" text-anchor="middle" fill="#000000">read-only</text>
+<text x="380" y="1335" font-size="14" text-anchor="middle" fill="#000000">HTTPS</text>
+<text x="380" y="1353" font-size="14" text-anchor="middle" fill="#000000">new TLS session</text>
+<text x="840" y="1335" font-size="14" text-anchor="middle" fill="#000000">HTTPS</text>
+<text x="840" y="1353" font-size="14" text-anchor="middle" fill="#000000">TLS passes through</text>
 </svg>
