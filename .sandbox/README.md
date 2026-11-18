@@ -63,6 +63,15 @@ buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
   --output type=oci,dest=/tmp/image.tar
 ```
 
+The sandbox pushes the tar with `skopeo`. The builder never pushes, so it holds no registry login.
+
+```shell
+skopeo inspect oci-archive:/tmp/image.tar
+skopeo copy oci-archive:/tmp/image.tar docker://ghcr.io/raghav19/<NAME>:<TAG>
+```
+
+`skopeo` pushed the tar to a local registry in a test. The push to `ghcr.io` through the proxy is not tested.
+
 | Fact | Detail |
 |---|---|
 | Who may connect | Any process that reaches the socket. BuildKit has no authorization. The agent and the builder use the same subuid, and no other user reaches the folder. |
@@ -184,7 +193,7 @@ Each row is one attack of an injected agent and the control that stops it.
 
 ## Limits
 
-- Build images with `buildctl`. See [Builder](#builder). A build step has no network, so send the base image with `--oci-layout`.
+- Build images with `buildctl` and push them with `skopeo`. See [Builder](#builder). A build step has no network, so send the base image with `--oci-layout`.
 - No SSH and no raw TCP. Use HTTPS remotes. A tool that ignores `HTTPS_PROXY` has no route.
 - No `sudo` and no package install. Change the image.
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
