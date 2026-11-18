@@ -1,0 +1,16 @@
+# The firewall rule of the sandbox proxy. This is a system unit, because nft needs root.
+# `just sandbox setup` copies this file to /etc/systemd/system/ and the rule to /etc/sandbox-guard.nft, with sudo.
+# The copies are owned by root. Do not link a file from your home: root would run a file that you can change.
+[Unit]
+Description=Firewall rule of the sandbox proxy: one user reaches its loopback ports
+Wants=network-pre.target
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nft -f /etc/sandbox-guard.nft
+ExecStop=-/usr/bin/nft delete table inet sandbox_guard
+
+[Install]
+WantedBy=multi-user.target

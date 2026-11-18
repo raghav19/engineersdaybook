@@ -6,6 +6,7 @@
 - A relay in the container turns the proxy address that tools expect into that file.
 - The host end of the file leads to a proxy that holds the real tokens.
 - The proxy allows listed hosts only. It replaces each placeholder with the real token.
+- A firewall rule keeps other users off the ports of the proxy.
 
 ## The picture
 
@@ -30,6 +31,7 @@ On the host:
 - `sandbox-bridge.socket`: makes and owns `proxy.sock`.
 - `sandbox-bridge.service`: runs `systemd-socket-proxyd`. It copies the bytes from `proxy.sock` to iron-proxy.
 - `sandbox-proxy.service`: runs iron-proxy with the real tokens from Bitwarden.
+- `sandbox-guard.service`: loads the firewall rule `sandbox-guard.nft`.
 
 ## The flow in phases
 
@@ -39,13 +41,15 @@ On the host:
 flowchart TD
     A[just sandbox setup] --> B[Make the CA if it is missing]
     A --> C[Link the unit, runsc.conf and repo.git]
+    A --> D[Install the firewall rule with sudo]
     A --> E[Encrypt the Bitwarden token if it is missing]
     B --> F[Link and start the proxy units]
     C --> F
+    D --> F
     E --> F
 ```
 
-`setup` makes a CA only if `ca.crt` or `ca.key` is missing. It asks for the Bitwarden access token only if the credential is missing or unreadable. At the end, it checks that `sandbox-proxy.service` is active.
+`setup` makes a CA only if `ca.crt` or `ca.key` is missing. It asks for your `sudo` password for the firewall rule. It asks for the Bitwarden access token only if the credential is missing or unreadable. At the end, it checks that `sandbox-proxy.service` is active.
 
 ### Each run
 
@@ -98,6 +102,7 @@ The bytes stay the same. The carrier changes at three points: TCP to `socat`, a 
 - **The clone:** made at the first start, when the workspace has no `.git` folder.
 - **The CA:** made by `setup` with a life of 365 days. `setup` keeps an existing CA. After you make a new CA, restart the sandbox with `just sandbox run`.
 - **The Bitwarden access token:** encrypted with `systemd-creds` in `~/.config/credstore.encrypted/bws-token`, mode 0400.
+- **The firewall rule:** `sandbox-guard.service` loads it at each boot, before the network.
 
 ## Why the design looks like this
 
@@ -109,7 +114,7 @@ The bytes stay the same. The carrier changes at three points: TCP to `socat`, a 
 - **The socket has mode 0666.** In rootless Podman, `agent` is a subuid, not your user. Only you and the containers that mount the folder reach the socket, because `$XDG_RUNTIME_DIR` has mode 0700.
 - **A bridge.** iron-proxy listens on TCP only. `systemd-socket-proxyd` joins the socket to the tunnel port. There is no `socat` on the host.
 - **The CA is a mount.** The root file system takes no writes, so `update-ca-certificates` cannot run. The unit mounts `ca.crt` read-only over `/etc/ssl/certs/ca-certificates.crt`. The sandbox trusts this CA only. The file never mounts `ca.key`.
-- **No firewall rule.** A TCP port on `127.0.0.1` has no check of the user, so any local user could use the proxy and its real tokens. This setup assumes one user on the host.
+- **The firewall rule.** A TCP port on `127.0.0.1` has no check of the user. Without the rule, any local user could use the proxy and its real tokens.
 - **Limits on the service.** gVisor ignores the limits of Podman. `MemoryMax`, `MemorySwapMax`, `TasksMax` and `CPUQuota` are in `[Service]` of `sandbox.container`.
 
 ## The names
@@ -130,6 +135,7 @@ The bytes stay the same. The carrier changes at three points: TCP to `socat`, a 
 - [`proxy/iron-proxy.yaml`](../proxy/iron-proxy.yaml): the allowlist and the secret rules.
 - [`proxy/sandbox-bridge.socket`](../proxy/sandbox-bridge.socket) and [`proxy/sandbox-bridge.service`](../proxy/sandbox-bridge.service): the bridge.
 - [`proxy/sandbox-proxy.service`](../proxy/sandbox-proxy.service): the proxy unit.
+- [`proxy/sandbox-guard.nft`](../proxy/sandbox-guard.nft) and [`proxy/sandbox-guard.service`](../proxy/sandbox-guard.service): the firewall rule.
 
 ## What comes next
 
