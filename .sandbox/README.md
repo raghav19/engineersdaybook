@@ -20,23 +20,23 @@ A fooled agent can use only what the sandbox allows.
 Run these steps in your main checkout.
 
 1. Read [what the setup assumes](proxy/README.md#what-this-setup-assumes). The registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager. The secrets already exist.
-2. Run `mise install`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `ip`, `nsenter`, `nft` and `sudo`.
+2. Run `mise install`. It installs `bws` and `iron-proxy`. The host also needs `podman`, `runsc`, `git`, `openssl`, `systemd-creds`, `systemd-socket-proxyd`, `ip`, `nsenter`, `nft` and `sudo`. The sandbox has a memory limit of 3 GB and the builder has a limit of 2 GB.
 3. Run these commands:
 
 ```shell
 just sandbox setup   # install the host proxy, the firewall rule and the container unit
-just sandbox build   # build the image and push it to ghcr.io (the first build takes several minutes)
+just sandbox build   # build the image and push it to ghcr.io (the first build takes about 15 minutes)
 just sandbox run     # start the container and open Herdr
 ```
 
-`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
+`setup` asks for your `sudo` password. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `just sandbox setup` | Installs the host proxy, the firewall rule, the container unit and the gVisor flags. |
-| `just sandbox run` | Makes a new container from the image and opens Herdr. Add a command to run it in place of Herdr. |
+| `just sandbox run` | Makes a new container from the image and opens Herdr. Herdr needs a terminal. Add a command to run it in place of Herdr. |
 | `just sandbox rm` | Stops the service and removes the container and the builder. The volume stays. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it. `just sandbox build --no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
@@ -55,7 +55,14 @@ The agent builds an image with `buildctl`. `buildctl` sends the build to BuildKi
 
 The Podman health check of the builder runs `buildctl debug workers`. If it fails at the start, `just sandbox run` fails. If it fails later, Podman stops the builder and systemd restarts it with an empty cache.
 
-This build sends an OCI tar back to the sandbox. The base image comes from the client, because the builder has no network:
+The builder has no network, so the base image comes from the client. Make an OCI layout of the base image with `skopeo`. The proxy allows Docker Hub, `ghcr.io` and `quay.io`. The Dockerfile names the base image `FROM base`.
+
+```shell
+skopeo copy docker://docker.io/library/busybox:1.37 oci:/tmp/base:1.37
+jq -r '.manifests[0].digest' /tmp/base/index.json    # this is the <DIGEST> below
+```
+
+The build sends an OCI tar back to the sandbox:
 
 ```shell
 buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
@@ -67,10 +74,10 @@ The sandbox pushes the tar with `skopeo`. The builder never pushes, so it holds 
 
 ```shell
 skopeo inspect oci-archive:/tmp/image.tar
-skopeo copy oci-archive:/tmp/image.tar docker://ghcr.io/raghav19/<NAME>:<TAG>
+skopeo copy --dest-creds "raghav19:$GHCR_PUSH_TOKEN" oci-archive:/tmp/image.tar docker://ghcr.io/raghav19/<NAME>:<TAG>
 ```
 
-`skopeo` pushed the tar to a local registry in a test. The push to `ghcr.io` through the proxy is not tested.
+`GHCR_PUSH_TOKEN` holds a placeholder. The proxy replaces it with the real token. Without `--dest-creds`, the push fails with `403`.
 
 | Fact | Detail |
 |---|---|
@@ -78,7 +85,7 @@ skopeo copy oci-archive:/tmp/image.tar docker://ghcr.io/raghav19/<NAME>:<TAG>
 | What a build step can do | Run any command as root in the builder. The wall is the builder container: no network, no secret, no host mount except the socket folder. |
 | What stays off | The entitlements `network.host`, `security.insecure` and `device`. BuildKit denies them by default. Do not enable them. |
 | Limits | 2 GB of memory with no swap, 1 GB of cache in `tmpfs`, 1024 host threads, 2 CPUs. A build that fills the cache fails with "No space left on device". The builder stays up. |
-| Image pulls | Not possible yet. A `FROM` that is not in an OCI layout fails. A relay to the proxy is the next step. |
+| Image pulls | A `FROM` that is not in an OCI layout fails, because the builder has no network. |
 
 ## How it works
 
@@ -157,7 +164,7 @@ flowchart TD
     C --> D{"Build passes?"}
     D -->|yes| E["The OCI tar is in the sandbox, exit code 0"]
     D -->|no| F["Exit code is not 0, the log shows the failed step"]
-    E --> G["The sandbox pushes the tar through the proxy, not tested"]
+    E --> G["The sandbox pushes the tar through the proxy"]
 ```
 
 ## Security controls
@@ -185,7 +192,7 @@ Each row is one attack of an injected agent and the control that stops it.
 | The repo in clone mode | The unit mounts the `.git` folder of your repo at `/run/sandbox/source`, read-only. At the first start, `sandbox-start` clones it to `/home/agent/engineersdaybook` in the volume. Git runs the hooks in `.git/hooks` and reads `.git/config` on the host, so a writable `.git` would let an injected agent plant code that runs on the host. The agent can change only its clone. The `origin` of the clone is the GitHub URL. |
 | `--cap-drop=ALL` | The container has no capability. |
 | `--security-opt no-new-privileges` | A setuid program cannot raise a privilege. |
-| The default seccomp profile of Podman | A system call filter. Not tested under gVisor. gVisor has its own filter between the sentry and the host. |
+| The default seccomp profile of Podman | A system call filter. gVisor has its own filter between the sentry and the host. |
 | `User=agent` (uid 1000) | The container starts as `agent`, not as root. In rootless Podman, `agent` is a subuid, not your host user. The sentry and the gofer run as your host user. |
 | `MemoryMax`, `MemorySwapMax`, `TasksMax`, `CPUQuota` in `[Service]` | 3 GB of memory with no swap, 2048 host threads, 4 CPUs. gVisor ignores the limits of Podman, so they are on the service. The kernel kills a sandbox that goes over a limit. |
 | Read-only mounts | The CA, the proxy socket folder, the `.git` of the repo and the theme. |
@@ -198,7 +205,7 @@ Each row is one attack of an injected agent and the control that stops it.
 - No `sudo` and no package install. Change the image.
 - gVisor is not a microVM. A bug in the sentry gives an attacker your host user.
 - The firewall rule separates users only. A rootless container of your user that has a route to the host loopback can still connect to the proxy ports.
-- The clone starts on the current branch of your repo. Its git identity is `agent`. Set yours with `git config` in the clone.
+- The clone starts on the current branch of your repo. Commits use the name `agent` and the email `agent@localhost`. The unit sets them in `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL`, and `git config` does not change them. To commit as yourself, set these four variables in the shell.
 - Listed hosts can receive data from the agent. Keep the allowlist short.
 - A branch that the agent pushes can hold hooks or settings files. Read the diff before you check it out on the host.
 
@@ -206,10 +213,11 @@ Each row is one attack of an injected agent and the control that stops it.
 
 | Symptom | Action |
 |---|---|
-| `run` says `proxy.sock` is missing | Run `systemctl --user start sandbox-proxy`. |
+| `run` says `proxy.sock` is missing | Run `systemctl --user start sandbox-proxy`. If systemd reports a start limit, run `systemctl --user reset-failed sandbox-proxy` first. If the proxy does not start, run `just sandbox setup`. |
 | `run` says the container is not healthy | Run `podman logs sandbox`. |
 | `run` fails and the builder is not healthy | Run `podman logs sandbox-builder`. |
 | `systemctl --user status sandbox` shows `failed` | A limit killed the sandbox. Run `just sandbox run`. The clone stays in the volume. |
+| `systemctl --user status sandbox-builder` shows `failed` after `just sandbox rm` | This is normal. `buildkitd` exits with code 1 when it stops. |
 | A tool fails with a connection error | The tool ignores `HTTPS_PROXY` and has no route. |
 | You made a new CA | Restart the sandbox with `just sandbox run`. |
 

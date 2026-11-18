@@ -31,7 +31,7 @@ RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 # 
 FROM stage2-runtimes AS stage3-headroom
 COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
-# The uv cache (~880 MiB) is a download cache. Tools do not read it, so this line removes it from the layer.
+# The uv cache is a download cache. Tools do not read it, so this line removes it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
 FROM stage1-base AS stage4-infra

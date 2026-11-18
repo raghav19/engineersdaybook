@@ -41,14 +41,15 @@ Run this in your main checkout. The links of the units point to the files in thi
 just sandbox setup
 ```
 
-The recipe asks for your `sudo` password and for the access token. Nothing shows as you type. It does these steps and skips a step that is already done.
+The recipe asks for your `sudo` password. It asks for the access token only if the credential is missing or unreadable. Nothing shows as you type. It does these steps and skips a step that is already done.
 
 1. Links the `iron-proxy` and `bws` binaries into `~/.config/sandbox/bin`. The unit runs these links.
 2. Makes the CA in `~/.local/state/sandbox`. An existing CA stays.
 3. Links `iron-proxy.yaml` to `~/.config/sandbox/iron-proxy.yaml`.
-4. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
-5. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
-6. Links the three units, enables `sandbox-proxy.service` and restarts it.
+4. Links the container units, `runsc.conf` and `repo.git` for the sandbox. The proxy does not use them.
+5. Installs the firewall rule with `sudo`: it copies `sandbox-guard.nft` and `sandbox-guard.service` to `/etc` and starts the unit. If this step fails, the recipe stops and the proxy does not start.
+6. Encrypts the access token with `systemd-creds` into `~/.config/credstore.encrypted/bws-token`. The unit loads it by name with `LoadCredentialEncrypted=bws-token`. It asks for the token only if the file is missing or cannot be read.
+7. Links the three units, enables `sandbox-proxy.service` and restarts it.
 
 The recipe ends with `The proxy runs.`
 
@@ -91,11 +92,10 @@ What the rule does not do:
 
 - It separates users. It does not separate programs of the same user. A rootless container of your user with `pasta` networking can connect to the host loopback as your user. The sandbox has `Network=none`, so it cannot. Do not give another container of your user a route to these ports.
 - It does not guard `proxy.sock`. The folder `$XDG_RUNTIME_DIR` has the mode 0700 and guards the socket.
-- Tests of the rule ran in a temporary network namespace. See the handoff `docs/handoff/podman-gvisor-sandbox.md`.
 
 ## Files
 
-`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. They are copied to `/etc`, not linked.
+`iron-proxy.yaml` has the allowlist and the secret rules. `sandbox-proxy.service` starts iron-proxy with the real tokens from Bitwarden. `sandbox-bridge.socket` makes `$XDG_RUNTIME_DIR/sandbox/proxy.sock` (mode 0666, in a folder with mode 0711). `sandbox-bridge.service` joins the socket to the tunnel. `sandbox-guard.nft` and `sandbox-guard.service` install the firewall rule. `just sandbox setup` copies them to `/etc` and does not link them.
 
 ## Why there is a bridge
 
@@ -178,7 +178,3 @@ Run `journalctl --user -u sandbox-proxy` and look for the text in the first colu
 | An address family error | The proxy needs a socket type that the list leaves out. | Add `AF_NETLINK` to `RestrictAddressFamilies=`. |
 | `No such file or directory` for a path in `/home` | The path is not in a `BindReadOnlyPaths=` line. | Add a line for the path. |
 | `No such file or directory` for `~/.config/sandbox/bin/bws` or `iron-proxy` | The links are missing or point to an old version. | Run `mise install`, then `just sandbox setup`. |
-
-## Later
-
-Not built yet. The gateway accepts a JWT. iron-proxy has no SPIFFE support and no upstream mTLS. A `file` source with a `ttl` can carry a JWT-SVID. A loop on the host would run `spire-agent api fetch jwt` and write the token to that file. The identity is then the identity of the proxy, not of one sandbox.
