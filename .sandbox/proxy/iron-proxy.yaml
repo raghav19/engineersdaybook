@@ -47,8 +47,7 @@ transforms:
         - registry-1.docker.io
         - auth.docker.io
         - "*.docker.com"
-        # GitHub Container Registry. ghcr.io serves the token and the manifests. It redirects the blobs to pkg-containers.githubusercontent.com.
-        - ghcr.io
+        # GitHub Container Registry. The blobs come from pkg-containers.githubusercontent.com. The host ghcr.io is in rules below, not here.
         - pkg-containers.githubusercontent.com
         # Tool downloads
         - proxy.golang.org
@@ -96,6 +95,12 @@ transforms:
         - cloud.google.com
         # Other
         - crl.microsoft.com
+      # ghcr.io takes reads in any namespace and writes only in the namespace raghav19. Other writes get 403.
+      # The proxy checks the CONNECT first, before it sees a path. So ghcr.io needs a CONNECT rule.
+      rules:
+        - {host: ghcr.io, methods: [CONNECT]}
+        - {host: ghcr.io, methods: [GET, HEAD], paths: ["/token", "/v2/", "/v2/*"]}
+        - {host: ghcr.io, methods: [POST, PATCH, PUT], paths: ["/v2/raghav19/*"]}
   - name: secrets
     config:
       secrets:
@@ -116,7 +121,7 @@ transforms:
           replace: {proxy_value: sandbox-placeholder-QWEN_API_KEY, match_headers: [Authorization]}
           rules:
             - {host: token-plan.ap-southeast-1.maas.aliyuncs.com}
-        # GitHub Container Registry: podman login, podman push and flux push artifact
+        # GitHub Container Registry: the login of crane (push and pull)
         - source: {type: env, var: GITHUB_TOKEN}
           replace: {proxy_value: sandbox-placeholder-GHCR_PUSH_TOKEN, match_headers: [Authorization]}
           rules:
