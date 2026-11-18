@@ -1,6 +1,6 @@
 #!/bin/bash
-# The start script of the sandbox. It runs as the user agent, after sandbox-entry, and it is the process that keeps the container alive.
-# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. The healthcheck in sandbox-agent.container tests this file. `just sandbox run` waits for it, then opens Herdr.
+# The start script of the sandbox. sandbox-agent.service runs it with podman exec, as the user agent, after the container starts and the relay runs.
+# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. The healthcheck in sandbox-agent.container tests this file. The service is active after this script ends, and then `just sandbox run` opens Herdr.
 # Each step does nothing if its work exists, so a restart does no harm.
 # Values from sandbox-agent.container: SANDBOX_WORKSPACE (the path of the clone) and REPO_URL. SANDBOX_BRANCH is optional. Without it, the clone gets the branch that the host repo has checked out.
 set -eu
@@ -47,6 +47,3 @@ claude plugin marketplace add /home/agent/token-economizer && claude plugin inst
 
 # The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `podman stop sandbox-agent` stops it.
 touch /tmp/sandbox-ready
-trap 'exit 0' TERM INT
-sleep infinity &
-wait

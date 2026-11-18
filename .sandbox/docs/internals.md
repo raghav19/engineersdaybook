@@ -37,9 +37,9 @@ In the agent sandbox:
 
 | Part | Job |
 |---|---|
-| `sandbox-entry` | The command of the container. Starts the relay, then runs your command. |
-| relay (`socat`) | Listens on `127.0.0.1:3128`. Copies the bytes to `proxy.sock`. |
-| `sandbox-start` | Prepares the home and the clone, starts Headroom, writes `/tmp/sandbox-ready`. |
+| `sleep infinity` | The command of the container. It keeps the container alive. An init process passes the stop signal to it. |
+| relay (`socat`) | Started by `ExecStartPost`. Listens on `127.0.0.1:3128`. Copies the bytes to `proxy.sock`. |
+| `sandbox-start` | Runs with `podman exec` from `ExecStartPost`. Prepares the home and the clone, starts Headroom, writes `/tmp/sandbox-ready`. |
 | `docker` and `buildx` | The client of the builder. The read-only folder `/etc/docker` holds its settings. |
 | `crane` | Pushes the tar of a build. Reads the placeholder login from `/etc/docker/config.json`. |
 
@@ -48,7 +48,7 @@ In the builder:
 | Part | Job |
 |---|---|
 | `buildkitd` | BuildKit, rootless. Runs each build step as root in the builder. |
-| relay (`socat`) | Started by `relay-entry`. Listens on `127.0.0.1:3129`. Copies the bytes to the socket of the builder proxy. |
+| relay (`socat`) | Started by `ExecStartPost`. Listens on `127.0.0.1:3129`. Copies the bytes to the socket of the builder proxy. |
 | cache | A 1 GB `tmpfs`. Holds the layers of the build. |
 
 In gVisor, on the host, as your user:
@@ -135,12 +135,14 @@ sequenceDiagram
     just->>systemd: daemon-reload, restart sandbox-agent.service
     systemd->>Builder: start a new builder
     Builder-->>systemd: the health check passes
+    systemd->>Builder: ExecStartPost: start the relay
     systemd->>Agent: podman run --replace, runsc, no network
-    Agent->>Agent: start the relay, prepare the clone
-    just->>Agent: wait for healthy, then run herdr
+    systemd->>Agent: ExecStartPost: bring up lo, start the relay, run sandbox-start
+    systemd-->>just: the service is active
+    just->>Agent: check the health, then run herdr
 ```
 
-The builder starts first. A failed health check fails the start. `just` waits up to 180 seconds for the agent sandbox. It is healthy after `sandbox-start` writes `/tmp/sandbox-ready`.
+The builder starts first. A failed health check fails the start. The start of each unit has `ExecStartPost` steps, and a failed step fails the start. The agent sandbox is active after `sandbox-start` ends. It is healthy after `sandbox-start` writes `/tmp/sandbox-ready`.
 
 ### One call to the outside
 
@@ -378,12 +380,12 @@ Each part has its own folder. The firewall rule and the setup guide are on the h
   agent/
     sandbox-agent.container     the unit of the agent sandbox
     runsc.conf                  the gVisor flags of runsc
-    image/                      the Dockerfile, sandbox-entry, sandbox-start, mise.toml, tools, configs
+    image/                      the Dockerfile, sandbox-start, mise.toml, tools, configs
     proxy/                      the host proxy: iron-proxy.yaml, proxy.service, proxy-bridge.socket, proxy-bridge.service
   builder/
     sandbox-builder.container   the unit of the builder
     runsc.conf                  the gVisor flags of runsc-builder
-    image/                      the Containerfile and relay-entry
+    image/                      the Containerfile
     proxy/                      the builder proxy: the same four file names
   host/
     sandbox-guard.nft           the firewall rule for both proxies
