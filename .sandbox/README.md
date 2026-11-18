@@ -15,6 +15,19 @@ A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in 
 
 A fooled agent can use only what the sandbox allows.
 
+## Architecture
+
+[![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
+
+The sandbox has two containers: the agent sandbox and the builder. Both run in gVisor and have no network. The agent sandbox reaches the internet only through the host proxy. A request goes this way:
+
+1. A tool sends its request to `HTTPS_PROXY` (`http://127.0.0.1:3128`).
+2. `socat` in the container copies the bytes to the Unix socket `proxy.sock`.
+3. On the host, `systemd-socket-proxyd` copies them to iron-proxy (`127.0.0.1:18080`).
+4. iron-proxy checks the host. An unlisted host gets `403`. For a listed host, iron-proxy replaces each placeholder with the real token and sends the request.
+
+For the details, see [How it works in detail](docs/internals.md).
+
 ## Quick start
 
 Run these steps in your main checkout.
@@ -87,16 +100,9 @@ skopeo copy --dest-creds "raghav19:$GHCR_PUSH_TOKEN" oci-archive:/tmp/image.tar 
 | Limits | 2 GB of memory with no swap, 1 GB of cache in `tmpfs`, 1024 host threads, 2 CPUs. A build that fills the cache fails with "No space left on device". The builder stays up. |
 | Image pulls | A `FROM` that is not in an OCI layout fails, because the builder has no network. |
 
-## How it works
+## Command flows
 
-[![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
-
-1. A tool sends its request to `HTTPS_PROXY` (`http://127.0.0.1:3128`).
-2. `socat` in the container copies the bytes to the Unix socket `proxy.sock`.
-3. On the host, `systemd-socket-proxyd` copies them to iron-proxy (`127.0.0.1:18080`).
-4. iron-proxy checks the host. An unlisted host gets `403`. For a listed host, iron-proxy replaces each placeholder with the real token and sends the request.
-
-For the details, see [How it works in detail](docs/internals.md).
+The flows of `setup`, `run` and `build`, and the flow of a build in the sandbox.
 
 ### Setup
 
