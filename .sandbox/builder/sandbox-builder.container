@@ -1,0 +1,60 @@
+# The builder: BuildKit (buildkitd) in a rootless gVisor container. `just sandbox setup` links this file for Quadlet.
+# The agent runs buildctl in the sandbox. It connects to the socket that buildkitd makes in %t/sandbox/buildkit.
+# The builder lives as long as the sandbox. A stop removes the container and its tmpfs, so the cache is gone.
+# It has no network and no secret. Any holder of the socket can run any build step, so the container is the wall.
+# %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable.
+[Unit]
+Description=Builder of the agent sandbox (BuildKit and gVisor)
+# A stop or a restart of sandbox.service stops or restarts the builder.
+PartOf=sandbox.service
+
+# No network at start. This drops the wait for network-online.
+[Quadlet]
+DefaultDependencies=false
+
+[Container]
+ContainerName=sandbox-builder
+# BuildKit v0.35.0, pinned by digest.
+Image=docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
+# runsc-builder has its flags in runsc.conf.
+PodmanArgs=--runtime=runsc-builder
+Network=none
+# User 1000 is a subuid. It is the same subuid as the user agent, so the agent may connect.
+User=1000
+# rootlesskit needs these three capabilities for newuidmap. No other capability.
+DropCapability=ALL
+AddCapability=SETUID
+AddCapability=SETGID
+AddCapability=SYS_CHROOT
+# no-new-privileges stays off. With it, rootlesskit hangs with no log and no socket.
+# gVisor has no PID namespace for build steps. The flag allows this in a container.
+Exec=--addr unix:///run/buildkit/buildkitd.sock --oci-worker-no-process-sandbox --oci-worker-snapshotter=native
+# The cache is in memory and counts against MemoryMax.
+Tmpfs=/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g
+# buildkitd makes its socket here. The sandbox mounts this folder read-only.
+Volume=%t/sandbox/buildkit:/run/buildkit
+# Ready when buildkitd lists a worker. sandbox.service starts after that. A builder that is not ready fails the start.
+HealthCmd=buildctl --addr unix:///run/buildkit/buildkitd.sock debug workers
+HealthInterval=5s
+HealthTimeout=5s
+HealthRetries=6
+HealthStartPeriod=60s
+Notify=healthy
+# An unhealthy builder stops. systemd then restarts it with an empty cache.
+HealthOnFailure=kill
+
+[Service]
+# gVisor ignores the limits of Podman, so the service holds them.
+MemoryMax=2G
+# Without MemorySwapMax=0, swap hides the memory limit.
+MemorySwapMax=0
+TasksMax=1024
+CPUQuota=200%
+# A subuid owns the folder, so chown runs in the user namespace of Podman. Mode 0700 keeps other host users out.
+ExecStartPre=/usr/bin/mkdir -p -m 0711 %t/sandbox
+ExecStartPre=/usr/bin/mkdir -p -m 0700 %t/sandbox/buildkit
+ExecStartPre=/usr/bin/podman unshare chown 1000:1000 %t/sandbox/buildkit
+# The first start pulls the image.
+TimeoutStartSec=300
+# buildkitd exits with code 1 on a stop, so systemctl shows failed after a stop. This is normal.
+Restart=on-failure
