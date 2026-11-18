@@ -29,7 +29,7 @@ just sandbox build   # build the image and push it to ghcr.io (the first build t
 just sandbox run     # start the container and open Herdr
 ```
 
-`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `runsc.conf` or `sandbox.container`.
+`setup` asks for your `sudo` password and the Bitwarden access token. Run it again after you edit a file in `proxy/`, `builder/`, `runsc.conf` or `sandbox.container`.
 
 ## Commands
 
@@ -37,7 +37,8 @@ just sandbox run     # start the container and open Herdr
 |---|---|
 | `just sandbox setup` | Installs the host proxy, the firewall rule, the container unit and the gVisor flags. |
 | `just sandbox run` | Makes a new container from the image and opens Herdr. Add a command to run it in place of Herdr. |
-| `just sandbox rm` | Stops the service and removes the container. The volume stays. |
+| `just sandbox rm` | Stops the service and removes the container and the builder. The volume stays. |
+| `just sandbox builder-check` | Lists the BuildKit worker from the sandbox. It tests the socket of the builder. |
 | `just sandbox build` | Builds the image, tags it with the commit and pushes it. `just sandbox build --no-cache` updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox` | Follows the log of the container. |
@@ -69,6 +70,33 @@ The ACL gives each user only the commands and keys it needs. A connection that d
 | `worker` | `QUEUE_WORKER_PASSWORD` | `blmove`, `lrem`, `lrange`, `get`, `set`, `append`, `del` | Read and write: `job:*`, `build:queue`, `build:active`, `queue:epoch`. |
 
 The agent cannot read a context, cannot write a status and cannot list the queue. To change a right, edit `build/queue-policy.yaml`, run `just sandbox queue`, then run `just sandbox queue-check`.
+
+## Builder
+
+The agent builds an image with `buildctl`. `buildctl` sends the build to BuildKit (`buildkitd`), which runs in a second container, the builder. The builder has its own gVisor container, has no network and holds no secret.
+
+1. `sandbox.service` requires `sandbox-builder.service`. The builder starts first.
+2. `buildkitd` makes the socket `$XDG_RUNTIME_DIR/sandbox/buildkit/buildkitd.sock` in a folder on the host.
+3. The sandbox mounts the folder read-only at `/run/sandbox/buildkit`. `BUILDKIT_HOST` points there, so `buildctl build` needs no `--addr`.
+4. A stop or a restart of `sandbox.service` stops the builder. The state of `buildkitd` is in memory, so the cache and every file of the build are gone.
+
+Run `just sandbox builder-check` to test the socket. It lists one BuildKit worker.
+
+This build sends an OCI tar back to the sandbox. The base image comes from the client, because the builder has no network:
+
+```shell
+buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. \
+  --oci-layout base=/path/to/oci-layout --opt context:base=oci-layout:base@sha256:<DIGEST> \
+  --output type=oci,dest=/tmp/image.tar
+```
+
+| Fact | Detail |
+|---|---|
+| Who may connect | Any process that reaches the socket. BuildKit has no authorization. The agent and the builder use the same subuid, and no other user reaches the folder. |
+| What a build step can do | Run any command as root in the builder. The wall is the builder container: no network, no secret, no host mount except the socket folder. |
+| What stays off | The entitlements `network.host`, `security.insecure` and `device`. BuildKit denies them by default. Do not enable them. |
+| Limits | 4 GB of memory with no swap, 2 GB of cache in `tmpfs`, 2048 host threads, 4 CPUs. |
+| Image pulls | Not possible yet. A `FROM` that is not in an OCI layout fails. A relay to the proxy is the next step. |
 
 ## How it works
 
@@ -138,8 +166,9 @@ Each row is one attack of an injected agent and the control that stops it.
 | Path | Content |
 |---|---|
 | `sandbox.container` | The Quadlet unit: environment, hardening, mounts and limits. |
-| `runsc.conf` | The gVisor flags for Podman. |
-| `justfile` | The `setup`, `run`, `rm`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
+| `runsc.conf` | The gVisor flags for Podman, for the sandbox (`runsc`) and for the builder (`runsc-builder`). |
+| `builder/` | The builder: the Quadlet unit `sandbox-builder.container`. |
+| `justfile` | The `setup`, `run`, `rm`, `builder-check`, `build`, `queue`, `queue-check` and `queue-down` recipes. |
 | `build/` | The build queue: the Valkey container, its config, the ACL policy, the rules that render it and `queue-check.sh` with the tests. |
 | `image/` | The Dockerfile, `sandbox-entry`, `sandbox-start` and the `mise` tasks. |
 | `proxy/` | The host proxy. See [`proxy/README.md`](proxy/README.md). |

@@ -4,6 +4,9 @@
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
 [Unit]
 Description=Agent sandbox (Podman and gVisor)
+# The builder (builder/sandbox-builder.container) starts first. A stop or a restart of this unit stops the builder, so each session has a new builder.
+Requires=sandbox-builder.service
+After=sandbox-builder.service
 
 # The container needs no network at start. This drops the wait for network-online that Quadlet adds.
 [Quadlet]
@@ -37,6 +40,8 @@ Environment=GH_TOKEN=sandbox-placeholder-GH_TOKEN
 Environment=CLAUDE_CODE_OAUTH_TOKEN=sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
 Environment=QWEN_API_KEY=sandbox-placeholder-QWEN_API_KEY
 Environment=GHCR_PUSH_TOKEN=sandbox-placeholder-GHCR_PUSH_TOKEN
+# buildctl connects here. The builder makes this socket. See the Volume line for /run/sandbox/buildkit.
+Environment=BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock
 # The relay in sandbox-entry listens here. A tool that ignores these variables has no route.
 Environment=HTTP_PROXY=http://127.0.0.1:3128
 Environment=HTTPS_PROXY=http://127.0.0.1:3128
@@ -66,10 +71,12 @@ Environment=MISE_IGNORED_CONFIG_PATHS=/home/agent/engineersdaybook/mise.toml
 Environment=CLAUDE_CONFIG_DIR=/home/agent/.claude
 Environment=DISABLE_UPDATES=1
 Environment=HEADROOM_HARD_WATCHDOG_SECS=0
-# The first three mounts have the flag :ro. The agent cannot change the CA, the socket folder or the repo.
+# The first four mounts have the flag :ro. The agent cannot change the CA, the socket folder or the repo.
 # repo.git is a link that `just sandbox setup` makes. It points to the .git folder of your main checkout.
 Volume=%h/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
 Volume=%t/sandbox:/run/sandbox/proxy:ro
+# The socket folder of the builder. The agent is the user 1000, the same subuid as the builder, so it may connect.
+Volume=%t/sandbox/buildkit:/run/sandbox/buildkit:ro
 Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
 # The name does not change, so the volume of the earlier setup keeps working.
 Volume=sandbox-home:/home/agent

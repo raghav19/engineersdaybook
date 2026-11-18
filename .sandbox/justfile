@@ -5,7 +5,8 @@
 #
 #   just sandbox setup   install the host proxy and the firewall rule. Link the container unit, the gVisor flags and the repo. Run it again after you edit a file in proxy/.
 #   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
-#   just sandbox rm      stop and remove the container. The volume stays.
+#   just sandbox rm      stop and remove the container and the builder. The volume stays.
+#   just sandbox builder-check   list the BuildKit worker from the sandbox. It tests the socket of the builder.
 #   just sandbox build   build the image, tag it with the commit and push it to ghcr.io. Extra flags go to podman build.
 #   just sandbox queue   start the build queue (Valkey). Run it again after you edit build/ or change the secret QUEUE_WORKER_PASSWORD.
 #   just sandbox queue-check   test the rights of the agent and of the worker in the queue.
@@ -92,6 +93,8 @@ setup:
     # repo.git points to the .git folder of this repo. The unit mounts it read-only, and the container clones it.
     mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
     ln -sf '{{ source_directory() }}/sandbox.container' "$HOME/.config/containers/systemd/sandbox.container"
+    # The builder is a second unit. sandbox.container requires it, so it starts and stops with the sandbox.
+    ln -sf '{{ source_directory() }}/builder/sandbox-builder.container' "$HOME/.config/containers/systemd/sandbox-builder.container"
     ln -sf '{{ source_directory() }}/runsc.conf' "$HOME/.config/containers/containers.conf.d/runsc.conf"
     ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
     systemctl --user daemon-reload
@@ -146,8 +149,13 @@ run *command: (_needs proxy_socket) (_needs SANDBOX_CA)
         {{ if command == '' { 'herdr' } else { command } }}
 
 # Stop and remove the container. The volume sandbox-home stays, so the clone and the logins stay.
+# The builder stops with the sandbox, and its cache is gone.
 rm:
     systemctl --user stop sandbox.service
+
+# Test the builder from the sandbox. The output lists one worker. A list means that the socket and buildkitd work.
+builder-check:
+    podman exec sandbox buildctl debug workers
 
 # Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 build *args: (_needs credential)
