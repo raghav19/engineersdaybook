@@ -45,7 +45,7 @@
 <g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="742" y="335.3">Builder: Podman and gVisor</text></g>
 
 <rect x="745" y="358" width="210" height="114" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="392.8" font-weight="bold">BuildKit (buildkitd)</text><text x="850.0" y="413.8">rootless, no network</text><text x="850.0" y="434.8">cache in tmpfs,</text><text x="850.0" y="455.8">gone at each stop</text></g>
+<g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="392.8" font-weight="bold">BuildKit (buildkitd)</text><text x="850.0" y="413.8">rootless, no network</text><text x="850.0" y="434.8">new per sandbox session</text><text x="850.0" y="455.8">cache in tmpfs</text></g>
 
 <rect x="660" y="570" width="380" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <g font-size="16" text-anchor="middle" fill="#000000"><text x="850.0" y="599.8" font-weight="bold">Quadlet service sandbox-builder.service</text><text x="850.0" y="620.8">limits: 2 GB, 2 CPUs</text></g>
