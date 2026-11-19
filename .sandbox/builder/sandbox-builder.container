@@ -4,8 +4,11 @@
 # The builder lives as long as the sandbox. A stop removes the container and its tmpfs, so the cache is gone.
 # It has no network device and no secret. Any holder of the socket can run any build step, so the container is the wall.
 # %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable.
+# For a Compose reader: [Container] is the Compose service. [Unit], [Quadlet] and [Service] are systemd sections.
+# A comment names the Compose key of a setting.
 [Unit]
 Description=Builder of the agent sandbox (BuildKit and gVisor)
+# Requires= and After= are depends_on. PartOf= has no Compose key.
 # The builder proxy must run before the container mounts the folder of its socket.
 Requires=sandbox-builder-proxy.service
 After=sandbox-builder-proxy.service
@@ -17,6 +20,10 @@ PartOf=sandbox-agent.service
 DefaultDependencies=false
 
 [Container]
+# Compose keys: ContainerName=container_name, Image=image, Network=network_mode, User=user, Exec=command,
+# DropCapability=cap_drop, AddCapability=cap_add, Tmpfs=tmpfs, Environment=environment, Volume=volumes.
+# PodmanArgs=--runtime=runsc-builder is runtime. Health* is healthcheck: HealthCmd=test, HealthInterval=interval, HealthTimeout=timeout, HealthRetries=retries, HealthStartPeriod=start_period.
+# Notify=healthy and HealthOnFailure=kill have no Compose key. Notify=healthy is close to depends_on with condition: service_healthy, for the units that start after this one.
 ContainerName=sandbox-builder
 # `just sandbox build` builds this image from builder/image/Containerfile.
 Image=localhost/sandbox-builder:latest
@@ -54,6 +61,8 @@ Notify=healthy
 HealthOnFailure=kill
 
 [Service]
+# Compose keys: MemoryMax=mem_limit, TasksMax=pids_limit, CPUQuota=200% is cpus: 2, Restart=on-failure is restart: on-failure.
+# MemorySwapMax=0 turns swap off, like memswap_limit. ExecStartPre, ExecStartPost and TimeoutStartSec have no Compose key.
 # gVisor ignores the limits of Podman, so the service holds them.
 MemoryMax=2G
 # Without MemorySwapMax=0, swap hides the memory limit.

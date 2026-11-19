@@ -12,15 +12,6 @@ You let a coding agent work on your repository. The agent has three abilities. T
 
 A prompt injection hides an instruction in the text that the agent reads. A fooled agent then runs commands with your rights. It can send your private data to an attacker. Simon Willison calls this combination the [lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/). A filter that stops most attacks is not enough, because one missed attack is enough.
 
-You cannot remove the first ability, because the agent must read. You cannot remove all outside communication, because the agent must work. In this repository the agent must:
-
-- clone, commit and push to GitHub
-- call the APIs of the models (Claude and Qwen), which need tokens
-- install tools and read documentation
-- build container images, with no Docker daemon and no root on your host
-
-The sandbox must run on one Linux machine with rootless Podman. It must start with one command.
-
 ## The solution
 
 The sandbox keeps the agent useful and limits what a fooled agent can do. It has one step for each ability:
@@ -59,21 +50,25 @@ The sandbox has two limits of its own:
 
 ## Security controls
 
-The baseline is rootless Podman and limits on memory and threads for every container. The agent sandbox also has a user that is not root, no capability, `no-new-privileges` and a read-only root file system. The proxies have the same, except the user. The builder keeps three capabilities and has no `no-new-privileges`, because `rootlesskit` needs them. An agent needs more. These controls are specific to a sandbox for an agent:
+The table lists the controls from the outside in. The last column of each row names the Podman containers that have the control.
 
-| Control | What it stops |
-|---|---|
-| No network device in the agent sandbox and the builder | A tool or a build step that ignores the proxy settings has no route out. |
-| One way out: a socket to a proxy container | The agent reaches only the tunnel port of the proxy. It cannot see the files, the process or the other ports of the proxy. |
-| Placeholders in the agent, real tokens in the proxy | A fooled agent cannot read a token. The proxy swaps a token in for the listed hosts only. |
-| Tokens outside the Podman storage | The proxy reads a systemd credential. The real tokens are in memory only while a session runs. |
-| Rules for the host, the method and the path | A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`. |
-| gVisor for the agent sandbox and the builder | A system call of a hostile command reaches gVisor, not the host kernel. |
-| A private clone, with your `.git` mounted read-only | The agent cannot plant a git hook or change your repository. A push goes to GitHub, and you read the branch. |
-| A separate builder for build steps | A `RUN` step runs as root in a container with no token and no network device. The agent has no Docker daemon. |
-| Read-only policy: `/etc/docker` and the managed settings | The agent cannot add a builder, change the endpoint or edit its own policy. |
-| A new builder and new proxies for each session | The cache and the tokens in memory end with the session. |
-| An audit log in the proxy | Each request is one JSON line in `journalctl --user -u sandbox-proxy`. |
+| Layer | Control | Applies to | What it stops |
+|---|---|---|---|
+| Container | Rootless Podman | All containers | A container escape gives an attacker your user and not root. |
+| Container | Limits on memory and threads | All containers | A runaway or hostile process cannot use up the host. |
+| Container | A user that is not root | Agent sandbox, builder | A process in the container has no root rights. |
+| Container | No capability, `no-new-privileges`, read-only root file system | Agent sandbox, proxies | A process cannot gain rights or change its image. The builder is the exception. It keeps `SETUID`, `SETGID` and `SYS_CHROOT`, has no `no-new-privileges` and has a writable `tmpfs`, because `rootlesskit` needs them. |
+| Kernel | gVisor | Agent sandbox, builder | A system call of a hostile command goes to gVisor and not to the Linux kernel of your host. |
+| Egress | No network device | Agent sandbox, builder | A tool that ignores the proxy settings has no route out. |
+| Egress | One Unix socket to its own proxy | Agent sandbox, builder | The only way out is the tunnel port of the proxy. The container cannot see the files, the process or the other ports of the proxy. |
+| Egress | Allowlist of hosts | Agent proxy, builder proxy | Any other host gets `403`. The builder proxy lists registries, package hosts and release hosts. The agent proxy lists the hosts that the agent needs. |
+| Egress | Rules for the method and the path | Agent proxy | A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`. |
+| Egress | Token swap | Agent proxy | The agent holds placeholders. The proxy puts in the real token for the listed hosts only. The builder has no token. |
+| Egress | Audit log | Agent proxy | Each request is one JSON line in `journalctl --user -u sandbox-proxy`. |
+| Workspace | A private clone, with your `.git` mounted read-only | Agent sandbox | The agent cannot plant a git hook or change your repository. A push goes to GitHub, and you read the branch. |
+| Build | A separate builder | Builder | A `RUN` step runs as root in a container with no token and no network device. The agent has no Docker daemon. |
+| Policy | Read-only `/etc/docker` and managed settings | Agent sandbox | The agent cannot add a builder, change the endpoint or edit its own policy. |
+| Session | New containers for each session | Builder, proxies | The build cache and the proxy state end with the session. |
 
 ## What the agent can reach
 
@@ -144,7 +139,34 @@ The volume `sandbox-home` keeps the clone, the logins and the histories.
 
 ## Build and push in the agent sandbox
 
-[![Build and push in the agent sandbox](docs/diagrams/build-push.png)](docs/diagrams/build-push.svg)
+```mermaid
+sequenceDiagram
+    participant Agent as Agent sandbox
+    participant Builder
+    participant BP as Builder proxy
+    participant Hosts as Base image and package hosts
+    participant HP as Host proxy
+    participant GHCR as ghcr.io
+    Note over Agent,GHCR: 1. docker build
+    Agent->>Builder: send the context on buildkitd.sock
+    Builder->>BP: FROM and RUN, through proxy.sock
+    alt the host is in the allowlist
+        BP->>Hosts: pull the base image and the packages
+        Hosts-->>Builder: the layers and the packages
+    else the host is not in the allowlist
+        BP-->>Builder: 403
+    end
+    Builder-->>Agent: send the image, docker writes image.tar
+    Note over Agent,GHCR: 2. crane push
+    Agent->>HP: push image.tar, login with the placeholder
+    alt the path is in the namespace raghav19
+        HP->>HP: replace the placeholder with the real token
+        HP->>GHCR: send each blob and the manifest
+        GHCR-->>Agent: the digest of the image
+    else the path is in another namespace
+        HP-->>Agent: 403
+    end
+```
 
 1. Run `docker build` as on any host. A normal Dockerfile builds as it is. The agent sandbox has no Docker daemon, so the build writes a tar file:
 
@@ -158,28 +180,64 @@ The volume `sandbox-home` keeps the clone, the logins and the histories.
    crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
    ```
 
-Rules:
-
-- `docker build`, `docker buildx build` and `docker buildx bake` work. Add `--output type=docker,dest=FILE`. One platform only.
-- Without `--output`, the image stays in the cache of the builder.
-- `--push`, `--load`, `docker push`, `run`, `images`, `tag` and `compose` fail. There is no daemon and no image store. Use `crane push`.
-- A `FROM` or `RUN` step reaches only the hosts in `builder/proxy/iron-proxy.yaml`. An unlisted host gets `403`. To add a host, edit the file and run `just sandbox setup`.
-- For a private base image, run `crane pull --format oci REF /tmp/base`. Then add `--build-context NAME=oci-layout:///tmp/base@sha256:DIGEST`.
-
 ## Troubleshooting
 
-- **`run` fails at the start.** A failed step of a unit fails the start. Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`.
-- **`run` says that the credential is missing.** Run `just sandbox setup`.
-- **`Failed to read encrypted credential data: Invalid argument`.** `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again.
-- **`podman logs sandbox-proxy` shows a Bitwarden error.** The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`.
-- **`run` says the agent sandbox is not healthy.** Run `podman logs sandbox-agent`.
-- **`run` says the builder is not healthy.** Run `podman logs sandbox-builder`.
-- **`docker build` says `failed to connect to the docker API`.** `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.
-- **A `FROM` or a `RUN` step gets `403`.** The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`.
-- **`crane push` gets `403`.** The namespace is not `raghav19`.
-- **A GitHub call gets `403`.** The host proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
-- **`status sandbox-agent` shows `failed`.** A limit killed it. Run `just sandbox run`. The clone stays in the volume.
-- **`status sandbox-builder` shows `failed` after `just sandbox rm`.** This is normal. `buildkitd` exits with code 1 when it stops.
-- **`run` stops at a `Credential` error of the proxy.** The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.
-- **A tool fails with a connection error.** The tool ignores `HTTPS_PROXY`.
-- **You made a new CA.** Run `just sandbox run`.
+**Why does `run` fail at the start?**
+
+A failed step of a unit fails the start. Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`.
+
+**Why does `run` say that the credential is missing?**
+
+Run `just sandbox setup`.
+
+**Why do I see `Failed to read encrypted credential data: Invalid argument`?**
+
+`bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again.
+
+**Why does `podman logs sandbox-proxy` show a Bitwarden error?**
+
+The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`.
+
+**Why does `run` say the agent sandbox is not healthy?**
+
+Run `podman logs sandbox-agent`.
+
+**Why does `run` say the builder is not healthy?**
+
+Run `podman logs sandbox-builder`.
+
+**Why does `docker build` say `failed to connect to the docker API`?**
+
+`DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`.
+
+**Why does a `FROM` or a `RUN` step get `403`?**
+
+The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`.
+
+**Why does `crane push` get `403`?**
+
+The namespace is not `raghav19`.
+
+**Why does a GitHub call get `403`?**
+
+The host proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`.
+
+**Why does `status sandbox-agent` show `failed`?**
+
+A limit killed it. Run `just sandbox run`. The clone stays in the volume.
+
+**Why does `status sandbox-builder` show `failed` after `just sandbox rm`?**
+
+This is normal. `buildkitd` exits with code 1 when it stops.
+
+**Why does `run` stop at a `Credential` error of the proxy?**
+
+The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`.
+
+**Why does a tool fail with a connection error?**
+
+The tool ignores `HTTPS_PROXY`.
+
+**What do I do after I make a new CA?**
+
+Run `just sandbox run`.

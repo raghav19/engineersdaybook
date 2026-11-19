@@ -3,6 +3,8 @@
 # The agent sandbox connects to the Unix socket proxy.sock in %t/sandbox. socat in this container joins the socket to the tunnel port of iron-proxy.
 # The port exists only in the network namespace of this container, so no firewall rule is needed.
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. %d is the folder of the systemd credentials of this service.
+# For a Compose reader: [Container] is the Compose service. [Unit], [Quadlet] and [Service] are systemd sections.
+# A comment names the Compose key of a setting.
 [Unit]
 Description=Host proxy of the agent sandbox (iron-proxy in a container)
 # A stop or a restart of sandbox-agent.service stops or restarts this unit. The real tokens are in memory only while a sandbox runs.
@@ -13,6 +15,9 @@ PartOf=sandbox-agent.service
 DefaultDependencies=false
 
 [Container]
+# Compose keys: ContainerName=container_name, Image=image, ReadOnly=read_only, DropCapability=cap_drop, Tmpfs=tmpfs,
+# Environment=environment, WorkingDir=working_dir, RunInit=init, Volume=volumes, Exec=command.
+# NoNewPrivileges=true is security_opt: no-new-privileges.
 ContainerName=sandbox-proxy
 Image=localhost/sandbox-proxy:latest
 ReadOnly=true
@@ -36,6 +41,8 @@ Volume=%d/bws-token:/run/secrets/bws-token:ro
 Exec=sh -c 'BWS_ACCESS_TOKEN="$(cat /run/secrets/bws-token)" exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config /etc/iron-proxy/iron-proxy.yaml'
 
 [Service]
+# Compose keys: MemoryMax=mem_limit, TasksMax=pids_limit, Restart=on-failure is restart: on-failure.
+# MemorySwapMax=0 turns swap off, like memswap_limit. LoadCredentialEncrypted, SuccessExitStatus, ExecStartPre and ExecStartPost have no Compose key.
 # The credential bws-token: ~/.config/credstore.encrypted/bws-token. just sandbox setup makes the file.
 LoadCredentialEncrypted=bws-token
 # gVisor is not here, so the limits of Podman do not apply to this container either. The service holds the limits.
