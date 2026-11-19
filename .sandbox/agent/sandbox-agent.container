@@ -2,8 +2,11 @@
 # `just sandbox run` starts it. Quadlet turns it into the service sandbox-agent.service.
 # The container has no network. The host proxy container (.sandbox/agent/proxy) is its only way out.
 # %h is your home folder. %t is $XDG_RUNTIME_DIR. Quadlet reads no other variable, so every path here is fixed.
+# For a Compose reader: [Container] is the Compose service. [Unit], [Quadlet] and [Service] are systemd sections.
+# A comment names the Compose key of a setting.
 [Unit]
 Description=Agent sandbox (Podman and gVisor)
+# Requires= and After= are depends_on.
 # The builder and the host proxy start first. A stop or a restart of this unit stops them, so each session has a new builder and a new proxy.
 Requires=sandbox-builder.service sandbox-proxy.service
 After=sandbox-builder.service sandbox-proxy.service
@@ -13,6 +16,10 @@ After=sandbox-builder.service sandbox-proxy.service
 DefaultDependencies=false
 
 [Container]
+# Compose keys: ContainerName=container_name, Image=image, Network=network_mode, User=user, WorkingDir=working_dir,
+# Exec=command, RunInit=init, ReadOnly=read_only, DropCapability=cap_drop, Tmpfs=tmpfs, Environment=environment, Volume=volumes.
+# PodmanArgs=--runtime=runsc is runtime. NoNewPrivileges=true is security_opt: no-new-privileges.
+# Health* is healthcheck: HealthCmd=test, HealthInterval=interval, HealthTimeout=timeout, HealthRetries=retries, HealthStartPeriod=start_period.
 ContainerName=sandbox-agent
 Image=localhost/sandbox-dev:latest
 # gVisor. `just sandbox setup` registers runsc in ~/.config/containers/containers.conf.d/sandbox-agent-runsc.conf.
@@ -90,6 +97,8 @@ Volume=%h/.config/sandbox/repo.git:/run/sandbox/source:ro
 Volume=sandbox-home:/home/agent
 
 [Service]
+# Compose keys: MemoryMax=mem_limit, TasksMax=pids_limit, CPUQuota=400% is cpus: 4. MemorySwapMax=0 turns swap off, like memswap_limit.
+# SuccessExitStatus, ExecStartPost and TimeoutStartSec have no Compose key.
 # gVisor ignores the limits of Podman. These service limits apply to the whole sandbox.
 # A sandbox that goes over a limit is killed, and the service shows failed. `just sandbox run` starts it again.
 # MemorySwapMax=0 is needed. Without it, swap hides the memory limit.
