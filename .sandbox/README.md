@@ -57,6 +57,8 @@ The sandbox has two limits of its own:
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
+The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`. For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
+
 ## Security controls
 
 The baseline is rootless Podman and limits on memory and threads for every container. The agent sandbox also has a user that is not root, no capability, `no-new-privileges` and a read-only root file system. The proxies have the same, except the user. The builder keeps three capabilities and has no `no-new-privileges`, because `rootlesskit` needs them. An agent needs more. These controls are specific to a sandbox for an agent:
@@ -74,16 +76,6 @@ The baseline is rootless Podman and limits on memory and threads for every conta
 | Read-only policy: `/etc/docker` and the managed settings | The agent cannot add a builder, change the endpoint or edit its own policy. |
 | A new builder and new proxies for each session | The cache and the tokens in memory end with the session. |
 | An audit log in the proxy | Each request is one JSON line in `journalctl --user -u sandbox-proxy`. |
-
-## What the agent can reach
-
-- **GitHub.** The agent reads any repository. A push and a REST write (issues, comments, pull requests, reviews) go to this repository only. A merge, a file write, a removal, a gist, a fork and GraphQL get `403`.
-- **GitHub MCP server.** The proxy opens the URL. The toolsets and the `deny` list in the settings files limit the tools. You plan a central gateway for this.
-- **`ghcr.io`.** The agent reads any namespace and writes in the namespace `raghav19` only.
-- **Other hosts.** The agent reaches the hosts in `agent/proxy/iron-proxy.yaml`. Any other host gets `403`.
-- **Builds.** A `FROM` or `RUN` step reaches the hosts in `builder/proxy/iron-proxy.yaml`, with no token.
-
-For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
 
 ## Prerequisites
 
