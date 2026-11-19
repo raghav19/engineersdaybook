@@ -204,7 +204,7 @@ Run `podman logs sandbox-builder`.
 
 **Why does a `FROM` or a `RUN` step get `403`?**
 
-The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox setup`.
+The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox run`. The proxy reads its file at start, and `run` restarts the agent sandbox, the builder and both proxies.
 
 **Why does `crane push` get `403`?**
 
