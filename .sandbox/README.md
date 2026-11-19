@@ -48,6 +48,8 @@ The sandbox has two limits of its own:
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
+The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`. For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
+
 ## Security controls
 
 The table lists the controls from the outside in. The last column of each row names the Podman containers that have the control.
@@ -69,16 +71,6 @@ The table lists the controls from the outside in. The last column of each row na
 | Build | A separate builder | Builder | A `RUN` step runs as root in a container with no token and no network device. The agent has no Docker daemon. |
 | Policy | Read-only `/etc/docker` and managed settings | Agent sandbox | The agent cannot add a builder, change the endpoint or edit its own policy. |
 | Session | New containers for each session | Builder, proxies | The build cache and the proxy state end with the session. |
-
-## What the agent can reach
-
-- **GitHub.** The agent reads any repository. A push and a REST write (issues, comments, pull requests, reviews) go to this repository only. A merge, a file write, a removal, a gist, a fork and GraphQL get `403`.
-- **GitHub MCP server.** The proxy opens the URL. The toolsets and the `deny` list in the settings files limit the tools. You plan a central gateway for this.
-- **`ghcr.io`.** The agent reads any namespace and writes in the namespace `raghav19` only.
-- **Other hosts.** The agent reaches the hosts in `agent/proxy/iron-proxy.yaml`. Any other host gets `403`.
-- **Builds.** A `FROM` or `RUN` step reaches the hosts in `builder/proxy/iron-proxy.yaml`, with no token.
-
-For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
 
 ## Prerequisites
 
