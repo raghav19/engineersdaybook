@@ -30,6 +30,14 @@
     "nerd_font_icons": true
   },
   "languages": {
+    "systemd": {
+      "extensions": [
+        "service", "socket", "timer", "target", "mount", "automount", "swap", "path", "slice", "scope",
+        "container", "volume", "network", "kube", "pod", "build", "image"
+      ],
+      "grammar": "INI",
+      "comment_prefix": "#"
+    },
     "go": {
       "format_on_save": true
     },
@@ -60,6 +68,12 @@
     }
   },
   "lsp": {
+    "systemd": [
+      {
+        "command": "systemd-lsp",
+        "auto_start": true
+      }
+    ],
     "go": [
       {
         "command": "gopls",
