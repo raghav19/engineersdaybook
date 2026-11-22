@@ -125,6 +125,37 @@ just sandbox run     # start the proxies, the builder and the agent sandbox, and
 
 The volume `sandbox-home` keeps the clone, the logins and the histories.
 
+## Open a port of the sandbox on the host
+
+A service in the agent sandbox listens on `127.0.0.1:<port>` there. The host bridge opens the same port on the loopback of the host. Headroom is in the list: open `http://127.0.0.1:8787/dashboard`.
+
+### Add a port
+
+1. Add the port number to `agent/ports` in your main checkout. Write one port in each line.
+2. Run `systemctl --user restart sandbox-bridge.service`.
+3. Run `curl -s http://127.0.0.1:<port>/`. The port is open when the service in the sandbox answers.
+
+If step 3 fails, run `journalctl --user -u sandbox-bridge -n 20`. A `bad port` line names a wrong entry in `agent/ports`. An `Address already in use` line names a port that a program on the host holds. Only that port fails.
+
+### Rules of the bridge
+
+| Rule | Value |
+|---|---|
+| Address on the host | `127.0.0.1` only |
+| Target in the sandbox | `127.0.0.1:<the same port>` only |
+| Ports | 1024 to 65535. Any other entry stops the bridge. |
+| Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
+| Connections | At most 8 at the same time for each port |
+| Direction | The host starts each connection. The sandbox keeps `Network=none` and cannot start one. |
+| Sandbox stopped | The connection closes at once. |
+| Needs | `socat` on the host, and the unit `sandbox-bridge.service` |
+
+`bridge.sh` runs on the host, not in the sandbox. For each port, it starts a `socat` on the host. For each connection, that `socat` runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:<port>`.
+
+The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
+
+To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
+
 ## Build and push in the agent sandbox
 
 ```mermaid
