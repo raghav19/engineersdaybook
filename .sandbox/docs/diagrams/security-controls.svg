@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1320" viewBox="0 0 1800 1320" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<svg xmlns="http://www.w3.org/2000/svg" width="1820" height="1320" viewBox="0 0 1820 1320" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <defs>
 <marker id="a-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#333333"/></marker>
 <marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d79b00"/></marker>
 </defs>
-<rect width="1800" height="1320" fill="#ffffff"/>
+<rect width="1820" height="1320" fill="#ffffff"/>
 <text x="20" y="30" dominant-baseline="central" font-size="22" font-weight="bold">Security controls of the agent sandbox</text>
 <rect x="20" y="80" width="580" height="510" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
 <line x1="20" y1="140" x2="600" y2="140" stroke="#82b366" stroke-width="2"/>
@@ -86,11 +86,11 @@
 <rect x="1265" y="1098" width="215" height="70" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1372.5" y="1116.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1372.5" dy="0">Limits in the service</tspan><tspan x="1372.5" dy="17">256 MB, 256 threads,</tspan><tspan x="1372.5" dy="17">no swap</tspan></text>
 <rect x="20" y="670" width="1480" height="60" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<text x="760.0" y="690.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="760.0" dy="0">Host kernel (Linux)</tspan><tspan x="760.0" dy="19">gVisor stands between each sandbox and this kernel. The proxy containers run without gVisor.</tspan></text>
-<rect x="1620" y="100" width="160" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<text x="1700.0" y="125.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="1700.0" dy="0">Bitwarden</tspan><tspan x="1700.0" dy="19">Secrets Manager</tspan></text>
-<rect x="1620" y="440" width="160" height="600" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<text x="1700.0" y="730.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1700.0" dy="0">Internet</tspan><tspan x="1700.0" dy="19">allowed hosts</tspan></text>
+<text x="760.0" y="700.0" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="760.0" dy="0">Host kernel</tspan></text>
+<rect x="1640" y="100" width="160" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="1720.0" y="125.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="1720.0" dy="0">Bitwarden</tspan><tspan x="1720.0" dy="19">Secrets Manager</tspan></text>
+<rect x="1640" y="702" width="160" height="76" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1720.0" y="740.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1720.0" dy="0">Internet</tspan></text>
 <path d="M310 518.0 C355.0 518.0 355.0 518.0 400 518.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="309.2" y="495.5" width="91.6" height="17" fill="#ffffff"/>
 <text x="355.0" y="504.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="355.0" dy="0">HTTPS_PROXY</tspan></text>
@@ -98,10 +98,10 @@
 <rect x="609.4" y="495.5" width="61.199999999999996" height="17" fill="#ffffff"/>
 <text x="640.0" y="504.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="640.0" dy="0">connect</tspan></text>
 <path d="M900 518.0 C970.0 518.0 970.0 518.0 1040 518.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<path d="M1480 518.0 C1550.0 518.0 1550.0 518.0 1620 518.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
-<path d="M1620 135.0 C1560.0 135.0 1560.0 170.015 1500 170.015" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#a-orange)"/>
-<rect x="1514.2" y="130.0075" width="91.6" height="17" fill="#ffffff"/>
-<text x="1560.0" y="138.5075" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1560.0" dy="0">real tokens</tspan></text>
+<path d="M1480 518.0 C1581.5 518.0 1538.5 721.0 1640 721.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<path d="M1640 135.0 C1570.0 135.0 1570.0 170.015 1500 170.015" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#a-orange)"/>
+<rect x="1524.2" y="130.0075" width="91.6" height="17" fill="#ffffff"/>
+<text x="1570.0" y="138.5075" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1570.0" dy="0">real tokens</tspan></text>
 <path d="M310 962.0 C355.0 962.0 355.0 962.0 400 962.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="309.2" y="939.5" width="91.6" height="17" fill="#ffffff"/>
 <text x="355.0" y="948.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="355.0" dy="0">HTTPS_PROXY</tspan></text>
@@ -109,7 +109,7 @@
 <rect x="609.4" y="939.5" width="61.199999999999996" height="17" fill="#ffffff"/>
 <text x="640.0" y="948.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="640.0" dy="0">connect</tspan></text>
 <path d="M900 962.0 C970.0 962.0 970.0 962.0 1040 962.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<path d="M1480 962.0 C1550.0 962.0 1550.0 962.0 1620 962.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<path d="M1480 962.0 C1581.5 962.0 1538.5 759.0 1640 759.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <path d="M499.0 570 C499.0 620.0 498.928 620.0 498.928 670" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="437.964" y="611.5" width="122.0" height="17" fill="#ffffff"/>
 <text x="498.964" y="620.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="498.964" dy="0">calls by gVisor</tspan></text>
