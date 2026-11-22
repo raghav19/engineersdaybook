@@ -69,7 +69,7 @@ The Quadlet services and their limits:
 
 The diagram shows each control in the container that has it. It calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
 
-The reason or the command behind a control:
+Notes on the controls:
 
 - **One socket.** The container cannot see the files, the process or the other ports of the proxy.
 - **The builder.** `rootlesskit` needs the three capabilities. The builder has no `no-new-privileges`, and its root file system is writable.
