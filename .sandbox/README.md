@@ -47,21 +47,7 @@ The sandbox has two limits of its own:
 
 [![The agent sandbox, the builder and both proxies](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
-- The agent sandbox and the builder have `Network=none`. Only a Unix socket leads to the host.
-- A relay in each of them turns the proxy address that tools expect into that socket.
-- Each proxy runs in its own container, with the default Podman network. A `socat` in that container joins the socket to `iron-proxy`.
-- The host proxy holds the real tokens. The builder proxy holds none.
-- Both proxies allow listed hosts only. The lists are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
-- The agent sandbox sends a build to the builder through a socket in a shared folder.
-- Quadlet turns each container file into a systemd service. The service holds the limits of its container.
-
-The network path of the agent sandbox and the builder, inside gVisor:
-
-[![The network path of the sandbox with gVisor](docs/diagrams/sandbox-network.png)](docs/diagrams/sandbox-network.svg)
-
-The Quadlet services and their limits:
-
-[![How Quadlet controls the sandbox](docs/diagrams/quadlet.png)](docs/diagrams/quadlet.svg)
+Each proxy runs in its own container, with the default Podman network. The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
 
 ## Security controls
 
@@ -69,7 +55,7 @@ The Quadlet services and their limits:
 
 The diagram shows each control in the container that has it. It calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
 
-The reason or the command behind a control:
+Notes on the controls:
 
 - **One socket.** The container cannot see the files, the process or the other ports of the proxy.
 - **The builder.** `rootlesskit` needs the three capabilities. The builder has no `no-new-privileges`, and its root file system is writable.
@@ -77,8 +63,7 @@ The reason or the command behind a control:
 - **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A merge, a file removal, a gist, a fork and GraphQL get `403`.
 - **TLS.** The agent proxy reads each request with its own CA, and the sandbox trusts only this CA. The builder proxy has no CA.
 - **Audit log.** Read it with `journalctl --user -u sandbox-proxy`.
-- **No Docker daemon.** The agent sandbox has none. `docker` sends the build to the builder.
-- **Limits.** gVisor ignores the limits of Podman, so each Quadlet service holds them.
+- **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
 ## Flows
