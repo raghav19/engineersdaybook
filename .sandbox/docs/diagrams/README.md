@@ -11,6 +11,8 @@
 | `quadlet.drawio` | Source of the Quadlet diagram. Shows the four `.container` files, the Quadlet generator, and the four services in one box. Each service shows its limits. A `Requires` arrow joins each service to the service that it needs. Two notes say that the limits are in the service and that the builder and both proxies are part of the agent. |
 | `quadlet.svg` | The Quadlet diagram as a plain SVG, drawn in the same way. |
 | `quadlet.png` | The PNG of that SVG. |
+| `security-controls.drawio` | Source of the security controls diagram. Two lanes mirror each other around a `Host kernel` box: the agent sandbox above it and the builder below it. Each lane goes from the sandbox through `proxy.sock` to a proxy container and the Internet. A legend at the bottom names the colors. The diagram is the list of controls in the section "Security controls" of `../../README.md`. When you edit it, keep the lanes mirrored in size, position and layout. Keep each title 10 px from the left edge and 8 px from the outer edge. Keep each arrow label 8 px from its line and each arrow 2 px thick. |
+| `security-controls.svg` | The security controls diagram as a plain SVG, drawn in the same way. |
 
 After you edit a `.drawio` file:
 

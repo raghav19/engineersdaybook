@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2030" height="1532" viewBox="0 0 2030 1532" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<defs>
+<marker id="a-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#333333"/></marker>
+<marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d79b00"/></marker>
+</defs>
+<rect width="2030" height="1532" fill="#ffffff"/>
+<text x="20" y="30" dominant-baseline="central" font-size="22" font-weight="bold">Security controls of the agent sandbox</text>
+<rect x="1150" y="80" width="580" height="568" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<text x="1160" y="97.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="1160" dy="0">Agent proxy</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
+<rect x="1170" y="551" width="110" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1225.0" y="584.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1225.0" dy="0">socat</tspan></text>
+<rect x="1170" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="166.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Allowlist of hosts</tspan><tspan x="1300.0" dy="17">Other hosts get 403</tspan></text>
+<rect x="1450" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="166.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Method and path rules</tspan><tspan x="1580.0" dy="17">Writes go to one repo and</tspan><tspan x="1580.0" dy="17">one ghcr.io namespace</tspan></text>
+<rect x="1170" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="250.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">TLS termination</tspan></text>
+<rect x="1450" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Token swap</tspan><tspan x="1580.0" dy="17">Placeholder becomes the real</tspan><tspan x="1580.0" dy="17">token, for listed hosts only</tspan></text>
+<rect x="1170" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Audit log</tspan><tspan x="1300.0" dy="17">One JSON line per request</tspan></text>
+<rect x="1450" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Encrypted access token</tspan><tspan x="1580.0" dy="17">Not given to iron-proxy</tspan></text>
+<rect x="1170" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="1300.0" dy="17">No capability or new privilege</tspan><tspan x="1300.0" dy="17">Read-only root file system</tspan></text>
+<rect x="1450" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="1580.0" dy="17">512 MB, 512 threads</tspan></text>
+<rect x="1170" y="430" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="460.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Wiped when the session ends</tspan></text>
+<rect x="1500" y="551" width="210" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1605.0" y="574.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1605.0" dy="0">iron-proxy</tspan><tspan x="1605.0" dy="19">the egress proxy</tspan></text>
+<rect x="1150" y="858" width="580" height="568" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<text x="1160" y="1389.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="1160" dy="0">Builder proxy</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
+<rect x="1170" y="889" width="110" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1225.0" y="922.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1225.0" dy="0">socat</tspan></text>
+<rect x="1170" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="1032.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Allowlist of host names</tspan><tspan x="1300.0" dy="17">Other hosts get 403</tspan></text>
+<rect x="1450" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">TLS passthrough</tspan></text>
+<rect x="1170" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No URL path rules</tspan><tspan x="1300.0" dy="17">The proxy sees the host name</tspan><tspan x="1300.0" dy="17">only. It does not decrypt TLS.</tspan></text>
+<rect x="1450" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="1580.0" dy="17">No capability or new privilege</tspan><tspan x="1580.0" dy="17">Read-only root file system</tspan></text>
+<rect x="1170" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1300.0" y="1172.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="1300.0" dy="17">256 MB, 256 threads</tspan></text>
+<rect x="1450" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="1580.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Wiped when the session ends</tspan></text>
+<rect x="1500" y="889" width="210" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1605.0" y="912.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1605.0" dy="0">iron-proxy</tspan><tspan x="1605.0" dy="19">the egress proxy</tspan></text>
+<rect x="160" y="80" width="580" height="568" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<text x="170" y="97.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="170" dy="0">Agent sandbox</tspan><tspan x="170" dy="19">rootless Podman + gVisor</tspan></text>
+<rect x="180" y="510" width="540" height="118" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="190" y="526.5" text-anchor="start" dominant-baseline="central" font-size="14"><tspan x="190" dy="0">gVisor: userspace kernel</tspan></text>
+<rect x="180" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="180.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No network device</tspan></text>
+<rect x="460" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="166.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Not root in the container</tspan><tspan x="590.0" dy="17">User agent, a subuid</tspan></text>
+<rect x="180" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="310.0" dy="17">No capability or new privilege</tspan><tspan x="310.0" dy="17">Read-only root file system</tspan></text>
+<rect x="460" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Read-only mounts</tspan><tspan x="590.0" dy="17">CA, proxy and builder sockets</tspan></text>
+<rect x="180" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Read-only /etc/docker</tspan><tspan x="310.0" dy="17">and managed settings</tspan></text>
+<rect x="460" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="590.0" dy="17">3 GB, 4 CPUs, 2048 threads</tspan></text>
+<rect x="180" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Private clone of the repo</tspan><tspan x="310.0" dy="17">Your .git is read-only</tspan></text>
+<rect x="200" y="551" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="300.0" y="574.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="300.0" dy="0">Agent tools</tspan><tspan x="300.0" dy="19">placeholders only</tspan></text>
+<rect x="600" y="551" width="110" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="655.0" y="584.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="655.0" dy="0">socat</tspan></text>
+<rect x="160" y="858" width="580" height="568" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<text x="170" y="1389.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="170" dy="0">Builder sandbox</tspan><tspan x="170" dy="19">rootless Podman + gVisor</tspan></text>
+<rect x="180" y="878" width="540" height="118" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="190" y="979.5" text-anchor="start" dominant-baseline="central" font-size="14"><tspan x="190" dy="0">gVisor: userspace kernel</tspan></text>
+<rect x="180" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No network device</tspan></text>
+<rect x="460" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="1032.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Not root in the container</tspan><tspan x="590.0" dy="17">User 1000, a subuid</tspan></text>
+<rect x="180" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="1116.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No token, no secret</tspan></text>
+<rect x="460" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">3 capabilities only</tspan><tspan x="590.0" dy="17">SETUID, SETGID, SYS_CHROOT</tspan></text>
+<rect x="180" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Read-only proxy socket</tspan></text>
+<rect x="460" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="1172.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">BuildKit cache: tmpfs</tspan><tspan x="590.0" dy="17">1 GB, in memory</tspan></text>
+<rect x="180" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">RUN steps run as root</tspan><tspan x="310.0" dy="17">only inside the rootless build</tspan></text>
+<rect x="460" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="590.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="590.0" dy="17">2 GB, 2 CPUs, 1024 threads</tspan></text>
+<rect x="180" y="1296" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="310.0" y="1326.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Wiped when the session ends</tspan></text>
+<rect x="200" y="889" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="300.0" y="912.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="300.0" dy="0">BuildKit</tspan><tspan x="300.0" dy="19">runs the builds</tspan></text>
+<rect x="600" y="889" width="110" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="655.0" y="922.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="655.0" dy="0">socat</tspan></text>
+<rect x="860" y="551" width="170" height="66" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="945.0" y="565.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">Unix socket file</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
+<rect x="860" y="889" width="170" height="66" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="945.0" y="903.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">Unix socket file</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
+<rect x="160" y="728" width="1570" height="50" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="170" y="753.0" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="170" dy="0">Host kernel</tspan></text>
+<rect x="1850" y="100" width="160" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="1930.0" y="125.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="1930.0" dy="0">Bitwarden</tspan><tspan x="1930.0" dy="19">Secrets Manager</tspan></text>
+<rect x="1850" y="728" width="140" height="50" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1860" y="753.0" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="1860" dy="0">Internet</tspan></text>
+<rect x="455" y="1450" width="1120" height="58" rx="10" fill="#ffffff" stroke="#999999" stroke-width="1"/>
+<text x="465" y="1479.0" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="bold"><tspan x="465" dy="0">Legend</tspan></text>
+<rect x="545" y="1460" width="160" height="38" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="625.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="625.0" dy="0">Part of a sandbox</tspan></text>
+<rect x="717" y="1460" width="140" height="38" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="787.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="787.0" dy="0">Part of a proxy</tspan></text>
+<rect x="869" y="1460" width="150" height="38" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="944.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="944.0" dy="0">Security control</tspan></text>
+<rect x="1031" y="1460" width="190" height="38" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="1126.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1126.0" dy="0">Shared socket file</tspan></text>
+<rect x="1233" y="1460" width="120" height="38" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="1293.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1293.0" dy="0">Secret store</tspan></text>
+<rect x="1365" y="1460" width="190" height="38" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1460.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1460.0" dy="0">Host kernel, Internet</tspan></text>
+<path d="M400 584.0 C500.0 584.0 500.0 584.0 600 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="442.8" y="542.0" width="114.39999999999999" height="34" fill="#ffffff"/>
+<text x="500.0" y="550.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">HTTPS_PROXY</tspan><tspan x="500.0" dy="17">127.0.0.1:3128</tspan></text>
+<rect x="484.6" y="592.0" width="30.799999999999997" height="17" fill="#ffffff"/>
+<text x="500.0" y="600.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">TCP</tspan></text>
+<path d="M710 584.0 C785.0 584.0 785.0 584.0 860 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="739.2" y="559.0" width="91.6" height="17" fill="#ffffff"/>
+<text x="785.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">Unix socket</tspan></text>
+<path d="M1030 584.0 C1100.0 584.0 1100.0 584.0 1170 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1054.2" y="559.0" width="91.6" height="17" fill="#ffffff"/>
+<text x="1100.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">Unix socket</tspan></text>
+<path d="M1280 584.0 C1390.0 584.0 1390.0 584.0 1500 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1329.0" y="559.0" width="122.0" height="17" fill="#ffffff"/>
+<text x="1390.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">127.0.0.1:18080</tspan></text>
+<rect x="1374.6" y="592.0" width="30.799999999999997" height="17" fill="#ffffff"/>
+<text x="1390.0" y="600.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">TCP</tspan></text>
+<path d="M1710 584.0 C1788.25 584.0 1771.75 740.5 1850 740.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<path d="M1850 135.0 C1790.0 135.0 1790.0 134.98239999999998 1730 134.98239999999998" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#a-orange)"/>
+<rect x="1744.2" y="109.99119999999999" width="91.6" height="17" fill="#ffffff"/>
+<text x="1790.0" y="118.49119999999999" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1790.0" dy="0">real tokens</tspan></text>
+<path d="M400 922.0 C500.0 922.0 500.0 922.0 600 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="484.6" y="897.0" width="30.799999999999997" height="17" fill="#ffffff"/>
+<text x="500.0" y="905.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">TCP</tspan></text>
+<rect x="442.8" y="930.0" width="114.39999999999999" height="34" fill="#ffffff"/>
+<text x="500.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">HTTPS_PROXY</tspan><tspan x="500.0" dy="17">127.0.0.1:3129</tspan></text>
+<path d="M710 922.0 C785.0 922.0 785.0 922.0 860 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="739.2" y="930.0" width="91.6" height="17" fill="#ffffff"/>
+<text x="785.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">Unix socket</tspan></text>
+<path d="M1030 922.0 C1100.0 922.0 1100.0 922.0 1170 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1054.2" y="930.0" width="91.6" height="17" fill="#ffffff"/>
+<text x="1100.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">Unix socket</tspan></text>
+<path d="M1280 922.0 C1390.0 922.0 1390.0 922.0 1500 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1374.6" y="897.0" width="30.799999999999997" height="17" fill="#ffffff"/>
+<text x="1390.0" y="905.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">TCP</tspan></text>
+<rect x="1329.0" y="930.0" width="122.0" height="17" fill="#ffffff"/>
+<text x="1390.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">127.0.0.1:18080</tspan></text>
+<path d="M1710 922.0 C1788.25 922.0 1771.75 765.5 1850 765.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<path d="M200 584.0 L90.0 584.0 Q70 584 70.0 604.0 L70.0 902.0 Q70 922 90.0 922.0 L200 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="12.800000000000004" y="736.0" width="114.39999999999999" height="34" fill="#ffffff"/>
+<text x="70.0" y="744.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="70.0" dy="0">docker over</tspan><tspan x="70.0" dy="17">buildkitd.sock</tspan></text>
+<path d="M450.0 628 C450.0 678.0 449.979 678.0 449.979 728" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="400.3895" y="669.5" width="99.19999999999999" height="17" fill="#ffffff"/>
+<text x="449.98949999999996" y="678.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="449.98949999999996" dy="0">system calls</tspan></text>
+<path d="M450.0 878 C450.0 828.0 449.979 828.0 449.979 778" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="400.3895" y="819.5" width="99.19999999999999" height="17" fill="#ffffff"/>
+<text x="449.98949999999996" y="828.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="449.98949999999996" dy="0">system calls</tspan></text>
+<path d="M1440.0 648 C1440.0 688.0 1440.021 688.0 1440.021 728" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1390.4105000000002" y="679.5" width="99.19999999999999" height="17" fill="#ffffff"/>
+<text x="1440.0105" y="688.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1440.0105" dy="0">system calls</tspan></text>
+<path d="M1440.0 858 C1440.0 818.0 1440.021 818.0 1440.021 778" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="1390.4105000000002" y="809.5" width="99.19999999999999" height="17" fill="#ffffff"/>
+<text x="1440.0105" y="818.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1440.0105" dy="0">system calls</tspan></text>
+</svg>

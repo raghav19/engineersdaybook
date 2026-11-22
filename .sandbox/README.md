@@ -52,25 +52,21 @@ The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-p
 
 ## Security controls
 
-The table lists the controls from the outside in. The `Applies to` column names the Podman containers that have the control.
+![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
 
-| Layer | Control | Applies to | What it stops |
-|---|---|---|---|
-| Container | Rootless Podman | All containers | A container escape gives an attacker your user and not root. |
-| Container | Limits on memory and threads | All containers | A runaway or hostile process cannot exhaust the host. |
-| Container | A user that is not root | Agent sandbox, builder | A process in the container has no root rights. |
-| Container | No capability, `no-new-privileges`, read-only root file system | Agent sandbox, proxies | A process cannot gain rights or change its image. The builder differs. It keeps `SETUID`, `SETGID` and `SYS_CHROOT` and has no `no-new-privileges`, because `rootlesskit` needs them. Its root file system is writable. Its BuildKit cache is a `tmpfs` of 1 GB. |
-| Kernel | gVisor | Agent sandbox, builder | A system call of a hostile command goes to gVisor and not to the Linux kernel of your host. |
-| Egress | No network device | Agent sandbox, builder | A tool that ignores the proxy settings has no route out. |
-| Egress | One Unix socket to its own proxy | Agent sandbox, builder | The only way out is the tunnel port of the proxy. The container cannot see the files, the process or the other ports of the proxy. |
-| Egress | Allowlist of hosts | Host proxy, builder proxy | Any other host gets `403`. The builder proxy lists registries, package hosts and release hosts. The host proxy lists the hosts that the agent needs. |
-| Egress | Rules for the method and the path | Host proxy | A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`. |
-| Egress | Token swap | Host proxy | The agent holds placeholders. The proxy replaces the placeholder with the real token for the listed hosts only. The builder has no token. |
-| Egress | Audit log | Host proxy | Each request is one JSON line in `journalctl --user -u sandbox-proxy`. |
-| Workspace | A private clone, with your `.git` mounted read-only | Agent sandbox | The agent cannot plant a git hook or change your repository. A push goes to GitHub, and you read the branch. |
-| Build | A separate builder | Builder | A `RUN` step runs as root in a container with no token and no network device. The agent has no Docker daemon. |
-| Policy | Read-only `/etc/docker` and managed settings | Agent sandbox | The agent cannot add a builder, change the endpoint or edit its own policy. |
-| Session | New containers for each session | Builder, proxies | The build cache and the proxy state end with the session. |
+The diagram shows each control in the container that has it. It calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
+
+The diagram does not draw these details:
+
+- **One socket.** The only way out is one Unix socket to the proxy of the container. The container cannot see the files, the process or the other ports of the proxy.
+- **The builder differs.** It keeps `SETUID`, `SETGID` and `SYS_CHROOT`, because `rootlesskit` needs them. It has no `no-new-privileges`, and its root file system is writable.
+- **Root in the builder.** The builder container runs as the user 1000, a subuid, and not as root. A `RUN` step runs as root only inside the rootless build. BuildKit has no authorization, so any holder of `buildkitd.sock` can run any build step as root there. The container is the wall.
+- **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`.
+- **TLS.** The agent proxy does TLS termination with its own CA, so it can read each request. The sandbox trusts only this CA. The builder proxy does TLS passthrough and has no CA. It checks only the host name.
+- **Audit log.** The agent proxy writes each request as one JSON line. Read it with `journalctl --user -u sandbox-proxy`.
+- **No Docker daemon.** The agent sandbox has no Docker daemon. `docker` sends the build to the builder on `buildkitd.sock`.
+- **Limits.** gVisor ignores the limits of Podman. Each Quadlet service holds the limits of its container.
+- **Session.** The builder and both proxies are new for each session. The build cache and the proxy state end with the session. The agent sandbox is new for each run too, but its volume `sandbox-home` stays. It keeps the clone, the logins and the histories.
 
 ## Prerequisites
 
