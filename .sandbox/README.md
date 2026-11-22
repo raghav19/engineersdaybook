@@ -53,10 +53,6 @@ The network path of the agent sandbox and the builder, inside gVisor:
 
 [![The network path of the sandbox with gVisor](docs/diagrams/sandbox-network.png)](docs/diagrams/sandbox-network.svg)
 
-The Quadlet services and their limits:
-
-[![How Quadlet controls the sandbox](docs/diagrams/quadlet.png)](docs/diagrams/quadlet.svg)
-
 ## Security controls
 
 ![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
@@ -72,7 +68,7 @@ Notes on the controls:
 - **TLS.** The agent proxy reads each request with its own CA, and the sandbox trusts only this CA. The builder proxy has no CA.
 - **Audit log.** Read it with `journalctl --user -u sandbox-proxy`.
 - **No Docker daemon.** The agent sandbox has none. `docker` sends the build to the builder.
-- **Limits.** gVisor ignores the limits of Podman, so each Quadlet service holds them.
+- **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
 ## Flows
