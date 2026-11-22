@@ -15,12 +15,13 @@ set shell := ['bash', '-euo', 'pipefail', '-c']
 
 # --- Required tools ---
 # These lines only check that a tool exists. just stops with a message before any recipe runs if one is missing.
-# bws comes from mise.toml. Run `mise install` once.
+# bws comes from mise.toml. Run `mise install` once. socat is for the host bridge.
 bws            := require("bws")
 git            := require("git")
 openssl        := require("openssl")
 podman         := require("podman")
 runsc          := require("runsc")
+socat          := require("socat")
 systemd_creds  := require("systemd-creds")
 
 # --- Names and paths ---
@@ -90,13 +91,14 @@ setup:
     ln -sf "$src/builder/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-builder-runsc.conf"
     ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
 
-    # The bridge to Headroom. It listens on 127.0.0.1:8787 on the host, and it runs socat in the sandbox for each connection. The sandbox keeps Network=none.
+    # The host bridge. One unit opens each port of agent/ports on 127.0.0.1 on the host and sends it into the sandbox. The sandbox keeps Network=none.
     mkdir -p "$HOME/.config/systemd/user"
-    ln -sf "$src/agent/headroom.socket" "$HOME/.config/systemd/user/sandbox-headroom.socket"
-    ln -sf "$src/agent/headroom@.service" "$HOME/.config/systemd/user/sandbox-headroom@.service"
+    ln -sf "$src/agent/ports" "$HOME/.config/sandbox/ports"
+    ln -sf "$src/agent/bridge.sh" "$HOME/.config/sandbox/bridge.sh"
+    ln -sf "$src/agent/bridge.service" "$HOME/.config/systemd/user/sandbox-bridge.service"
     systemctl --user daemon-reload
-    systemctl --user enable sandbox-headroom.socket
-    systemctl --user restart sandbox-headroom.socket
+    systemctl --user enable sandbox-bridge.service
+    systemctl --user restart sandbox-bridge.service
     echo 'Next: just sandbox build, then just sandbox run.'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.

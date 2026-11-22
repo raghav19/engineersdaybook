@@ -1,0 +1,5 @@
+# The ports that the host bridge opens. One port in each line, from 1024 to 65535.
+# The bridge listens on 127.0.0.1:<port> on the host. It sends each connection to 127.0.0.1:<port> inside the agent sandbox, and to no other address.
+# Only the host can edit this file. The agent edits its clone, and the clone does not change this file.
+# After you edit it, run: systemctl --user restart sandbox-bridge.service
+8787  # Headroom: http://127.0.0.1:8787/dashboard

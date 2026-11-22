@@ -129,18 +129,20 @@ just sandbox run     # start the proxies, the builder and the agent sandbox, and
 
 The volume `sandbox-home` keeps the clone, the logins and the histories.
 
-## Open Headroom on the host
+## Open a port of the sandbox on the host
 
-Headroom runs in the agent sandbox and listens on `127.0.0.1:8787` there. `just sandbox setup` makes a bridge to it. Open `http://127.0.0.1:8787/dashboard` in a browser on the host.
+A service in the agent sandbox listens on `127.0.0.1` there. Headroom listens on `127.0.0.1:8787`. The host bridge makes such a port open on the host. After `just sandbox setup`, open `http://127.0.0.1:8787/dashboard` in a browser on the host.
 
-- **How it works.** The unit `sandbox-headroom.socket` listens on `127.0.0.1:8787` on the host. For each connection, `sandbox-headroom@.service` runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:8787`. The socket stays active after a restart of the sandbox.
+To add a service, add its port to `agent/ports` and run `just sandbox setup` and `systemctl --user restart sandbox-bridge.service`. Each line holds one port from 1024 to 65535. You add no new unit.
+
+- **How it works.** One unit, `sandbox-bridge.service`, runs on the host. For each port in `agent/ports`, `bridge.sh` starts a `socat` that listens on `127.0.0.1:<port>` on the host. For each connection, it runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:<port>`. The bridge needs `socat` on the host. The unit keeps running when the sandbox restarts.
 - **The sandbox does not change.** It still has no network device. The host starts each connection. The sandbox cannot start one, and it gets no new way out.
-- **The limits.** The port is on the loopback of the host only. The command never changes, so a connection reaches only `127.0.0.1:8787` in the sandbox. At most 8 connections run at the same time. Each one is a unit with a limit on memory and threads.
+- **The limits.** The ports are on the loopback of the host only. A connection reaches only `127.0.0.1:<port>` in the sandbox, for a port in the list. The sandbox cannot add a port: the host reads `agent/ports` from your checkout, and the agent edits its own clone. At most 8 connections run at the same time for each port. The unit has a limit on memory and threads.
 - **A stopped sandbox.** The connection closes at once.
-- **The risk.** The agent controls what answers on that port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
-- **A port in use.** If a Headroom on the host holds `8787`, the socket does not start. Stop that Headroom, or change `ListenStream` in `agent/headroom.socket`.
+- **The risk.** The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
+- **A port in use.** If another program on the host holds a port of the list, `socat` for that port fails and the other ports still work. See `journalctl --user -u sandbox-bridge`.
 
-To remove the bridge, run `systemctl --user disable --now sandbox-headroom.socket`.
+To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
 ## Build and push in the agent sandbox
 
