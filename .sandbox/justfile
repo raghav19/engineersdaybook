@@ -25,7 +25,7 @@ systemd_creds  := require("systemd-creds")
 
 # --- Names and paths ---
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
-# The tag of the image is the commit, as in .msb/justfile.
+# The tag of the image is the commit.
 commit := shell(git + ' rev-parse HEAD')
 # The Bitwarden access token of the proxy. `setup` makes it. `build` reads it, so there is no prompt.
 credential := config_directory() / 'credstore.encrypted/bws-token'

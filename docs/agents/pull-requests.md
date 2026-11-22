@@ -3,7 +3,7 @@
 Open a PR with `gh pr create`. Do these steps in this order. If a step fails, stop and report the exact error text. Do not go on to the next step.
 
 1. Git identity. Run `git config user.name` and `git config user.email`. If either prints nothing, run `gh api user --jq '.login, .email'`. Then run `git config user.name "<name>"` and `git config user.email "<email>"`. If `email` is null, use `<id>+<login>@users.noreply.github.com`. Never use `--global`. Never invent a value.
-2. GitHub identity. Run `gh api user --jq .login`. If it returns an error, or the login is not `raghav19`, stop. Tell the user that `gh` has no GitHub authorization (in the msb sandbox: run `just msb github-login`, then `just msb run`, on the host). Do not try `gh auth login`.
+2. GitHub identity. Run `gh api user --jq .login`. If it returns an error, or the login is not `raghav19`, stop. Tell the user that `gh` has no GitHub authorization. Do not try `gh auth login`.
 3. Branch. `git branch --show-current` must not print `main`. If it does, run `git checkout -b <branch>` before you commit.
 4. Push. Run `git push -u origin <branch>`. Then run `git ls-remote origin refs/heads/<branch>`. The hash must equal `git rev-parse <branch>`. Do not compare with `HEAD`: the checkout can move to another branch. A PR for an unpushed branch always fails.
 5. Duplicate check. Run `gh pr list --head <branch> --state open --json number,url`. If a PR exists, run `gh pr edit <number>` on it. Do not create a second PR.

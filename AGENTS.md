@@ -77,7 +77,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Issues and specs live as GitHub issues on `raghav19/engineersdaybook`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-In the msb sandbox (`.msb/README.md`), `GH_TOKEN` is a placeholder that the host replaces, so `gh` and `git push` work there as on the host.
+In the Podman sandbox (`.sandbox/README.md`), `GH_TOKEN` is a placeholder that the host proxy replaces, so `gh` and `git push` work there as on the host.
 
 ### Triage labels
 
@@ -101,7 +101,7 @@ Before you commit, push, or create or update a pull request, read `docs/agents/p
 
 ## 8. Sandbox network
 
-The msb sandbox VM blocks all egress except hosts listed in `network.allow` in `.msb/sandbox.yaml`. If a DNS or connection error happens inside the sandbox, read `docs/agents/sandbox-network.md` in full.
+The Podman sandbox has no network device. It reaches only the hosts listed in `.sandbox/agent/proxy/iron-proxy.yaml` and `.sandbox/builder/proxy/iron-proxy.yaml`. If a tool gets a `403` inside the sandbox, read `docs/agents/sandbox-network.md` in full.
 
 ## 9. Diagrams
 
@@ -131,9 +131,9 @@ Always use git worktrees for agent work. Use Herdr's worktree commands to create
 3. When done, commit and push from the worktree
 4. User removes worktree via Herdr when work is complete
 
-## 12. msb sandbox image
+## 12. Sandbox image
 
-Before you add or remove tools or LSP servers in `.msb/image/`, read `.msb/AGENTS.md` in full. Before you do the same in `.sandbox/agent/image/`, read `.sandbox/AGENTS.md` in full.
+Before you add or remove tools or LSP servers in `.sandbox/agent/image/`, read `.sandbox/AGENTS.md` in full.
 
 ## 13. Simplified Technical English
 

@@ -1,11 +1,10 @@
-# The sandbox tooling lives in .msb/ (microsandbox). `mod` makes it `just msb <recipe>` from anywhere in the repo. `just msb` lists its recipes.
+# The sandbox tooling lives in .sandbox/ (Podman). `mod` makes it `just sandbox <recipe>` from anywhere in the repo. `just sandbox` lists its recipes.
 # Part 3 has its own justfiles under code/mcp-sandbox/part-3-mcp-guardrails/; they do not fall back to this one.
 #
-#   just msb run            developer: create or start the sandbox and open the TTT editor in it. See .msb/README.md
+#   just sandbox run        start the sandbox and open Herdr in it. See .sandbox/README.md
 
 set quiet
 
-mod msb '.msb'
 mod sandbox '.sandbox'
 
 # list the recipes, modules included (the default)

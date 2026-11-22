@@ -9,8 +9,7 @@ The Status column shows how far each project has come. **Done** means the projec
 
 | Project | Status | What it achieves |
 |---|---|---|
-| [agent-sandbox with Docker sbx](https://github.com/raghav19/engineersdaybook/tree/docker-sbx/code/agent-sandbox) | Done | Runs Claude Code in an `sbx` microVM with no real credential. A fooled agent can do only what the sandbox allows. This is the git tag `docker-sbx`. |
-| [agent-sandbox with microsandbox](code/agent-sandbox/README.md) | Done | Runs Claude Code in a microsandbox VM with no real token. A fooled agent can do only what the sandbox allows. SPIRE node attestation and the kind kubeconfig are not ported yet. |
+| [agent sandbox with Podman and gVisor](.sandbox/README.md) | Done | Runs Claude Code, Qwen Code and the Fresh editor in a rootless Podman container with gVisor and no network device. The only way out is a proxy. The proxy allows listed hosts, methods and paths, and it holds the real tokens. A second container, the builder, builds images with its own proxy. |
 | [mcp-sandbox, part 1](code/mcp-sandbox/part-1-lethal-trifecta/README.md) | Done | Tests the "lethal trifecta" against real GitHub infrastructure. The agent recognized the injected instruction twice and refused. |
 | [mcp-sandbox, part 2](code/mcp-sandbox/part-2-sandboxing-local-mcp/README.md) | Done | Seals a local MCP server in rootless Docker. An egress proxy logs each outbound attempt. |
 | [mcp-sandbox, part 3](code/mcp-sandbox/part-3-mcp-guardrails/README.md) | **In progress** | Puts one gateway in front of three MCP servers. It checks identity, arguments and results against the OWASP MCP Top 10. Not finished: access logs and traces (MCP08) are not wired, and the guardrail suite is still being built. |
