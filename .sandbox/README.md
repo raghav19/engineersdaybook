@@ -131,16 +131,32 @@ The volume `sandbox-home` keeps the clone, the logins and the histories.
 
 ## Open a port of the sandbox on the host
 
-A service in the agent sandbox listens on `127.0.0.1` there. Headroom listens on `127.0.0.1:8787`. The host bridge makes such a port open on the host. After `just sandbox setup`, open `http://127.0.0.1:8787/dashboard` in a browser on the host.
+A service in the agent sandbox listens on `127.0.0.1:<port>` there. The host bridge opens the same port on the loopback of the host. Headroom is in the list: open `http://127.0.0.1:8787/dashboard`.
 
-To add a service, add its port to `agent/ports` and run `just sandbox setup` and `systemctl --user restart sandbox-bridge.service`. Each line holds one port from 1024 to 65535. You add no new unit.
+### Add a port
 
-- **How it works.** One unit, `sandbox-bridge.service`, runs on the host. For each port in `agent/ports`, `bridge.sh` starts a `socat` that listens on `127.0.0.1:<port>` on the host. For each connection, it runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:<port>`. The bridge needs `socat` on the host. The unit keeps running when the sandbox restarts.
-- **The sandbox does not change.** It still has no network device. The host starts each connection. The sandbox cannot start one, and it gets no new way out.
-- **The limits.** The ports are on the loopback of the host only. A connection reaches only `127.0.0.1:<port>` in the sandbox, for a port in the list. The sandbox cannot add a port: the host reads `agent/ports` from your checkout, and the agent edits its own clone. At most 8 connections run at the same time for each port. The unit has a limit on memory and threads.
-- **A stopped sandbox.** The connection closes at once.
-- **The risk.** The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
-- **A port in use.** If another program on the host holds a port of the list, `socat` for that port fails and the other ports still work. See `journalctl --user -u sandbox-bridge`.
+1. Add the port number to `agent/ports` in your main checkout. Write one port in each line.
+2. Run `systemctl --user restart sandbox-bridge.service`.
+3. Run `curl -s http://127.0.0.1:<port>/`. The port is open when the service in the sandbox answers.
+
+If step 3 fails, run `journalctl --user -u sandbox-bridge -n 20`. A `bad port` line names a wrong entry in `agent/ports`. An `Address already in use` line names a port that a program on the host holds. Only that port fails.
+
+### Rules of the bridge
+
+| Rule | Value |
+|---|---|
+| Address on the host | `127.0.0.1` only |
+| Target in the sandbox | `127.0.0.1:<the same port>` only |
+| Ports | 1024 to 65535. Any other entry stops the bridge. |
+| Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
+| Connections | At most 8 at the same time for each port |
+| Direction | The host starts each connection. The sandbox keeps `Network=none` and cannot start one. |
+| Sandbox stopped | The connection closes at once. |
+| Needs | `socat` on the host, and the unit `sandbox-bridge.service` |
+
+`bridge.sh` runs on the host, not in the sandbox. For each port, it starts a `socat` on the host. For each connection, that `socat` runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:<port>`.
+
+The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
 
 To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
