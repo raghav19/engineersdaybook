@@ -47,13 +47,7 @@ The sandbox has two limits of its own:
 
 [![The agent sandbox, the builder and both proxies](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
-- The agent sandbox and the builder have `Network=none`. Only a Unix socket leads to the host.
-- A relay in each of them turns the proxy address that tools expect into that socket.
-- Each proxy runs in its own container, with the default Podman network. A `socat` in that container joins the socket to `iron-proxy`.
-- The host proxy holds the real tokens. The builder proxy holds none.
-- Both proxies allow listed hosts only. The lists are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
-- The agent sandbox sends a build to the builder through a socket in a shared folder.
-- Quadlet turns each container file into a systemd service. The service holds the limits of its container.
+Each proxy runs in its own container, with the default Podman network. The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
 
 The network path of the agent sandbox and the builder, inside gVisor:
 
