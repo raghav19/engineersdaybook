@@ -1,5 +1,7 @@
 # sandboxing agents
 
+> **Removed on 2026-11-22.** The msb sandbox is no longer in this repo. The files that this page names are at [commit `ca19476`](https://github.com/raghav19/engineersdaybook/tree/ca19476da2ff19470eca3340a8c6ec8a9f482991). The current sandbox is [`.sandbox/README.md`](../../.sandbox/README.md).
+
 ## What we are building
 
 A coding agent you can run without handing it your machine.
