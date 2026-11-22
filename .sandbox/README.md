@@ -54,7 +54,7 @@ The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-p
 
 ![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
 
-The diagram shows each control in the container that has it. The agent sandbox and the builder are above and below the host kernel. Each sandbox runs in gVisor, so its system calls do not reach the host kernel directly. The proxy containers run without gVisor. The diagram calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
+The diagram shows each control in the container that has it. It calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
 
 The diagram does not draw these details:
 
