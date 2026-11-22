@@ -5,7 +5,7 @@
       "source": "danyuchn/asd-ste100-skill",
       "sourceType": "github",
       "skillPath": "SKILL.md",
-      "computedHash": "4a86cbd5013f2f3597b5844524da6c21bf72b824434df6a34cb0298f70ebd23b"
+      "computedHash": "e45d6b62200a03a6c4a9ef2d0e069c06124d2b166ef4d341378d7d20a428e0f8"
     },
     "ask-matt": {
       "source": "mattpocock/skills",
@@ -29,7 +29,7 @@
       "source": "aws/agent-toolkit-for-aws",
       "sourceType": "github",
       "skillPath": "skills/core-skills/aws-containers/SKILL.md",
-      "computedHash": "cea0e1f787d4d284e58e6b605f2ae95bc44df4107384771b96cfdab3a377b897"
+      "computedHash": "8da5f7152158e62e98a8b12a007b1cd81b3afa30ca26f1d0f9a2703e3c624380"
     },
     "aws-iam": {
       "source": "aws/agent-toolkit-for-aws",
@@ -149,7 +149,7 @@
       "source": "tw93/kami",
       "sourceType": "github",
       "skillPath": "skills/kami/SKILL.md",
-      "computedHash": "1f35a6110c6b821cc2c6df9d167983df9c96a6095a0b8e048b3d09b4af03bfe0"
+      "computedHash": "77d804587239065be02bdb4edc65fe48a0ad9369270572812b6da5d200f39237"
     },
     "pr": {
       "source": "mattpocock/skills",

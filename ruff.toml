@@ -1,8 +1,8 @@
 # ruff settings for the whole repo: line length 140 (the code in tools/ is written for wide lines), Python 3.13.
 line-length = 140
 target-version = "py313"
-# vendored agent skills (.claude/skills) are third-party code: not linted here
-extend-exclude = [".claude/skills"]
+# vendored agent skills (.claude/skills and .agents/skills) are third-party code: not linted here
+extend-exclude = [".claude/skills", ".agents/skills"]
 
 [lint]
 # ANN: every parameter and return value needs a type hint. ty checks that the hints are correct.
