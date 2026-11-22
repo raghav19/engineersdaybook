@@ -6,9 +6,9 @@
 <rect width="2030" height="1326" fill="#ffffff"/>
 <text x="20" y="30" dominant-baseline="central" font-size="22" font-weight="bold">Security controls of the agent sandbox</text>
 <rect x="1150" y="80" width="580" height="498" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
-<text x="1160" y="100.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="1160" dy="0">Host proxy container</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
-<rect x="1170" y="484" width="180" height="60" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="1260.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1260.0" dy="0">socat</tspan><tspan x="1260.0" dy="19">socket to TCP</tspan></text>
+<text x="1160" y="100.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="1160" dy="0">Host proxy container</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
+<rect x="1170" y="481" width="190" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1265.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1265.0" dy="0">socat</tspan><tspan x="1265.0" dy="19">Unix socket to TCP</tspan></text>
 <rect x="1170" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1300.0" y="171.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0">Allowlist of hosts</tspan><tspan x="1300.0" dy="17">Other hosts get 403</tspan></text>
 <rect x="1450" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -25,12 +25,12 @@
 <text x="1300.0" y="373.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0">No capability, no new</tspan><tspan x="1300.0" dy="17">privilege, read-only</tspan><tspan x="1300.0" dy="17">root file system</tspan></text>
 <rect x="1450" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="390.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0">Limits: 512 MB</tspan></text>
-<rect x="1490" y="484" width="220" height="60" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="1600.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1600.0" dy="0">iron-proxy</tspan><tspan x="1600.0" dy="19">the egress proxy</tspan></text>
+<rect x="1500" y="481" width="210" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1605.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1605.0" dy="0">iron-proxy</tspan><tspan x="1605.0" dy="19">the egress proxy</tspan></text>
 <rect x="1150" y="788" width="580" height="498" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
-<text x="1160" y="1246.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="1160" dy="0">Builder proxy container</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
-<rect x="1170" y="822" width="180" height="60" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="1260.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1260.0" dy="0">socat</tspan><tspan x="1260.0" dy="19">socket to TCP</tspan></text>
+<text x="1160" y="1246.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="1160" dy="0">Builder proxy container</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
+<rect x="1170" y="819" width="190" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1265.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1265.0" dy="0">socat</tspan><tspan x="1265.0" dy="19">Unix socket to TCP</tspan></text>
 <rect x="1170" y="946" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1300.0" y="967.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0">Allowlist of host names</tspan><tspan x="1300.0" dy="17">Other hosts get 403</tspan></text>
 <rect x="1450" y="946" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -47,10 +47,10 @@
 <text x="1300.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0">Limits: 256 MB</tspan></text>
 <rect x="1450" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0">Wiped when the session ends</tspan></text>
-<rect x="1490" y="822" width="220" height="60" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="1600.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1600.0" dy="0">iron-proxy</tspan><tspan x="1600.0" dy="19">the egress proxy</tspan></text>
+<rect x="1500" y="819" width="210" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1605.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1605.0" dy="0">iron-proxy</tspan><tspan x="1605.0" dy="19">the egress proxy</tspan></text>
 <rect x="160" y="80" width="580" height="498" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
-<text x="170" y="100.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="170" dy="0">Agent sandbox</tspan><tspan x="170" dy="19">rootless Podman</tspan></text>
+<text x="170" y="100.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="170" dy="0">Agent sandbox</tspan><tspan x="170" dy="19">rootless Podman</tspan></text>
 <rect x="180" y="440" width="540" height="118" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
 <text x="190" y="456.0" text-anchor="start" dominant-baseline="central" font-size="14"><tspan x="190" dy="0">gVisor: userspace kernel</tspan></text>
 <rect x="180" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -69,12 +69,12 @@
 <text x="310.0" y="390.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0">Limits: 3 GB, 4 CPUs</tspan></text>
 <rect x="460" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="590.0" y="381.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0">Private clone of the repo</tspan><tspan x="590.0" dy="17">Your .git is read-only</tspan></text>
-<rect x="200" y="484" width="200" height="60" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<rect x="200" y="481" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <text x="300.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="300.0" dy="0">Agent tools</tspan><tspan x="300.0" dy="19">placeholders only</tspan></text>
-<rect x="540" y="484" width="160" height="60" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<text x="620.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="620.0" dy="0">socat relay</tspan><tspan x="620.0" dy="19">127.0.0.1:3128</tspan></text>
+<rect x="510" y="481" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="610.0" y="495.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="610.0" dy="0">socat relay</tspan><tspan x="610.0" dy="19">TCP 127.0.0.1:3128</tspan><tspan x="610.0" dy="19">to Unix socket</tspan></text>
 <rect x="160" y="788" width="580" height="498" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
-<text x="170" y="1246.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="170" dy="0">Builder</tspan><tspan x="170" dy="19">rootless Podman</tspan></text>
+<text x="170" y="1246.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="170" dy="0">Builder</tspan><tspan x="170" dy="19">rootless Podman</tspan></text>
 <rect x="180" y="808" width="540" height="118" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
 <text x="190" y="910.0" text-anchor="start" dominant-baseline="central" font-size="14"><tspan x="190" dy="0">gVisor: userspace kernel</tspan></text>
 <rect x="180" y="946" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -93,44 +93,48 @@
 <text x="310.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0">Limits: 2 GB, 2 CPUs</tspan></text>
 <rect x="460" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="590.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0">Wiped when the session ends</tspan></text>
-<rect x="200" y="822" width="200" height="60" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<rect x="200" y="819" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <text x="300.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="300.0" dy="0">BuildKit</tspan><tspan x="300.0" dy="19">runs the builds</tspan></text>
-<rect x="540" y="822" width="160" height="60" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<text x="620.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="620.0" dy="0">socat relay</tspan><tspan x="620.0" dy="19">127.0.0.1:3129</tspan></text>
-<rect x="860" y="486" width="170" height="56" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<text x="945.0" y="504.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
-<rect x="860" y="824" width="170" height="56" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<text x="945.0" y="842.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
+<rect x="510" y="819" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="610.0" y="833.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="610.0" dy="0">socat relay</tspan><tspan x="610.0" dy="19">TCP 127.0.0.1:3129</tspan><tspan x="610.0" dy="19">to Unix socket</tspan></text>
+<rect x="860" y="481" width="170" height="66" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="945.0" y="495.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">Unix socket file</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
+<rect x="860" y="819" width="170" height="66" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="945.0" y="833.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="945.0" dy="0">proxy.sock</tspan><tspan x="945.0" dy="19">Unix socket file</tspan><tspan x="945.0" dy="19">the only way out</tspan></text>
 <rect x="160" y="658" width="1570" height="50" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <text x="945.0" y="683.0" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="945.0" dy="0">Host kernel</tspan></text>
 <rect x="1850" y="100" width="160" height="70" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
 <text x="1930.0" y="125.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="1930.0" dy="0">Bitwarden</tspan><tspan x="1930.0" dy="19">Secrets Manager</tspan></text>
 <rect x="1850" y="658" width="140" height="50" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <text x="1920.0" y="683.0" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1920.0" dy="0">Internet</tspan></text>
-<path d="M400 514.0 C470.0 514.0 470.0 514.0 540 514.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
-<rect x="424.2" y="491.5" width="91.6" height="17" fill="#ffffff"/>
-<text x="470.0" y="500.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="470.0" dy="0">HTTPS_PROXY</tspan></text>
-<path d="M700 514.0 C780.0 514.0 780.0 514.0 860 514.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<rect x="749.4" y="491.5" width="61.199999999999996" height="17" fill="#ffffff"/>
-<text x="780.0" y="500.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="780.0" dy="0">connect</tspan></text>
+<path d="M400 514.0 C455.0 514.0 455.0 514.0 510 514.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="409.2" y="473.0" width="91.6" height="34" fill="#ffffff"/>
+<text x="455.0" y="481.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="455.0" dy="0">HTTPS_PROXY</tspan><tspan x="455.0" dy="17">TCP</tspan></text>
+<path d="M710 514.0 C785.0 514.0 785.0 514.0 860 514.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<rect x="731.6" y="473.0" width="106.8" height="34" fill="#ffffff"/>
+<text x="785.0" y="481.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">connect</tspan><tspan x="785.0" dy="17">(Unix socket)</tspan></text>
 <path d="M1030 514.0 C1100.0 514.0 1100.0 514.0 1170 514.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<path d="M1350 514.0 C1420.0 514.0 1420.0 514.0 1490 514.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<rect x="1359.0" y="491.5" width="122.0" height="17" fill="#ffffff"/>
-<text x="1420.0" y="500.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1420.0" dy="0">127.0.0.1:18080</tspan></text>
+<rect x="1046.6" y="473.0" width="106.8" height="34" fill="#ffffff"/>
+<text x="1100.0" y="481.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">listen</tspan><tspan x="1100.0" dy="17">(Unix socket)</tspan></text>
+<path d="M1360 514.0 C1430.0 514.0 1430.0 514.0 1500 514.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<rect x="1369.0" y="473.0" width="122.0" height="34" fill="#ffffff"/>
+<text x="1430.0" y="481.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1430.0" dy="0">TCP</tspan><tspan x="1430.0" dy="17">127.0.0.1:18080</tspan></text>
 <path d="M1710 514.0 C1788.25 514.0 1771.75 670.5 1850 670.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <path d="M1850 135.0 C1790.0 135.0 1790.0 134.9792 1730 134.9792" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#a-orange)"/>
 <rect x="1744.2" y="112.4896" width="91.6" height="17" fill="#ffffff"/>
 <text x="1790.0" y="120.9896" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1790.0" dy="0">real tokens</tspan></text>
-<path d="M400 852.0 C470.0 852.0 470.0 852.0 540 852.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
-<rect x="424.2" y="829.5" width="91.6" height="17" fill="#ffffff"/>
-<text x="470.0" y="838.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="470.0" dy="0">HTTPS_PROXY</tspan></text>
-<path d="M700 852.0 C780.0 852.0 780.0 852.0 860 852.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<rect x="749.4" y="829.5" width="61.199999999999996" height="17" fill="#ffffff"/>
-<text x="780.0" y="838.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="780.0" dy="0">connect</tspan></text>
+<path d="M400 852.0 C455.0 852.0 455.0 852.0 510 852.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
+<rect x="409.2" y="811.0" width="91.6" height="34" fill="#ffffff"/>
+<text x="455.0" y="819.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="455.0" dy="0">HTTPS_PROXY</tspan><tspan x="455.0" dy="17">TCP</tspan></text>
+<path d="M710 852.0 C785.0 852.0 785.0 852.0 860 852.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<rect x="731.6" y="811.0" width="106.8" height="34" fill="#ffffff"/>
+<text x="785.0" y="819.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">connect</tspan><tspan x="785.0" dy="17">(Unix socket)</tspan></text>
 <path d="M1030 852.0 C1100.0 852.0 1100.0 852.0 1170 852.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<path d="M1350 852.0 C1420.0 852.0 1420.0 852.0 1490 852.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
-<rect x="1359.0" y="829.5" width="122.0" height="17" fill="#ffffff"/>
-<text x="1420.0" y="838.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1420.0" dy="0">127.0.0.1:18080</tspan></text>
+<rect x="1046.6" y="811.0" width="106.8" height="34" fill="#ffffff"/>
+<text x="1100.0" y="819.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">listen</tspan><tspan x="1100.0" dy="17">(Unix socket)</tspan></text>
+<path d="M1360 852.0 C1430.0 852.0 1430.0 852.0 1500 852.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<rect x="1369.0" y="811.0" width="122.0" height="34" fill="#ffffff"/>
+<text x="1430.0" y="819.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1430.0" dy="0">TCP</tspan><tspan x="1430.0" dy="17">127.0.0.1:18080</tspan></text>
 <path d="M1710 852.0 C1788.25 852.0 1771.75 695.5 1850 695.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <path d="M200 514.0 L90.0 514.0 Q70 514 70.0 534.0 L70.0 832.0 Q70 852 90.0 852.0 L200 852.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="12.800000000000004" y="666.0" width="114.39999999999999" height="34" fill="#ffffff"/>
