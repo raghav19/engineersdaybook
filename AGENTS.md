@@ -143,6 +143,10 @@ All text you produce — plans, explanations, PR bodies, commit messages, commen
 
 Before you write or edit a topic doc in the `docs/` folder of a project, read `docs/agents/project-docs.md` in full.
 
+## 15. Documents for agents
+
+Before you create or edit a document that an agent reads, invoke `/writing-for-agents`. These documents are skills, `AGENTS.md`, the files in `docs/agents/`, and any doc that `AGENTS.md` points to.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
