@@ -49,10 +49,6 @@ The sandbox has two limits of its own:
 
 Each proxy runs in its own container, with the default Podman network. The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
 
-The network path of the agent sandbox and the builder, inside gVisor:
-
-[![The network path of the sandbox with gVisor](docs/diagrams/sandbox-network.png)](docs/diagrams/sandbox-network.svg)
-
 ## Security controls
 
 ![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
