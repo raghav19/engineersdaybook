@@ -84,8 +84,8 @@ USER agent
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The mise task fresh:plugins runs fresh-plugins.sh. The script reads plugins.yaml with yq and fetches each package at its pinned commit.
-COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/plugins.yaml
+# The mise task fresh:plugins runs fresh-plugins.sh. The script reads fresh-plugins.yaml with yq and fetches each package at its pinned commit.
+COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml

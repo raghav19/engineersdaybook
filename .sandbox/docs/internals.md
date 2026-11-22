@@ -2,9 +2,9 @@
 
 ## The idea
 
-- Each container has no network. Only a file can cross to the host.
-- A relay in the container turns the proxy address that tools expect into that file.
-- Each proxy runs in its own container. A `socat` there joins the file to the proxy.
+- The agent sandbox and the builder have `Network=none`. Only a Unix socket leads to the host.
+- A relay in each of them turns the proxy address that tools expect into that socket.
+- Each proxy runs in its own container, with the default Podman network. A `socat` in that container joins the socket to `iron-proxy`.
 - The host proxy holds the real tokens. The builder proxy holds none.
 - Both proxies allow listed hosts only. The host proxy also checks the method and the path, so a write goes to one GitHub repository only.
 - The agent sandbox sends a build to the builder through a socket in a shared folder.
@@ -24,7 +24,7 @@ Quadlet turns each `.container` file into a systemd service. The service holds t
 
 ## The flows
 
-### One call from the agent sandbox
+### One call from a container
 
 Both containers follow this path. Only the relay port, the proxy and the rule set differ.
 
@@ -36,7 +36,7 @@ sequenceDiagram
     participant Socat as socat in the proxy container
     participant Proxy as iron-proxy
     participant Host as Listed host
-    Tool->>Relay: connect to 127.0.0.1:3128 or :3129
+    Tool->>Relay: connect to 127.0.0.1:3128 (agent sandbox) or 127.0.0.1:3129 (builder)
     Relay->>gVisor: connect to proxy.sock
     gVisor->>Socat: the gofer opens proxy.sock
     Socat->>Proxy: copy the bytes to 127.0.0.1:18080
@@ -55,7 +55,7 @@ sequenceDiagram
     participant Proxy as host proxy
     participant Host as The host
     Tool->>Proxy: a request in the tunnel
-    alt the host is not in the allowlist or in a rule
+    alt the host is in neither domains nor rules
         Proxy-->>Tool: 403
     else the method and the path match no rule
         Proxy-->>Tool: 403
@@ -71,7 +71,7 @@ sequenceDiagram
 
 A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules. The builder proxy has no path rules, because it cannot see a path.
 
-The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the `socat` in the proxy container, and TCP to the proxy. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
+The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the `socat` in the proxy container, and TCP to `iron-proxy` on port 18080. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
 
 ### One build
 
@@ -107,7 +107,7 @@ A failed build gives a code other than 0. The builder proxy holds no token, so a
 
 ### One push
 
-The agent sandbox pushes the tar file. The builder takes no part in the push and holds no login.
+Only the agent sandbox pushes the tar file.
 
 ```mermaid
 sequenceDiagram
