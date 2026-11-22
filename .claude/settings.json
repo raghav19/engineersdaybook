@@ -1,6 +1,14 @@
 {
   "model": "claude-sonnet-5-5",
   "effortLevel": "high",
+  "permissions": {
+    "allow": [
+      "mcp__github__get_me",
+      "mcp__github__list_pull_requests",
+      "mcp__github__create_pull_request",
+      "mcp__github__update_pull_request"
+    ]
+  },
   "env": {
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
