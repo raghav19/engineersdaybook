@@ -38,7 +38,7 @@
 <rect x="1450" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">TLS passthrough</tspan></text>
 <rect x="1170" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1300.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No path rules</tspan><tspan x="1300.0" dy="17">It cannot see a path</tspan></text>
+<text x="1300.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No URL path rules</tspan><tspan x="1300.0" dy="17">The proxy sees the host name</tspan><tspan x="1300.0" dy="17">only. It does not decrypt TLS.</tspan></text>
 <rect x="1450" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="1580.0" dy="17">No capability or new privilege</tspan><tspan x="1580.0" dy="17">Read-only root file system</tspan></text>
 <rect x="1170" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>

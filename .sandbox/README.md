@@ -61,7 +61,7 @@ The diagram does not draw these details:
 - **One socket.** The only way out is one Unix socket to the proxy of the container. The container cannot see the files, the process or the other ports of the proxy.
 - **The builder differs.** It keeps `SETUID`, `SETGID` and `SYS_CHROOT`, because `rootlesskit` needs them. It has no `no-new-privileges`, and its root file system is writable.
 - **Root in the builder.** The builder container runs as the user 1000, a subuid, and not as root. A `RUN` step runs as root only inside the rootless build. BuildKit has no authorization, so any holder of `buildkitd.sock` can run any build step as root there. The container is the wall.
-- **Path rules.** A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`.
+- **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`.
 - **TLS.** The agent proxy does TLS termination with its own CA, so it can read each request. The sandbox trusts only this CA. The builder proxy does TLS passthrough and has no CA. It checks only the host name.
 - **Audit log.** The agent proxy writes each request as one JSON line. Read it with `journalctl --user -u sandbox-proxy`.
 - **No Docker daemon.** The agent sandbox has no Docker daemon. `docker` sends the build to the builder on `buildkitd.sock`.
