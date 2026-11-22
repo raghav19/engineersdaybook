@@ -63,7 +63,6 @@ Notes on the controls:
 - **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A merge, a file removal, a gist, a fork and GraphQL get `403`.
 - **TLS.** The agent proxy reads each request with its own CA, and the sandbox trusts only this CA. The builder proxy has no CA.
 - **Audit log.** Read it with `journalctl --user -u sandbox-proxy`.
-- **No Docker daemon.** The agent sandbox has none. `docker` sends the build to the builder.
 - **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
