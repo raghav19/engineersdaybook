@@ -39,7 +39,8 @@
       "comment_prefix": "#"
     },
     "go": {
-      "format_on_save": true
+      "format_on_save": true,
+      "tab_size": 4
     },
     "python": {
       "format_on_save": true
@@ -303,5 +304,8 @@
         "autoOpenDock": "never"
       }
     }
+  },
+  "file_explorer": {
+    "show_hidden": true
   }
 }
