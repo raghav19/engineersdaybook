@@ -54,14 +54,14 @@ The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-p
 
 ![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
 
-The diagram shows each control in the container that has it. The purple boxes are the controls. The agent sandbox and the builder are above and below the host kernel. Each sandbox runs in gVisor, so its system calls do not reach the host kernel directly. The proxy containers run without gVisor.
+The diagram shows each control in the container that has it. The purple boxes are the controls. The agent sandbox and the builder are above and below the host kernel. Each sandbox runs in gVisor, so its system calls do not reach the host kernel directly. The proxy containers run without gVisor. The diagram calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
 
 The diagram does not draw these details:
 
 - **One socket.** The only way out is one Unix socket to the proxy of the container. The container cannot see the files, the process or the other ports of the proxy.
 - **The builder differs.** It keeps `SETUID`, `SETGID` and `SYS_CHROOT`, because `rootlesskit` needs them. It has no `no-new-privileges`, and its root file system is writable.
 - **Path rules.** A write goes to one GitHub repository and one `ghcr.io` namespace. A merge, a file removal, a gist, a fork and GraphQL get `403`.
-- **Audit log.** The host proxy writes each request as one JSON line. Read it with `journalctl --user -u sandbox-proxy`.
+- **Audit log.** The agent proxy writes each request as one JSON line. Read it with `journalctl --user -u sandbox-proxy`.
 - **No Docker daemon.** The agent sandbox has no Docker daemon. `docker` sends the build to the builder on `buildkitd.sock`.
 - **Limits.** gVisor ignores the limits of Podman. Each Quadlet service holds the limits of its container.
 - **Session.** The builder and both proxies are new for each session. The build cache and the proxy state end with the session.
