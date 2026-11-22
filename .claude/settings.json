@@ -5,5 +5,11 @@
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
     "ENABLE_TOOL_SEARCH": "true"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(herdr worktree create:*)",
+      "Bash(herdr worktree list:*)"
+    ]
   }
 }
