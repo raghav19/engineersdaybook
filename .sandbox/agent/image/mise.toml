@@ -57,5 +57,5 @@ echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 
 # The Dockerfile runs this task. The script is configs/editor/fresh-plugins.sh. The Dockerfile copies it to /usr/local/share/sandbox/.
 [tasks."fresh:plugins"]
-description = "Install the Fresh packages of plugins.yaml at their pinned commits"
+description = "Install the Fresh packages of fresh-plugins.yaml at their pinned commits"
 run = "bash /usr/local/share/sandbox/fresh-plugins.sh"
