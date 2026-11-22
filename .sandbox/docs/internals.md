@@ -5,10 +5,11 @@
 - The agent sandbox and the builder have `Network=none`. Only a Unix socket leads to the host.
 - A relay in each of them turns the proxy address that tools expect into that socket.
 - Each proxy runs in its own container, with the default Podman network. A `socat` in that container joins the socket to `iron-proxy`.
-- The host proxy holds the real tokens. The builder proxy holds none.
-- Both proxies allow listed hosts only. The host proxy also checks the method and the path, so a write goes to one GitHub repository only.
+- The host proxy holds the real tokens. The builder proxy holds none. The diagram of the security controls calls the host proxy the agent proxy.
+- Both proxies allow listed hosts only.
+- The host proxy ends the TLS with its CA, so it can read each request. The builder proxy passes the TLS through.
 - The agent sandbox sends a build to the builder through a socket in a shared folder.
-- Quadlet turns each container file into a systemd service. The service limits memory, CPU and threads.
+- Quadlet turns each container file into a systemd service. The service limits memory, CPU and threads, because gVisor ignores the limits of Podman.
 
 ## The picture
 
@@ -18,9 +19,11 @@ The network path of the agent sandbox and the builder, inside gVisor:
 
 [![The network path of the sandbox with gVisor](diagrams/sandbox-network.png)](diagrams/sandbox-network.svg)
 
-Quadlet turns each `.container` file into a systemd service. The service holds the limits of the whole sandbox, because gVisor ignores the limits of Podman:
+How Quadlet controls the sandbox:
 
 [![How Quadlet controls the sandbox](diagrams/quadlet.png)](diagrams/quadlet.svg)
+
+The controls of each container are in the diagram in the section "Security controls" of `../README.md`.
 
 ## The flows
 
@@ -69,9 +72,7 @@ sequenceDiagram
     end
 ```
 
-A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules. The builder proxy has no path rules, because it cannot see a path.
-
-The bytes stay the same. The carrier changes three times: TCP to the relay, a Unix socket to the `socat` in the proxy container, and TCP to `iron-proxy` on port 18080. The host proxy ends the TLS with its CA. The builder proxy passes the TLS through.
+A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules, so a write goes to one GitHub repository only. The builder proxy has no path rules, because it cannot see a path.
 
 ### One build
 
@@ -94,7 +95,7 @@ sequenceDiagram
         BP-->>BK: 403
     end
     loop each RUN step
-        BK->>BK: run the step as root in the builder
+        BK->>BK: run the step as root inside the rootless build
         BK->>Relay: download a package
         Relay->>BP: through proxy.sock and socat
         BP->>Reg: only a host in the allowlist
@@ -103,7 +104,7 @@ sequenceDiagram
     Agent->>Agent: write the tar file in the agent sandbox
 ```
 
-A failed build gives a code other than 0. The builder proxy holds no token, so a base image comes from a public registry. For a private base image, the agent sandbox pulls it with `crane` through the host proxy. It then passes the image to `docker build` as an OCI layout.
+The builder proxy holds no token, so a base image comes from a public registry. For a private base image, the agent sandbox pulls it with `crane` through the host proxy. It then passes the image to `docker build` as an OCI layout.
 
 ### One push
 

@@ -48,7 +48,7 @@ The sandbox has two limits of its own:
 
 [![Architecture of the hardened Podman sandbox](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
-The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`. For the parts and the flows, read [How the sandbox works in detail](docs/internals.md).
+The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`. Before you change the proxy rules, the builder or the Quadlet limits, read [How the sandbox works in detail](docs/internals.md). It has the parts and the flows.
 
 ## Security controls
 
