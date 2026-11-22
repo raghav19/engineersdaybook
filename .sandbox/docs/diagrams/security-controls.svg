@@ -14,7 +14,7 @@
 <rect x="1450" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="166.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Method and path rules</tspan><tspan x="1580.0" dy="17">Writes go to one repo and</tspan><tspan x="1580.0" dy="17">one ghcr.io namespace</tspan></text>
 <rect x="1170" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1300.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">TLS termination</tspan><tspan x="1300.0" dy="17">Own CA lets it read requests</tspan><tspan x="1300.0" dy="17">Sandbox trusts only this CA</tspan></text>
+<text x="1300.0" y="250.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">TLS termination</tspan></text>
 <rect x="1450" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1580.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Token swap</tspan><tspan x="1580.0" dy="17">Placeholder becomes the real</tspan><tspan x="1580.0" dy="17">token, for listed hosts only</tspan></text>
 <rect x="1170" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -36,7 +36,7 @@
 <rect x="1170" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1300.0" y="1032.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Allowlist of host names</tspan><tspan x="1300.0" dy="17">Other hosts get 403</tspan></text>
 <rect x="1450" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1580.0" y="1032.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">TLS passthrough</tspan><tspan x="1580.0" dy="17">No CA, so it cannot read the</tspan><tspan x="1580.0" dy="17">traffic. Host name check only.</tspan></text>
+<text x="1580.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">TLS passthrough</tspan></text>
 <rect x="1170" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1300.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No path rules</tspan><tspan x="1300.0" dy="17">It cannot see a path</tspan></text>
 <rect x="1450" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -54,7 +54,7 @@
 <rect x="180" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="310.0" y="180.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No network device</tspan></text>
 <rect x="460" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="590.0" y="180.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">No root user</tspan></text>
+<text x="590.0" y="166.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Not root in the container</tspan><tspan x="590.0" dy="17">User agent, a subuid</tspan></text>
 <rect x="180" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="310.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="310.0" dy="17">No capability or new privilege</tspan><tspan x="310.0" dy="17">Read-only root file system</tspan></text>
 <rect x="460" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -76,7 +76,7 @@
 <rect x="180" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="310.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No network device</tspan></text>
 <rect x="460" y="1016" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="590.0" y="1046.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">No root user</tspan></text>
+<text x="590.0" y="1032.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Not root in the container</tspan><tspan x="590.0" dy="17">User 1000, a subuid</tspan></text>
 <rect x="180" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="310.0" y="1116.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No token, no secret</tspan></text>
 <rect x="460" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
@@ -86,7 +86,7 @@
 <rect x="460" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="590.0" y="1172.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">BuildKit cache: tmpfs</tspan><tspan x="590.0" dy="17">1 GB, in memory</tspan></text>
 <rect x="180" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="310.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">RUN steps run as root</tspan><tspan x="310.0" dy="17">in this container</tspan></text>
+<text x="310.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">RUN steps run as root</tspan><tspan x="310.0" dy="17">only inside the rootless build</tspan></text>
 <rect x="460" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="590.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="590.0" dy="17">2 GB, 2 CPUs, 1024 threads</tspan></text>
 <rect x="180" y="1296" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
