@@ -40,15 +40,11 @@
 <rect x="1170" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="1300.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No path rules</tspan><tspan x="1300.0" dy="17">It cannot see a path</tspan></text>
 <rect x="1450" y="1086" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1580.0" y="1116.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">No capability</tspan></text>
+<text x="1580.0" y="1102.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="1580.0" dy="17">No capability or new privilege</tspan><tspan x="1580.0" dy="17">Read-only root file system</tspan></text>
 <rect x="1170" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1300.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">No new privilege</tspan></text>
+<text x="1300.0" y="1172.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="1300.0" dy="17">256 MB, 256 threads</tspan></text>
 <rect x="1450" y="1156" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1580.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Read-only root file system</tspan></text>
-<rect x="1170" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1300.0" y="1242.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1300.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="1300.0" dy="17">256 MB, 256 threads</tspan></text>
-<rect x="1450" y="1226" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1580.0" y="1256.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Wiped when the session ends</tspan></text>
+<text x="1580.0" y="1186.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1580.0" dy="0" font-weight="bold">Wiped when the session ends</tspan></text>
 <rect x="1500" y="889" width="210" height="66" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
 <text x="1605.0" y="912.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1605.0" dy="0">iron-proxy</tspan><tspan x="1605.0" dy="19">the egress proxy</tspan></text>
 <rect x="160" y="80" width="580" height="568" rx="16" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
@@ -60,19 +56,15 @@
 <rect x="460" y="150" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
 <text x="590.0" y="180.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">No root user</tspan></text>
 <rect x="180" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="310.0" y="250.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">No capability</tspan></text>
+<text x="310.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Hardened container</tspan><tspan x="310.0" dy="17">No capability or new privilege</tspan><tspan x="310.0" dy="17">Read-only root file system</tspan></text>
 <rect x="460" y="220" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="590.0" y="250.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">No new privilege</tspan></text>
+<text x="590.0" y="236.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Read-only mounts</tspan><tspan x="590.0" dy="17">CA, proxy and builder sockets</tspan></text>
 <rect x="180" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="310.0" y="320.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Read-only root file system</tspan></text>
+<text x="310.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Read-only /etc/docker</tspan><tspan x="310.0" dy="17">and managed settings</tspan></text>
 <rect x="460" y="290" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="590.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Read-only mounts</tspan><tspan x="590.0" dy="17">CA, proxy and builder sockets</tspan></text>
+<text x="590.0" y="306.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="590.0" dy="17">3 GB, 4 CPUs, 2048 threads</tspan></text>
 <rect x="180" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="310.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Read-only /etc/docker</tspan><tspan x="310.0" dy="17">and managed settings</tspan></text>
-<rect x="460" y="360" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="590.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="590.0" dy="0" font-weight="bold">Limits (Quadlet service)</tspan><tspan x="590.0" dy="17">3 GB, 4 CPUs, 2048 threads</tspan></text>
-<rect x="180" y="430" width="260" height="60" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="310.0" y="446.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Private clone of the repo</tspan><tspan x="310.0" dy="17">Your .git is read-only</tspan></text>
+<text x="310.0" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="310.0" dy="0" font-weight="bold">Private clone of the repo</tspan><tspan x="310.0" dy="17">Your .git is read-only</tspan></text>
 <rect x="200" y="551" width="200" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <text x="300.0" y="574.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="300.0" dy="0">Agent tools</tspan><tspan x="300.0" dy="19">placeholders only</tspan></text>
 <rect x="600" y="551" width="110" height="66" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
@@ -118,13 +110,13 @@
 <text x="500.0" y="550.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">HTTPS_PROXY</tspan><tspan x="500.0" dy="17">127.0.0.1:3128</tspan></text>
 <rect x="484.6" y="592.0" width="30.799999999999997" height="17" fill="#ffffff"/>
 <text x="500.0" y="600.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">TCP</tspan></text>
-<path d="M710 584.0 C785.0 584.0 785.0 584.0 860 584.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M710 584.0 C785.0 584.0 785.0 584.0 860 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="739.2" y="559.0" width="91.6" height="17" fill="#ffffff"/>
 <text x="785.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">Unix socket</tspan></text>
-<path d="M1030 584.0 C1100.0 584.0 1100.0 584.0 1170 584.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M1030 584.0 C1100.0 584.0 1100.0 584.0 1170 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="1054.2" y="559.0" width="91.6" height="17" fill="#ffffff"/>
 <text x="1100.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">Unix socket</tspan></text>
-<path d="M1280 584.0 C1390.0 584.0 1390.0 584.0 1500 584.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M1280 584.0 C1390.0 584.0 1390.0 584.0 1500 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="1329.0" y="559.0" width="122.0" height="17" fill="#ffffff"/>
 <text x="1390.0" y="567.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">127.0.0.1:18080</tspan></text>
 <rect x="1374.6" y="592.0" width="30.799999999999997" height="17" fill="#ffffff"/>
@@ -138,13 +130,13 @@
 <text x="500.0" y="905.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">TCP</tspan></text>
 <rect x="442.8" y="930.0" width="114.39999999999999" height="34" fill="#ffffff"/>
 <text x="500.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">HTTPS_PROXY</tspan><tspan x="500.0" dy="17">127.0.0.1:3129</tspan></text>
-<path d="M710 922.0 C785.0 922.0 785.0 922.0 860 922.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M710 922.0 C785.0 922.0 785.0 922.0 860 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="739.2" y="930.0" width="91.6" height="17" fill="#ffffff"/>
 <text x="785.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="785.0" dy="0">Unix socket</tspan></text>
-<path d="M1030 922.0 C1100.0 922.0 1100.0 922.0 1170 922.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M1030 922.0 C1100.0 922.0 1100.0 922.0 1170 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="1054.2" y="930.0" width="91.6" height="17" fill="#ffffff"/>
 <text x="1100.0" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1100.0" dy="0">Unix socket</tspan></text>
-<path d="M1280 922.0 C1390.0 922.0 1390.0 922.0 1500 922.0" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#a-dark)"/>
+<path d="M1280 922.0 C1390.0 922.0 1390.0 922.0 1500 922.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="1374.6" y="897.0" width="30.799999999999997" height="17" fill="#ffffff"/>
 <text x="1390.0" y="905.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1390.0" dy="0">TCP</tspan></text>
 <rect x="1329.0" y="930.0" width="122.0" height="17" fill="#ffffff"/>
