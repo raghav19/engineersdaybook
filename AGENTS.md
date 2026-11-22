@@ -77,7 +77,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Issues and specs live as GitHub issues on `raghav19/engineersdaybook`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-In the Podman sandbox (`.sandbox/README.md`), `GH_TOKEN` is a placeholder that the host proxy replaces, so `gh` and `git push` work there as on the host.
+In the Podman sandbox (`.sandbox/README.md`), `GH_TOKEN` is a placeholder that the host proxy replaces, so `git push` and the GitHub MCP tools work there as on the host. The sandbox has no `gh`.
 
 ### Triage labels
 
