@@ -129,6 +129,19 @@ just sandbox run     # start the proxies, the builder and the agent sandbox, and
 
 The volume `sandbox-home` keeps the clone, the logins and the histories.
 
+## Open Headroom on the host
+
+Headroom runs in the agent sandbox and listens on `127.0.0.1:8787` there. `just sandbox setup` makes a bridge to it. Open `http://127.0.0.1:8787/dashboard` in a browser on the host.
+
+- **How it works.** The unit `sandbox-headroom.socket` listens on `127.0.0.1:8787` on the host. For each connection, `sandbox-headroom@.service` runs `podman exec -i sandbox-agent socat - TCP:127.0.0.1:8787`. The socket stays active after a restart of the sandbox.
+- **The sandbox does not change.** It still has no network device. The host starts each connection. The sandbox cannot start one, and it gets no new way out.
+- **The limits.** The port is on the loopback of the host only. The command never changes, so a connection reaches only `127.0.0.1:8787` in the sandbox. At most 8 connections run at the same time. Each one is a unit with a limit on memory and threads.
+- **A stopped sandbox.** The connection closes at once.
+- **The risk.** The agent controls what answers on that port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
+- **A port in use.** If a Headroom on the host holds `8787`, the socket does not start. Stop that Headroom, or change `ListenStream` in `agent/headroom.socket`.
+
+To remove the bridge, run `systemctl --user disable --now sandbox-headroom.socket`.
+
 ## Build and push in the agent sandbox
 
 ```mermaid

@@ -1,0 +1,15 @@
+# One connection from the host to Headroom. sandbox-headroom.socket starts it. The socket of the connection is stdin and stdout.
+# The command is fixed. It reaches 127.0.0.1:8787 inside the sandbox and no other address.
+# If the sandbox does not run, podman exec fails and the connection closes.
+# The limits are here, because gVisor ignores the Podman limits (see sandbox-agent.container).
+[Unit]
+Description=One connection to Headroom in the agent sandbox
+
+[Service]
+StandardInput=socket
+StandardOutput=socket
+ExecStart=/usr/bin/podman exec -i sandbox-agent socat - TCP:127.0.0.1:8787
+NoNewPrivileges=true
+MemoryMax=64M
+MemorySwapMax=0
+TasksMax=32

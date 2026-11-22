@@ -1,0 +1,14 @@
+# The bridge from the host to Headroom in the agent sandbox. The host starts each connection. The sandbox cannot start one.
+# The port is on the loopback of the host only. Do not change the address to 0.0.0.0: it would show Headroom to your network.
+# Accept=yes starts one headroom@.service for each connection. MaxConnections stops a flood of connections.
+# `just sandbox setup` links this file to ~/.config/systemd/user/sandbox-headroom.socket and enables it.
+[Unit]
+Description=Headroom of the agent sandbox, on the loopback of the host
+
+[Socket]
+ListenStream=127.0.0.1:8787
+Accept=yes
+MaxConnections=8
+
+[Install]
+WantedBy=sockets.target
