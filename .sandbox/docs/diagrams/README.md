@@ -20,4 +20,4 @@ After you edit a `.drawio` file:
 2. Make the PNG: `rsvg-convert -z 2 -b white <name>.svg -o <name>.png`.
 3. Read every label in the PNG, as `docs/agents/diagrams.md` requires.
 
-The flows are mermaid diagrams in `../internals.md`.
+The flows are mermaid diagrams in the section "Flows" of `../../README.md`.
