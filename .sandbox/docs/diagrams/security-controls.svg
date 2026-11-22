@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2030" height="1466" viewBox="0 0 2030 1466" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<svg xmlns="http://www.w3.org/2000/svg" width="2030" height="1532" viewBox="0 0 2030 1532" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <defs>
 <marker id="a-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#333333"/></marker>
 <marker id="a-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d79b00"/></marker>
 </defs>
-<rect width="2030" height="1466" fill="#ffffff"/>
+<rect width="2030" height="1532" fill="#ffffff"/>
 <text x="20" y="30" dominant-baseline="central" font-size="22" font-weight="bold">Security controls of the agent sandbox</text>
 <rect x="1150" y="80" width="580" height="568" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
 <text x="1160" y="97.5" text-anchor="start" dominant-baseline="central" font-size="16" font-weight="bold" font-style="italic"><tspan x="1160" dy="0">Agent proxy</tspan><tspan x="1160" dy="19">rootless Podman, no gVisor</tspan></text>
@@ -105,20 +105,20 @@
 <text x="1930.0" y="125.5" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="bold"><tspan x="1930.0" dy="0">Bitwarden</tspan><tspan x="1930.0" dy="19">Secrets Manager</tspan></text>
 <rect x="1850" y="728" width="140" height="50" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <text x="1860" y="753.0" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="1860" dy="0">Internet</tspan></text>
-<rect x="740" y="8" width="1120" height="58" rx="10" fill="#ffffff" stroke="#999999" stroke-width="1"/>
-<text x="750" y="37.0" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="bold"><tspan x="750" dy="0">Legend</tspan></text>
-<rect x="830" y="18" width="160" height="38" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<text x="910.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="910.0" dy="0">Part of a sandbox</tspan></text>
-<rect x="1002" y="18" width="140" height="38" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="1072.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1072.0" dy="0">Part of a proxy</tspan></text>
-<rect x="1154" y="18" width="150" height="38" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<text x="1229.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1229.0" dy="0">Security control</tspan></text>
-<rect x="1316" y="18" width="190" height="38" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<text x="1411.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1411.0" dy="0">Shared socket file</tspan></text>
-<rect x="1518" y="18" width="120" height="38" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<text x="1578.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1578.0" dy="0">Secret store</tspan></text>
-<rect x="1650" y="18" width="190" height="38" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<text x="1745.0" y="37.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1745.0" dy="0">Host kernel, Internet</tspan></text>
+<rect x="455" y="1450" width="1120" height="58" rx="10" fill="#ffffff" stroke="#999999" stroke-width="1"/>
+<text x="465" y="1479.0" text-anchor="start" dominant-baseline="central" font-size="14" font-weight="bold"><tspan x="465" dy="0">Legend</tspan></text>
+<rect x="545" y="1460" width="160" height="38" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="625.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="625.0" dy="0">Part of a sandbox</tspan></text>
+<rect x="717" y="1460" width="140" height="38" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="787.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="787.0" dy="0">Part of a proxy</tspan></text>
+<rect x="869" y="1460" width="150" height="38" rx="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="944.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="944.0" dy="0">Security control</tspan></text>
+<rect x="1031" y="1460" width="190" height="38" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="1126.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1126.0" dy="0">Shared socket file</tspan></text>
+<rect x="1233" y="1460" width="120" height="38" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="1293.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1293.0" dy="0">Secret store</tspan></text>
+<rect x="1365" y="1460" width="190" height="38" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1460.0" y="1479.0" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1460.0" dy="0">Host kernel, Internet</tspan></text>
 <path d="M400 584.0 C500.0 584.0 500.0 584.0 600 584.0" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a-dark)"/>
 <rect x="442.8" y="542.0" width="114.39999999999999" height="34" fill="#ffffff"/>
 <text x="500.0" y="550.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="500.0" dy="0">HTTPS_PROXY</tspan><tspan x="500.0" dy="17">127.0.0.1:3128</tspan></text>
