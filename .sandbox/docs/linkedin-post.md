@@ -33,7 +33,7 @@ The limits, in plain words:
 • A bug in the proxy can expose the real tokens.
 • The sandbox does not stop prompt injection. It limits the damage.
 
-The picture shows the architecture and the controls together.
+The picture shows the architecture on top and the security controls below.
 
 What can your agent reach today?
 
@@ -42,8 +42,8 @@ What can your agent reach today?
 
 ## Image
 
-Upload `diagrams/sandbox-overview.png`.
+Upload `diagrams/sandbox-architecture-and-controls.png`.
 
 ## Alt text
 
-Agent sandbox diagram. An agent sandbox and a builder reach the Internet only through two proxies. Each container lists its security controls.
+Two diagrams in one image. The top diagram shows the agent sandbox, the builder, the two proxies and the Internet. The bottom diagram lists the security controls of each container.

@@ -8,7 +8,7 @@ Your coding agent has your repo, your tokens and a network connection. One poiso
 
 I built an agent sandbox to limit that damage. This post shows the problem, the design and the limits.
 
-![The agent sandbox: architecture and security controls](diagrams/sandbox-overview.png)
+![The agent sandbox: architecture and security controls](diagrams/sandbox-architecture-and-controls.png)
 
 ### The problem
 
@@ -80,10 +80,10 @@ What can your agent reach today?
 
 Upload these files to Medium in this order:
 
-1. `diagrams/sandbox-overview.png`: the picture under the opening paragraph.
+1. `diagrams/sandbox-architecture-and-controls.png`: the picture under the opening paragraph. It holds two diagrams.
 2. `diagrams/sandbox-network.png`: the picture in the section "How a request leaves".
 
 ## Alt text
 
-1. Agent sandbox diagram. An agent sandbox and a builder reach the Internet only through two proxies. Each container lists its security controls.
+1. Two diagrams in one image. The top diagram shows the agent sandbox, the builder, the two proxies and the Internet. The bottom diagram lists the security controls of each container.
 2. Network path diagram. The agent sandbox and the builder send requests through a relay and a Unix socket file to their proxy containers. Only the proxies reach the Internet.
