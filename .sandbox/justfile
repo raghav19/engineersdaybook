@@ -9,7 +9,6 @@
 #   just sandbox build   build the four images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
 #
 # After you edit agent/sandbox-agent.container or build the image, run `just sandbox run`. It makes a new container.
-# Do not put a colon and a space in the quoted text of a plain echo or read line, as in echo 'a: b'. Fresh 0.5.9 then draws the rest of the file in one colour.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
