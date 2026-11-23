@@ -1,19 +1,6 @@
 {
   "model": "opusplan",
   "effortLevel": "high",
-  "permissions": {
-    "allow": [
-      "mcp__github__get_me",
-      "mcp__github__list_pull_requests",
-      "mcp__github__create_pull_request",
-      "mcp__github__update_pull_request",
-      "Bash(herdr worktree create:*)",
-      "Bash(herdr worktree list:*)"
-    ],
-    "additionalDirectories": [
-      "/home/agent/.herdr/worktrees"
-    ]
-  },
   "env": {
     "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
