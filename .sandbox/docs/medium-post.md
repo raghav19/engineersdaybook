@@ -1,0 +1,89 @@
+# I built my own sandbox for coding agents
+
+_One way out, no real tokens inside, and a proxy that checks each request._
+
+## Post
+
+Your coding agent has your repo, your tokens and a network connection. One poisoned issue or web page can make it use all three.
+
+I built an agent sandbox to limit that damage. This post shows the problem, the design and the limits.
+
+![The agent sandbox: architecture and security controls](diagrams/sandbox-overview.png)
+
+### The problem
+
+Three things together make an agent risky:
+
+1. It reads text that you did not write: web pages, issues, packages and code.
+2. It reaches private data: your repo, your files and your tokens.
+3. It can send data out: a `git push`, an API call or a web request.
+
+A prompt injection hides an instruction in the text that the agent reads. A fooled agent then runs commands with your rights.
+
+A filter that stops most attacks is not enough. One missed attack is enough. The agent has to read, so I cannot remove the first thing. I can limit the other two.
+
+### The idea
+
+Assume that the agent will be fooled. Then limit what a fooled agent can do. The sandbox has one step for each ability:
+
+- **Private data.** The agent works in a private clone of the repo. It holds placeholders, not real tokens. The real tokens stay in a proxy.
+- **Outside communication.** The agent container has no network device. The only way out is a Unix socket file that leads to the proxy.
+- **Untrusted content.** The sandbox cannot stop it, because the agent has to read. The other two steps limit the damage.
+- **Builds.** A second container builds the images. It has no token and no network device. It has its own proxy.
+
+### How a request leaves
+
+A tool in the sandbox sends a request to a small relay. The relay passes the bytes to `proxy.sock`. This is a file that the proxy container owns. The proxy container passes the bytes to the proxy.
+
+![The network path of the agent sandbox and the builder](diagrams/sandbox-network.png)
+
+The proxy checks the host, the method and the path of each request:
+
+- A host that is not on the list gets a `403`.
+- A host with rules takes only the methods and the paths of its rules. A write goes to one GitHub repository only.
+- A merge, a file removal, a gist, a fork and GraphQL get a `403`.
+- If a rule matches, the proxy replaces the placeholder with the real token and sends the request.
+
+The host proxy ends the TLS of each call with its own CA. The sandbox trusts only this CA. The real tokens come from Bitwarden Secrets Manager and stay in memory.
+
+### Builds without a token
+
+The agent runs `docker build` as on any host. The build goes to a second container, the builder, over a socket. The builder runs the build steps. It has no token and no network device.
+
+The builder reaches the internet only through its own proxy. This proxy checks host names only. It holds no token. The builder is new for each session.
+
+### The hard edges
+
+The agent container and the host proxy have a read-only root file system and no capabilities. The agent container does not run as root. The builder keeps three capabilities, because its build tool needs them. The containers run in rootless Podman and gVisor.
+
+gVisor ignores the limits of Podman. So Quadlet turns each container file into a systemd service, and each service holds the memory and CPU limits.
+
+### The limits
+
+The sandbox limits the damage. It does not make the agent safe. These risks stay:
+
+- gVisor is not a microVM. A bug in gVisor can give an attacker your host user.
+- The proxy reads every request. A bug in the proxy can expose the real tokens.
+- A prompt injection can still change what the agent tries to do. The model and the client handle that.
+- A write to `main` needs branch protection on GitHub. A rule in the proxy cannot see the branch.
+- Data can leave through a listed host. Keep the lists short.
+
+### Try it
+
+The code and the README are in my repo: [engineersdaybook/.sandbox](https://github.com/raghav19/engineersdaybook/tree/main/.sandbox).
+
+This is a personal setup. It assumes `ghcr.io` and Bitwarden Secrets Manager. The README lists what to change for another registry or secret manager.
+
+What can your agent reach today?
+
+## Images
+
+Upload these files to Medium in this order:
+
+1. `diagrams/sandbox-overview.png`: the picture under the opening paragraph.
+2. `diagrams/sandbox-network.png`: the picture in the section "How a request leaves".
+
+## Alt text
+
+1. Agent sandbox diagram. An agent sandbox and a builder reach the Internet only through two proxies. Each container lists its security controls.
+2. Network path diagram. The agent sandbox and the builder send requests through a relay and a Unix socket file to their proxy containers. Only the proxies reach the Internet.

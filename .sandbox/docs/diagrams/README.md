@@ -13,6 +13,9 @@
 | `quadlet.png` | The PNG of that SVG. |
 | `security-controls.drawio` | Source of the security controls diagram. Two lanes mirror each other around a `Host kernel` box: the agent sandbox above it and the builder below it. Each lane goes from the sandbox through `proxy.sock` to a proxy container and the Internet. A legend at the bottom names the colors. The diagram is the list of controls in the section "Security controls" of `../../README.md`. When you edit it, keep the lanes mirrored in size, position and layout. Keep each title 10 px from the left edge and 8 px from the outer edge. Keep each arrow label 8 px from its line and each arrow 2 px thick. |
 | `security-controls.svg` | The security controls diagram as a plain SVG, drawn in the same way. |
+| `sandbox-overview.drawio` | Source of the overview diagram for a post. Joins the architecture and the security controls in one view, with the labels at 13 px or more. Two columns: the agent sandbox and the builder on the left, the host proxy and the builder proxy on the right. Each container has its main parts and six control boxes. A `proxy.sock` box joins each sandbox to its proxy. Your terminal, Bitwarden and the Internet are outside the boxes. |
+| `sandbox-overview.svg` | The overview diagram as a plain SVG, drawn at the same coordinates. |
+| `sandbox-overview.png` | The PNG of that SVG, 2x with a white background. |
 
 After you edit a `.drawio` file:
 

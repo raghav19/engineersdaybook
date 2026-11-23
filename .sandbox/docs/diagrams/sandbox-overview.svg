@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1200" height="1056" viewBox="0 0 1200 1056" font-family="Helvetica, Arial, sans-serif" fill="#000000">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker></defs>
+<rect width="1200" height="1056" fill="#ffffff"/>
+<text x="30" y="40" font-size="24" font-weight="bold">Agent sandbox: the only way out is a proxy</text>
+<rect x="30" y="196" width="410" height="370" rx="14" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<text x="40" y="222" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">Agent sandbox</text>
+<text x="40" y="242" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">rootless Podman + gVisor</text>
+<rect x="30" y="646" width="410" height="370" rx="14" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
+<text x="40" y="672" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">Builder</text>
+<text x="40" y="692" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">rootless Podman + gVisor, new for each session</text>
+<rect x="640" y="196" width="410" height="370" rx="14" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<text x="650" y="222" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">Host proxy</text>
+<text x="650" y="242" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">rootless Podman, no gVisor</text>
+<rect x="640" y="646" width="410" height="370" rx="14" fill="#ffffff" stroke="#6c8ebf" stroke-width="2"/>
+<text x="650" y="672" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">Builder proxy</text>
+<text x="650" y="692" font-size="16" text-anchor="start" font-weight="bold" font-style="italic">rootless Podman, no gVisor</text>
+<rect x="46" y="262" width="378" height="104" rx="12" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="56" y="282" font-size="13" text-anchor="start">gVisor: userspace kernel</text>
+<rect x="46" y="712" width="378" height="104" rx="12" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="56" y="732" font-size="13" text-anchor="start">gVisor: userspace kernel</text>
+<rect x="30" y="60" width="410" height="56" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="235" y="84" font-size="16" text-anchor="middle" font-weight="bold">Your terminal</text>
+<text x="235" y="102" font-size="15" text-anchor="middle">just sandbox run</text>
+<rect x="640" y="60" width="410" height="56" rx="8" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="845" y="84" font-size="16" text-anchor="middle" font-weight="bold">Bitwarden Secrets Manager</text>
+<text x="845" y="102" font-size="15" text-anchor="middle">holds the real tokens</text>
+<rect x="62" y="300" width="150" height="52" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="137" y="322" font-size="14" text-anchor="middle" font-weight="bold">Agent tools</text>
+<text x="137" y="340" font-size="13" text-anchor="middle">placeholders only</text>
+<rect x="332" y="300" width="76" height="52" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="370" y="331" font-size="16" text-anchor="middle" font-weight="bold">socat</text>
+<rect x="62" y="750" width="150" height="52" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="137" y="772" font-size="14" text-anchor="middle" font-weight="bold">BuildKit</text>
+<text x="137" y="790" font-size="13" text-anchor="middle">runs the builds</text>
+<rect x="332" y="750" width="76" height="52" rx="8" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="370" y="781" font-size="16" text-anchor="middle" font-weight="bold">socat</text>
+<rect x="470" y="292" width="130" height="68" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="535" y="313" font-size="13" text-anchor="middle" font-weight="bold">proxy.sock</text>
+<text x="535" y="331" font-size="12" text-anchor="middle">Unix socket file</text>
+<text x="535" y="349" font-size="12" text-anchor="middle">the only way out</text>
+<rect x="470" y="742" width="130" height="68" rx="8" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="535" y="763" font-size="13" text-anchor="middle" font-weight="bold">proxy.sock</text>
+<text x="535" y="781" font-size="12" text-anchor="middle">Unix socket file</text>
+<text x="535" y="799" font-size="12" text-anchor="middle">the only way out</text>
+<rect x="656" y="300" width="378" height="52" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="845" y="322" font-size="14" text-anchor="middle" font-weight="bold">iron-proxy</text>
+<text x="845" y="340" font-size="13" text-anchor="middle">the egress proxy</text>
+<rect x="656" y="750" width="378" height="52" rx="8" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="845" y="772" font-size="14" text-anchor="middle" font-weight="bold">iron-proxy</text>
+<text x="845" y="790" font-size="13" text-anchor="middle">the egress proxy</text>
+<rect x="1090" y="576" width="100" height="60" rx="8" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1140" y="602" font-size="14" text-anchor="middle" font-weight="bold">Internet</text>
+<text x="1140" y="620" font-size="13" text-anchor="middle">listed hosts</text>
+<rect x="46" y="382" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="412" font-size="14" text-anchor="middle" font-weight="bold">No network device</text>
+<rect x="241" y="382" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="403" font-size="14" text-anchor="middle" font-weight="bold">Not root</text>
+<text x="332.5" y="421" font-size="13" text-anchor="middle">user agent, a subuid</text>
+<rect x="46" y="440" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="461" font-size="14" text-anchor="middle" font-weight="bold">Hardened container</text>
+<text x="137.5" y="479" font-size="13" text-anchor="middle">read-only root file system</text>
+<rect x="241" y="440" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="461" font-size="14" text-anchor="middle" font-weight="bold">Read-only mounts</text>
+<text x="332.5" y="479" font-size="13" text-anchor="middle">CA, proxy, builder sockets</text>
+<rect x="46" y="498" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="519" font-size="14" text-anchor="middle" font-weight="bold">Private clone</text>
+<text x="137.5" y="537" font-size="13" text-anchor="middle">your .git is read-only</text>
+<rect x="241" y="498" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="519" font-size="14" text-anchor="middle" font-weight="bold">Limits (Quadlet)</text>
+<text x="332.5" y="537" font-size="13" text-anchor="middle">3 GB, 4 CPUs</text>
+<rect x="46" y="832" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="862" font-size="14" text-anchor="middle" font-weight="bold">No network device</text>
+<rect x="241" y="832" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="862" font-size="14" text-anchor="middle" font-weight="bold">No token, no secret</text>
+<rect x="46" y="890" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="920" font-size="14" text-anchor="middle" font-weight="bold">3 capabilities only</text>
+<rect x="241" y="890" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="911" font-size="14" text-anchor="middle" font-weight="bold">Cache in memory</text>
+<text x="332.5" y="929" font-size="13" text-anchor="middle">tmpfs, 1 GB</text>
+<rect x="46" y="948" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="137.5" y="978" font-size="14" text-anchor="middle" font-weight="bold">Wiped at session end</text>
+<rect x="241" y="948" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="332.5" y="969" font-size="14" text-anchor="middle" font-weight="bold">Limits (Quadlet)</text>
+<text x="332.5" y="987" font-size="13" text-anchor="middle">2 GB, 2 CPUs</text>
+<rect x="656" y="382" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="403" font-size="14" text-anchor="middle" font-weight="bold">Allowlist of hosts</text>
+<text x="747.5" y="421" font-size="13" text-anchor="middle">other hosts get 403</text>
+<rect x="851" y="382" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="403" font-size="14" text-anchor="middle" font-weight="bold">Method and path rules</text>
+<text x="942.5" y="421" font-size="13" text-anchor="middle">one repo, one namespace</text>
+<rect x="656" y="440" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="470" font-size="14" text-anchor="middle" font-weight="bold">TLS termination</text>
+<rect x="851" y="440" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="461" font-size="14" text-anchor="middle" font-weight="bold">Token swap</text>
+<text x="942.5" y="479" font-size="13" text-anchor="middle">placeholder to real token</text>
+<rect x="656" y="498" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="519" font-size="14" text-anchor="middle" font-weight="bold">Audit log</text>
+<text x="747.5" y="537" font-size="13" text-anchor="middle">one JSON line per request</text>
+<rect x="851" y="498" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="519" font-size="14" text-anchor="middle" font-weight="bold">Limits (Quadlet)</text>
+<text x="942.5" y="537" font-size="13" text-anchor="middle">512 MB, 512 threads</text>
+<rect x="656" y="832" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="853" font-size="14" text-anchor="middle" font-weight="bold">Host allowlist</text>
+<text x="747.5" y="871" font-size="13" text-anchor="middle">other hosts get 403</text>
+<rect x="851" y="832" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="862" font-size="14" text-anchor="middle" font-weight="bold">TLS passthrough</text>
+<rect x="656" y="890" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="911" font-size="14" text-anchor="middle" font-weight="bold">No URL path rules</text>
+<text x="747.5" y="929" font-size="13" text-anchor="middle">sees the host name only</text>
+<rect x="851" y="890" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="911" font-size="14" text-anchor="middle" font-weight="bold">Hardened container</text>
+<text x="942.5" y="929" font-size="13" text-anchor="middle">read-only root file system</text>
+<rect x="656" y="948" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="747.5" y="978" font-size="14" text-anchor="middle" font-weight="bold">Wiped at session end</text>
+<rect x="851" y="948" width="183" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
+<text x="942.5" y="969" font-size="14" text-anchor="middle" font-weight="bold">Limits (Quadlet)</text>
+<text x="942.5" y="987" font-size="13" text-anchor="middle">256 MB, 256 threads</text>
+<path d="M337,116 V196" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<text x="347" y="162" font-size="14" text-anchor="start">runs</text>
+<path d="M950,116 V196" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<text x="960" y="162" font-size="14" text-anchor="start">real tokens</text>
+<path d="M212,326 H332" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<text x="272" y="318" font-size="14" text-anchor="middle">HTTPS_PROXY</text>
+<path d="M408,326 H470" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M600,326 H656" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M212,776 H332" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<text x="272" y="768" font-size="14" text-anchor="middle">HTTPS_PROXY</text>
+<path d="M408,776 H470" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M600,776 H656" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M235,566 V646" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<text x="245" y="612" font-size="14" text-anchor="start">docker over buildkitd.sock</text>
+<path d="M1050,481 H1120 Q1140,481 1140,501 V576" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+<path d="M1050,731 H1120 Q1140,731 1140,711 V636" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#ah)"/>
+</svg>
