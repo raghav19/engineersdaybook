@@ -68,6 +68,79 @@ Notes on the controls:
 
 ## Flows
 
+### Setup flow
+
+`setup` changes only files in your home folder, and it restarts only the bridge. `run` starts the containers.
+
+```mermaid
+---
+title: Setup flow
+---
+sequenceDiagram
+    participant You
+    participant Setup as just sandbox setup
+    participant Home as Files in your home folder
+    participant Systemd as systemd user manager
+    opt ca.crt or ca.key is missing
+        Setup->>Home: make the CA
+    end
+    opt bws-token is missing or unreadable
+        Setup->>You: ask for the Bitwarden access token
+        You-->>Setup: the token
+        Setup->>Home: encrypt it with systemd-creds
+    end
+    Setup->>Home: link the proxy configs, the four .container files, the gVisor flags, repo.git and the bridge files
+    Setup->>Systemd: daemon-reload
+    Note over Systemd: Quadlet makes the four services
+    Setup->>Systemd: enable and restart sandbox-bridge.service
+```
+
+### Run flow
+
+`run` restarts the agent sandbox. systemd restarts the units that it requires, so each session has a new builder and new proxies.
+
+```mermaid
+---
+title: Run flow
+---
+sequenceDiagram
+    participant Run as just sandbox run
+    participant Systemd as systemd user manager
+    participant Proxies as both proxies
+    participant Builder as sandbox-builder
+    participant Agent as sandbox-agent
+    Run->>Systemd: daemon-reload, restart sandbox-agent.service
+    Systemd->>Proxies: restart
+    Systemd->>Builder: restart, wait until it is healthy
+    Systemd->>Agent: start, then run the relay and sandbox-start
+    loop each 2 s, up to 180 s
+        Run->>Agent: podman healthcheck run
+    end
+    Run->>Agent: podman exec Herdr, or your command
+```
+
+### Sandbox build flow
+
+`build` runs on the host and makes the images of the sandbox. The Image build flow below makes an image for your project. `build` stops at the first error, so the login stays until you run `podman logout ghcr.io`.
+
+```mermaid
+---
+title: Sandbox build flow
+---
+sequenceDiagram
+    participant Build as just sandbox build
+    participant Bws as systemd-creds and bws
+    participant Podman
+    participant GHCR as ghcr.io
+    Build->>Bws: decrypt bws-token, read GITHUB_TOKEN
+    Bws->>Podman: GITHUB_TOKEN
+    Podman->>GHCR: log in to ghcr.io
+    Build->>Podman: build the four images
+    Podman->>GHCR: read and write the stage cache of the agent sandbox image
+    Build->>Podman: push the agent sandbox image with the commit tag, then log out
+    Podman->>GHCR: push
+```
+
 ### Egress request flow
 
 Both containers follow this path. Only the relay port, the proxy and the rule set differ.
@@ -226,23 +299,28 @@ Run these steps in your main checkout.
 2. Run these commands:
 
 ```shell
-just sandbox setup   # make the CA and the credential, and link the units, the proxy configs and the repo
-just sandbox build   # build the four images and push the agent sandbox image to ghcr.io
-just sandbox run     # start the proxies, the builder and the agent sandbox, and open Herdr, a terminal workspace manager
+just sandbox setup   # once, and again after you edit a file in agent/ or builder/
+just sandbox build   # build the images and push the agent sandbox image
+just sandbox run     # start the containers and open Herdr, a terminal workspace manager
 ```
 
-`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/` or `builder/`.
+`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable.
 
-`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. `run` starts all four containers. Each unit starts the units that it requires.
+`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. 
+
+The flows of the three commands are in [Flows](#flows).
+
+## Decisions
+
+- [Quadlet units, not Docker Compose or Podman Compose](docs/adr/0001-quadlet-over-compose.md)
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `just sandbox setup` | Makes the CA and the credential. Links the container units, the gVisor flags, the proxy configs and the repo. |
-| `just sandbox run` | Makes a new agent sandbox, a new builder and two new proxies. Opens Herdr. Add a command to run it in place of Herdr. |
+| `just sandbox run <command>` | Runs your command in place of Herdr. |
 | `just sandbox rm` | Removes the agent sandbox, the builder and both proxies. The volume stays. |
-| `just sandbox build` | Builds the four images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
+| `just sandbox build --no-cache` | Updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
 | `journalctl --user -u sandbox-proxy -f` | Follows the audit log of the host proxy: one JSON line for each request. |

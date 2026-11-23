@@ -105,6 +105,8 @@ The Podman sandbox has no network device. It reaches only the hosts listed in `.
 
 ## 9. Diagrams
 
+Draw a flow or a system as a diagram, and keep the text short. Use a Mermaid `sequenceDiagram` for a flow over time. Use draw.io for the picture of a system.
+
 Before you create or edit a diagram, read `docs/agents/diagrams.md` in full.
 
 ## 10. Python
