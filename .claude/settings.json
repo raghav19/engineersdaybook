@@ -7,6 +7,8 @@
       "mcp__github__list_pull_requests",
       "mcp__github__create_pull_request",
       "mcp__github__update_pull_request",
+      "mcp__github__list_dependabot_alerts",
+      "mcp__github__get_dependabot_alert",
       "Bash(herdr worktree create:*)",
       "Bash(herdr worktree list:*)"
     ],
