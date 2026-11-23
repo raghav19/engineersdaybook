@@ -24,7 +24,7 @@ A filter that stops most attacks is not enough. One missed attack is enough. The
 
 ### The idea
 
-Assume that the agent will be fooled. Then limit what a fooled agent can do. The sandbox has one step for each ability:
+Assume that an attacker will fool the agent. Then limit what a fooled agent can do. The sandbox has one step for each ability:
 
 - **Private data.** The agent works in a private clone of the repo. It holds placeholders, not real tokens. The real tokens stay in a proxy.
 - **Outside communication.** The agent container has no network device. The only way out is a Unix socket file that leads to the proxy.
@@ -34,8 +34,6 @@ Assume that the agent will be fooled. Then limit what a fooled agent can do. The
 ### How a request leaves
 
 A tool in the sandbox sends a request to a small relay. The relay passes the bytes to `proxy.sock`. This is a file that the proxy container owns. The proxy container passes the bytes to the proxy.
-
-![The network path of the agent sandbox and the builder](diagrams/sandbox-network.png)
 
 The proxy checks the host, the method and the path of each request:
 
@@ -57,6 +55,21 @@ The builder reaches the internet only through its own proxy. This proxy checks h
 The agent container and the host proxy have a read-only root file system and no capabilities. The agent container does not run as root. The builder keeps three capabilities, because its build tool needs them. The containers run in rootless Podman and gVisor.
 
 gVisor ignores the limits of Podman. So Quadlet turns each container file into a systemd service, and each service holds the memory and CPU limits.
+
+### The six concepts
+
+The guide [Agent sandboxes explained](https://departmentofproduct.substack.com/p/agent-sandboxes-explained-a-guide) by Department of Product splits an agent sandbox into six concepts. Use them as a checklist when you build a sandbox.
+
+![The six concepts of an agent sandbox](diagrams/concepts.png)
+
+My sandbox applies each concept:
+
+1. **The wall.** The agent runs in rootless Podman on gVisor, a user-space kernel.
+2. **Workspace.** The agent works in a private clone of the repo. The `.git` folder of my checkout is a read-only mount, so the agent cannot change it.
+3. **Network gate.** One socket file leads to the proxy. The proxy allows listed hosts, methods and paths.
+4. **Key holder.** The proxy replaces each placeholder with the real token.
+5. **Saved state.** A volume keeps the clone, the logins and the histories after a restart.
+6. **You.** I approve the tool calls in Claude Code. The audit log of the proxy shows each request. One command stops the sandbox. Each task has its own worktree and branch, so I can undo one task.
 
 ### The limits
 
@@ -81,9 +94,9 @@ What can your agent reach today?
 Upload these files to Medium in this order:
 
 1. `diagrams/sandbox-architecture-and-controls.png`: the picture under the opening paragraph. It holds two diagrams.
-2. `diagrams/sandbox-network.png`: the picture in the section "How a request leaves".
+2. `diagrams/concepts.png`: the picture in the section "The six concepts". Make it on the host first. In `diagrams/`, run `rsvg-convert -z 2 -b white concepts.svg -o concepts.png`.
 
 ## Alt text
 
 1. Two diagrams in one image. The top diagram shows the agent sandbox, the builder, the two proxies and the Internet. The bottom diagram lists the security controls of each container.
-2. Network path diagram. The agent sandbox and the builder send requests through a relay and a Unix socket file to their proxy containers. Only the proxies reach the Internet.
+2. The six concepts of an agent sandbox. A host computer holds the wall, the network gate and the key holder. The wall holds the agent, the software, the workspace and the saved state. The network gate and the key holder are outside the wall. You allow or deny the actions of the sandbox.
