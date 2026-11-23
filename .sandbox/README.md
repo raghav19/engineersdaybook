@@ -233,7 +233,7 @@ just sandbox run     # start the proxies, the builder and the agent sandbox, and
 
 `setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable. Run `setup` again after you edit a file in `agent/` or `builder/`.
 
-`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. `run` starts all four containers. Each unit starts the units that it requires.
+`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. 
 
 ### Setup flow
 
@@ -328,10 +328,9 @@ sequenceDiagram
 
 | Command | What it does |
 |---|---|
-| `just sandbox setup` | Makes the CA and the credential. Links the container units, the gVisor flags, the proxy configs and the repo. |
-| `just sandbox run` | Makes a new agent sandbox, a new builder and two new proxies. Opens Herdr. Add a command to run it in place of Herdr. |
+| `just sandbox run <command>` | Runs your command in place of Herdr. |
 | `just sandbox rm` | Removes the agent sandbox, the builder and both proxies. The volume stays. |
-| `just sandbox build` | Builds the four images and pushes the agent sandbox image with the commit tag. `--no-cache` updates the pinned tools. |
+| `just sandbox build --no-cache` | Updates the pinned tools. |
 | `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
 | `journalctl --user -u sandbox-proxy -f` | Follows the audit log of the host proxy: one JSON line for each request. |
