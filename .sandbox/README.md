@@ -96,7 +96,7 @@ Notes on the controls:
 | `permissions.blockWritesOutsideWorkingDirectories` | Makes `Write`, `Edit` and `NotebookEdit` refuse a path outside the working directories. It also refuses the Claude Code settings files, so the agent cannot edit `.claude/settings.json`. A shell command is not limited. |
 | `allowManagedHooksOnly` | Runs only the hooks of this file. A hook in a project, user or plugin file does not run. |
 | `allowManagedMcpServersOnly` | Ignores `allowedMcpServers` from other files. |
-| `allowedMcpServers` | An empty list blocks each MCP server that a user, a plugin or a project adds. The servers in `managedMcpServers` skip this check and still load. |
+| `allowedMcpServers` | Lists the URL of each server in `managedMcpServers`. A server that a user, a plugin or a project adds must match a URL here, so only these three hosts can load. The URL, not the name, is the control, because a user can choose any name. The servers in `managedMcpServers` skip this check, so the list repeats them on purpose. |
 | `managedMcpServers` | Gives the agent `drawio`, `flux-schema-catalog` and `github`. The proxy allows only these hosts. |
 
 A change to the file takes effect after an image rebuild.

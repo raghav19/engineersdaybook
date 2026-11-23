@@ -16,7 +16,11 @@
   },
   "allowManagedHooksOnly": true,
   "allowManagedMcpServersOnly": true,
-  "allowedMcpServers": [],
+  "allowedMcpServers": [
+    { "serverUrl": "https://mcp.draw.io/mcp" },
+    { "serverUrl": "https://schemas.fluxoperator.dev/mcp" },
+    { "serverUrl": "https://api.githubcopilot.com/mcp/" }
+  ],
   "managedMcpServers": {
     "drawio": {
       "type": "http",
