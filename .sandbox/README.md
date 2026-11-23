@@ -25,6 +25,12 @@ The sandbox keeps the agent useful and limits what a fooled agent can do. It has
 
 The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea: a socket to a proxy outside the sandbox, which enforces approved domains.
 
+### The six concepts
+
+The guide [Agent sandboxes explained](https://departmentofproduct.substack.com/p/agent-sandboxes-explained-a-guide) splits an agent sandbox into six concepts. The diagram shows the part of this sandbox for each concept.
+
+![The agent sandbox in the six concepts of the guide](docs/diagrams/concepts.svg)
+
 ## What is out of scope
 
 The sandbox limits what a fooled agent can do. Other layers handle the rest. These risks are out of scope:
