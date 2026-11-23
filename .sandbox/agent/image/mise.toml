@@ -19,6 +19,9 @@ HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language server) runs on .NET. The image has no ICU library, and this setting lets .NET start without it
 HF_HUB_OFFLINE = "1"
+# Herdr finds the agent of a pane from the foreground process group of the pane. gVisor does not show this group, so Herdr lists no agents.
+# This mode makes Herdr infer the group from the child processes of the shell. A newer background job can look like the foreground job.
+HERDR_PROCESS_DETECTION = "child-groups"
 # Ponytail (sandbox-start installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
