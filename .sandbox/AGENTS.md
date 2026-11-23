@@ -22,3 +22,5 @@ When adding a language server to `agent/image/tools/lsp.toml`, also add it to `a
 `fresh-config.json` is a copy of `~/.config/fresh/config.json` on the host. Keep it the same as the host file.
 
 `agent/image/configs/editor/fresh-plugins.yaml` lists the Fresh packages. When you add a package, add a key with `kind`, `repo`, `commit` and `subdir`. The mise task `fresh:plugins` in `agent/image/mise.toml` runs `fresh-plugins.sh`, which installs each one at its pinned commit. The theme `catppuccin-mocha` in the config comes from the `catppuccin` package.
+
+`agent/image/configs/editor/just-language/` is a copy of the Just grammar of `nk9/just_sublime`. The commit is in its `package.json`. It is not in `fresh-plugins.yaml`, because the upstream repo has no Fresh `package.json`. The built-in Justfile grammar of Fresh 0.5.9 draws the rest of the file in one colour after `echo 'a: b'`. The setting `languages.justfile.grammar` in `fresh-config.json` selects the package. To test a new Fresh version, run it on a justfile with `echo 'a: b'` in a recipe, then a comment. Remove the package and the setting when the built-in grammar colours the comment.

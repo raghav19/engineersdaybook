@@ -1,0 +1,13 @@
+{
+  "name": "just-language",
+  "version": "1.0.0",
+  "description": "Just grammar, a copy of Syntax/Just.sublime-syntax from nk9/just_sublime at commit 2dcc60286d1af6a4c6c2c03d50bc03230dc56ce3",
+  "type": "language",
+  "license": "MIT",
+  "fresh": {
+    "grammar": {
+      "file": "grammars/syntax.sublime-syntax",
+      "extensions": [".just", ".justfile", "justfile", "Justfile"]
+    }
+  }
+}

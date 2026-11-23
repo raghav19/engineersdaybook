@@ -73,7 +73,7 @@ setup:
     mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
     if ! systemd-creds --user decrypt --name=bws-token '{{ credential }}' - >/dev/null 2>&1; then
-        read -rsp 'Bitwarden access token> ' tok; echo
+        read -rsp 'Bitwarden access token: ' tok; echo
         rm -f '{{ credential }}'
         printf '%s' "$tok" | systemd-creds --user encrypt --name=bws-token - '{{ credential }}'
         chmod 0400 '{{ credential }}'
@@ -99,7 +99,7 @@ setup:
     systemctl --user daemon-reload
     systemctl --user enable sandbox-bridge.service
     systemctl --user restart sandbox-bridge.service
-    echo 'Next, run just sandbox build. Then run just sandbox run.'
+    echo 'Next: just sandbox build, then just sandbox run.'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
@@ -114,7 +114,7 @@ run *command: (_needs SANDBOX_CA)
     # --foreground and </dev/null keep podman away from your terminal. Without them, timeout runs podman in a background group.
     # In a terminal, the kernel then stops podman for good, and a stopped podman holds the lock of the container, so every podman command hangs.
     timeout --foreground 180 sh -c 'until podman healthcheck run sandbox-agent >/dev/null 2>&1 </dev/null; do sleep 2; done' \
-        || { echo 'sandbox: the container is not healthy. To see why, run podman logs sandbox-agent.' >&2; exit 1; }
+        || { echo 'sandbox: the container is not healthy. See: podman logs sandbox-agent' >&2; exit 1; }
 
     # Open Herdr, or run the command that you gave.
     podman exec -it \

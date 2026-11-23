@@ -88,6 +88,8 @@ COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fr
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 RUN mise run fresh:plugins
+# The Just grammar of Fresh loses its colours after echo 'a: b'. This package replaces it. See .sandbox/AGENTS.md.
+COPY --chown=agent:agent configs/editor/just-language /home/agent/.config/fresh/languages/packages/just-language
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml

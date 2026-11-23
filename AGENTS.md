@@ -149,10 +149,6 @@ Before you write or edit a topic doc in the `docs/` folder of a project, read `d
 
 Before you create or edit a document that an agent reads, invoke `/writing-for-agents`. These documents are skills, `AGENTS.md`, the files in `docs/agents/`, and any doc that `AGENTS.md` points to.
 
-## 16. Justfiles
-
-In a recipe, write the quoted text of an `echo` or `read` line with no colon and space. Write `echo 'Next, run X'`, not `echo 'Next: X'`. Fresh 0.5.9 draws the rest of the file in one colour after `echo 'a: b'`.
-
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

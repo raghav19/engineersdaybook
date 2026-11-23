@@ -66,6 +66,9 @@
     },
     "jsonc": {
       "format_on_save": true
+    },
+    "justfile": {
+      "grammar": "Just"
     }
   },
   "lsp": {
