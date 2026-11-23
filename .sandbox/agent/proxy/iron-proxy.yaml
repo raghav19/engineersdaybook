@@ -87,6 +87,7 @@ transforms:
         - fluxcd.control-plane.io
         - doc.traefik.io
         - cloud.google.com
+        - "*.substack.com"
         # Other
         - crl.microsoft.com
       # ghcr.io takes reads in any namespace and writes only in the namespace raghav19. Other writes get 403.
@@ -95,24 +96,24 @@ transforms:
         - {host: ghcr.io, methods: [CONNECT]}
         - {host: ghcr.io, methods: [GET, HEAD], paths: ["/token", "/v2/", "/v2/*"]}
         - {host: ghcr.io, methods: [POST, PATCH, PUT], paths: ["/v2/raghav19/*"]}
-      # GitHub. Reads are open. Writes go to the repository raghav19/engineersdaybook only, so an injected agent cannot send data to another repository, a gist or an issue elsewhere.
-      # Each host needs a CONNECT rule, because the proxy decides at the CONNECT. The proxy cannot read the body of a request.
-      # Static hosts: reads only.
+        # GitHub. Reads are open. Writes go to the repository raghav19/engineersdaybook only, so an injected agent cannot send data to another repository, a gist or an issue elsewhere.
+        # Each host needs a CONNECT rule, because the proxy decides at the CONNECT. The proxy cannot read the body of a request.
+        # Static hosts: reads only.
         - {host: "*.githubusercontent.com", methods: [CONNECT, GET, HEAD]}
         - {host: github.githubassets.com, methods: [CONNECT, GET, HEAD]}
         - {host: www.githubstatus.com, methods: [CONNECT, GET, HEAD]}
-      # Git over HTTPS and release downloads. A clone or a pull is a POST of git-upload-pack and reads any repository. A push is a POST of git-receive-pack in the repository of this project only.
+        # Git over HTTPS and release downloads. A clone or a pull is a POST of git-upload-pack and reads any repository. A push is a POST of git-receive-pack in the repository of this project only.
         - {host: github.com, methods: [CONNECT]}
         - {host: github.com, methods: [GET, HEAD]}
         - {host: github.com, methods: [POST], paths: ["/*/*/git-upload-pack"]}
         - {host: github.com, methods: [POST], paths: ["/raghav19/engineersdaybook/git-receive-pack", "/raghav19/engineersdaybook.git/git-receive-pack"]}
-      # The REST API. Reads are open. A write is possible on issues and pull requests of this repository only.
-      # POST and PATCH on /pulls cover a new pull request, an edit, a comment and a review. A merge is a PUT, so it gets 403.
-      # A file write, a removal, a branch, a release, a workflow, a gist and a fork get 403. GraphQL gets 403, because its path does not show what a query writes.
+        # The REST API. Reads are open. A write is possible on issues and pull requests of this repository only.
+        # POST and PATCH on /pulls cover a new pull request, an edit, a comment and a review. A merge is a PUT, so it gets 403.
+        # A file write, a removal, a branch, a release, a workflow, a gist and a fork get 403. GraphQL gets 403, because its path does not show what a query writes.
         - {host: api.github.com, methods: [CONNECT]}
         - {host: api.github.com, methods: [GET, HEAD]}
         - {host: api.github.com, methods: [POST, PATCH], paths: ["/repos/raghav19/engineersdaybook/issues", "/repos/raghav19/engineersdaybook/issues/*", "/repos/raghav19/engineersdaybook/pulls", "/repos/raghav19/engineersdaybook/pulls/*"]}
-      # The GitHub MCP server. Only the URL /mcp/ is open. The proxy does not limit the tools. The settings files and the central gateway do.
+        # The GitHub MCP server. Only the URL /mcp/ is open. The proxy does not limit the tools. The settings files and the central gateway do.
         - {host: api.githubcopilot.com, methods: [CONNECT]}
         - {host: api.githubcopilot.com, methods: [GET, POST, DELETE], paths: ["/mcp", "/mcp/"]}
   - name: secrets
