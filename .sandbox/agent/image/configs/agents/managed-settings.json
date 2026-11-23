@@ -1,5 +1,15 @@
 {
   "permissions": {
+    "allow": [
+      "mcp__github__get_me",
+      "mcp__github__list_pull_requests",
+      "mcp__github__create_pull_request",
+      "mcp__github__update_pull_request",
+      "mcp__github__list_dependabot_alerts",
+      "mcp__github__get_dependabot_alert",
+      "Bash(herdr worktree create:*)",
+      "Bash(herdr worktree list:*)"
+    ],
     "deny": [
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
@@ -15,6 +25,7 @@
     "blockWritesOutsideWorkingDirectories": true
   },
   "allowManagedHooksOnly": true,
+  "allowManagedPermissionRulesOnly": true,
   "allowManagedMcpServersOnly": true,
   "allowedMcpServers": [
     { "serverUrl": "https://mcp.draw.io/mcp" },
@@ -35,7 +46,7 @@
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer sandbox-placeholder-GH_TOKEN",
-        "X-MCP-Toolsets": "context,issues,pull_requests,repos"
+        "X-MCP-Toolsets": "context,dependabot,issues,pull_requests,repos"
       }
     }
   }
