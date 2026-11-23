@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "allow": [
+      "mcp__github__list_dependabot_alerts",
+      "mcp__github__get_dependabot_alert"
+    ],
     "deny": [
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
