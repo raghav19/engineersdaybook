@@ -19,6 +19,8 @@ HEADROOM_UPDATE_CHECK = "off"
 DO_NOT_TRACK = "1"
 DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language server) runs on .NET. The image has no ICU library, and this setting lets .NET start without it
 HF_HUB_OFFLINE = "1"
+# Under gVisor, Herdr lists no agents without this setting. See https://github.com/herdrdev/herdr/issues/1982
+HERDR_PROCESS_DETECTION = "child-groups"
 # Ponytail (sandbox-start installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
