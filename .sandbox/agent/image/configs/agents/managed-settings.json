@@ -1,5 +1,7 @@
 {
+  "// file": "Managed settings. root owns this file, and no project, local or user file can override a key here. A change needs an image rebuild.",
   "permissions": {
+    "// deny": "Blocks GitHub MCP tools that merge, remove files, or create, remove or fork a repository. The proxy cannot read an MCP tool name.",
     "deny": [
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
@@ -7,20 +9,28 @@
       "mcp__github__create_repository",
       "mcp__github__fork_repository"
     ],
+    "// additionalDirectories": "Makes the Herdr worktrees a working directory. The two block keys below ignore a directory that only a project file adds.",
     "additionalDirectories": [
       "/home/agent/.herdr/worktrees"
     ],
+    "// disableBypassPermissionsMode": "Rejects --dangerously-skip-permissions and permissionMode bypassPermissions in an agent definition.",
     "disableBypassPermissionsMode": "disable",
+    "// blockReadsOutsideWorkingDirectories": "Read, Grep, Glob and LSP refuse a path outside the working directories. A shell command is not limited.",
     "blockReadsOutsideWorkingDirectories": true,
+    "// blockWritesOutsideWorkingDirectories": "Write, Edit and NotebookEdit refuse a path outside the working directories and the Claude Code settings files. A shell command is not limited.",
     "blockWritesOutsideWorkingDirectories": true
   },
+  "// allowManagedHooksOnly": "Runs only hooks from this file. A hook from a project, user or plugin file does not run.",
   "allowManagedHooksOnly": true,
+  "// allowManagedMcpServersOnly": "Ignores allowedMcpServers from every other file.",
   "allowManagedMcpServersOnly": true,
+  "// allowedMcpServers": "A server that a user, plugin or project adds must match a URL here. The URL is the control, because a user can choose any name. managedMcpServers skip this check, so these entries repeat them on purpose.",
   "allowedMcpServers": [
     { "serverUrl": "https://mcp.draw.io/mcp" },
     { "serverUrl": "https://schemas.fluxoperator.dev/mcp" },
     { "serverUrl": "https://api.githubcopilot.com/mcp/" }
   ],
+  "// managedMcpServers": "The MCP servers of the agent. The proxy allows only these hosts. The GitHub token is a placeholder that the proxy replaces.",
   "managedMcpServers": {
     "drawio": {
       "type": "http",
