@@ -235,6 +235,95 @@ just sandbox run     # start the proxies, the builder and the agent sandbox, and
 
 `podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. `run` starts all four containers. Each unit starts the units that it requires.
 
+### Setup flow
+
+`setup` changes only files in your home folder, and it restarts only the bridge. It does not start the agent sandbox, the builder or the proxies. `run` does that.
+
+```mermaid
+---
+title: Setup flow
+---
+sequenceDiagram
+    participant You
+    participant Setup as just sandbox setup
+    participant Home as Files in your home folder
+    participant Creds as systemd-creds
+    participant Systemd as systemd user manager
+    participant Bridge as sandbox-bridge.service
+    opt ca.crt or ca.key is missing
+        Setup->>Home: make the CA in ~/.local/state/sandbox
+    end
+    Setup->>Home: link the two proxy configs
+    opt bws-token is missing or unreadable
+        Setup->>You: ask for the Bitwarden access token
+        You-->>Setup: the token
+        Setup->>Creds: encrypt it to credstore.encrypted/bws-token
+    end
+    Setup->>Home: link the four .container files, the two gVisor flag files and repo.git
+    Setup->>Home: link ports, bridge.sh and bridge.service
+    Setup->>Systemd: daemon-reload
+    Note over Systemd: Quadlet makes the four services
+    Setup->>Systemd: enable and restart the bridge
+    Systemd->>Bridge: start
+```
+
+### Run flow
+
+`run` restarts the agent sandbox. systemd then restarts the units that it requires, so each session has a new builder and new proxies.
+
+```mermaid
+---
+title: Run flow
+---
+sequenceDiagram
+    participant You
+    participant Run as just sandbox run
+    participant Systemd as systemd user manager
+    participant Proxies as both proxies
+    participant Builder as sandbox-builder
+    participant Agent as sandbox-agent
+    You->>Run: just sandbox run
+    Run->>Systemd: daemon-reload
+    Run->>Systemd: restart sandbox-agent.service
+    Systemd->>Proxies: restart
+    Systemd->>Builder: restart, wait until it is healthy
+    Systemd->>Agent: start, then run the relay and sandbox-start
+    loop each 2 s, up to 180 s
+        Run->>Agent: podman healthcheck run
+    end
+    Run->>Agent: podman exec Herdr, or your command
+```
+
+### Host build flow
+
+`build` runs on the host. It stops at the first error, so the login stays until you run `podman logout ghcr.io`.
+
+```mermaid
+---
+title: Host build flow
+---
+sequenceDiagram
+    participant You
+    participant Build as just sandbox build
+    participant Creds as systemd-creds and bws
+    participant Podman
+    participant GHCR as ghcr.io
+    You->>Build: just sandbox build
+    Build->>Creds: decrypt bws-token, then bws run
+    Creds->>Podman: GITHUB_TOKEN for podman login
+    Podman->>GHCR: log in
+    Build->>Podman: build the agent sandbox image
+    Podman->>GHCR: read and write the stage cache
+    Build->>Podman: build the builder image and the two proxy images
+    Build->>Podman: push the agent sandbox image with the commit tag
+    Podman->>GHCR: push
+    Build->>Podman: log out
+```
+
+## Decisions
+
+- [Quadlet units, not Docker Compose or Podman Compose](docs/adr/0001-quadlet-over-compose.md)
+
 ## Commands
 
 | Command | What it does |
