@@ -3,7 +3,7 @@
 <rect width="1380" height="810" fill="#ffffff"/>
 <text x="20" y="30" dominant-baseline="central" font-size="22" font-weight="bold">The six concepts of an agent sandbox</text>
 <rect x="290" y="90" width="620" height="520" rx="16" fill="#ffffff" stroke="#333333" stroke-width="2" stroke-dasharray="8 4"/>
-<text font-weight="bold" x="338" y="107.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="338" dy="0">The sandbox: a computer of its own</tspan><tspan x="338" dy="19">A container starts fast. A user-space kernel</tspan><tspan x="338" dy="19">or a microVM gives a stronger wall.</tspan></text>
+<text font-weight="bold" x="338" y="107.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="338" dy="0">The wall: a container, a user-space kernel or a microVM</tspan><tspan x="338" dy="19">The agent and its tools run inside it.</tspan><tspan x="338" dy="19">A container starts fast. The other two seal it off more.</tspan></text>
 <rect x="20" y="180" width="220" height="70" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="130.0" y="206.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="130.0" dy="0" font-weight="bold">Your request</tspan><tspan x="130.0" dy="17">a task for the agent</tspan></text>
 <rect x="320" y="170" width="270" height="90" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>

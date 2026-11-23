@@ -35,7 +35,7 @@ This sandbox applies each concept as follows:
 
 | Concept | This sandbox |
 |---|---|
-| 1 The sandbox | A rootless Podman container on gVisor. The root file system is read-only. The container has no capabilities. |
+| 1 The wall | A rootless Podman container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
 | 2 Workspace | A private clone of the repo. The `.git` folder of your checkout is a read-only mount. |
 | 3 Network gate | `proxy.sock` leads to the host proxy. The proxy allows listed hosts, methods and paths. |
 | 4 Key holder | The host proxy swaps a placeholder for the real token. The real tokens come from Bitwarden. |
