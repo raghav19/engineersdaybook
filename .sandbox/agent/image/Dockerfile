@@ -109,6 +109,7 @@ RUN mkdir -p /usr/share/sandbox \
  && chown agent:agent /home/agent
 
 RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
+# JSON has no comments. The reason for each key is in .sandbox/README.md, section "Managed settings".
 COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
 
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code

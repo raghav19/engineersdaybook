@@ -83,6 +83,24 @@ Notes on the controls:
 - **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
+### Managed settings
+
+`agent/image/configs/agents/managed-settings.json` is `/etc/claude-code/managed-settings.json` in the image. `root` owns the file. Claude Code ranks managed settings above every settings file of the project, so the agent cannot override a key. JSON has no comments, so this table gives the reason for each key.
+
+| Key | Reason |
+| --- | --- |
+| `permissions.deny` | Blocks the GitHub MCP tools for a merge, a file removal, and a repository creation, removal or fork. The proxy cannot read the tool name in an MCP request. |
+| `permissions.additionalDirectories` | Makes `/home/agent/.herdr/worktrees` a working directory. The two `block…` keys below ignore a directory that only a project file adds. Without this key, the agent cannot edit a Herdr worktree. |
+| `permissions.disableBypassPermissionsMode` | Rejects `--dangerously-skip-permissions` and `permissionMode: bypassPermissions` in an agent definition. |
+| `permissions.blockReadsOutsideWorkingDirectories` | Makes `Read`, `Grep`, `Glob` and `LSP` refuse a path outside the working directories. A shell command is not limited. |
+| `permissions.blockWritesOutsideWorkingDirectories` | Makes `Write`, `Edit` and `NotebookEdit` refuse a path outside the working directories. It also refuses the Claude Code settings files, so the agent cannot edit `.claude/settings.json`. A shell command is not limited. |
+| `allowManagedHooksOnly` | Runs only the hooks of this file. A hook in a project, user or plugin file does not run. |
+| `allowManagedMcpServersOnly` | Ignores `allowedMcpServers` from other files. |
+| `allowedMcpServers` | An empty list blocks each MCP server that a user, a plugin or a project adds. The servers in `managedMcpServers` skip this check and still load. |
+| `managedMcpServers` | Gives the agent `drawio`, `flux-schema-catalog` and `github`. The proxy allows only these hosts. |
+
+A change to the file takes effect after an image rebuild.
+
 ## Flows
 
 ### Setup flow
