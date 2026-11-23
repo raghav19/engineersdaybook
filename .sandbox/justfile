@@ -73,7 +73,7 @@ setup:
     mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
     if ! systemd-creds --user decrypt --name=bws-token '{{ credential }}' - >/dev/null 2>&1; then
-        read -rsp 'Bitwarden access token: ' tok; echo
+        read -rsp 'Bitwarden access token> ' tok; echo
         rm -f '{{ credential }}'
         printf '%s' "$tok" | systemd-creds --user encrypt --name=bws-token - '{{ credential }}'
         chmod 0400 '{{ credential }}'
@@ -99,7 +99,7 @@ setup:
     systemctl --user daemon-reload
     systemctl --user enable sandbox-bridge.service
     systemctl --user restart sandbox-bridge.service
-    echo 'Next: just sandbox build, then just sandbox run.'
+    echo 'Next, run just sandbox build. Then run just sandbox run.'
 
 # Restart the container and open Herdr in it. Each run makes a new container from the image. The clone, the logins and the histories stay in the volume sandbox-home.
 # A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
