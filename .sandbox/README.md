@@ -25,6 +25,23 @@ The sandbox keeps the agent useful and limits what a fooled agent can do. It has
 
 The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea: a socket to a proxy outside the sandbox, which enforces approved domains.
 
+### The six concepts
+
+The guide [Agent sandboxes explained](https://departmentofproduct.substack.com/p/agent-sandboxes-explained-a-guide) splits an agent sandbox into six concepts. Use the diagram as a checklist when you build a sandbox.
+
+![The six concepts of an agent sandbox](docs/diagrams/concepts.svg)
+
+This sandbox applies each concept as follows:
+
+| Concept | This sandbox |
+|---|---|
+| 1 The wall | A rootless Podman container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
+| 2 Workspace | A private clone of the repo. The `.git` folder of your checkout is a read-only mount. |
+| 3 Network gate | `proxy.sock` leads to the host proxy. The proxy allows listed hosts, methods and paths. |
+| 4 Key holder | The host proxy swaps a placeholder for the real token. The real tokens come from Bitwarden. |
+| 5 Saved state | The volume `sandbox-home` keeps the clone, the logins and the histories. Herdr restores the panes. |
+| 6 You | You approve tool calls in Claude Code and follow the panes in Herdr and the audit log. `just sandbox rm` stops the sandbox. Each task has its own worktree and branch. |
+
 ## What is out of scope
 
 The sandbox limits what a fooled agent can do. Other layers handle the rest. These risks are out of scope:
