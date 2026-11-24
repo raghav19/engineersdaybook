@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "mcp__github__get_me",
       "mcp__github__list_pull_requests",
@@ -8,14 +9,19 @@
       "mcp__github__list_dependabot_alerts",
       "mcp__github__get_dependabot_alert",
       "Bash(herdr worktree create:*)",
-      "Bash(herdr worktree list:*)"
+      "Bash(herdr worktree list:*)",
+      "Bash"
     ],
     "deny": [
       "mcp__github__merge_pull_request",
       "mcp__github__delete_file",
       "mcp__github__delete_repository",
       "mcp__github__create_repository",
-      "mcp__github__fork_repository"
+      "mcp__github__fork_repository",
+      "Bash(git push origin main:*)",
+      "Bash(git push origin HEAD:main:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
     ],
     "additionalDirectories": [
       "/home/agent/.herdr/worktrees"
@@ -35,6 +41,18 @@
   "allowManagedHooksOnly": true,
   "allowManagedPermissionRulesOnly": true,
   "allowManagedMcpServersOnly": true,
+  "enabledPlugins": {
+    "ponytail@ponytail": true,
+    "tokeneconomizer@tokeneconomizer": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": { "source": "github", "repo": "DietrichGebert/ponytail", "ref": "v5.3.2" }
+    },
+    "tokeneconomizer": {
+      "source": { "source": "directory", "path": "/home/agent/token-economizer" }
+    }
+  },
   "allowedMcpServers": [
     { "serverUrl": "https://mcp.draw.io/mcp" },
     { "serverUrl": "https://schemas.fluxoperator.dev/mcp" },
