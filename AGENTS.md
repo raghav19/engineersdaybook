@@ -149,6 +149,18 @@ Before you write or edit a topic doc in the `docs/` folder of a project, read `d
 
 Before you create or edit a document that an agent reads, invoke `/writing-for-agents`. These documents are skills, `AGENTS.md`, the files in `docs/agents/`, and any doc that `AGENTS.md` points to.
 
+## 16. Code comments
+
+Write each comment as a one-line signpost. It gives a reason, a trap or a link. The code gives the rest.
+
+- Keep a comment that states a reason, a trap or a coupling to another file. Example: `# Must equal the port in config/server.yaml.` Delete a comment that repeats the next line.
+- Link to the upstream docs when they explain the topic. Use one link for each topic, at its first use in the file. Check that each URL returns 200.
+- Link to a README anchor in place of a flow. Example: `# Flow: README.md#run-flow`.
+- Limit a file header to two lines: what the file is, and one link.
+- Describe the end state. Write no measurement, date, test result or history.
+- Update the comment of each line that you change. A stale comment is a defect.
+- After a comment-only change with `#` comments, this command prints nothing: `git diff -U0 | grep -E '^[+-][^+-]' | grep -vE '^[+-]\s*(#|$)'`
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
