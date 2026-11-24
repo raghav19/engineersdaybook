@@ -20,7 +20,6 @@ RUN useradd --create-home --uid 1000 --shell /bin/bash agent \
  && chown -R agent:agent /opt/mise /home/agent
 
 RUN curl -fsSL $MISE_INSTALLER_URL | sh
-COPY mise.toml /etc/mise/conf.d/mise.toml
 USER agent
 
 
@@ -68,7 +67,7 @@ COPY --from=stage5-dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage6-agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
-RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
+RUN mise reshim
 
 USER root
 # The docker config is read-only at run time. It has the ghcr.io login (a placeholder that must equal a proxy_value in agent/proxy/iron-proxy.yaml), the proxy settings and the builder definition.
@@ -85,7 +84,6 @@ COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.confi
 # The mise task fresh:plugins runs fresh-plugins.sh. It installs each package of fresh-plugins.yaml at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
-RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
@@ -95,6 +93,10 @@ COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.co
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
+
+# Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
+COPY mise.toml /etc/mise/conf.d/mise.toml
+RUN mise run fresh:plugins && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
