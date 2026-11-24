@@ -100,6 +100,9 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
+# The config of otelcol, and the report of `mise run otel:report`.
+COPY --chmod=0644 configs/tools/otelcol-config.yaml /etc/otelcol/config.yaml
+COPY --chmod=0644 configs/tools/otel-report.jq /usr/local/share/sandbox/otel-report.jq
 
 # At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
 # as a skeleton. sandbox-start copies it into the tmpfs at each start.

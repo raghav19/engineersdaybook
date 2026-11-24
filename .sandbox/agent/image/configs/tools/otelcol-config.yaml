@@ -1,0 +1,37 @@
+# Claude Code sends OTLP/http to 127.0.0.1:4318. otelcol appends it to one file. `mise run otel:report` reads the file.
+# The file holds Bash commands and file paths (OTEL_LOG_TOOL_DETAILS=1). Keep it out of the repo.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+
+processors:
+  batch:
+    timeout: 5s
+
+exporters:
+  file:
+    path: ${env:HOME}/.local/state/otelcol/claude-code.jsonl
+    rotation:
+      max_megabytes: 50
+      max_backups: 10
+
+extensions:
+  health_check:
+    endpoint: 127.0.0.1:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file]
+  telemetry:
+    metrics:
+      level: none

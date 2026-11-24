@@ -1,6 +1,6 @@
 #!/bin/bash
 # The start script of the sandbox. sandbox-agent.service runs it with podman exec, as the user agent, after the container starts and the relay runs.
-# It prepares the workspace and starts Headroom. Then it writes /tmp/sandbox-ready. The healthcheck in sandbox-agent.container tests this file. The service is active after this script ends, and then `just sandbox run` opens Herdr.
+# It prepares the workspace and starts Headroom and otelcol. Then it writes /tmp/sandbox-ready. The healthcheck in sandbox-agent.container tests this file. The service is active after this script ends, and then `just sandbox run` opens Herdr.
 # Each step does nothing if its work exists, so a restart does no harm.
 # Values from sandbox-agent.container: SANDBOX_WORKSPACE (the path of the clone) and REPO_URL. SANDBOX_BRANCH is optional. Without it, the clone gets the branch that the host repo has checked out.
 set -eu
@@ -37,6 +37,15 @@ for _ in $(seq 60); do
   sleep 1
 done
 curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
+
+# otelcol takes the telemetry of Claude Code on 127.0.0.1:4318 and writes it to ~/.local/state/otelcol. A failure only prints a warning.
+mkdir -p "$HOME/.local/state/otelcol"
+curl -sf -o /dev/null http://127.0.0.1:13133 || setsid nohup otelcol --config /etc/otelcol/config.yaml >/tmp/otelcol.log 2>&1 &
+for _ in $(seq 30); do
+  curl -sf -o /dev/null http://127.0.0.1:13133 && break
+  sleep 1
+done
+curl -sf -o /dev/null http://127.0.0.1:13133 || { tail -n 20 /tmp/otelcol.log >&2; echo "sandbox-start: warning: otelcol did not answer on 127.0.0.1:13133" >&2; }
 
 # Plugins of Claude Code. They go to the volume claude-home, so a new sandbox finds them.
 # A failure prints a warning and does not stop the script.
