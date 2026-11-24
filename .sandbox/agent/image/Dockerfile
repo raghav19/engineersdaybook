@@ -84,8 +84,9 @@ USER agent
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The theme fireside has the colors of the Fireside theme of the host. fresh-config.json sets it by the file name.
-COPY --chown=agent:agent configs/editor/fireside.json /home/agent/.config/fresh/themes/fireside.json
+# Two Fresh themes. fireside has the exact colors of the Fireside theme. omarchy-terminal uses the colors of the terminal, so it follows each Omarchy theme.
+# fresh-config.json sets omarchy-terminal by the file name.
+COPY --chown=agent:agent configs/editor/fireside.json configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/
 # The mise task fresh:plugins runs fresh-plugins.sh. The script reads fresh-plugins.yaml with yq and fetches each package at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh

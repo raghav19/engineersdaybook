@@ -1,0 +1,18 @@
+{
+  "name": "omarchy-terminal",
+  "extends": "builtin://terminal",
+  "syntax": {
+    "keyword": "LightMagenta",
+    "operator": "LightBlue"
+  },
+  "ui": {
+    "menu_active_bg": "DarkGray",
+    "menu_highlight_bg": "DarkGray",
+    "prompt_selection_bg": "DarkGray",
+    "popup_selection_bg": "DarkGray",
+    "text_input_selection_bg": "DarkGray",
+    "suggestion_selected_bg": "DarkGray",
+    "settings_selected_bg": "DarkGray",
+    "tab_drop_zone_bg": "DarkGray"
+  }
+}

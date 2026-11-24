@@ -1,5 +1,5 @@
 {
-  "theme": "fireside.json",
+  "theme": "omarchy-terminal.json",
   "active_keybinding_map": "vscode",
   "keybindings": [
     {
