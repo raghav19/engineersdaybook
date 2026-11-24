@@ -356,8 +356,7 @@ The flows of the three commands are in [Flows](#flows).
 
 ## Open a port of the sandbox on the host
 
-The host bridge opens a port of a service in the agent sandbox on the loopback of the host. Headroom is in the list: open `http://127.0.0.1:8787/dashboard`.
-
+The host bridge opens a port of a service in the agent sandbox on the loopback of the host.
 ### Add a port
 
 1. Add the port number to `agent/ports` in your main checkout. Write one port in each line.
@@ -396,10 +395,15 @@ sequenceDiagram
 | Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
 | Connections | At most 8 at the same time for each port |
 | Sandbox stopped | The connection closes at once. |
+| No port in the list | `bridge.sh` exits at once. This is not an error. |
 
-The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
+The agent controls what answers on a listed port. Open the page in a browser that holds no important logins.
 
 To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
+
+## Token usage
+
+Run `mise run usage` in the agent sandbox. It prints the tokens and cost of each Claude Code session. `ccusage` reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices.
 
 ## Troubleshooting
 

@@ -57,6 +57,11 @@ echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
 
+# Prints the tokens and cost of each session from the logs of Claude Code. --offline makes no network call.
+[tasks.usage]
+description = "Print the tokens and cost of each Claude Code session"
+run = "ccusage claude session --offline"
+
 # The Dockerfile runs this task. The script is configs/editor/fresh-plugins.sh. The Dockerfile copies it to /usr/local/share/sandbox/.
 [tasks."fresh:plugins"]
 description = "Install the Fresh packages of fresh-plugins.yaml at their pinned commits"
