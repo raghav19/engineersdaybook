@@ -153,14 +153,13 @@ Before you create or edit a document that an agent reads, invoke `/writing-for-a
 
 Write each comment as a one-line signpost. It gives a reason, a trap or a link. The code gives the rest.
 
-- Keep a comment that states a reason, a trap or a coupling to another file. Example: `# Must equal a proxy_value in agent/proxy/iron-proxy.yaml.` Delete a comment that repeats the next line.
+- Keep a comment that states a reason, a trap or a coupling to another file. Example: `# Must equal the port in config/server.yaml.` Delete a comment that repeats the next line.
 - Link to the upstream docs when they explain the topic. Use one link for each topic, at its first use in the file. Check that each URL returns 200.
 - Link to a README anchor in place of a flow. Example: `# Flow: README.md#run-flow`.
 - Limit a file header to two lines: what the file is, and one link.
 - Describe the end state. Write no measurement, date, test result or history.
 - Update the comment of each line that you change. A stale comment is a defect.
-- Before you edit a comment in `.sandbox/`, read `.sandbox/AGENTS.md`.
-- After a comment-only change, this command prints nothing: `git diff -U0 | grep -E '^[+-][^+-]' | grep -vE '^[+-]\s*(#|$)'`
+- After a comment-only change with `#` comments, this command prints nothing: `git diff -U0 | grep -E '^[+-][^+-]' | grep -vE '^[+-]\s*(#|$)'`
 
 ---
 
