@@ -33,6 +33,18 @@
   "allowManagedHooksOnly": true,
   "allowManagedPermissionRulesOnly": true,
   "allowManagedMcpServersOnly": true,
+  "enabledPlugins": {
+    "ponytail@ponytail": true,
+    "tokeneconomizer@tokeneconomizer": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": { "source": "github", "repo": "DietrichGebert/ponytail", "ref": "v5.3.2" }
+    },
+    "tokeneconomizer": {
+      "source": { "source": "directory", "path": "/home/agent/token-economizer" }
+    }
+  },
   "allowedMcpServers": [
     { "serverUrl": "https://mcp.draw.io/mcp" },
     { "serverUrl": "https://schemas.fluxoperator.dev/mcp" },
