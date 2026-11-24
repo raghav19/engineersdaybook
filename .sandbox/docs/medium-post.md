@@ -10,6 +10,19 @@ I built an agent sandbox to limit that damage. This post shows the problem, the 
 
 ![The agent sandbox: architecture and security controls](diagrams/sandbox-architecture-and-controls.png)
 
+### This already happened
+
+Four cases from 2025 and 2026 show the three abilities at work:
+
+- **GitHub MCP, May 2025.** A poisoned issue in a public repo made an agent read private repos. The agent then put the data in a public pull request. [Invariant Labs](https://invariantlabs.ai/blog/mcp-github-vulnerability) found it. A GitHub maintainer [calls it](https://github.com/github/github-mcp-server/issues/844) a "lethal trifecta" risk, not a bug. In my sandbox, only the scope of the token limits this path. The proxy cannot see which repository an MCP call targets.
+- **Amazon Q Developer, July 2025.** Version 1.84.0 of the extension carried malicious code. Reports say it told the AI agent to delete local files and AWS resources. A syntax error stopped it ([CVE-2025-8217](https://github.com/aws/aws-toolkit-vscode/security/advisories/GHSA-7g7f-ff96-5gcw)). In my sandbox, the agent works in a private clone and holds no real AWS credentials.
+- **Nx s1ngularity, August 2025.** A malicious npm package prompted the AI tools on the machine to search for secrets. It sent the results to a new GitHub repo in the account of the victim ([advisory](https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c)). In my sandbox, the agent holds placeholders, and the proxy gives a `403` to a request that creates a repo. The builder runs `npm install` with no token.
+- **Mini Shai-Hulud, April and May 2026.** A malicious npm package stole tokens and `~/.claude.json`. It also planted a Claude Code hook, so the malware runs again when someone opens the repo ([StepSecurity](https://www.stepsecurity.io/blog/a-mini-shai-hulud-has-appeared), [CISA](https://www.cisa.gov/news-events/alerts/2026/05/28/supply-chain-compromises-impact-nx-console-and-github-repositories)). In my sandbox, the builder has no token, and the agent holds placeholders only.
+
+Checks inside the agent fail too. The Claude Code [security advisories](https://github.com/anthropics/claude-code/security/advisories) list three allowlist bugs that could leak data: CVE-2025-55284, CVE-2026-24052 and CVE-2026-54316. So my sandbox puts the gate in a separate container.
+
+Vendors and standards bodies now ask for the same control. [Claude Code](https://code.claude.com/docs/en/sandboxing), [Codex](https://developers.openai.com/codex/agent-approvals-security), [GitHub Copilot](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-firewall), [Gemini CLI](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/sandbox.md) and [Docker](https://docs.docker.com/ai/sandboxes/security/) ship sandboxes. OWASP lists agent risks in its [Top 10 for Agentic Applications](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/). NIST started an [AI Agent Standards Initiative](https://www.nist.gov/news-events/news/2026/02/announcing-ai-agent-standards-initiative-interoperable-and-secure) in February 2026. Claude Code on the web and Docker Sandboxes [keep credentials out of the sandbox](https://code.claude.com/docs/en/security), as mine does.
+
 ### The problem
 
 Three things together make an agent risky:
@@ -56,11 +69,11 @@ The agent container and the host proxy have a read-only root file system and no 
 
 gVisor ignores the limits of Podman. So Quadlet turns each container file into a systemd service, and each service holds the memory and CPU limits.
 
-### The six concepts
+### How to design an agent sandbox
 
-The guide [Agent sandboxes explained](https://departmentofproduct.substack.com/p/agent-sandboxes-explained-a-guide) by Department of Product splits an agent sandbox into six concepts. Use them as a checklist when you build a sandbox.
+An agent sandbox has six concepts. Use them as a checklist when you build a sandbox.
 
-![The six concepts of an agent sandbox](diagrams/concepts.png)
+![How to design an agent sandbox](diagrams/concepts.png)
 
 My sandbox applies each concept:
 
@@ -79,7 +92,16 @@ The sandbox limits the damage. It does not make the agent safe. These risks stay
 - The proxy reads every request. A bug in the proxy can expose the real tokens.
 - A prompt injection can still change what the agent tries to do. The model and the client handle that.
 - A write to `main` needs branch protection on GitHub. A rule in the proxy cannot see the branch.
+- Malware can plant a hook in `.claude/settings.json` or `.vscode/tasks.json` in the clone. Read these files in each diff.
 - Data can leave through a listed host. Keep the lists short.
+
+### Further reading
+
+- Anthropic: [Beyond permission prompts: making Claude Code more secure and autonomous](https://www.anthropic.com/engineering/claude-code-sandboxing)
+- Claude Code docs: [Sandboxing](https://code.claude.com/docs/en/sandboxing) and [Security](https://code.claude.com/docs/en/security)
+- Simon Willison: [The lethal trifecta for AI agents](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)
+- Simon Willison: [Agents Rule of Two and The Attacker Moves Second](https://simonwillison.net/2025/Nov/2/new-prompt-injection-papers/)
+- OWASP: [Top 10 for Agentic Applications](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/)
 
 ### Try it
 
@@ -94,9 +116,9 @@ What can your agent reach today?
 Upload these files to Medium in this order:
 
 1. `diagrams/sandbox-architecture-and-controls.png`: the picture under the opening paragraph. It holds two diagrams.
-2. `diagrams/concepts.png`: the picture in the section "The six concepts". Make it on the host first. In `diagrams/`, run `rsvg-convert -z 2 -b white concepts.svg -o concepts.png`.
+2. `diagrams/concepts.png`: the picture in the section "How to design an agent sandbox". Make it on the host first. In `diagrams/`, run `rsvg-convert -z 2 -b white concepts.svg -o concepts.png`.
 
 ## Alt text
 
 1. Two diagrams in one image. The top diagram shows the agent sandbox, the builder, the two proxies and the Internet. The bottom diagram lists the security controls of each container.
-2. The six concepts of an agent sandbox. A host computer holds the wall, the network gate and the key holder. The wall holds the agent, the software, the workspace and the saved state. The network gate and the key holder are outside the wall. You allow or deny the actions of the sandbox.
+2. How to design an agent sandbox: the six concepts. A host computer holds the wall, the network gate and the key holder. The wall holds the agent, the software, the workspace and the saved state. The network gate and the key holder are outside the wall. You allow or deny the actions of the sandbox.
