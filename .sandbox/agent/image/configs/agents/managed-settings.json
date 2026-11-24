@@ -10,7 +10,13 @@
       "mcp__github__get_dependabot_alert",
       "Bash(herdr worktree create:*)",
       "Bash(herdr worktree list:*)",
-      "Bash"
+      "Bash",
+      "Read(//opt/mise/**)",
+      "Read(//run/sandbox/**)",
+      "Read(//usr/local/share/sandbox/**)",
+      "Read(//etc/claude-code/**)",
+      "Read(//etc/docker/**)",
+      "Read(//home/agent/token-economizer/**)"
     ],
     "deny": [
       "mcp__github__merge_pull_request",
@@ -24,7 +30,14 @@
       "Bash(git push -f:*)"
     ],
     "additionalDirectories": [
-      "/home/agent/.herdr/worktrees"
+      "/home/agent/.claude",
+      "/home/agent/.herdr",
+      "/home/agent/.headroom",
+      "/home/agent/.tokeneconomizer",
+      "/home/agent/.qwen",
+      "/home/agent/.npm",
+      "/home/agent/.cache",
+      "/home/agent/.local"
     ],
     "disableBypassPermissionsMode": "disable",
     "blockReadsOutsideWorkingDirectories": true,
