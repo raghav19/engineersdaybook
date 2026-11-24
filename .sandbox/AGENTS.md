@@ -21,4 +21,8 @@ When adding a language server to `agent/image/tools/lsp.toml`, also add it to `a
 
 `fresh-config.json` is a copy of `~/.config/fresh/config.json` on the host. Keep it the same as the host file.
 
-`agent/image/configs/editor/fresh-plugins.yaml` lists the Fresh packages. When you add a package, add a key with `kind`, `repo`, `commit` and `subdir`. The mise task `fresh:plugins` in `agent/image/mise.toml` runs `fresh-plugins.sh`, which installs each one at its pinned commit. The theme `catppuccin-mocha` in the config comes from the `catppuccin` package.
+`agent/image/configs/editor/fresh-plugins.yaml` lists the Fresh packages. When you add a package, add a key with `kind`, `repo`, `commit` and `subdir`. The mise task `fresh:plugins` in `agent/image/mise.toml` runs `fresh-plugins.sh`, which installs each one at its pinned commit.
+
+## Fresh theme
+
+`fresh-config.json` sets `"theme": "omarchy-terminal.json"`. Keep this value, and keep the same value in `~/.config/fresh/config.json` on the host. The theme extends the built-in `terminal` theme. It takes its colors from the ANSI palette of the terminal, so it follows each Omarchy theme on the host and in the sandbox. `fireside.json` uses fixed RGB colors for the Fireside theme only. The user can pick it with Select Theme, but it is not the default.
