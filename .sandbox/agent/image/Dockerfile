@@ -39,7 +39,15 @@ RUN mise install --yes
 
 FROM stage1-base AS stage5-dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
+COPY configs/tools/diffx-catppuccin.css /tmp/diffx-catppuccin.css
 RUN mise install --yes
+# diffx has no theme setting. Swap its code theme and append the page colors. The pin in dev.toml keeps the string valid.
+RUN d="$(mise where npm:diffx-cli)/node_modules/diffx-cli/dist/client/assets" \
+ && js="$(ls "$d"/index-*.js)" && css="$(ls "$d"/index-*.css)" \
+ && sed -i 's/theme:{dark:`github-dark`,light:`github-light`}/theme:{dark:`catppuccin-mocha`,light:`catppuccin-mocha`}/' "$js" \
+ && grep -q 'light:`catppuccin-mocha`' "$js" \
+ && cat /tmp/diffx-catppuccin.css >> "$css" \
+ && rm /tmp/diffx-catppuccin.css
 
 FROM stage1-base AS stage6-agents
 COPY tools/agents.toml /etc/mise/conf.d/agents.toml
@@ -94,6 +102,7 @@ COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agen
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
+COPY --chown=agent:agent configs/tools/diffx-settings.json /home/agent/.config/diffx/settings.json
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 USER root
