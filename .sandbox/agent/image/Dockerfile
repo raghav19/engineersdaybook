@@ -91,6 +91,8 @@ COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/f
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
+# The token usage plugin of Herdr, at a pinned commit. It reads the logs of Claude Code and makes no network call. herdr-config.toml has the sidebar rows and the dashboard key.
+RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml

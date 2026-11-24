@@ -2,5 +2,3 @@
 claude = "2.1"
 qwen-code = "0.28"
 herdr = "0.9"
-# ccusage prints the tokens and cost of Claude Code from its logs.
-"npm:ccusage" = "20.0"

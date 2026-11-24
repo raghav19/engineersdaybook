@@ -11,3 +11,20 @@ name = "catppuccin"
 default_shell = "/bin/bash"
 shell_mode = "login"
 new_cwd = "/home/agent/engineersdaybook"
+
+# Token usage plugin (pseudovar.token-usage). The rows show the usage of each agent pane in the sidebar. The prefix+u key opens the dashboard.
+# The plugin writes more settings with `tu setup --apply` (tab bar, workspace rows, alert toasts). The image does not use them.
+# The colors in the rules are Catppuccin Mocha: red, yellow and green.
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "machine", "workspace", "tab"],
+  ["agent", { token = "$tu_sub", dim = true }],
+  [{ token = "$tu", rules = [{ starts_with = "■", fg = "#f38ba8", bold = true }, { starts_with = "▲", fg = "#f9e2af" }, { starts_with = "▽", fg = "#a6e3a1" }] }],
+  [{ token = "$tu_more", dim = true }],
+]
+
+[[keys.command]]
+key = "prefix+u"
+type = "plugin_action"
+command = "pseudovar.token-usage.open"
+description = "token usage dashboard"

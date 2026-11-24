@@ -26,11 +26,12 @@ PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"
 
 [hooks.enter]
-# kubectl shorthand with completion
+# kubectl shorthand with completion, and the launcher of the token usage plugin of Herdr (Herdr writes it at each start)
 shell = "bash"
 script = """
 alias k=kubectl
 complete -F __start_kubectl k
+alias tu=~/.local/state/herdr/plugins/pseudovar.token-usage/bin/tu
 """
 
 # The Dockerfile runs this task after it installs the tools. COMPLETIONS_DIR comes from [env]. The build sets it.
@@ -56,11 +57,6 @@ flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
-
-# Prints the tokens and cost of each session from the logs of Claude Code. --offline makes no network call.
-[tasks.usage]
-description = "Print the tokens and cost of each Claude Code session"
-run = "ccusage claude session --offline"
 
 # The Dockerfile runs this task. The script is configs/editor/fresh-plugins.sh. The Dockerfile copies it to /usr/local/share/sandbox/.
 [tasks."fresh:plugins"]
