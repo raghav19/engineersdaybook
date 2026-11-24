@@ -10,7 +10,8 @@ rm -f /tmp/sandbox-ready # a restarted container keeps its /tmp
 fail() { echo "sandbox-start: $*" >&2; exit 1; }
 
 # /home/agent is a volume. Copy the skeleton of the image at each start. The folders of the agent stay: the clone, .claude, .qwen, .headroom, .herdr and .cache.
-cp -a /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
+# Trap: -f is required. Git pack files in the plugin checkouts are mode 0444, and cp -a cannot overwrite them at the second start.
+cp -af /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
 mkdir -p "$HOME/.claude" "$HOME/.qwen" "$HOME/.headroom" "$HOME/.herdr" "$HOME/.cache/terraform-providers" || fail "could not make the folders of the home"
 
 # The clone is private, because /run/sandbox/source (the .git folder of the host repo) is read-only. A push goes to GitHub, to a feature branch.
