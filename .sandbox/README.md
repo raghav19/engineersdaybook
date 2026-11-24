@@ -12,6 +12,17 @@ You let a coding agent work on your repository. The agent has three abilities. T
 
 A prompt injection hides an instruction in the text that the agent reads. A fooled agent then runs commands with your rights. Simon Willison calls this combination the [lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/). A filter that stops most attacks is not enough, because one missed attack is enough.
 
+These attacks already happened:
+
+| Date | Case | What limits it here | Source |
+|---|---|---|---|
+| 2025-05 | GitHub MCP. A poisoned issue in a public repo made an agent leak private repo data into a public pull request. | The scope of the token. The proxy cannot see the repository of an MCP call. | [Invariant Labs](https://invariantlabs.ai/blog/mcp-github-vulnerability), [GitHub issue](https://github.com/github/github-mcp-server/issues/844) |
+| 2025-07 | Amazon Q Developer 1.84.0 carried malicious code (CVE-2025-8217). Reports say it told the agent to delete local files and AWS resources. A syntax error stopped it. | A private clone. No real AWS credentials. | [Advisory](https://github.com/aws/aws-toolkit-vscode/security/advisories/GHSA-7g7f-ff96-5gcw) |
+| 2025-08 | Nx `s1ngularity`. A malicious npm package prompted the AI tools on the machine to search for secrets. It sent them to a new repo in the account of the victim. | Placeholders instead of tokens. The proxy gives a `403` to a request that creates a repo. The builder has no token. | [Advisory](https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c) |
+| 2026-04 | Mini Shai-Hulud. A malicious npm package stole tokens and `~/.claude.json`. It planted a Claude Code hook that runs again when someone opens the repo. | The builder has no token. The agent holds placeholders only. You read the agent config files in each diff. | [StepSecurity](https://www.stepsecurity.io/blog/a-mini-shai-hulud-has-appeared), [CISA](https://www.cisa.gov/news-events/alerts/2026/05/28/supply-chain-compromises-impact-nx-console-and-github-repositories) |
+
+Checks inside the agent fail too. The Claude Code [security advisories](https://github.com/anthropics/claude-code/security/advisories) list three allowlist bugs that could leak data: CVE-2025-55284, CVE-2026-24052 and CVE-2026-54316. So this sandbox puts the gate in a separate container. The note [agent-sandbox-incidents](../docs/research/agent-sandbox-incidents.md) has the details and the sources.
+
 ## The solution
 
 The sandbox keeps the agent useful and limits what a fooled agent can do. It has one step for each ability, and one for builds:
@@ -25,11 +36,11 @@ The sandbox keeps the agent useful and limits what a fooled agent can do. It has
 
 The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea: a socket to a proxy outside the sandbox, which enforces approved domains.
 
-### The six concepts
+### How to design an agent sandbox
 
-The guide [Agent sandboxes explained](https://departmentofproduct.substack.com/p/agent-sandboxes-explained-a-guide) splits an agent sandbox into six concepts. Use the diagram as a checklist when you build a sandbox.
+An agent sandbox has six concepts. Use the diagram as a checklist when you build a sandbox.
 
-![The six concepts of an agent sandbox](docs/diagrams/concepts.svg)
+![How to design an agent sandbox](docs/diagrams/concepts.svg)
 
 This sandbox applies each concept as follows:
 
@@ -52,7 +63,7 @@ The sandbox limits what a fooled agent can do. Other layers handle the rest. The
 | A tool of the MCP server writes outside this repository | The central MCP gateway. The proxy does not read MCP calls. |
 | A write goes to `main` | Branch protection on GitHub. A rule in the proxy cannot see the branch. |
 | A token has more scope than the agent needs | The scope of the token. Use a fine-grained token for one repository. |
-| A pushed branch holds bad code | You. Read the diff before you merge or check it out. |
+| A pushed branch holds bad code | You. Read the diff before you merge or check it out. Read the agent config files too: `.claude/` and `.vscode/tasks.json`. |
 | Data leaves through a listed host | The allowlists. Keep them short. |
 
 The sandbox has two limits of its own:
@@ -407,3 +418,16 @@ To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service
 | `systemctl --user status sandbox-builder` shows `failed` after `just sandbox rm` | This is normal. `buildkitd` exits with code 1 when it stops. |
 | A tool fails with a connection error | The tool ignores `HTTPS_PROXY`. Set the proxy of the tool to `http://127.0.0.1:3128`. |
 | You made a new CA | Run `just sandbox run`. |
+
+## References
+
+- Anthropic: [Beyond permission prompts: making Claude Code more secure and autonomous](https://www.anthropic.com/engineering/claude-code-sandboxing) (2025-10-20)
+- Claude Code docs: [Sandboxing](https://code.claude.com/docs/en/sandboxing) and [Security](https://code.claude.com/docs/en/security)
+- Simon Willison: [The lethal trifecta for AI agents](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/) (2025-06-16)
+- Simon Willison: [Agents Rule of Two and The Attacker Moves Second](https://simonwillison.net/2025/Nov/2/new-prompt-injection-papers/) (2025-11-02)
+- Nasr, Carlini, Tramèr and others: [The Attacker Moves Second](https://arxiv.org/abs/2510.09023) (2025-10-10)
+- OWASP: [Top 10 for Agentic Applications](https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/) (2025-12-09)
+- NIST: [AI Agent Standards Initiative](https://www.nist.gov/news-events/news/2026/02/announcing-ai-agent-standards-initiative-interoperable-and-secure) (2026-02-17)
+- Vendor sandboxes: [Codex](https://developers.openai.com/codex/agent-approvals-security), [GitHub Copilot firewall](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-firewall), [Gemini CLI](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/sandbox.md) and [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/security/)
+- Claude Code [security advisories](https://github.com/anthropics/claude-code/security/advisories)
+- Research note: [agent-sandbox-incidents](../docs/research/agent-sandbox-incidents.md)
