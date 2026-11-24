@@ -1,3 +1,2 @@
 # The ports that the host bridge opens, one in each line, from 1024 to 65535. See "Open a port of the sandbox on the host" in ../README.md.
 # After you edit this file, run: systemctl --user restart sandbox-bridge.service
-8787  # Headroom: http://127.0.0.1:8787/dashboard

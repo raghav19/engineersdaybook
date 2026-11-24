@@ -356,7 +356,7 @@ The flows of the three commands are in [Flows](#flows).
 
 ## Open a port of the sandbox on the host
 
-The host bridge opens a port of a service in the agent sandbox on the loopback of the host. Headroom is in the list: open `http://127.0.0.1:8787/dashboard`.
+The host bridge opens a port of a service in the agent sandbox on the loopback of the host. The list in `agent/ports` is empty, so the bridge opens no port.
 
 ### Add a port
 
@@ -396,8 +396,9 @@ sequenceDiagram
 | Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
 | Connections | At most 8 at the same time for each port |
 | Sandbox stopped | The connection closes at once. |
+| No port in the list | `bridge.sh` exits at once. This is not an error. |
 
-The agent controls what answers on a listed port. Open the page in a browser that holds no important logins. Headroom answers for any `Host` header, so a web page in the same browser can read the dashboard.
+The agent controls what answers on a listed port. Open the page in a browser that holds no important logins.
 
 To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
@@ -427,6 +428,7 @@ Run `mise run otel:report` in the agent sandbox. It prints tokens by type, cost 
 | Collector config | `agent/image/configs/tools/otelcol-config.yaml` |
 | Claude Code settings | The `env` block of `agent/image/configs/agents/managed-settings.json` |
 | File | `~/.local/state/otelcol/claude-code*.jsonl`. The collector keeps 10 files of 50 MB. |
+| Health | `podman ps` shows `(unhealthy)` when `otelcol` does not answer on `127.0.0.1:13133`. |
 | Memory | `otelcol` uses about 150 MiB. |
 
 The file holds Bash commands and file paths, because the settings set `OTEL_LOG_TOOL_DETAILS=1`. Keep the file in the home of the sandbox. Do not copy it into the repo.
