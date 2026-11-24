@@ -92,6 +92,7 @@ COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agen
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
+COPY --chown=agent:agent configs/tools/diffx-settings.json /home/agent/.config/diffx/settings.json
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.

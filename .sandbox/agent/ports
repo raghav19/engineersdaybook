@@ -1,2 +1,3 @@
 # The ports that the host bridge opens, one in each line, from 1024 to 65535. See ../README.md#open-a-port-of-the-sandbox-on-the-host
 # After you edit this file, run: systemctl --user restart sandbox-bridge.service
+3433
