@@ -421,7 +421,12 @@ sequenceDiagram
     R-->>R: print the tables
 ```
 
-Run `mise run otel:report` in the agent sandbox. It prints tokens by type, cost by model, source, skill and plugin, the costliest sessions and the size of the tool output.
+Two reports run in the agent sandbox:
+
+| Command | What it prints |
+|---|---|
+| `mise run usage` | The tokens and cost of each session. `ccusage` reads the logs of Claude Code and makes no network call. |
+| `mise run otel:report` | The cost by model, source, skill and plugin, the costliest sessions and the size of the tool output. It reads the files of `otelcol`. |
 
 | Item | Value |
 |---|---|

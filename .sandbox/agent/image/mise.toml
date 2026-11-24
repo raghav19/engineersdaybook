@@ -58,6 +58,11 @@ echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
 
+# Prints the tokens and cost of each session from the logs of Claude Code. --offline makes no network call.
+[tasks.usage]
+description = "Print the tokens and cost of each Claude Code session"
+run = "ccusage claude session --offline"
+
 # Prints the tokens and cost of Claude Code from the files of otelcol. The script is configs/tools/otel-report.jq.
 [tasks."otel:report"]
 description = "Print the token and cost report of Claude Code"
