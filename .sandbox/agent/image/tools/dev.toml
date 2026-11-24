@@ -10,6 +10,3 @@ yamlfmt = "0.21"
 shfmt = "3.14"
 ty = "0.0"
 "github:sinelaw/fresh" = "0.5"
-
-# Review UI for the PR flow. https://github.com/wong2/diffx
-"npm:diffx-cli" = "0.16"

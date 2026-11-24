@@ -87,12 +87,13 @@ COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
+# The review pane of Herdr, at the commit of the tag v0.52.2. The install downloads one release binary from github.com and checks its SHA-256.
+RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref bb71050caa5d3a0b1a414527783eb7a772447f9f persiyanov/herdr-reviewr
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
-COPY --chown=agent:agent configs/tools/diffx-settings.json /home/agent/.config/diffx/settings.json
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.

@@ -28,3 +28,10 @@ key = "prefix+u"
 type = "plugin_action"
 command = "pseudovar.token-usage.open"
 description = "token usage dashboard"
+
+# Review plugin (persiyanov.reviewr). The prefix+e key opens or closes the review pane. Press b for the branch scope, c to comment, s to send the comments to the agent.
+[[keys.command]]
+key = "prefix+e"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+description = "review pane"
