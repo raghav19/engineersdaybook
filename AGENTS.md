@@ -159,8 +159,7 @@ Write each comment as a one-line signpost. It gives a reason, a trap or a link. 
 - Limit a file header to two lines: what the file is, and one link.
 - Describe the end state. Write no measurement, date, test result or history.
 - Update the comment of each line that you change. A stale comment is a defect.
-- In a `justfile`, the last comment line above a recipe is its text in `just --list`. Keep it a one-line description.
-- A Quadlet unit has one header line that maps its keys to Compose keys. See `.sandbox/docs/adr/0001-quadlet-over-compose.md`.
+- Before you edit a comment in `.sandbox/`, read `.sandbox/AGENTS.md`.
 - After a comment-only change, this command prints nothing: `git diff -U0 | grep -E '^[+-][^+-]' | grep -vE '^[+-]\s*(#|$)'`
 
 ---

@@ -1,6 +1,13 @@
-# Sandbox image
+# Sandbox
 
-Guidance for agents working on `.sandbox/agent/image/`.
+Guidance for agents working in `.sandbox/`. The tool, LSP and Fresh sections apply to `agent/image/`.
+
+## Comments
+
+Section 16 of the root `AGENTS.md` has the general rules. These two rules are specific to the sandbox:
+
+- In the `justfile`, the last comment line above a recipe is its text in `just --list`. Keep it a one-line description.
+- A Quadlet unit has one header line that maps its keys to Compose keys. See `docs/adr/0001-quadlet-over-compose.md`.
 
 ## Tool/completion coupling
 
