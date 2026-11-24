@@ -28,10 +28,9 @@ FROM stage1-base AS stage2-runtimes
 COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
 RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
-# 
 FROM stage2-runtimes AS stage3-headroom
 COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
-# The uv cache is a download cache. Tools do not read it, so this line removes it from the layer.
+# Tools do not read the uv download cache, so remove it from the layer.
 RUN mise install --yes && rm -rf /home/agent/.cache/uv
 
 FROM stage1-base AS stage4-infra
@@ -69,29 +68,26 @@ COPY --from=stage5-dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage6-agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
-# mise creates shims from the installed tools. A mise task writes the bash completions.
 RUN mise reshim && mise run sandbox:completions && rm -rf /tmp/mise-cache
 
 USER root
-# The config of docker is read-only at run time. It has the placeholder login of ghcr.io, the proxy settings of the build steps and the definition of the builder.
-# docker finds the plugin buildx through cliPluginsExtraDirs. crane reads the login from this file. The placeholder must equal the proxy_value line of agent/proxy/iron-proxy.yaml. It is not a secret.
-# buildx create only writes the definition. It does not connect. The endpoint is the socket that the sandbox mounts.
+# The docker config is read-only at run time. It has the ghcr.io login (a placeholder that must equal a proxy_value in agent/proxy/iron-proxy.yaml), the proxy settings and the builder definition.
+# docker finds buildx through cliPluginsExtraDirs, and crane reads the login. buildx create only writes the definition. See https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
 COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
  && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker buildx create --name sandbox \
  && chmod -R a+rX /etc/docker
 USER agent
 
-# Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The theme omarchy-terminal uses the colors of the terminal, so it follows each Omarchy theme. fresh-config.json sets it by the file name.
+# omarchy-terminal takes its colors from the terminal. See AGENTS.md (Fresh theme).
 COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json
-# The mise task fresh:plugins runs fresh-plugins.sh. The script reads fresh-plugins.yaml with yq and fetches each package at its pinned commit.
+# The mise task fresh:plugins runs fresh-plugins.sh. It installs each package of fresh-plugins.yaml at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 RUN mise run fresh:plugins
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
-# The token usage plugin of Herdr, at a pinned commit. It reads the logs of Claude Code and makes no network call. herdr-config.toml has the sidebar rows and the dashboard key.
+# The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
@@ -100,13 +96,11 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
-# Root-only: the start script, managed settings.
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
 
-# At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
-# as a skeleton. sandbox-start copies it into the tmpfs at each start.
+# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-start copies it at each start.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \

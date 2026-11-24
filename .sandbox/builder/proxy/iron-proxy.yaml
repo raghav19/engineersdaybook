@@ -1,14 +1,13 @@
-# The config of the builder proxy. The builder reaches the internet through it. It runs in the container sandbox-builder-proxy (proxy.container).
-# It holds no token and no CA. The mode sni-only passes TLS through to the real host and checks only the host name.
-# A build step cannot get a token from it. The proxy of the sandbox (iron-proxy.yaml) holds the tokens, and the builder cannot reach it.
-# All listeners are on the loopback of the container. The ports do not exist on the host. The proxy of the sandbox uses the same ports in its own container.
+# The config of the builder proxy (container sandbox-builder-proxy). It holds no token and no CA. See agent/proxy/iron-proxy.yaml for the host proxy and https://github.com/ironsh/iron-proxy
+# The mode sni-only passes TLS through to the real host and checks only the host name. A build step cannot get a token, and the builder cannot reach the host proxy.
+# The listeners use the same loopback ports as the host proxy, each in its own container.
 dns:
   listen: "127.0.0.1:18084"
   proxy_ip: "127.0.0.1"
 proxy:
   http_listen: "127.0.0.1:18081"
   https_listen: "127.0.0.1:18082"
-  # The tunnel takes CONNECT. socat in the container joins it to the Unix socket that the builder mounts.
+  # The tunnel takes CONNECT. socat joins it to proxy.sock.
   tunnel_listen: "127.0.0.1:18080"
 tls:
   mode: sni-only

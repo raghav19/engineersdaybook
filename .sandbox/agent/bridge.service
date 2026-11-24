@@ -1,6 +1,5 @@
 # The host bridge: one unit for all the ports in agent/ports. It runs on the host, not in the sandbox. See bridge.sh.
-# The limits are here, because gVisor ignores the Podman limits (see sandbox-agent.container).
-# `just sandbox setup` links this file to ~/.config/systemd/user/sandbox-bridge.service and enables it.
+# The limits are here, as in the container units. See sandbox-agent.container.
 [Unit]
 Description=Host bridge to the ports of the agent sandbox
 
