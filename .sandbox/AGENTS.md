@@ -25,4 +25,4 @@ When adding a language server to `agent/image/tools/lsp.toml`, also add it to `a
 
 ## Fresh theme
 
-`fresh-config.json` sets `"theme": "omarchy-terminal.json"`. Keep this value, and keep the same value in `~/.config/fresh/config.json` on the host. The theme extends the built-in `terminal` theme. It takes its colors from the ANSI palette of the terminal, so it follows each Omarchy theme on the host and in the sandbox. `fireside.json` uses fixed RGB colors for the Fireside theme only. The user can pick it with Select Theme, but it is not the default.
+`fresh-config.json` sets `"theme": "omarchy-terminal.json"`. Keep this value, and keep the same value in `~/.config/fresh/config.json` on the host. The theme extends the built-in `terminal` theme. It takes its colors from the ANSI palette of the terminal, so it follows each Omarchy theme on the host and in the sandbox.
