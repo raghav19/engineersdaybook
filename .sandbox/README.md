@@ -92,9 +92,6 @@ Notes on the controls:
 - **TLS.** The agent proxy reads each request with its own CA, and the sandbox trusts only this CA. The builder proxy has no CA.
 - **Audit log.** Read it with `journalctl --user -u sandbox-proxy`.
 - **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
-- **Agent paths.** Claude Code asks for approval for a path outside the working directory. `managed-settings.json` lists these paths in two places:
-  - `additionalDirectories` holds the folders that the agent can write. These are the state folders in `/home/agent`, such as `.claude` and `.herdr`. Do not add a read-only path here.
-  - `Read(//path/**)` rules in `allow` hold the folders that the agent can only read. These are `/opt/mise`, `/run/sandbox`, `/usr/local/share/sandbox`, `/etc/claude-code`, `/etc/docker` and `/home/agent/token-economizer`.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
 ## Flows
