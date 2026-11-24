@@ -401,6 +401,30 @@ The agent controls what answers on a listed port. Open the page in a browser tha
 
 To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
+### Review flow
+
+`diffx-review` (in the image) starts `diffx` for the branch of the worktree. Port 3433 is the one port of the bridge. Caddy listens on it and routes by host name, so each branch gets its own URL. Browsers resolve `*.localhost` to `127.0.0.1`.
+
+```mermaid
+---
+title: Review flow
+---
+sequenceDiagram
+    participant Agent
+    participant DR as diffx-review
+    participant Caddy as Caddy on 3433
+    participant Diffx as diffx of the branch
+    participant Browser as Browser on the host
+    Agent->>DR: run in the worktree
+    DR->>Diffx: start on a free port
+    DR->>Caddy: write the route of the branch, then reload
+    DR-->>Agent: http://BRANCH.localhost:3433
+    Browser->>Caddy: through the host bridge, Host BRANCH.localhost
+    Caddy->>Diffx: reverse proxy
+    Diffx-->>Browser: the diff page
+    Agent->>DR: --stop, after the review
+```
+
 ## Token usage
 
 The token usage plugin of Herdr (`pseudovar.token-usage`) shows the usage in the sidebar of Herdr, one row for each agent pane. Press `prefix+u` to open the dashboard. Run `tu report --month` for a table in the terminal.

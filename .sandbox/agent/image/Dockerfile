@@ -101,6 +101,9 @@ RUN mise run fresh:plugins && mise run sandbox:completions && rm -rf /tmp/mise-c
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
+COPY --chmod=0755 diffx-review /usr/local/bin/diffx-review
+# Caddyfile: routes by host name. diffx-review starts Caddy. See https://caddyserver.com/docs/caddyfile
+COPY --chmod=0644 configs/tools/Caddyfile /etc/caddy/Caddyfile
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
 
 # At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-start copies it at each start.

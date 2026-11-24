@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Open the diff of this worktree in diffx at http://<branch>.localhost:3433, or stop it with --stop. Flow: ../../README.md#review-flow
+# Run it in the worktree. Port 3433 is the one port that the host bridge opens, so Caddy routes by host name.
+set -euo pipefail
+
+state="$HOME/.local/state/diffx"
+caddyfile=/etc/caddy/Caddyfile
+# A branch name can hold / _ and capitals. A host name cannot.
+slug=$(git branch --show-current | tr 'A-Z/_' 'a-z--' | tr -cd 'a-z0-9-')
+[ -n "$slug" ] || { echo "diffx-review: no branch in $PWD" >&2; exit 1; }
+
+caddy_reload() {
+  if curl -sf -o /dev/null http://127.0.0.1:2019/config/; then
+    caddy reload --config "$caddyfile" >>"$state/caddy.log" 2>&1
+  else
+    setsid nohup caddy run --config "$caddyfile" >>"$state/caddy.log" 2>&1 &
+  fi
+}
+
+stop() {
+  [ -f "$state/$slug.pid" ] && kill "$(cat "$state/$slug.pid")" 2>/dev/null || true
+  rm -f "$state/$slug.pid" "$state/$slug.caddy"
+}
+
+mkdir -p "$state"
+stop
+[ "${1:-}" = --stop ] && { caddy_reload; exit 0; }
+
+# shortcut: the port comes from a hash of the branch name, then the next free port. Two branches never share a port while both run.
+port=$((20000 + $(printf %s "$slug" | cksum | cut -d' ' -f1) % 20000))
+while (: </dev/tcp/127.0.0.1/$port) 2>/dev/null; do port=$((port + 1)); done
+
+setsid nohup diffx --no-open -p "$port" -- origin/main...HEAD >"$state/$slug.log" 2>&1 &
+echo $! >"$state/$slug.pid"
+printf 'http://%s.localhost:3433 {\n\treverse_proxy 127.0.0.1:%s\n}\n' "$slug" "$port" >"$state/$slug.caddy"
+caddy_reload
+
+for _ in $(seq 30); do
+  curl -sf -o /dev/null -H "Host: $slug.localhost:3433" http://127.0.0.1:3433/api/comments && { echo "http://$slug.localhost:3433"; exit 0; }
+  sleep 1
+done
+echo "diffx-review: no answer on port 3433 in 30 seconds. See $state/$slug.log and $state/caddy.log" >&2
+exit 1

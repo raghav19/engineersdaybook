@@ -13,3 +13,6 @@ ty = "0.0"
 
 # Review UI for the PR flow. https://github.com/wong2/diffx
 "npm:diffx-cli" = "0.16"
+
+# Routes <branch>.localhost:3433 to the diffx of each branch. See diffx-review.
+caddy = "2.11"

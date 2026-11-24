@@ -1,0 +1,7 @@
+# Routes <branch>.localhost:3433 to the diffx of that branch. diffx-review writes one snippet for each branch. https://caddyserver.com/docs/caddyfile
+{
+	auto_https off
+	default_bind 127.0.0.1
+}
+
+import {$HOME}/.local/state/diffx/*.caddy
