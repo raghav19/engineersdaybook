@@ -84,6 +84,8 @@ USER agent
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
+# The theme fireside has the colors of the Fireside theme of the host. fresh-config.json sets it by the file name.
+COPY --chown=agent:agent configs/editor/fireside.json /home/agent/.config/fresh/themes/fireside.json
 # The mise task fresh:plugins runs fresh-plugins.sh. The script reads fresh-plugins.yaml with yq and fetches each package at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
