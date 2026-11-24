@@ -356,8 +356,7 @@ The flows of the three commands are in [Flows](#flows).
 
 ## Open a port of the sandbox on the host
 
-The host bridge opens a port of a service in the agent sandbox on the loopback of the host. The list in `agent/ports` is empty, so the bridge opens no port.
-
+The host bridge opens a port of a service in the agent sandbox on the loopback of the host.
 ### Add a port
 
 1. Add the port number to `agent/ports` in your main checkout. Write one port in each line.
