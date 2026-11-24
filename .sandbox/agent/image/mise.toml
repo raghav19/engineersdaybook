@@ -53,7 +53,6 @@ crane completion bash > "$COMPLETIONS_DIR/crane"
 uv generate-shell-completion bash > "$COMPLETIONS_DIR/uv"
 gitleaks completion bash > "$COMPLETIONS_DIR/gitleaks"
 flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
-otelcol completion bash > "$COMPLETIONS_DIR/otelcol"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
@@ -62,14 +61,6 @@ echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 [tasks.usage]
 description = "Print the tokens and cost of each Claude Code session"
 run = "ccusage claude session --offline"
-
-# Prints the tokens and cost of Claude Code from the files of otelcol. The script is configs/tools/otel-report.jq.
-[tasks."otel:report"]
-description = "Print the token and cost report of Claude Code"
-run = """
-files=$(ls "$HOME"/.local/state/otelcol/claude-code*.jsonl 2>/dev/null) || { echo "No telemetry file in ~/.local/state/otelcol. Run Claude Code first."; exit 0; }
-jq -n -r -f /usr/local/share/sandbox/otel-report.jq $files
-"""
 
 # The Dockerfile runs this task. The script is configs/editor/fresh-plugins.sh. The Dockerfile copies it to /usr/local/share/sandbox/.
 [tasks."fresh:plugins"]

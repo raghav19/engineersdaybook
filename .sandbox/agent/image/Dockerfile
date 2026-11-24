@@ -84,6 +84,8 @@ USER agent
 
 # Agent-level configs.
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
+# The theme omarchy-terminal uses the colors of the terminal, so it follows each Omarchy theme. fresh-config.json sets it by the file name.
+COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json
 # The mise task fresh:plugins runs fresh-plugins.sh. The script reads fresh-plugins.yaml with yq and fetches each package at its pinned commit.
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
@@ -100,9 +102,6 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
-# The config of otelcol, and the report of `mise run otel:report`.
-COPY --chmod=0644 configs/tools/otelcol-config.yaml /etc/otelcol/config.yaml
-COPY --chmod=0644 configs/tools/otel-report.jq /usr/local/share/sandbox/otel-report.jq
 
 # At run time the root file system is read-only and /home/agent is a tmpfs. Keep what the image put in /home/agent
 # as a skeleton. sandbox-start copies it into the tmpfs at each start.

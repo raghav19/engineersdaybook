@@ -30,11 +30,11 @@ User=agent
 WorkingDir=/home/agent
 Exec=sleep infinity
 RunInit=true
-# The container is healthy after sandbox-start writes /tmp/sandbox-ready, and while otelcol answers on port 13133. `podman ps` shows the state.
+# The container is healthy after sandbox-start writes /tmp/sandbox-ready. `podman ps` shows the state.
 # The command of the container only keeps it alive. The init process (RunInit) passes the stop signal to it.
 # ExecStartPost below starts the relay and runs sandbox-start.
 # A failed check in the first 180 s does not count. After that, three failed checks in a row make the container unhealthy.
-HealthCmd=test -e /tmp/sandbox-ready && curl -sf -o /dev/null http://127.0.0.1:13133
+HealthCmd=test -e /tmp/sandbox-ready
 HealthInterval=5s
 HealthTimeout=3s
 HealthRetries=3

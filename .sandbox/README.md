@@ -402,41 +402,9 @@ The agent controls what answers on a listed port. Open the page in a browser tha
 
 To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
-## Token telemetry
+## Token usage
 
-Claude Code sends its telemetry to `otelcol` in the agent sandbox. `otelcol` writes it to a file. A report reads the file.
-
-```mermaid
----
-title: Token telemetry flow
----
-sequenceDiagram
-    participant C as Claude Code
-    participant O as otelcol on 127.0.0.1:4318
-    participant F as File in ~/.local/state/otelcol
-    participant R as mise run otel:report
-    C->>O: OTLP events and metrics
-    O->>F: append JSON lines
-    R->>F: read the files
-    R-->>R: print the tables
-```
-
-Two reports run in the agent sandbox:
-
-| Command | What it prints |
-|---|---|
-| `mise run usage` | The tokens and cost of each session. `ccusage` reads the logs of Claude Code and makes no network call. |
-| `mise run otel:report` | The cost by model, source, skill and plugin, the costliest sessions and the size of the tool output. It reads the files of `otelcol`. |
-
-| Item | Value |
-|---|---|
-| Collector config | `agent/image/configs/tools/otelcol-config.yaml` |
-| Claude Code settings | The `env` block of `agent/image/configs/agents/managed-settings.json` |
-| File | `~/.local/state/otelcol/claude-code*.jsonl`. The collector keeps 10 files of 50 MB. |
-| Health | `podman ps` shows `(unhealthy)` when `otelcol` does not answer on `127.0.0.1:13133`. |
-| Memory | `otelcol` uses about 150 MiB. |
-
-The file holds Bash commands and file paths, because the settings set `OTEL_LOG_TOOL_DETAILS=1`. Keep the file in the home of the sandbox. Do not copy it into the repo.
+Run `mise run usage` in the agent sandbox. It prints the tokens and cost of each Claude Code session. `ccusage` reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices.
 
 ## Troubleshooting
 
