@@ -189,7 +189,7 @@ The `launch_type` label separates `cold` from `warm`. Latency histograms have se
 | Burst warm adoption | ~300 claims/s for each cluster, p90 ≤ 200 ms | 3,600 claims in 12 s from a 3,700-replica pool |
 | Sustained refill for each pool | ~70–85 sandboxes/s | limited by kube-scheduler `--kube-api-qps=50` |
 | Warm adoption, sustained profile | p50 92 ms, p90 182 ms, p99 376 ms | 45/s Poisson, 4 pools, kops, k8s 1.35.6 |
-| Cold start (GKE) | ~42–50 s p50 | 75-claim burst, k8s 1.36.2, 20 nodes |
+| Claim latency, 75-claim burst (GKE) | ~42–50 s p50 | 150-member warm pool, k8s 1.36.2, 20 nodes. The earlier label "Cold start" is not clear. See section 7 |
 | `max-refill-rate` effect | ~15 % lower p50/p90 | GKE A/B |
 | Write-behind window 250 ms | 44 % fewer 409 conflicts, sustained p50 +58 % | 12-node kops |
 
@@ -255,6 +255,116 @@ The roadmap sets a target of "1000+ claims per second" and "200ms ➔ 100ms ➔ 
 - **APF (API Priority and Fairness):** an API server feature that divides request capacity between clients.
 - **Agent Substrate:** a separate project that runs agent "actors" on Kubernetes and keeps their state outside the Kubernetes API.
 
+## 7. State, memory and start paths (2026-11-24)
+
+Added on 2026-11-24 from a read of the `v1.0.12` source. No cluster ran. Every timing is UNVERIFIED. "gV" means `github.com/google/gvisor` `master` at `63d5036d`. Line numbers refer to the `v1.0.12` tag.
+
+### 7.1 Suspend and resume
+
+- **Order.** `Reconcile` checks expiry first. Then `reconcileChildResources` handles the PVCs, the Pod, the Service and the conditions, in that order. [src] (AS`controllers/sandbox_controller.go:534-571`)
+- **Suspend.** `reconcilePod` sends a plain `Delete` on the Pod when the Sandbox owns it. Then it clears the annotation `agents.x-k8s.io/pod-name`. There are no delete options, so the `terminationGracePeriodSeconds` of the Pod applies. [src] (`:1753-1783`)
+- **Kept on suspend.** The `Sandbox` object, the PVCs and the Service. `reconcileService` deletes the Service only when `service: false`. [src] (`:1530-1541`) KEP-694 says the same. [doc] (AS`docs/keps/694-.../README.md:122-123`)
+- **Cleared on suspend.** `status.podIPs` and `status.nodeName`. [src] (`:547-549`)
+- **Conditions.** `Suspended` goes to `PodTerminating`, then to `True` with reason `PodTerminated`. `Ready` is `False` with reason `SandboxSuspended`. `Finished` is kept. [src] (`:575-576`, `:689-726`, `:892-897`)
+- **Resume.** The controller takes the normal create path. It builds a new Pod with the name of the Sandbox, from the **current** `podTemplate`, with the same PVC claim names. [src] (`:1962-2040`, AS`api/v1beta1/sandbox_types.go:357-359`)
+  - The hostname stays the same, because the Pod name equals the Sandbox name.
+  - The Pod IP is new.
+  - The controller sets no `nodeName` or affinity. The scheduler picks the node. [inference] With the k3s `local-path` provisioner, the PV pins the Pod to the node of the PV. On one node this has no effect.
+- **PVC binding.** The controller does not wait for binding. A kept PVC is already `Bound`. First-bind time is UNVERIFIED.
+- **No pre-suspend hook.** The API and the controller have none. The only signal is normal Pod termination: a `preStop` hook, then SIGTERM, then the grace period. `sandboxd` passes SIGTERM to its children, waits `--shutdown-timeout` (default 10 s), then sends SIGKILL. [src] (AS`packages/sandboxd/cmd/sandboxd/main.go:61,107,171,255`, AS`packages/sandboxd/USER_GUIDE.md:556`)
+
+### 7.2 Where state lives, and what survives
+
+| State | Pod restart (`Recreate`) | Suspend, then resume | Expiry with `Retain` | Claim expiry or delete (any policy) |
+|---|---|---|---|---|
+| `Sandbox` object (etcd) | kept | kept | kept, with `Ready=False` reason `SandboxExpired` and live status cleared (`:2353-2364`) | deleted |
+| PVC from `volumeClaimTemplates` | kept (`sandbox_types.go:323-326`) | kept | kept (`:300-303`) | deleted, because the Sandbox owns it and the garbage collector removes it |
+| `emptyDir`, rootfs writes, process memory | lost | lost | lost | lost |
+
+- Claim expiry always deletes the Sandbox. `shutdownPolicy` controls only the claim object. [src] (AS`extensions/api/v1beta1/sandboxclaim_types.go:77-87`, AS`extensions/controllers/sandboxclaim_controller.go:729-735`)
+- The `Recreate` backoff state is in memory only. A controller restart resets it. [src] (`sandbox_types.go:327-332`)
+- `sandboxd` keeps no state of its own. The process list is an in-memory map. It writes files only on request, under `--root-dir` (default `/workspace`). [src] (AS`packages/sandboxd/pkg/processmanager/manager.go`, `main.go:103`)
+
+### 7.3 Memory snapshots
+
+- **GKE path.** `PodSnapshotSandboxClient` creates `podsnapshot.gke.io` `PodSnapshotManualTrigger` objects. [src] (AS`clients/python/.../gke_extensions/snapshots/snapshot_engine.py:114-178`)
+  - Resume sets `operatingMode: Running`. GKE then restores the new Pod from the latest Ready snapshot of its `PodSnapshotPolicy` group. The group key is the label `agents.x-k8s.io/sandbox-name-hash`.
+  - `restore(uid)` sets the annotation `podsnapshot.gke.io/ps-name` through `additionalPodMetadata` of the claim. The SDK checks the Pod condition `PodRestored`. [src] (`sandbox_with_snapshot_support.py:453-489, 528-557`, `utils.py:152-192`)
+  - Snapshots go to a GCS bucket through `PodSnapshotStorageConfig`. They hold "live memory and container rootfs". [doc] (AS`examples/openclaw-fleet-gke/60-snapshots/30-snapshot-hibernate.md:3-4`)
+  - UNVERIFIED: that GKE uses `runsc checkpoint` underneath. The Google Cloud docs were not reachable.
+- **Non-GKE path in the repo.** None. A search finds no CRIU, `runsc checkpoint` or `ContainerCheckpoint`. [src]
+- **gVisor.** It supports `runsc checkpoint --image-path [--leave-running]`, `runsc create` + `runsc restore` and Docker `checkpoint create`. An application can also start a checkpoint through `/proc/gvisor/checkpoint` and the annotations `dev.gvisor.internal.checkpoint.path` and `.enable`. After a restore, connected sockets return `ECONNRESET`. [doc] (gV`g3doc/user_guide/checkpoint_restore.md`)
+- **containerd shim.** In `containerd-shim-runsc-v1`, the standard task `Checkpoint` returns `errdefs.ErrNotImplemented`. The shim offers checkpoint only through a gVisor-specific `GvisorTaskServer.Checkpoint` extension. [src] (gV`pkg/shim/v1/runsc/service.go:570-572`, `:925-966`)
+- **Kubelet checkpoint API.** `POST /checkpoint/{ns}/{pod}/{container}` is behind the feature gate `ContainerCheckpoint`. It is beta and on by default since Kubernetes 1.30. Kubernetes has no restore API. [doc] (kubernetes/website `kubelet-checkpoint-api.md`, `ContainerCheckpoint.md`)
+- **Kubelet API with `runsc`.** [inference] It should fail, because the CRI path reaches the task `Checkpoint` call that is not implemented. UNVERIFIED. Lab 04a in the part-1 plan tests this.
+
+### 7.4 Warm start
+
+- **Pool members.** The pool creates Sandboxes with `GenerateName: "<pool>-"`. It sets an ownerRef to the pool, the labels for the pool and the template hash, and optionally `safe-to-evict=true`. [src] (AS`extensions/controllers/sandboxwarmpool_controller.go:1160-1222`)
+- **Adoption** (`completeAdoption`). [src] (AS`extensions/controllers/sandboxclaim_controller.go:1482-1576`)
+  - It removes the pool labels and sets `launch-type=warm`.
+  - It removes `safe-to-evict`.
+  - It sets `OwnerReferences = nil`, then sets the claim as the controller owner.
+  - It adds the labels for the claim identity and merges `additionalPodMetadata`.
+  - It patches with an optimistic lock.
+- **No rename.** The Sandbox and the Pod keep the name `<pool>-xxxxx`. The Pod ownerRef (the Sandbox) does not change. The controller re-patches only the Pod labels and annotations. [src] (`sandbox_controller.go:1844-1884`)
+- **Unready fallback.** A valid candidate that is not Ready, but has Pod IPs, can still be adopted. [src] (`sandboxclaim_controller.go:1363-1377`)
+- **Forced cold start.** A non-empty `env` or `volumeClaimTemplates` in the claim forces a cold start. [src] (`claimForcesColdStart`, `:2244-2248`)
+- **Refill.** Adoption removes the pool label. The pool controller then sees fewer members and creates replacements. [inference]
+- **`readinessGracePeriodSeconds`.** Minimum 30, controller default 300 s. The controller deletes and replaces a member that stays not Ready longer than this. It holds a member that is unschedulable or scheduling-gated. The clock starts at the later of creation and Pod scheduling. [src] (AS`extensions/api/v1beta1/sandboxwarmpool_types.go:68-81`, `sandboxwarmpool_controller.go:539-596`) The docs say that slow runtimes need a longer value.
+- **`updateStrategy`.** `OnReplenish` (default) or `Recreate`. Both apply only to unclaimed members.
+
+### 7.5 Cold start and metrics
+
+- **Cold claim.** With no candidate, the claim creates a Sandbox **named after the claim**. [src] (`sandboxclaim_controller.go:1956-2013`)
+- **Grace period.** If a candidate has no Pod IP yet, the claim waits `--sandbox-claim-warm-candidate-grace-period` (default `2s`, requeue every 100 ms). Then it creates a cold Sandbox. [doc] [src] (AS`docs/configuration.md:14`, `sandboxclaim_controller.go:63-67, 2429-2443`)
+- **Metrics.** [doc] (AS`docs/metrics.md:13-25`)
+  - The label `launch_type` (`warm`, `cold`, `unknown`) is on `agent_sandbox_claim_controller_startup_latency_ms`, `agent_sandbox_claim_creation_total`, `agent_sandbox_creation_latency_ms` and `agent_sandboxes`.
+  - Resume: `agent_sandbox_resume_latency_ms` and `agent_sandbox_resume_total{result=requested|ready|error}`.
+  - Suspend: `agent_sandbox_suspend_latency_ms` and `agent_sandbox_suspend_total{result=requested|pod_terminated|error}`.
+  - Client side, the Python SDK has `sandbox_client_{suspend,resume,restore}_latency_ms{status}`. [src] (`metrics.py:30-48`)
+- **Other kinds of "warm".** `docs/performance-tuning.md` gives no advice on image pull. A pre-pull DaemonSet exists only in the example `agent-sandbox-rl`. [doc] (AS`examples/agent-sandbox-rl/README.md:734-749`) A warm start from a snapshot is GKE-only. Pool members restore from one "golden" snapshot. [doc] (AS`examples/podsnapshot-golden-warmpool/README.md:1-22`)
+
+### 7.6 gVisor effects
+
+- **Port-forward.** "With gVisor or Kata runtimes, direct pod port-forwarding is not compatible. Use the Sandbox Router". [doc] (AS`site/content/docs/use-cases/gvisor-isolation/_index.md:62`)
+- **Memory per Pod.** One example gives about 370 MiB host RSS for each gVisor Pod: Sentry about 311 MiB, gofer about 25 MiB, shim about 34 MiB. [doc] (AS`examples/gke-swap/runtimes/README.md:31`) The handoff of 2026-11-23 assumed about 24 MB. These two numbers conflict. The part-1 benchmark must measure the real value first.
+- **Rootfs writes.** By default (`--overlay2=root:self`), rootfs writes go to a hidden overlay file and not to the host. PVC access goes through the gofer. [doc] (gV`g3doc/user_guide/filesystem.md`)
+- **Cold-start number.** No source gives a gVisor cold-start number. One example only says "slower cold start". [doc] (AS`examples/recall-memory/README.md:148`) UNVERIFIED.
+
+### 7.7 Minimal manifests and SDK calls
+
+- **`SandboxTemplate`** (from AS`site/content/docs/volumes/volume-claim-template/source/template.yaml`) [doc]:
+  ```yaml
+  apiVersion: extensions.agents.x-k8s.io/v1beta1
+  kind: SandboxTemplate
+  spec:
+    podTemplate:
+      spec:
+        runtimeClassName: gvisor
+        containers:
+        - name: agent
+          volumeMounts: [{name: agent-data, mountPath: /data}]
+    volumeClaimTemplates:
+    - metadata: {name: agent-data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
+  ```
+- **`Sandbox`** (`agents.x-k8s.io/v1beta1`): the same `podTemplate` and `volumeClaimTemplates`, plus `operatingMode`, `service`, `failedPodPolicy`, `shutdownTime` and `shutdownPolicy`. These field names come from `sandbox_types.go`, not from an example. [src]
+- **`SandboxWarmPool`** (AS`examples/warmpool-quickstart/sandboxwarmpool.yaml`): `spec: {replicas: 1, updateStrategy: {type: Recreate}, sandboxTemplateRef: {name: ...}}`. [doc]
+- **`SandboxClaim`** (AS`examples/warmpool-quickstart/sandbox-claim.yaml`): `spec: {warmPoolRef: {name: ...}, lifecycle: {shutdownPolicy: Delete, shutdownTime: ...}}`. [doc]
+- **Python SDK.** [src]
+  - Base: `Sandbox.suspend(timeout=180)`, `resume(timeout=180)` and `is_suspended()`, with async versions. Suspend waits for `Suspended`. Resume waits for `Ready`. (`sandbox.py:106-120`, `async_sandbox.py:110-118`)
+  - GKE only (`PodSnapshotSandboxClient`): `.suspend(snapshot_before_suspend=True)`, `.resume()`, `.restore(snapshot_uid)`, `.snapshots.create(trigger_name)`, `.list()`, `.delete(uid)` and `.delete_all()`.
+  - `create_sandbox(warmpool, ..., volume_claim_templates=, env=)`: either of the last two arguments forces a cold start. (`sandbox_client.py:126-141`)
+
+### 7.8 Conflicts between docs and source
+
+1. **Snapshot cluster type.** The site doc says "GKE **Autopilot** cluster". The SDK snapshot README and the `openclaw` example say GKE **Standard**.
+2. **Resume Pod spec.** KEP-694 (line 127) says the resume Pod uses the "original" `podTemplate`. The types and the code use the **current** one. Use the code.
+3. **Claim name as Pod name.** The comment in `warmpool-quickstart/sandbox-claim.yaml` says the claim name "will be the name of your sandbox pod". This is true only on the cold path. A warm Pod keeps `<pool>-xxxxx`. Read `status.sandbox.name`.
+4. **Expiry cleanup.** The lifecycle doc says that at `shutdownTime`, "the sandbox and its associated resources are automatically garbage-collected". This is true only with `shutdownPolicy: Delete`. With the default `Retain`, the object and the PVCs stay.
+5. **The "Cold start (GKE)" number.** The earlier table labelled "~42–50 s" as a cold start. `docs/performance-tuning.md` measured it on a 75-claim burst from a 150-member warm pool. It is not clearly a cold start. The table row now has a neutral label.
+
 ## Sources
 
 - https://github.com/kubernetes-sigs/agent-sandbox/tree/v1.0.12: `README.md`, `OWNERS`, `LICENSE`, `roadmap.md`, `api/v1beta1/groupversion_info.go`, `api/v1beta1/sandbox_types.go`, `extensions/api/v1beta1/{groupversion_info,sandboxtemplate_types,sandboxclaim_types,sandboxwarmpool_types}.go`, `controllers/sandbox_controller.go`, `extensions/controllers/{sandboxtemplate,sandboxclaim,sandboxwarmpool}_controller.go`, `cmd/agent-sandbox-controller/main.go`, `k8s/extensions.controller.yaml`, `k8s/crds/`, `docs/{metrics,performance-tuning,configuration,apf-insulation,api-migration-guide}.md`, `docs/security/threat_model.md`, `docs/keps/*/kep.yaml`, `helm/README.md`, `sandbox-router/README.md`, `packages/sandboxd/USER_GUIDE.md`, `site/content/docs/getting_started/install_prerequisites/_index.md`, `site/content/docs/use-cases/gvisor-isolation/_index.md`, `site/content/docs/sandbox/snapshots/_index.md`, `dev/load-test/test-recipes/README-capacity-cliff.md`, `examples/multi-cluster-fleet/ARCHITECTURE.md`, `clients/`
@@ -267,3 +377,6 @@ The roadmap sets a target of "1000+ claims per second" and "200ms ➔ 100ms ➔ 
 - https://github.com/agent-substrate/substrate (README, `site/README.md`, `docs/concepts/architecture.md` at `8368e765`)
 - https://github.com/google/gvisor/blob/master/g3doc/user_guide/containerd/quick_start.md and https://github.com/google/gvisor/blob/master/g3doc/user_guide/platforms.md (at `168b84e6`)
 - https://docs.k3s.io/advanced ("Alternative Container Runtime Support", "Configuring containerd")
+- Added 2026-11-24 (section 7): the files of the `v1.0.12` tag that section 7 names, including `packages/sandboxd/`, `clients/python/`, `examples/warmpool-quickstart/`, `examples/podsnapshot-golden-warmpool/`, `examples/openclaw-fleet-gke/`, `examples/gke-swap/runtimes/README.md` and `examples/agent-sandbox-rl/README.md`.
+- https://github.com/google/gvisor at `63d5036d`: `g3doc/user_guide/checkpoint_restore.md`, `g3doc/user_guide/filesystem.md`, `pkg/shim/v1/runsc/service.go`
+- https://github.com/kubernetes/website: `kubelet-checkpoint-api.md` and the feature gate page `ContainerCheckpoint.md`
