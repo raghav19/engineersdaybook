@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "acceptEdits",
     "allow": [
       "mcp__github__get_me",
       "mcp__github__list_pull_requests",
@@ -8,7 +9,23 @@
       "mcp__github__list_dependabot_alerts",
       "mcp__github__get_dependabot_alert",
       "Bash(herdr worktree create:*)",
-      "Bash(herdr worktree list:*)"
+      "Bash(herdr worktree list:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git fetch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(just:*)",
+      "Bash(rg:*)",
+      "Bash(fd:*)"
     ],
     "deny": [
       "mcp__github__merge_pull_request",
