@@ -403,7 +403,9 @@ To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service
 
 ## Token usage
 
-Run `mise run usage` in the agent sandbox. It prints the tokens and cost of each Claude Code session. `ccusage` reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices.
+The token usage plugin of Herdr (`pseudovar.token-usage`) shows the usage in the sidebar and the tab bar of Herdr. Press `prefix+u` to open the dashboard. Run `tu report --month` for a table in the terminal.
+
+The plugin reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices. The image pins the plugin to one commit in `agent/image/Dockerfile`.
 
 ## Troubleshooting
 

@@ -11,3 +11,41 @@ name = "catppuccin"
 default_shell = "/bin/bash"
 shell_mode = "login"
 new_cwd = "/home/agent/engineersdaybook"
+
+# Token usage plugin (pseudovar.token-usage). This is the output of `tu setup --apply`, so the image needs no manual setup.
+# The colors in the rules are Catppuccin Mocha: red, yellow and green. The prefix+u key opens the dashboard.
+[ui.toast]
+delivery = "herdr"
+
+[ui]
+tab_bar_right = [
+  { type = "command", command = "/home/agent/.local/state/herdr/plugins/pseudovar.token-usage/bin/tu-status", interval_seconds = 5, timeout_seconds = 4 },
+]
+
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", "machine", "workspace", "tab"],
+  ["agent", { token = "$tu_sub", dim = true }],
+  [{ token = "$tu", rules = [{ starts_with = "■", fg = "#f38ba8", bold = true }, { starts_with = "▲", fg = "#f9e2af" }, { starts_with = "▽", fg = "#a6e3a1" }] }],
+  [{ token = "$tu_more", dim = true }],
+]
+
+[ui.sidebar.spaces]
+rows = [
+  ["state_icon", "workspace"],
+  ["branch", "git_status"],
+  [{ token = "$tu_ws", rules = [{ starts_with = "■", fg = "#f38ba8", bold = true }, { starts_with = "▲", fg = "#f9e2af" }, { starts_with = "▽", fg = "#a6e3a1" }] }],
+  [{ token = "$tu_ws_more", dim = true }],
+]
+
+[[keys.command]]
+key = "prefix+u"
+type = "plugin_action"
+command = "pseudovar.token-usage.open"
+description = "token usage dashboard"
+
+[[keys.command]]
+key = "prefix+shift+u"
+type = "plugin_action"
+command = "pseudovar.token-usage.snooze"
+description = "snooze usage alerts (1h)"
