@@ -29,7 +29,6 @@ transforms:
         - proxy.golang.org
         - sum.golang.org
         - registry.npmjs.org
-        - tuf-repo-cdn.sigstore.dev # mise verifies the npm provenance (Sigstore) of diffx-cli
         - pypi.org
         - files.pythonhosted.org
         - releases.hashicorp.com
