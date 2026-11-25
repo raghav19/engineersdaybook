@@ -78,8 +78,6 @@ COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.confi
 COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
 COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
-# The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
-RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
 # The ble.sh faces are a copy of ~/.config/blesh/init.sh on the host. Keep it the same as the host file.
@@ -93,7 +91,7 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
 COPY mise.toml /etc/mise/conf.d/mise.toml
-RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:shell && rm -rf /tmp/mise-cache
+RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:herdr-plugins && mise run sandbox:shell && rm -rf /tmp/mise-cache
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start

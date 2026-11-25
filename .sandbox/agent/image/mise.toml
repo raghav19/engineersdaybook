@@ -67,6 +67,11 @@ ble="$(mise where github:akinomyoga/ble.sh)/ble.sh"
 } >> "$HOME/.bashrc"
 '''
 
+[tasks."sandbox:herdr-plugins"]
+description = "Install the Herdr plugins at their pinned commits"
+# The token usage plugin reads the logs of Claude Code and makes no network call at run time.
+run = "herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage"
+
 [tasks."fresh:plugins"]
 description = "Install the Fresh packages of fresh-plugins.yaml at their pinned commits"
 run = "bash /usr/local/share/sandbox/fresh-plugins.sh"
