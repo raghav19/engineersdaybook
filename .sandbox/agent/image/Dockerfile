@@ -80,8 +80,6 @@ COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
-# The ble.sh faces are a copy of ~/.config/blesh/init.sh on the host. Keep it the same as the host file.
-COPY --chown=agent:agent configs/tools/blesh-init.sh /home/agent/.config/blesh/init.sh
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
