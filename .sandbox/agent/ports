@@ -1,2 +1,5 @@
-# The ports that the host bridge opens, one port or one range (19432-19441) in each line, from 1024 to 65535. A range holds at most 16 ports. See ../README.md#open-a-port-of-the-sandbox-on-the-host
+# The ports that the host bridge opens, one port or one range (19432-19436) in each line, from 1024 to 65535. A range holds at most 16 ports. See ../README.md#open-a-port-of-the-sandbox-on-the-host
 # After you edit this file, run: systemctl --user restart sandbox-bridge.service
+
+# Plannotator: PLANNOTATOR_PORT=19432-19436 gives each live review one of these ports.
+19432-19436
