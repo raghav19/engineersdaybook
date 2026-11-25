@@ -13,6 +13,9 @@ DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language s
 HF_HUB_OFFLINE = "1"
 # Under gVisor, Herdr lists no agents without this setting. See https://github.com/herdrdev/herdr/issues/1982
 HERDR_PROCESS_DETECTION = "child-groups"
+# Each Plannotator review binds the first free port of this range. The range must equal the line in agent/ports. See ../../README.md#open-a-port-of-the-sandbox-on-the-host
+PLANNOTATOR_PORT = "19432-19436"
+PLANNOTATOR_BROWSER = "none"  # the sandbox has no browser. Plannotator prints the URL, and you open it on the host
 # Ponytail (sandbox-start installs the plugin) puts no codebase map in the session context. This saves input tokens.
 PONYTAIL_MAP = "0"
 PONYTAIL_DEFAULT_MODE = "full"

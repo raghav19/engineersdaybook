@@ -359,7 +359,7 @@ The flows of the three commands are in [Flows](#flows).
 The host bridge opens a port of a service in the agent sandbox on the loopback of the host.
 ### Add a port
 
-1. Add the port number to `agent/ports` in your main checkout. Write one port in each line.
+1. Add the port number to `agent/ports` in your main checkout. Write one port or one range in each line. Example of a range: `19432-19441`.
 2. Run `systemctl --user restart sandbox-bridge.service`.
 3. Run `curl -s http://127.0.0.1:<port>/`. The port is open when the service in the sandbox answers.
 
@@ -367,7 +367,7 @@ If step 3 fails, run `journalctl --user -u sandbox-bridge -n 20`. A `bad port` l
 
 ### Host port bridge flow
 
-The unit `sandbox-bridge.service` runs `bridge.sh` on the host, not in the sandbox. For each port, `bridge.sh` starts a `socat` on the host.
+The unit `sandbox-bridge.service` runs `bridge.sh` on the host, not in the sandbox. For each port, `bridge.sh` starts a `socat` on the host. A range gives one `socat` for each port of the range.
 
 ```mermaid
 ---
@@ -391,7 +391,7 @@ sequenceDiagram
 |---|---|
 | Address on the host | `127.0.0.1` only |
 | Target in the sandbox | `127.0.0.1:<the same port>` only |
-| Ports | 1024 to 65535. Any other entry stops the bridge. |
+| Ports | 1024 to 65535. A range holds at most 16 ports. Any other entry stops the bridge. |
 | Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
 | Connections | At most 8 at the same time for each port |
 | Sandbox stopped | The connection closes at once. |
