@@ -10,13 +10,7 @@
       "mcp__github__get_dependabot_alert",
       "Bash(herdr worktree create:*)",
       "Bash(herdr worktree list:*)",
-      "Bash",
-      "Read(//opt/mise/**)",
-      "Read(//run/sandbox/**)",
-      "Read(//usr/local/share/sandbox/**)",
-      "Read(//etc/claude-code/**)",
-      "Read(//etc/docker/**)",
-      "Read(//home/agent/token-economizer/**)"
+      "Bash"
     ],
     "deny": [
       "mcp__github__merge_pull_request",
@@ -40,7 +34,6 @@
       "/home/agent/.local"
     ],
     "disableBypassPermissionsMode": "disable",
-    "blockReadsOutsideWorkingDirectories": true,
     "blockWritesOutsideWorkingDirectories": true
   },
   "allowManagedHooksOnly": true,
