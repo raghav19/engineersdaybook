@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Pages a markdown file with each mermaid fence drawn as text. Draws: https://github.com/AlexanderGrooff/mermaid-ascii
+set -euo pipefail
+in=0
+buf=""
+while IFS= read -r line; do
+  if [[ $in == 0 && $line == '```mermaid' ]]; then in=1; buf=""; continue; fi
+  if [[ $in == 1 && $line == '```' ]]; then
+    # A diagram type that mermaid-ascii cannot draw stays as its source.
+    drawing=$(printf '%s' "$buf" | mermaid-ascii 2>/dev/null) || drawing=${buf%$'\n'}
+    printf '```text\n%s\n```\n' "$drawing"
+    in=0
+    continue
+  fi
+  if [[ $in == 1 ]]; then buf+="$line"$'\n'; else printf '%s\n' "$line"; fi
+done < "$1" | glow -p -
