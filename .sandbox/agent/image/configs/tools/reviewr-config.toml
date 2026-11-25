@@ -1,5 +1,6 @@
 # Config of the review pane (persiyanov.reviewr). Keys: https://github.com/persiyanov/herdr-reviewr#configuration
 editor = "vim +{line} {file}"
+default_scope = "branch"
 # The pane covers the tab of the agent. The key prefix+e shows the agent again.
 toggle_placement = "overlay"
 # Markdown opens rendered. Press m in the pane for the source.
