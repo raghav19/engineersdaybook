@@ -1,0 +1,4 @@
+# Config of the review pane (persiyanov.reviewr). Keys: https://github.com/persiyanov/herdr-reviewr#configuration
+editor = "vim +{line} {file}"
+# Markdown opens rendered. Press m in the pane for the source.
+markdown_view = "rendered"
