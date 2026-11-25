@@ -2,7 +2,6 @@
   "model": "opusplan",
   "effortLevel": "high",
   "env": {
-    "ANTHROPIC_BASE_URL": "http://127.0.0.1:8787",
     "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5",
     "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
