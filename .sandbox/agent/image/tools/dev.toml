@@ -10,6 +10,3 @@ yamlfmt = "0.21"
 shfmt = "3.14"
 ty = "0.0"
 "github:sinelaw/fresh" = "0.5"
-"github:charmbracelet/glow" = "2.1"
-# The release tags of mermaid-ascii have no v. The empty prefix makes mise find them.
-"github:AlexanderGrooff/mermaid-ascii" = { version = "1.6", version_prefix = "" }

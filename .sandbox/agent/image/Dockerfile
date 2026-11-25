@@ -97,8 +97,6 @@ RUN mise run fresh:plugins && mise run sandbox:completions && rm -rf /tmp/mise-c
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# Step 5 of docs/agents/pull-requests.md runs md-view in a pane next to reviewr.
-COPY --chmod=0755 md-view /usr/local/bin/md-view
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
 
 # At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-start copies it at each start.
