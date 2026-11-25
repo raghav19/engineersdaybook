@@ -1,18 +1,17 @@
 #!/bin/bash
 # Start script. sandbox-agent.service runs it with podman exec, as the user agent, after the relay starts. Flow: ../../README.md#run-flow
-# It prepares the home and the clone, starts Headroom and writes /tmp/sandbox-ready. A step does nothing if its work exists.
+# It prepares the home and the clone, installs the plugins and writes /tmp/sandbox-ready. A step does nothing if its work exists.
 # Variables: SANDBOX_WORKSPACE and REPO_URL come from sandbox-agent.container. SANDBOX_BRANCH is optional (default: the branch of the host checkout).
 set -eu
 
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
-headroom_log=/tmp/headroom.log
 rm -f /tmp/sandbox-ready # a restarted container keeps its /tmp
 fail() { echo "sandbox-start: $*" >&2; exit 1; }
 
-# /home/agent is a volume. Copy the skeleton of the image at each start. The folders of the agent stay: the clone, .claude, .qwen, .headroom, .herdr and .cache.
+# /home/agent is a volume. Copy the skeleton of the image at each start. The folders of the agent stay: the clone, .claude, .qwen, .herdr and .cache.
 # Trap: -f is required. Git pack files in the plugin checkouts are mode 0444, and cp -a cannot overwrite them at the second start.
 cp -af /usr/share/sandbox/home/. "$HOME/" || fail "could not copy the home skeleton"
-mkdir -p "$HOME/.claude" "$HOME/.qwen" "$HOME/.headroom" "$HOME/.herdr" "$HOME/.cache/terraform-providers" || fail "could not make the folders of the home"
+mkdir -p "$HOME/.claude" "$HOME/.qwen" "$HOME/.herdr" "$HOME/.cache/terraform-providers" || fail "could not make the folders of the home"
 
 # The clone is private, because /run/sandbox/source (the .git folder of the host repo) is read-only. A push goes to GitHub, to a feature branch.
 if [ ! -d "$ws/.git" ]; then
@@ -25,15 +24,6 @@ fi
 mkdir -p "$HOME/.config/herdr" "$HOME/.herdr/session-snapshots"
 ln -sfn "$HOME/.herdr/session.json" "$HOME/.config/herdr/session.json"
 ln -sfn "$HOME/.herdr/session-snapshots" "$HOME/.config/herdr/session-snapshots"
-
-# Headroom listens on port 8787. ANTHROPIC_BASE_URL in the .claude/settings.json of the repo points to it.
-# Start it only if it does not answer. Then wait until it answers.
-curl -sf -o /dev/null http://127.0.0.1:8787/health || setsid nohup headroom proxy --host 127.0.0.1 --port 8787 >"$headroom_log" 2>&1 &
-for _ in $(seq 60); do
-  curl -sf -o /dev/null http://127.0.0.1:8787/health && break
-  sleep 1
-done
-curl -sf -o /dev/null http://127.0.0.1:8787/health || { tail -n 20 "$headroom_log" >&2; fail "Headroom did not answer on 127.0.0.1:8787 in 60 seconds"; }
 
 # Plugins of Claude Code go to the home volume. A failure prints a warning and does not stop the script.
 claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin install ponytail@ponytail \

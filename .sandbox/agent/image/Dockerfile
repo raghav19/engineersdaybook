@@ -27,11 +27,6 @@ FROM stage1-base AS stage2-runtimes
 COPY tools/runtimes.toml /etc/mise/conf.d/runtimes.toml
 RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
-FROM stage2-runtimes AS stage3-headroom
-COPY tools/headroom.toml /etc/mise/conf.d/headroom.toml
-# Tools do not read the uv download cache, so remove it from the layer.
-RUN mise install --yes && rm -rf /home/agent/.cache/uv
-
 FROM stage1-base AS stage4-infra
 COPY tools/infra.toml /etc/mise/conf.d/infra.toml
 RUN mise install --yes
@@ -60,8 +55,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
-COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/pypi-headroom-ai /opt/mise/installs/pypi-headroom-ai
-COPY --from=stage3-headroom --chown=agent:agent /opt/mise/installs/uv /opt/mise/installs/uv
 COPY --from=stage4-infra --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage5-dev --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY --from=stage6-agents --chown=agent:agent /opt/mise/installs /opt/mise/installs
