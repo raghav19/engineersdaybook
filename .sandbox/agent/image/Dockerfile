@@ -93,7 +93,7 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
 COPY mise.toml /etc/mise/conf.d/mise.toml
-RUN mise run fresh:plugins && mise run sandbox:completions && rm -rf /tmp/mise-cache
+RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:shell && rm -rf /tmp/mise-cache
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
@@ -110,15 +110,6 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
-
-# Order in /etc/bash.bashrc: ble.sh loads first, then mise and starship, and ble-attach goes last. See https://github.com/akinomyoga/ble.sh#12-set-up-bashrc
-# The symlink gives bash.bashrc a path without the ble.sh version.
-RUN ln -s "$(mise where github:akinomyoga/ble.sh)" /usr/local/share/blesh \
- && printf '%s\n' \
-      'source /usr/local/share/blesh/ble.sh --noattach' \
-      'eval "$(mise activate bash)"' \
-      'eval "$(starship init bash)"' \
-      '[[ ${BLE_VERSION-} ]] && ble-attach' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \

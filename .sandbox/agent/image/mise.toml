@@ -53,6 +53,20 @@ echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
 
+# Order in ~/.bashrc: ble.sh loads first, then mise and starship, and ble-attach goes last. See https://github.com/akinomyoga/ble.sh#12-set-up-bashrc
+# The task appends once at build time. A second run adds the lines twice.
+[tasks."sandbox:shell"]
+description = "Append the ble.sh, mise and starship lines to ~/.bashrc"
+run = '''
+ble="$(mise where github:akinomyoga/ble.sh)/ble.sh"
+{
+  echo "source $ble --noattach"
+  echo 'eval "$(mise activate bash)"'
+  echo 'eval "$(starship init bash)"'
+  echo '[[ ${BLE_VERSION-} ]] && ble-attach'
+} >> "$HOME/.bashrc"
+'''
+
 [tasks."fresh:plugins"]
 description = "Install the Fresh packages of fresh-plugins.yaml at their pinned commits"
 run = "bash /usr/local/share/sandbox/fresh-plugins.sh"
