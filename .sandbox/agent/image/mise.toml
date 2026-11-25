@@ -55,11 +55,12 @@ echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 
 # The task appends once at build time. A second run adds the lines twice.
 [tasks."sandbox:shell"]
-description = "Append the mise and starship lines to ~/.bashrc"
+description = "Append the mise, starship and fzf lines to ~/.bashrc"
 run = '''
 {
   echo 'eval "$(mise activate bash)"'
   echo 'eval "$(starship init bash)"'
+  echo 'eval "$(fzf --bash)"'
 } >> "$HOME/.bashrc"
 '''
 

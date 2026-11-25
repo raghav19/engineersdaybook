@@ -9,7 +9,7 @@ gitleaks = "8.30"
 yamlfmt = "0.21"
 shfmt = "3.14"
 starship = "1.27"
+fzf = "0.75"
 ty = "0.0"
 "github:sinelaw/fresh" = "0.5"
-# Plannotator is one 237 MB binary. It has no bash completion, so sandbox:completions has no line for it.
 "github:backnotprop/plannotator" = "0.29"
