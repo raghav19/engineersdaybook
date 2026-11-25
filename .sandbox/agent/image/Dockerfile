@@ -86,6 +86,8 @@ RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref bb71050caa5d3a0b
 COPY --chown=agent:agent configs/tools/reviewr-config.toml /home/agent/.config/herdr/plugins/config/persiyanov.reviewr/config.toml
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
+# The ble.sh faces are a copy of ~/.config/blesh/init.sh on the host. Keep it the same as the host file.
+COPY --chown=agent:agent configs/tools/blesh-init.sh /home/agent/.config/blesh/init.sh
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
@@ -115,9 +117,14 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-# starship init goes after mise activate, so the prompt hook runs last. See https://starship.rs/guide/#step-2-set-up-your-shell-to-use-starship
-RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc \
- && echo 'eval "$(starship init bash)"' >> /etc/bash.bashrc
+# Order in /etc/bash.bashrc: ble.sh loads first, then mise and starship, and ble-attach goes last. See https://github.com/akinomyoga/ble.sh#12-set-up-bashrc
+# The symlink gives bash.bashrc a path without the ble.sh version.
+RUN ln -s "$(mise where github:akinomyoga/ble.sh)" /usr/local/share/blesh \
+ && printf '%s\n' \
+      'source /usr/local/share/blesh/ble.sh --noattach' \
+      'eval "$(mise activate bash)"' \
+      'eval "$(starship init bash)"' \
+      '[[ ${BLE_VERSION-} ]] && ble-attach' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
