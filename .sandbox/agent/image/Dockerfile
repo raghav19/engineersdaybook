@@ -51,7 +51,7 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils socat vim \
+ && apt-get install -y --no-install-recommends binutils socat \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -80,10 +80,6 @@ COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
-# The review pane of Herdr, at the commit of the tag v0.52.2. The install downloads one release binary from github.com and checks its SHA-256.
-RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref bb71050caa5d3a0b1a414527783eb7a772447f9f persiyanov/herdr-reviewr
-# The editor of the review pane is vim, from the apt line of stage10-final. EDITOR stays fresh for all other tools.
-COPY --chown=agent:agent configs/tools/reviewr-config.toml /home/agent/.config/herdr/plugins/config/persiyanov.reviewr/config.toml
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
 # The ble.sh faces are a copy of ~/.config/blesh/init.sh on the host. Keep it the same as the host file.
@@ -101,8 +97,6 @@ RUN mise run fresh:plugins && mise run sandbox:completions && rm -rf /tmp/mise-c
 
 USER root
 COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# Step 5 of docs/agents/pull-requests.md runs md-view in a pane next to reviewr.
-COPY --chmod=0755 md-view /usr/local/bin/md-view
 # The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
 
 # At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-start copies it at each start.

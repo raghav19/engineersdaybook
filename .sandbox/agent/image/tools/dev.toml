@@ -13,8 +13,5 @@ starship = "1.27"
 "github:akinomyoga/ble.sh" = "0.4.0-devel3"
 ty = "0.0"
 "github:sinelaw/fresh" = "0.5"
-"github:charmbracelet/glow" = "2.1"
-# The release tags of mermaid-ascii have no v. The empty prefix makes mise find them.
-"github:AlexanderGrooff/mermaid-ascii" = { version = "1.6", version_prefix = "" }
 # Plannotator is one 237 MB binary. It has no bash completion, so sandbox:completions has no line for it.
 "github:backnotprop/plannotator" = "0.29"
