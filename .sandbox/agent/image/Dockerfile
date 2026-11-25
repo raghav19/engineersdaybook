@@ -51,7 +51,7 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils socat vim \
+ && apt-get install -y --no-install-recommends binutils socat \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -80,10 +80,6 @@ COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The token usage plugin of Herdr at a pinned commit. It reads the logs of Claude Code and makes no network call.
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
-# The review pane of Herdr, at the commit of the tag v0.52.2. The install downloads one release binary from github.com and checks its SHA-256.
-RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref bb71050caa5d3a0b1a414527783eb7a772447f9f persiyanov/herdr-reviewr
-# The editor of the review pane is vim, from the apt line of stage10-final. EDITOR stays fresh for all other tools.
-COPY --chown=agent:agent configs/tools/reviewr-config.toml /home/agent/.config/herdr/plugins/config/persiyanov.reviewr/config.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
