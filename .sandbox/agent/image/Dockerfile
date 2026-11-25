@@ -84,6 +84,8 @@ RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref 7f2689bb0880c72f
 RUN PATH=/opt/mise/shims:$PATH herdr plugin install --yes --ref bb71050caa5d3a0b1a414527783eb7a772447f9f persiyanov/herdr-reviewr
 # The editor of the review pane is vim, from the apt line of stage10-final. EDITOR stays fresh for all other tools.
 COPY --chown=agent:agent configs/tools/reviewr-config.toml /home/agent/.config/herdr/plugins/config/persiyanov.reviewr/config.toml
+# The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
+COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
 COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
@@ -113,7 +115,9 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc
+# starship init goes after mise activate, so the prompt hook runs last. See https://starship.rs/guide/#step-2-set-up-your-shell-to-use-starship
+RUN echo 'eval "$(mise activate bash)"' >> /etc/bash.bashrc \
+ && echo 'eval "$(starship init bash)"' >> /etc/bash.bashrc
 
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8 \
