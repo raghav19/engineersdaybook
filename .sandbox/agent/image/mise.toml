@@ -48,9 +48,29 @@ crane completion bash > "$COMPLETIONS_DIR/crane"
 uv generate-shell-completion bash > "$COMPLETIONS_DIR/uv"
 gitleaks completion bash > "$COMPLETIONS_DIR/gitleaks"
 flux9s completions bash > "$COMPLETIONS_DIR/flux9s"
+starship completions bash > "$COMPLETIONS_DIR/starship"
 echo complete -C terraform terraform > "$COMPLETIONS_DIR/terraform"
 echo complete -C terragrunt terragrunt > "$COMPLETIONS_DIR/terragrunt"
 """
+
+# Order in ~/.bashrc: ble.sh loads first, then mise and starship, and ble-attach goes last. See https://github.com/akinomyoga/ble.sh#12-set-up-bashrc
+# The task appends once at build time. A second run adds the lines twice.
+[tasks."sandbox:shell"]
+description = "Append the ble.sh, mise and starship lines to ~/.bashrc"
+run = '''
+ble="$(mise where github:akinomyoga/ble.sh)/ble.sh"
+{
+  echo "source $ble --noattach"
+  echo 'eval "$(mise activate bash)"'
+  echo 'eval "$(starship init bash)"'
+  echo '[[ ${BLE_VERSION-} ]] && ble-attach'
+} >> "$HOME/.bashrc"
+'''
+
+[tasks."sandbox:herdr-plugins"]
+description = "Install the Herdr plugins at their pinned commits"
+# The token usage plugin reads the logs of Claude Code and makes no network call at run time.
+run = "herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage"
 
 [tasks."fresh:plugins"]
 description = "Install the Fresh packages of fresh-plugins.yaml at their pinned commits"
