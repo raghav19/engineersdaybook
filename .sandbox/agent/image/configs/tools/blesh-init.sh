@@ -4,7 +4,7 @@ ble-face auto_complete=fg=8
 ble-face syntax_error=fg=1,underline
 ble-face argument_error=fg=1
 ble-face region=reverse
-ble-face region_insert=reverse
+ble-face region_insert=fg=12
 ble-face region_match=reverse
 ble-face region_target=reverse
 
