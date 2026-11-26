@@ -32,7 +32,7 @@ volumes:
 
 # Both proxies: the upstream iron-proxy image, on runc as a dedicated uid. The uid reads ca.key and the secret files through ACLs. See README.md#prerequisites.
 x-proxy: &proxy
-  image: docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+  image: docker.io/ironsh/iron-proxy:0.61.0@sha256:973b7adf44a12ded3b58cf67af35a80a8304d82bef0fb943e6467fe4f4020573
   # The entrypoint of the image is iron-proxy.
   command: ["-config", "/etc/iron-proxy/iron-proxy.yaml"]
   runtime: runc
@@ -77,7 +77,7 @@ services:
   # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
   builder:
     # The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image runs it as root and needs privileged.
-    image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
+    image: docker.io/moby/buildkit:v0.35.1-rootless@sha256:7d02292556e66feea6d2d89b7ec143503b57e4f59a4efc6b7ece8547e4d3e5be
     runtime: runsc-builder
     user: "1000:1000"
     cap_drop: [ALL]
