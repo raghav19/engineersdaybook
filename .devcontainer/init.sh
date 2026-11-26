@@ -55,10 +55,12 @@ if ! json=$(BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token "$
     fail "bws cannot read the secrets (step: token)"
 fi
 
-# Write one file for each token, with no newline: iron-proxy uses the exact content of the file. Let the proxy read each file.
+# Write one file for each token, and let the proxy read it.
 for name in "${names[@]}"; do
-    if ! jq -e -j --arg key "$name" '.[] | select(.key == $key) | .value' <<<"$json" >"$secrets/$name"; then
-        fail "Bitwarden has no secret $name"
-    fi
+    # The value of the secret with this key, or nothing if Bitwarden has no such secret.
+    value=$(jq -r --arg key "$name" '.[] | select(.key == $key) | .value' <<<"$json")
+    [ -n "$value" ] || fail "Bitwarden has no secret $name"
+    # No newline at the end: iron-proxy uses the exact content of the file.
+    printf '%s' "$value" >"$secrets/$name"
     setfacl -m "u:$proxy_uid:r" "$secrets/$name"
 done
