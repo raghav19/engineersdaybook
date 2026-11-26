@@ -13,7 +13,7 @@ A handoff is a record of one day. It can be out of date. For the sandbox as it r
 
 ## The list
 
-- **2026-11-26. The `.devcontainer/` sandbox: Decisions 11 to 25 and spike S1 to S2b (PRs #402 and #403 merged, Docker switch not built).** The agent reaches iron-proxy on a Docker internal network, with no socat. The proxies run hardened on runc as uid 10001. All run-time env is in `compose.yaml`. The owner uses only the devcontainer CLI. Spike S3 to S6 come before the Docker switch (PR 3).
+- **2026-11-26. The `.devcontainer/` sandbox: Decisions 11 to 30 and spike S1 to S6, all pass (PRs #402 and #403 merged, Docker switch in progress).** The agent reaches iron-proxy on a Docker internal network, with no socat. The proxies run hardened on runc as uid 10001. All run-time env is in `compose.yaml`. The owner uses only the devcontainer CLI. The Docker switch is PR 3.
   Path: [`docs/handoff/agent-sandbox-devcontainer-compose-2026-11-25.md`](handoff/agent-sandbox-devcontainer-compose-2026-11-25.md), section "Decisions of 2026-11-26". Research: [`docs/research/agent-sandbox-devcontainer-spike.md`](research/agent-sandbox-devcontainer-spike.md). Status: active.
 - **2026-11-25. Move the agent sandbox to `.devcontainer/` with rootful Docker, Compose and gVisor (spike done, design agreed, nothing built).** The owner wants one declarative spec. The spike showed that rootful Docker enforces limits under gVisor and that rootless Docker and Podman cannot.
   Path: [`docs/handoff/agent-sandbox-devcontainer-compose-2026-11-25.md`](handoff/agent-sandbox-devcontainer-compose-2026-11-25.md). Research: [`docs/research/agent-sandbox-manifest-spec.md`](research/agent-sandbox-manifest-spec.md). Status: continued by the entry above in the same document.
