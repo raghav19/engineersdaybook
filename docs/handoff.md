@@ -2,7 +2,7 @@
 
 A handoff document lets a fresh session continue a piece of work without the old conversation. This file is the index. Newest first.
 
-A handoff is a record of one day. It can be out of date. For the sandbox as it runs now, read `.sandbox/README.md` first. The sandbox is rootless Podman with gVisor, as Quadlet units, with a host proxy and a BuildKit builder. The `krun` microVM design and the Valkey build queue are not current.
+A handoff is a record of one day. It can be out of date. For the sandbox as it runs now, read `.devcontainer/README.md` first. The sandbox is rootless Podman with gVisor, as Quadlet units, with a host proxy and a BuildKit builder. The `krun` microVM design and the Valkey build queue are not current.
 
 ## How to add one
 

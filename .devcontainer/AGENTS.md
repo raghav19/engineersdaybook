@@ -1,6 +1,6 @@
 # Sandbox image
 
-Guidance for agents working on `.sandbox/agent/image/`.
+Guidance for agents working on `.devcontainer/agent/image/`.
 
 ## Tool/completion coupling
 

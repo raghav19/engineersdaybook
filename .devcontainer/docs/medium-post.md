@@ -105,7 +105,7 @@ The sandbox limits the damage. It does not make the agent safe. These risks stay
 
 ### Try it
 
-The code and the README are in my repo: [engineersdaybook/.sandbox](https://github.com/raghav19/engineersdaybook/tree/main/.sandbox).
+The code and the README are in my repo: [engineersdaybook/.devcontainer](https://github.com/raghav19/engineersdaybook/tree/main/.devcontainer).
 
 This is a personal setup. It assumes `ghcr.io` and Bitwarden Secrets Manager. The README lists what to change for another registry or secret manager.
 
