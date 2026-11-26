@@ -1,6 +1,5 @@
+# The recipes of the repo: the agent skills. The sandbox needs no recipe: see .devcontainer/README.md.
 # Part 3 has its own justfiles under code/mcp-sandbox/part-3-mcp-guardrails/; they do not fall back to this one.
-#
-#   devcontainer up --workspace-folder .   start the sandbox. See .devcontainer/README.md
 
 set quiet
 
