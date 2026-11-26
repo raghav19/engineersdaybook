@@ -352,6 +352,12 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
    chmod 0400 "$f"
    ```
 
+6. **ghcr.io.** Log in once with a GitHub token that has `read:packages` and `write:packages`. `devcontainer up` pulls the private agent image, and `just sandbox publish` pushes it. A push or a pull without the login fails with `unauthorized`.
+
+   ```shell
+   docker login ghcr.io -u <github-user>
+   ```
+
 ## Quick start
 
 Run these commands in your main checkout. `init.sh` runs first: it checks the prerequisites, gives a new proxy its token and opens the host bridge.
