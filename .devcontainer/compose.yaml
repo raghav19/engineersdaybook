@@ -2,15 +2,20 @@
 # devcontainer.json starts it. Compose keys: https://docs.docker.com/reference/compose-file/
 name: sandbox
 
-# internal: no route out of the subnet. inhibit_ipv4: the host gets no address on the bridge, so the agent cannot reach it.
-# The proxy IPs are fixed, because gVisor cannot use the DNS of Docker.
+# Docker sends no traffic to a proxy. A tool reaches a proxy only through HTTP(S)_PROXY. Any other connection gets "network unreachable".
+# We chose the subnets. 10.200.0.0/24 overlaps no range on this host: the LAN, the Docker pools (172.17-31, 192.168), Podman (10.88-89) and k3s (10.42-43).
 networks:
   sandbox:
+    # Blocks calls to the internet.
     internal: true
+    # Blocks calls to the host, for example to LocalSend.
     driver_opts:
       com.docker.network.bridge.inhibit_ipv4: "true"
+    # /29 has 8 addresses: .0 network, .1 gateway (reserved), .2 to .6 containers, .7 broadcast.
+    # Each ipv4_address below is one of .2 to .6. The IPs are fixed, because gVisor cannot use the DNS of Docker to find a proxy by name.
     ipam:
       config: [{ subnet: 10.200.0.0/29 }]
+  # The same settings as sandbox, with the next /29. The builder and the agent share no network.
   build:
     internal: true
     driver_opts:
@@ -22,6 +27,7 @@ volumes:
   # The clone, the logins and the Herdr sessions. `docker compose down` keeps it. Never add -v.
   sandbox-home:
     name: sandbox-home
+  # Holds the socket file of the builder. The agent sends its builds through it.
   buildkit-sock: {}
 
 # Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL that `just sandbox setup` sets.
@@ -42,7 +48,10 @@ x-proxy: &proxy
   # A proxy reads its token once. A restart outside `devcontainer up` has no token.
   restart: "no"
   tmpfs: ["/tmp:size=16m,mode=1777,noexec,nosuid,nodev"]
+  # The maximum number of processes and threads. A fork bomb stops at this limit and cannot use all PIDs of the host. A proxy runs sh, bws and iron-proxy.
   pids_limit: 256
+  # core: 0 turns off core dumps. A core dump is a copy of the memory of a crashed process, and the host saves it on its disk.
+  # The memory of a proxy holds the real tokens, so a core dump would put the tokens on the disk.
   ulimits: { core: 0 }
   environment:
     HOME: /tmp
@@ -60,24 +69,36 @@ services:
     <<: *proxy
     command: ["iron-proxy", "-config", "/etc/iron-proxy/iron-proxy.yaml"]
     mem_limit: 256m
+    # No swap. See the proxy service.
     memswap_limit: 256m
     volumes:
       - ./policy/builder.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
     networks:
       default: {}
+      # Must equal tunnel_listen in policy/builder.yaml, HTTPS_PROXY of the builder and proxies in agent/configs/tools/docker-config.json.
       build: { ipv4_address: 10.200.0.10 }
 
   # BuildKit for `docker build` in the agent. Any holder of the socket can run any build step, so the container is the wall.
   # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
   builder:
+    # The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image runs it as root and needs privileged.
     image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
     runtime: runsc-builder
     user: "1000:1000"
-    # rootlesskit needs these three for newuidmap. no-new-privileges stays off: with it, rootlesskit hangs.
     cap_drop: [ALL]
     cap_add: [SETUID, SETGID, SYS_CHROOT]
     restart: "no"
-    command: ["--addr", "unix:///run/user/1000/buildkit/buildkitd.sock", "--oci-worker-no-process-sandbox", "--oci-worker-snapshotter=native"]
+    command:
+      - --addr
+      - unix:///run/user/1000/buildkit/buildkitd.sock
+      # The process sandbox needs a new /proc for each step. Docker hides the sensitive /proc entries, and a new /proc would show them again, so the kernel refuses it.
+      # The hiding of Docker stays on, so this flag turns off the process sandbox.
+      # Trade-off: a RUN step can kill buildkitd, so the worst case is a failed build.
+      - --oci-worker-no-process-sandbox
+      # The snapshotter stores the image layers. native copies each layer in full.
+      # Trade-off: builds are slower, and the cache tmpfs fills faster.
+      # TODO: overlayfs passed a 2-step build under gVisor. Try it with a build of the agent image.
+      - --oci-worker-snapshotter=native
     # The cache is in memory and counts against mem_limit. A new container starts empty.
     tmpfs: ["/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g"]
     environment:
@@ -91,8 +112,10 @@ services:
       retries: 12
       start_period: 60s
     mem_limit: 2g
+    # No swap. See the proxy service.
     memswap_limit: 2g
     cpus: 2
+    # Higher than a proxy: RUN steps run in parallel.
     pids_limit: 1024
     # Trap: the image owns /run/user/1000 as uid 1000, so the empty volume gets that owner. Mounted elsewhere, buildkitd cannot make its socket.
     volumes:
@@ -114,6 +137,7 @@ services:
         export BWS_ACCESS_TOKEN="$$t" && unset t &&
         exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config /etc/iron-proxy/iron-proxy.yaml
     mem_limit: 512m
+    # Swap would put the real tokens on the disk. A memswap_limit equal to mem_limit turns off swap.
     memswap_limit: 512m
     volumes:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
@@ -126,6 +150,7 @@ services:
         bind: { create_host_path: false }
     networks:
       default: {}
+      # The only container on both networks. Must equal tunnel_listen in policy/agent.yaml and HTTPS_PROXY of the agent.
       sandbox: { ipv4_address: 10.200.0.2 }
 
   agent:
@@ -140,10 +165,11 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     init: true
-    # memswap equal to mem: no swap. gVisor counts host threads, so pids stays high.
     mem_limit: 3g
+    # No swap. See the proxy service.
     memswap_limit: 3g
     cpus: 4
+    # The PID limit also counts the threads of the gVisor kernel on the host, so it is higher than the agent processes need.
     pids_limit: 2048
     # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
     tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
