@@ -1,0 +1,15 @@
+// The build config of the agent image. devcontainer build writes the lifecycle hooks below into the image label, and devcontainer up merges them.
+// Build and push: README.md#update-the-agent-image. Spec: https://containers.dev/implementors/json_reference/
+{
+  "name": "sandbox-agent-image",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    // Reads the layer cache in ghcr.io. The publish command in the README writes it with --cache-to.
+    "cacheFrom": "ghcr.io/raghav19/engineersdaybook/sandbox-dev:cache"
+  },
+  // Runs once in each new container: the home and the clone. Script: lifecycle/on-create.sh
+  "onCreateCommand": "sandbox-on-create",
+  // Runs after each start: the shell setup, the completions and the ready file for the healthcheck. Script: lifecycle/post-start.sh
+  "postStartCommand": "sandbox-post-start"
+}

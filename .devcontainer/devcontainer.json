@@ -12,9 +12,6 @@
   // Keep the command of compose.yaml. The default runs the CMD of the image (bash), which exits without a TTY.
   "overrideCommand": false,
   // Runs on the host, in the repo root: it checks the one-time setup, then gives a new proxy its token.
-  "initializeCommand": ".devcontainer/init.sh",
-  // Runs once in each new container: the home and the clone. Script: agent/lifecycle/on-create.sh
-  "onCreateCommand": "sandbox-on-create",
-  // Runs after each start: the shell setup, the completions and the ready file for the healthcheck. Script: agent/lifecycle/post-start.sh
-  "postStartCommand": "sandbox-post-start"
+  "initializeCommand": ".devcontainer/init.sh"
+  // The agent image brings onCreateCommand and postStartCommand in its label (agent/devcontainer.json). A hook here would run twice.
 }

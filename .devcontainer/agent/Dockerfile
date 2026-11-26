@@ -116,7 +116,7 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 USER root
-# The image has no command. ../compose.yaml sets it. ../devcontainer.json runs the two lifecycle scripts.
+# The image has no command. ../compose.yaml sets it. devcontainer.json in this folder names the two lifecycle scripts as hooks.
 COPY --chmod=0755 lifecycle/on-create.sh /usr/local/bin/sandbox-on-create
 COPY --chmod=0755 lifecycle/post-start.sh /usr/local/bin/sandbox-post-start
 

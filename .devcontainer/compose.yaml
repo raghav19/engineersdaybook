@@ -157,7 +157,7 @@ services:
 
   agent:
     # The tag is the git tree sha of agent/, and the digest pins the content. Update: README.md#update-the-agent-image
-    image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:9e3558ed4f45ca7eed492fab183746170485fba3
+    image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:97a22d03cd2b99e6ab7e8cb792cdd826df20e77b
     runtime: runsc-uds
     user: agent
     working_dir: /home/agent
