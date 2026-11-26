@@ -96,7 +96,7 @@ services:
       - --addr
       - unix:///run/user/1000/buildkit/buildkitd.sock
       # The process sandbox needs a new /proc for each step. Docker hides the sensitive /proc entries, and a new /proc would show them again, so the kernel refuses it.
-      # We keep the hiding and turn off the process sandbox.
+      # The hiding of Docker stays on, so this flag turns off the process sandbox.
       # Trade-off: a RUN step can kill buildkitd, so the worst case is a failed build.
       - --oci-worker-no-process-sandbox
       # The snapshotter stores the image layers. native copies each layer in full.
