@@ -51,7 +51,7 @@ RUN git clone $TE_REPO /home/agent/token-economizer \
 FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends binutils socat \
+ && apt-get install -y --no-install-recommends binutils \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
@@ -87,9 +87,10 @@ COPY tasks.toml /etc/mise/conf.d/tasks.toml
 RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:herdr-plugins && mise run sandbox:shell && rm -rf /tmp/mise-cache
 
 USER root
-# The image has no command. ../compose.yaml sets it, and ../devcontainer.json runs the task sandbox:start after each start.
+# The image has no command. ../compose.yaml sets it, and ../devcontainer.json runs sandbox-on-create in each new container.
+COPY --chmod=0755 on-create.sh /usr/local/bin/sandbox-on-create
 
-# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. The task sandbox:start copies it at each start.
+# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-on-create copies it into the volume.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \
