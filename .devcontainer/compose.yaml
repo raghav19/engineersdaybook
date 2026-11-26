@@ -175,7 +175,7 @@ services:
     pids_limit: 2048
     # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
     tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
-    # Healthy after the task sandbox:start (agent/tasks.toml) writes the file.
+    # Healthy after post-start.sh writes the file.
     healthcheck:
       test: ["CMD", "test", "-e", "/tmp/sandbox-ready"]
       interval: 5s
@@ -233,8 +233,6 @@ services:
       CHECKPOINT_DISABLE: "1"
       # catppuccin-mocha or tokyo-night (agent/configs/tools/k9s-skin-*.yaml)
       K9S_SKIN: catppuccin-mocha
-      # dev: the sandbox has no browser. Plannotator prints the URL, and you open it on the host.
-      PLANNOTATOR_BROWSER: none
       # agents
       CLAUDE_CONFIG_DIR: /home/agent/.claude
       DISABLE_UPDATES: "1"
@@ -256,8 +254,11 @@ services:
         target: /run/sandbox/buildkit
         read_only: true
         volume: { subpath: buildkit }
-      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. sandbox:start clones it once.
+      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. on-create.sh clones it once.
       - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
+      # The lifecycle scripts of devcontainer.json, read-only. An edit applies at the next down and up, with no image build.
+      - ./on-create.sh:/opt/sandbox/on-create.sh:ro
+      - ./post-start.sh:/opt/sandbox/post-start.sh:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
