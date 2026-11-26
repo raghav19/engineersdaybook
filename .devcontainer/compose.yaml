@@ -130,7 +130,7 @@ services:
       sandbox: { ipv4_address: 10.200.0.2 }
 
   agent:
-    # `just sandbox publish` builds agent/ at a clean commit, pushes this tag and writes the tag and the digest here.
+    # The tag is the git tree sha of agent/. `just sandbox publish` pushes the image and writes the tag and the digest here.
     image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:PUBLISH_ME
     runtime: runsc-uds
     user: agent

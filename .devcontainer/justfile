@@ -29,7 +29,8 @@ systemd_creds  := require("systemd-creds")
 # --- Names and paths ---
 compose := 'docker compose -p sandbox -f compose.yaml'
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
-commit := shell(git + ' rev-parse HEAD')
+# The git tree sha of agent/ at HEAD. It changes only with the content of agent/, and a squash merge keeps it.
+tag := shell(git + ' rev-parse HEAD:.devcontainer/agent')
 repo := parent_directory(source_directory())
 # The Bitwarden access token of the proxy, encrypted. `setup` makes it.
 credential := config_directory() / 'credstore.encrypted/bws-token'
@@ -150,22 +151,22 @@ bridge: bridge-stop
 bridge-stop:
     systemctl --user stop 'sandbox-bridge-*.service' 2>/dev/null || true
 
-# Build agent/ at the current commit, push it to ghcr.io as :<commit>, and write the tag and the digest into compose.yaml. Commit compose.yaml after it.
+# Build agent/, push it to ghcr.io as :<tree sha of agent/>, and write the tag and the digest into compose.yaml. Commit compose.yaml after it.
 # Flags go to docker build: `just sandbox publish --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 publish *args:
-    # The tag names a commit, so agent/ must equal that commit.
+    # The tag names the committed agent/, so the folder must have no uncommitted change.
     test -z "$(git status --porcelain -- agent)" || { echo 'publish: commit the changes in agent/ first' >&2; exit 1; }
     # GITHUB_TOKEN (write:packages) comes from Bitwarden. The && stops the recipe if systemd-creds fails.
     # bws run joins its arguments into one string for a shell. Do not add sh -c: the shell then loses the quotes.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
         BWS_ACCESS_TOKEN="$token" \
         '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | docker login ghcr.io -u raghav19 --password-stdin'
-    docker build agent -t {{ registry }}:{{ commit }} {{ args }}
-    docker push {{ registry }}:{{ commit }}
+    docker build agent -t {{ registry }}:{{ tag }} {{ args }}
+    docker push {{ registry }}:{{ tag }}
     # If the push fails, the login stays until you run: docker logout ghcr.io
     docker logout ghcr.io
-    # The digest pins the content: a second publish of one commit pushes a new digest under the same tag.
-    digest=$(docker image inspect --format '{{{{join .RepoDigests "\n"}}' '{{ registry }}:{{ commit }}' | sed -n 's|^{{ registry }}@||p') && \
+    # The digest pins the content: a second publish of one tree (for example with --no-cache) pushes a new digest under the same tag.
+    digest=$(docker image inspect --format '{{{{join .RepoDigests "\n"}}' '{{ registry }}:{{ tag }}' | sed -n 's|^{{ registry }}@||p') && \
         test -n "$digest" && \
-        sed -i "s|^\(    image: {{ registry }}\):.*|\1:{{ commit }}@$digest|" compose.yaml
-    echo 'publish: compose.yaml now uses {{ registry }}:{{ commit }}. Commit it.'
+        sed -i "s|^\(    image: {{ registry }}\):.*|\1:{{ tag }}@$digest|" compose.yaml
+    echo 'publish: compose.yaml now uses {{ registry }}:{{ tag }}. Commit it.'
