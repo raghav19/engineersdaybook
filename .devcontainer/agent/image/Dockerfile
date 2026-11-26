@@ -74,9 +74,6 @@ USER agent
 COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
 # omarchy-terminal takes its colors from the terminal. See AGENTS.md (Fresh theme).
 COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json
-# The mise task fresh:plugins runs fresh-plugins.sh. It installs each package of fresh-plugins.yaml at its pinned commit.
-COPY --chown=agent:agent configs/editor/fresh-plugins.yaml /home/agent/.config/fresh/fresh-plugins.yaml
-COPY --chmod=0755 configs/editor/fresh-plugins.sh /usr/local/share/sandbox/fresh-plugins.sh
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
@@ -87,15 +84,14 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
-# Keep mise.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
-COPY mise.toml /etc/mise/conf.d/mise.toml
+# Keep tasks.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
+COPY tasks.toml /etc/mise/conf.d/tasks.toml
 RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:herdr-plugins && mise run sandbox:shell && rm -rf /tmp/mise-cache
 
 USER root
-COPY --chmod=0755 sandbox-start /usr/local/bin/sandbox-start
-# The image has no command. sandbox-agent.container sets the command, starts the relay and runs sandbox-start.
+# The image has no command. sandbox-agent.container sets the command, starts the relay and runs the task sandbox:start.
 
-# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-start copies it at each start.
+# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. The task sandbox:start copies it at each start.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \

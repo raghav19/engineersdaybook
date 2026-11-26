@@ -22,8 +22,8 @@ User=agent
 WorkingDir=/home/agent
 Exec=sleep infinity
 RunInit=true
-# Healthy after sandbox-start writes /tmp/sandbox-ready. A failed check in the first 180 s does not count.
-# Exec only keeps the container alive. ExecStartPost starts the relay and runs sandbox-start.
+# Healthy after the task sandbox:start writes /tmp/sandbox-ready. A failed check in the first 180 s does not count.
+# Exec only keeps the container alive. ExecStartPost starts the relay and runs the task sandbox:start.
 HealthCmd=test -e /tmp/sandbox-ready
 HealthInterval=5s
 HealthTimeout=3s
@@ -90,6 +90,6 @@ CPUQuota=400%
 ExecStartPost=/bin/sh -c 'pid=$(podman inspect -f "{{.State.Pid}}" sandbox-agent) && podman unshare nsenter --net=/proc/$pid/ns/net ip link set lo up'
 # 2. The relay on 127.0.0.1:3128 copies the bytes to the socket of the host proxy.
 ExecStartPost=/usr/bin/podman exec -d sandbox-agent socat TCP-LISTEN:3128,bind=127.0.0.1,fork,reuseaddr UNIX-CONNECT:/run/sandbox/proxy/proxy.sock
-# 3. sandbox-start prepares the home and the clone, and installs the plugins. The first start is slow, so the timeout is high.
-ExecStartPost=/usr/bin/podman exec sandbox-agent sandbox-start
+# 3. The task sandbox:start (agent/image/tasks.toml) prepares the home and the clone, and installs the plugins. The first start is slow, so the timeout is high.
+ExecStartPost=/usr/bin/podman exec sandbox-agent mise run sandbox:start
 TimeoutStartSec=300
