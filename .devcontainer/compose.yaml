@@ -51,6 +51,7 @@ x-proxy: &proxy
   tmpfs: ["/tmp:size=16m,mode=1777,noexec,nosuid,nodev"]
   # The maximum number of processes and threads. A fork bomb stops at this limit and cannot use all PIDs of the host. A proxy runs sh, bws and iron-proxy.
   pids_limit: 256
+  # No core dump. On a crash, the host (systemd-coredump) stores the memory of the process on disk, and the memory of a proxy holds the real tokens.
   ulimits: { core: 0 }
   environment:
     HOME: /tmp
