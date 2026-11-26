@@ -38,7 +38,8 @@ x-proxy: &proxy
       FROM docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
       COPY --from=bws /bin/bws /usr/local/bin/bws
       ENTRYPOINT []
-  image: localhost/sandbox-proxy:latest
+  # The tag names the two pinned versions above. Change it with each bump.
+  image: localhost/sandbox-proxy:iron-proxy-0.56.0-bws-2.1.0
   runtime: runc
   user: "10001:10001"
   read_only: true
@@ -155,8 +156,8 @@ services:
       sandbox: { ipv4_address: 10.200.0.2 }
 
   agent:
-    build: ./agent
-    image: localhost/sandbox-dev:latest
+    # .env sets it: `just sandbox publish` writes the tag (the git tree sha of agent/) and the digest.
+    image: ${AGENT_IMAGE:?run just sandbox build and just sandbox publish}
     runtime: runsc-uds
     user: agent
     working_dir: /home/agent
