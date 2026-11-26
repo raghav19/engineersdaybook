@@ -389,17 +389,19 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 ## Update the agent image
 
-The tag of the agent image is the git tree sha of `agent/`, so commit your change of `agent/` first. The build reads and writes a layer cache in `ghcr.io`, so it rebuilds only the changed stages.
+`agent/devcontainer.json` is the build config of the agent image. `devcontainer build` writes its lifecycle hooks into the image label, and `devcontainer up` runs them. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
 
 ```shell
 tag=$(git rev-parse HEAD:.devcontainer/agent)
 img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
-docker buildx build .devcontainer/agent -t "$img:$tag" --push \
-  --cache-from "type=registry,ref=$img:cache" --cache-to "type=registry,ref=$img:cache,mode=max"
+devcontainer build --workspace-folder . --config .devcontainer/agent/devcontainer.json --image-name "$img:$tag" \
+  --push --cache-to "type=registry,ref=$img:cache,mode=max"
 docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}'
 ```
 
-The last command prints the pinned reference. Put it in the `image` line of the service `agent` in `compose.yaml`, commit it, then apply it with `docker compose -p sandbox down && devcontainer up --workspace-folder .`. To test an image before the push, leave out `--push` and the cache flags, and add `--load`.
+The last command prints the pinned reference. Put it in the `image` line of the service `agent` in `compose.yaml`, commit it, then apply it with `docker compose -p sandbox down && devcontainer up --workspace-folder .`.
+
+To test an image before the push, run the build without `--push` and `--cache-to`. `devcontainer up` uses the local image of that tag.
 
 ## Token usage
 
