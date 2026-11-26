@@ -382,7 +382,8 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 | `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
 | `just sandbox apply` | Applies an edit of `compose.yaml`, `devcontainer.json`, a policy or the image: down, then up. |
 | `just sandbox down` | Stops the four containers and closes the bridge. The volume `sandbox-home` stays. |
-| `just sandbox publish` | Builds the agent sandbox image and pushes it to `ghcr.io`. `--no-cache` updates the pinned tools. |
+| `just sandbox build` | Builds the agent sandbox image from the committed `agent/`. `--no-cache` updates the pinned tools. |
+| `just sandbox publish` | Pushes the built image to `ghcr.io` and writes its tag and digest into `.env`. Commit `.env` after. |
 | `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
 | `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |

@@ -5,7 +5,8 @@
 #   devcontainer exec --workspace-folder . herdr    open Herdr in the agent sandbox.
 #   just sandbox apply     apply an edit of a file in this folder: down, then up.
 #   just sandbox down      stop and remove the containers and the bridge. The volume sandbox-home stays.
-#   just sandbox publish   build the agent image, push it to ghcr.io and pin it in compose.yaml.
+#   just sandbox build     build the agent image.
+#   just sandbox publish   push it to ghcr.io and pin it in .env.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
@@ -74,10 +75,14 @@ bridge: bridge-stop
 bridge-stop:
     systemctl --user stop 'sandbox-bridge-*.service' 2>/dev/null || true
 
-# Build agent/, push it to ghcr.io, then pin its digest in compose.yaml. Commit agent/ first, and compose.yaml after. Needs `docker login ghcr.io`.
-# Flags go to docker build: `just sandbox publish --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
-publish *args:
+# Flags go to docker build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
+# Test it with: AGENT_IMAGE=<image> devcontainer up --workspace-folder ..
+# Build the agent image from the committed agent/. Commit agent/ first.
+build *args:
     docker build agent -t {{ image }} {{ args }}
+
+# Push the built image to ghcr.io and write its tag and digest into .env. Commit .env after. Needs `docker login ghcr.io`.
+publish:
     docker push {{ image }}
     ref=$(docker image inspect -f '{{{{index .RepoDigests 0}}' {{ image }}) && \
-        sed -i "s|image: {{ registry }}:.*|image: {{ image }}@${ref#*@}|" compose.yaml
+        echo "AGENT_IMAGE={{ image }}@${ref#*@}" > .env
