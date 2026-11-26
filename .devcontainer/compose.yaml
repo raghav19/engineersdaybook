@@ -203,15 +203,13 @@ services:
       GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
       NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-certificates.crt
       NODE_OPTIONS: --use-system-ca
-      # wiring: the home, the clone and the bridge
+      # wiring: the home and the clone
       HOME: /home/agent
       TMPDIR: /tmp
       SANDBOX_WORKSPACE: /home/agent/engineersdaybook
       REPO_URL: https://github.com/raghav19/engineersdaybook
       MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook
       MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml
-      # Each Plannotator review binds the first free port of this range. `just sandbox bridge` opens the same range on the host.
-      PLANNOTATOR_PORT: 19432-19436
       # base
       EDITOR: fresh
       COLORTERM: truecolor
