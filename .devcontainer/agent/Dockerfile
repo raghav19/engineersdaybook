@@ -69,8 +69,9 @@ ADD --chown=agent:agent https://github.com/sinelaw/fresh-plugins.git#3f327361b8b
 ADD --chown=agent:agent https://github.com/2fd/dotfiles-fresh-language.git#2b8c0e58721001dba0b7f9bf7608ee8b52e04261 /home/agent/.config/fresh/languages/packages/dotfiles-fresh-language
 
 # The Claude Code plugins: ponytail v5.3.2 and TokenEconomizer from stage9. Only ~/.claude/plugins stays: managed-settings.json enables them, and the rest of ~/.claude is the state of the agent.
-RUN export CLAUDE_CONFIG_DIR=/home/agent/.claude \
- && claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin install ponytail@ponytail \
+# The same folder as CLAUDE_CONFIG_DIR in ../compose.yaml, so the paths in installed_plugins.json stay valid. This stage only.
+ENV CLAUDE_CONFIG_DIR=/home/agent/.claude
+RUN claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin install ponytail@ponytail \
  && claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
  && find "$CLAUDE_CONFIG_DIR" -mindepth 1 -maxdepth 1 ! -name plugins -exec rm -rf {} +
 
