@@ -156,8 +156,8 @@ services:
       sandbox: { ipv4_address: 10.200.0.2 }
 
   agent:
-    # .env sets it: `just sandbox publish` writes the tag (the git tree sha of agent/) and the digest.
-    image: ${AGENT_IMAGE:?run just sandbox build and just sandbox publish}
+    # The tag is the git tree sha of agent/, and the digest pins the content. Update: README.md#update-the-agent-image
+    image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:9e3558ed4f45ca7eed492fab183746170485fba3
     runtime: runsc-uds
     user: agent
     working_dir: /home/agent
@@ -175,7 +175,7 @@ services:
     pids_limit: 2048
     # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
     tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
-    # Healthy after post-start.sh writes the file.
+    # Healthy after agent/lifecycle/post-start.sh writes the file.
     healthcheck:
       test: ["CMD", "test", "-e", "/tmp/sandbox-ready"]
       interval: 5s
@@ -254,11 +254,8 @@ services:
         target: /run/sandbox/buildkit
         read_only: true
         volume: { subpath: buildkit }
-      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. on-create.sh clones it once.
+      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. agent/lifecycle/on-create.sh clones it once.
       - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
-      # The lifecycle scripts of devcontainer.json, read-only. An edit applies at the next down and up, with no image build.
-      - ./on-create.sh:/opt/sandbox/on-create.sh:ro
-      - ./post-start.sh:/opt/sandbox/post-start.sh:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }

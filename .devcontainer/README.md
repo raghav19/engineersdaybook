@@ -313,7 +313,7 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
 
 1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
 
-2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `just`, `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum.
+2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `jq`, the devcontainer CLI and gVisor at a pinned version with a checksum.
    `init.sh` also needs `setfacl`. On Arch, it is in the package `acl`.
 
 3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
@@ -352,7 +352,7 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
    chmod 0400 "$f"
    ```
 
-6. **ghcr.io.** Log in once with a GitHub token that has `read:packages` and `write:packages`. `devcontainer up` pulls the private agent image, and `just sandbox publish` pushes it. A push or a pull without the login fails with `unauthorized`.
+6. **ghcr.io.** Log in once with a GitHub token that has `read:packages` and `write:packages`. `devcontainer up` pulls the private agent image, and the [image update](#update-the-agent-image) pushes it. A push or a pull without the login fails with `unauthorized`.
 
    ```shell
    docker login ghcr.io -u <github-user>
@@ -382,12 +382,24 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 | `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
 | `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new token. |
 | `docker compose -p sandbox down` | Removes the four containers and the networks. The volume `sandbox-home` stays. Never add `-v`: it removes the clone and the logins. |
-| `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json`, a policy or `.env`. `devcontainer up` alone keeps the old containers. |
-| `just sandbox build` | Builds the agent sandbox image from the committed `agent/`. `--no-cache` updates the pinned tools. |
-| `just sandbox publish` | Pushes the built image to `ghcr.io` and writes its tag and digest into `.env`. Commit `.env` after. |
+| `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json` or a policy. `devcontainer up` alone keeps the old containers. |
 | `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
 | `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |
+
+## Update the agent image
+
+The tag of the agent image is the git tree sha of `agent/`, so commit your change of `agent/` first. The build reads and writes a layer cache in `ghcr.io`, so it rebuilds only the changed stages.
+
+```shell
+tag=$(git rev-parse HEAD:.devcontainer/agent)
+img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
+docker buildx build .devcontainer/agent -t "$img:$tag" --push \
+  --cache-from "type=registry,ref=$img:cache" --cache-to "type=registry,ref=$img:cache,mode=max"
+docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}'
+```
+
+The last command prints the pinned reference. Put it in the `image` line of the service `agent` in `compose.yaml`, commit it, then apply it with `docker compose -p sandbox down && devcontainer up --workspace-folder .`. To test an image before the push, leave out `--push` and the cache flags, and add `--load`.
 
 ## Token usage
 
