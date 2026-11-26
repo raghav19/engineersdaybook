@@ -93,7 +93,6 @@ services:
     command:
       - --addr
       - unix:///run/user/1000/buildkit/buildkitd.sock
-      # This flag turns off the process sandbox. The process sandbox gives each RUN step its own PID namespace, so the step sees only its own processes.
       # The process sandbox needs a new /proc for each step. Docker hides the sensitive /proc entries, and a new /proc would show them again, so the kernel refuses it.
       # We keep the hiding and turn off the process sandbox.
       # Trade-off: a RUN step can kill buildkitd, so the worst case is a failed build.
