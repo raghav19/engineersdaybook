@@ -16,6 +16,10 @@ k9s = "0.51"
 "github:dgunzy/flux9s" = { version = "1.5", asset_pattern = "flux9s-linux-x86_64-gnu.tar.gz" }
 qwen-code = "0.28"  # Qwen Code, the command qwen. It runs on node, which the host provides
 
+[env]
+# Compose 5.6 builds with buildx bake, which refuses the Dockerfile that `devcontainer build` writes to /tmp. The sandbox ignores this file.
+BUILDX_BAKE_ENTITLEMENTS_FS = "0"
+
 [hooks.enter]
 shell = "bash"
 script = """

@@ -1,57 +1,61 @@
-# The Podman sandbox for Claude Code, Qwen Code and the Fresh editor. ../justfile loads this file as `mod sandbox`. Recipes run in this folder.
-# Flows: README.md#setup-flow, #run-flow, #image-build-flow. Manual: https://just.systems/man/en/
+# The host recipes of the agent sandbox. ../justfile loads this file as `mod sandbox`. Recipes run in this folder.
+# Flows: README.md#setup-flow, #run-flow. Manual: https://just.systems/man/en/
 #
-#   just sandbox setup   make the CA and the credential. Link the container units, the gVisor flags, the host bridge and the repo. Run it again after you edit a file in agent/ or builder/.
-#   just sandbox run     restart the container and open Herdr in it. The volume keeps the clone and the logins.
-#   just sandbox rm      stop and remove the container, the builder and both proxies. The volume stays.
-#   just sandbox build   build the four images, tag the agent sandbox image with the commit and push it to ghcr.io. Extra flags go to podman build.
-#
-# After you edit agent/sandbox-agent.container or build the image, run `just sandbox run`. It makes a new container.
+#   just sandbox setup     once: the CA, the credential, the ACL, the repo link. It also removes the old Podman units.
+#   devcontainer up --workspace-folder .    from the repo root: build if needed, then start. It runs pre-up first.
+#   devcontainer exec --workspace-folder . herdr    open Herdr in the agent sandbox.
+#   just sandbox apply     apply an edit of a file in this folder: down, then up.
+#   just sandbox down      stop and remove the containers and the bridge. The volume sandbox-home stays.
+#   just sandbox publish   build the agent image and push it to ghcr.io.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
+# Compose 5.6 builds with buildx bake, which refuses the Dockerfile that the devcontainer CLI writes to /tmp. The root mise.toml sets the same value.
+export BUILDX_BAKE_ENTITLEMENTS_FS := '0'
+
 # --- Required tools ---
-# If a tool is missing, just stops with a message before any recipe runs. bws comes from mise.toml. Run `mise install`. socat is for the host bridge.
+# If a tool is missing, just stops with a message before any recipe runs. bws and jq come from the root mise.toml.
 bws            := require("bws")
+devcontainer   := require("devcontainer")
+docker         := require("docker")
 git            := require("git")
+jq             := require("jq")
 openssl        := require("openssl")
-podman         := require("podman")
-runsc          := require("runsc")
+setfacl        := require("setfacl")
 socat          := require("socat")
 systemd_creds  := require("systemd-creds")
 
 # --- Names and paths ---
+compose := 'docker compose -p sandbox -f compose.yaml'
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
 commit := shell(git + ' rev-parse HEAD')
-# The Bitwarden access token of the proxy. `setup` makes it.
+repo := parent_directory(source_directory())
+# The Bitwarden access token of the proxy, encrypted. `setup` makes it.
 credential := config_directory() / 'credstore.encrypted/bws-token'
-
-# Must equal a Volume line of agent/sandbox-agent.container.
-SANDBOX_CA := home_directory() / '.local/state/sandbox/ca.crt'
-# `setup` links it to ~/.config/sandbox/repo.git, and the unit mounts that link.
+# Must equal the secrets mount of the proxy in compose.yaml.
+secrets := env('XDG_RUNTIME_DIR') / 'sandbox-secrets'
+# Must equal the uid of x-proxy in compose.yaml.
+proxy_uid := '10001'
+# The container of the service agent: project sandbox, first replica.
+agent := 'sandbox-agent-1'
 git_dir := shell(git + ' rev-parse --path-format=absolute --git-common-dir')
-
-# Stops with a message if a file is missing. Example: `build: (_needs credential)`.
-_needs file:
-    {{ assert(path_exists(file) == 'true', 'sandbox: missing ' + file + '. Run: just sandbox setup') }}
 
 # List the recipes (the default)
 [default]
 help:
     just --list --unsorted
 
-# Run it in your main checkout, because the links of the units point to the files in this folder.
+# Run it in your main checkout: repo.git links to the .git folder of this checkout.
 # It asks for the access token of a Bitwarden machine account. See README.md#prerequisites.
-# Make the CA and the credential. Link the units. Run it again after you edit a file in agent/ or builder/.
+# Make the CA, the credential, the ACL and the repo link. Check the gVisor runtimes. Remove the old Podman units.
 [script('bash')]
 setup:
     set -euo pipefail
-    src='{{ source_directory() }}'
     state="$HOME/.local/state/sandbox"
     mkdir -p "$state" "$HOME/.config/sandbox"
 
-    # iron-proxy ends the TLS of each HTTPS call with this CA. The sandbox gets ca.crt only. An old CA stays.
+    # iron-proxy ends the TLS of each HTTPS call with this CA. The agent gets ca.crt only. An old CA stays.
     if [ ! -f "$state/ca.crt" ] || [ ! -f "$state/ca.key" ]; then
         openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
             -subj '/CN=sandbox egress proxy CA' \
@@ -61,9 +65,8 @@ setup:
         chmod 0600 "$state/ca.key"
         chmod 0644 "$state/ca.crt"
     fi
-
-    ln -sf "$src/agent/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy.yaml"
-    ln -sf "$src/builder/proxy/iron-proxy.yaml" "$HOME/.config/sandbox/iron-proxy-builder.yaml"
+    # The proxy runs as uid {{ proxy_uid }}. The ACL lets it read the key, and the mode stays 0600 for everyone else.
+    setfacl -m u:{{ proxy_uid }}:r "$state/ca.key"
 
     mkdir -p '{{ parent_directory(credential) }}'
     # Ask for the token only if the credential is missing or systemd-creds cannot read it. The pipe writes no plaintext file.
@@ -74,74 +77,87 @@ setup:
         chmod 0400 '{{ credential }}'
     fi
 
-    # Quadlet units and gVisor flags. The proxy links get a prefix, because both proxy folders use the same file names.
-    # repo.git points to this repo. The unit mounts it read-only, and the container clones it.
-    mkdir -p "$HOME/.config/containers/systemd" "$HOME/.config/containers/containers.conf.d"
-    ln -sf "$src/agent/sandbox-agent.container" "$HOME/.config/containers/systemd/sandbox-agent.container"
-    ln -sf "$src/agent/proxy/proxy.container" "$HOME/.config/containers/systemd/sandbox-proxy.container"
-    ln -sf "$src/builder/sandbox-builder.container" "$HOME/.config/containers/systemd/sandbox-builder.container"
-    ln -sf "$src/builder/proxy/proxy.container" "$HOME/.config/containers/systemd/sandbox-builder-proxy.container"
-    ln -sf "$src/agent/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-agent-runsc.conf"
-    ln -sf "$src/builder/runsc.conf" "$HOME/.config/containers/containers.conf.d/sandbox-builder-runsc.conf"
+    # compose.yaml mounts this link read-only, and sandbox:start clones it once.
     ln -sfn '{{ git_dir }}' "$HOME/.config/sandbox/repo.git"
 
-    # The host bridge opens each port of agent/ports on the host. See README.md#host-port-bridge-flow.
-    mkdir -p "$HOME/.config/systemd/user"
-    ln -sf "$src/agent/ports" "$HOME/.config/sandbox/ports"
-    ln -sf "$src/agent/bridge.sh" "$HOME/.config/sandbox/bridge.sh"
-    ln -sf "$src/agent/bridge.service" "$HOME/.config/systemd/user/sandbox-bridge.service"
+    # The agent and the builder need these runtimes in /etc/docker/daemon.json. See https://gvisor.dev/docs/user_guide/install/
+    missing=$(jq -r '[.runtimes // {} | keys[]] as $k | ["runsc-uds", "runsc-builder"] - $k | join(" ")' /etc/docker/daemon.json)
+    if [ -n "$missing" ]; then
+        echo "sandbox: /etc/docker/daemon.json misses the runtimes: $missing. Add them, then run: sudo systemctl restart docker" >&2
+        echo "  sudo jq '.runtimes += {\"runsc-uds\": {\"path\": \"/usr/local/bin/runsc\", \"runtimeArgs\": [\"--host-uds=open\"]}, \"runsc-builder\": {\"path\": \"/usr/local/bin/runsc\", \"runtimeArgs\": [\"--host-uds=all\"]}}' /etc/docker/daemon.json" >&2
+    fi
+
+    # The Podman sandbox ran as Quadlet units with these links. Remove a link only if it points into a sandbox folder of a checkout.
+    systemctl --user disable --now sandbox-bridge.service 2>/dev/null || true
+    for link in "$HOME"/.config/containers/systemd/sandbox-*.container \
+                "$HOME"/.config/containers/containers.conf.d/sandbox-*-runsc.conf \
+                "$HOME"/.config/systemd/user/sandbox-bridge.service \
+                "$HOME"/.config/sandbox/{iron-proxy.yaml,iron-proxy-builder.yaml,ports,bridge.sh}; do
+        if [ -L "$link" ] && [[ $(readlink "$link") == */.sandbox/* || $(readlink "$link") == */.devcontainer/* ]]; then
+            rm "$link" && echo "removed $link"
+        fi
+    done
     systemctl --user daemon-reload
-    systemctl --user enable sandbox-bridge.service
-    systemctl --user restart sandbox-bridge.service
-    echo 'Next, run just sandbox build. Then run just sandbox run.'
+    echo 'Next, from the repo root: devcontainer up --workspace-folder .'
 
-# Restart the container and open Herdr in it. The clone, the logins and the histories stay in the volume sandbox-home.
-# A process in the old container stops. Give a command to run it in place of Herdr: `just sandbox run claude --version`.
-run *command: (_needs SANDBOX_CA)
-    # restart also restarts the builder and both proxies. daemon-reload makes systemd read an edit of the unit.
-    systemctl --user daemon-reload
-    systemctl --user restart sandbox-agent.service
+# devcontainer.json runs it on the host before each `devcontainer up`.
+# Decrypt the bws token into RAM and start the bridge, only if the proxy is not running.
+[script('bash')]
+pre-up:
+    set -euo pipefail
+    if [ -n "$({{ compose }} ps -q --status running proxy 2>/dev/null)" ]; then
+        exit 0
+    fi
+    test -f '{{ credential }}' || { echo 'sandbox: missing {{ credential }}. Run: just sandbox setup' >&2; exit 1; }
+    # The proxy removes the file after it reads it. The ACL lets uid {{ proxy_uid }} read the file and remove it.
+    install -d -m 0700 '{{ secrets }}'
+    setfacl -m u:{{ proxy_uid }}:rwx '{{ secrets }}'
+    ( umask 077; systemd-creds --user decrypt --name=bws-token '{{ credential }}' - > '{{ secrets }}/bws-token' )
+    setfacl -m u:{{ proxy_uid }}:r '{{ secrets }}/bws-token'
+    just -f '{{ justfile() }}' bridge
 
-    # Wait for the healthcheck in sandbox-agent.container. If it fails after 180 s, see: podman logs sandbox-agent
-    # --foreground and </dev/null keep podman out of a background group. Without them, the kernel stops podman in a terminal.
-    # A stopped podman holds the lock of the container, so every podman command hangs.
-    timeout --foreground 180 sh -c 'until podman healthcheck run sandbox-agent >/dev/null 2>&1 </dev/null; do sleep 2; done' \
-        || { echo 'sandbox: the container is not healthy. See: podman logs sandbox-agent' >&2; exit 1; }
+# `devcontainer up` on stopped containers starts them as they were. down removes them, so up makes them from the new files.
+# Apply an edit of compose.yaml, devcontainer.json, a policy or the image: down, then up.
+apply: down
+    devcontainer up --workspace-folder '{{ repo }}'
 
-    podman exec -it \
-        -w /home/agent/engineersdaybook \
-        sandbox-agent \
-        {{ if command == '' { 'herdr' } else { command } }}
+# Stop and remove the containers and the bridge. The volume sandbox-home stays, so the clone and the logins stay.
+down: bridge-stop
+    {{ compose }} down
+    rm -rf '{{ secrets }}'
 
-# Stop and remove the container. The volume sandbox-home stays, so the clone and the logins stay.
-# The builder and both proxies stop too.
-rm:
-    systemctl --user stop sandbox-agent.service
+# The host starts each connection: one transient unit per port, and each connection runs socat in the agent. See README.md#host-port-bridge-flow
+# Open each agent port of PLANNOTATOR_PORT on 127.0.0.1 of the host. Run it again after a change: it stops the old units first.
+[script('bash')]
+bridge: bridge-stop
+    set -euo pipefail
+    spec=$({{ compose }} config --format json | jq -r '.services.agent.environment.PLANNOTATOR_PORT // empty')
+    [ -n "$spec" ] || { echo 'bridge: PLANNOTATOR_PORT is not set in compose.yaml' >&2; exit 1; }
+    # One port or a range like 19432-19436. A plain port gives first=last.
+    first=${spec%-*} last=${spec#*-}
+    if ! [[ $first =~ ^[0-9]+$ && $last =~ ^[0-9]+$ ]] || ((first < 1024 || last > 65535 || first > last || last - first >= 16)); then
+        echo "bridge: bad PLANNOTATOR_PORT '$spec'" >&2; exit 1
+    fi
+    for ((port = first; port <= last; port++)); do
+        # Trap: the colons inside EXEC need a backslash. max-children limits the connections to one port.
+        systemd-run --user --quiet --collect --unit "sandbox-bridge-$port" \
+            socat "TCP-LISTEN:$port,bind=127.0.0.1,reuseaddr,fork,max-children=8" \
+            "EXEC:docker exec -i {{ agent }} socat - TCP\\:127.0.0.1\\:$port"
+    done
+    echo "bridge: 127.0.0.1:$first-$last → {{ agent }}"
 
-# Build the image and push it to ghcr.io. Flags go to podman build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
-build *args: (_needs credential)
-    # Log in to ghcr.io. GITHUB_TOKEN (write:packages) comes from Bitwarden.
-    # The && stops the recipe if systemd-creds fails. A failed $(...) before a command does not.
+# Close the host ports of the bridge.
+bridge-stop:
+    systemctl --user stop 'sandbox-bridge-*.service' 2>/dev/null || true
+
+# Build the agent image, tag it with the commit and push it to ghcr.io. Flags go to docker build: `just sandbox publish --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
+publish *args:
+    # GITHUB_TOKEN (write:packages) comes from Bitwarden. The && stops the recipe if systemd-creds fails.
     # bws run joins its arguments into one string for a shell. Do not add sh -c: the shell then loses the quotes.
     token="$(systemd-creds --user decrypt --name=bws-token '{{ credential }}' -)" && \
         BWS_ACCESS_TOKEN="$token" \
-        '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | podman login ghcr.io -u raghav19 --password-stdin'
-
-    # --jobs 4 builds independent stages at the same time. A stage that did not change comes from the -cache image.
-    podman build agent/image \
-        -t localhost/sandbox-dev:latest \
-        -t {{ registry }}:{{ commit }} \
-        --jobs 4 \
-        --cache-from {{ registry }}-cache \
-        --cache-to {{ registry }}-cache \
-        {{ args }}
-
-    podman build builder/image -t localhost/sandbox-builder:latest
-
-    podman build agent/proxy -t localhost/sandbox-proxy:latest
-    podman build builder/proxy -t localhost/sandbox-builder-proxy:latest
-
-    podman push {{ registry }}:{{ commit }}
-
-    # Remove the login. If the build fails, the login stays until you run: podman logout ghcr.io
-    podman logout ghcr.io
+        '{{ bws }}' run -- 'printf %s "$GITHUB_TOKEN" | docker login ghcr.io -u raghav19 --password-stdin'
+    docker build agent -t localhost/sandbox-dev:latest -t {{ registry }}:{{ commit }} {{ args }}
+    docker push {{ registry }}:{{ commit }}
+    # If the push fails, the login stays until you run: docker logout ghcr.io
+    docker logout ghcr.io

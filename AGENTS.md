@@ -77,7 +77,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Issues and specs live as GitHub issues on `raghav19/engineersdaybook`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
-In the Podman sandbox (`.devcontainer/README.md`), `GH_TOKEN` is a placeholder that the host proxy replaces, so `git push` and the GitHub MCP tools work there as on the host. The sandbox has no `gh`.
+In the agent sandbox (`.devcontainer/README.md`), `GH_TOKEN` is a placeholder that the proxy replaces, so `git push` and the GitHub MCP tools work there as on the host. The sandbox has no `gh`.
 
 ### Triage labels
 
@@ -101,7 +101,7 @@ Before you commit, push, or create or update a pull request, read `docs/agents/p
 
 ## 8. Sandbox network
 
-The Podman sandbox has no network device. It reaches only the hosts listed in `.devcontainer/agent/proxy/iron-proxy.yaml` and `.devcontainer/builder/proxy/iron-proxy.yaml`. If a tool gets a `403` inside the sandbox, read `docs/agents/sandbox-network.md` in full.
+The agent sandbox sits on an internal Docker network, and its only way out is the proxy. It reaches only the hosts listed in `.devcontainer/policy/agent.yaml` and `.devcontainer/policy/builder.yaml`. If a tool gets a `403` inside the sandbox, read `docs/agents/sandbox-network.md` in full.
 
 ## 9. Diagrams
 
@@ -135,7 +135,7 @@ Always use git worktrees for agent work. Use Herdr's worktree commands to create
 
 ## 12. Sandbox image
 
-Before you add or remove tools or LSP servers in `.devcontainer/agent/image/`, read `.devcontainer/AGENTS.md` in full.
+Before you add or remove tools or LSP servers in `.devcontainer/agent/`, read `.devcontainer/AGENTS.md` in full.
 
 ## 13. Simplified Technical English
 

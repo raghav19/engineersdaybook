@@ -1,24 +1,7 @@
-# The system config of mise in the image: the env, the shell hook and the tasks. The tools are in tools/, one file for each group. See https://mise.jdx.dev/configuration.html
+# The system config of mise in the image: the shell hook and the tasks. The tools are in tools/, one file for each group. See https://mise.jdx.dev/configuration.html
 # mise reads this file and tools/ from /etc/mise/conf.d/. The mise of the host does not load them.
 # The root mise.toml is for the host only (kind, bws). If both sides use a tool (kubectl, helm, kustomize), both files list it.
-
-# EDITOR is in the Dockerfile ENV, so it applies outside a mise shell too.
-[env]
-LANG = "C.UTF-8"
-TF_PLUGIN_CACHE_DIR = "{{env.HOME}}/.cache/terraform-providers"
-CHECKPOINT_DISABLE = "1"  # Terraform does not check its version at checkpoint-api.hashicorp.com
-COMPLETIONS_DIR = "{{ get_env(name='COMPLETIONS_DIR', default=env.HOME ~ '/.local/share/bash-completion/completions') }}"  # the Dockerfile sets the same path at build time
-DO_NOT_TRACK = "1"
-DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1"  # marksman (the Markdown language server) runs on .NET. The image has no ICU library, and this setting lets .NET start without it
-HF_HUB_OFFLINE = "1"
-# Under gVisor, Herdr lists no agents without this setting. See https://github.com/herdrdev/herdr/issues/1982
-HERDR_PROCESS_DETECTION = "child-groups"
-# Each Plannotator review binds the first free port of this range. The range must equal the line in agent/ports. See ../../README.md#open-a-port-of-the-sandbox-on-the-host
-PLANNOTATOR_PORT = "19432-19436"
-PLANNOTATOR_BROWSER = "none"  # the sandbox has no browser. Plannotator prints the URL, and you open it on the host
-# Ponytail (the task sandbox:start installs the plugin) puts no codebase map in the session context. This saves input tokens.
-PONYTAIL_MAP = "0"
-PONYTAIL_DEFAULT_MODE = "full"
+# The run-time env is in ../compose.yaml, so it applies to every process, in a mise shell or not.
 
 [hooks.enter]
 # The alias k is kubectl with completion. The alias tu is the launcher of the token usage plugin of Herdr. Herdr writes it at each start.
@@ -106,9 +89,9 @@ catppuccin              theme    https://github.com/sinelaw/fresh-plugins       
 EOF
 '''
 
-# The start step of the agent sandbox. sandbox-agent.container runs it with podman exec, as the user agent, after the relay starts. Flow: ../../README.md#run-flow
+# The start step of the agent sandbox. ../devcontainer.json runs it (postStartCommand) as the user agent after each start. Flow: ../README.md#run-flow
 # It prepares the home and the clone, installs the plugins and writes /tmp/sandbox-ready. A step does nothing if its work exists.
-# Variables: SANDBOX_WORKSPACE and REPO_URL come from sandbox-agent.container. SANDBOX_BRANCH is optional (default: the branch of the host checkout).
+# Variables: SANDBOX_WORKSPACE and REPO_URL come from ../compose.yaml. SANDBOX_BRANCH is optional (default: the branch of the host checkout).
 [tasks."sandbox:start"]
 description = "Prepare the home and the clone, install the plugins, write /tmp/sandbox-ready"
 shell = "bash -c"
@@ -141,6 +124,6 @@ claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin in
 claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
   || echo "sandbox:start: warning: the TokenEconomizer plugin is not installed" >&2
 
-# The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `podman stop sandbox-agent` stops it.
+# The container stays up after you close the terminal. Herdr and Claude Code keep running in it. `just sandbox down` stops it.
 touch /tmp/sandbox-ready
 '''

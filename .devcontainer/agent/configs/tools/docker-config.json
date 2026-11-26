@@ -7,8 +7,8 @@
   },
   "proxies": {
     "default": {
-      "httpProxy": "http://127.0.0.1:3129",
-      "httpsProxy": "http://127.0.0.1:3129",
+      "httpProxy": "http://10.200.0.10:18080",
+      "httpsProxy": "http://10.200.0.10:18080",
       "noProxy": "localhost,127.0.0.1"
     }
   }

@@ -1,6 +1,8 @@
 # Agent Sandbox
 
-A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in a hardened Podman container. The container is rootless and uses gVisor. A second container, the builder, builds images for the agent.
+A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in a hardened Docker container with gVisor. A second container, the builder, builds images for the agent. The devcontainer CLI starts both, with their proxies, from `compose.yaml`.
+
+> [Quick start](#quick-start) and [Commands](#commands) describe the Docker setup. The flows, the security controls and the troubleshooting table still describe the Podman setup. The next docs PR rewrites them.
 
 ## The problem
 
@@ -303,56 +305,55 @@ What the setup assumes:
 - The Bitwarden project holds `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`.
 - You have the access token of a machine account that reads that project. Give it only to `just sandbox setup`, which asks for it.
 
-For another registry or secret manager, change `agent/proxy/iron-proxy.yaml`, `agent/proxy/proxy.container` and the `build` recipe.
+For another registry or secret manager, change `policy/agent.yaml`, the proxy in `compose.yaml` and the `publish` recipe.
 
 What the host needs:
 
 | Need | Check |
 |---|---|
 | A Linux host with a systemd user manager | `systemctl --user is-system-running` |
+| Rootful Docker with Compose, and your user in the `docker` group | `docker compose version` |
+| gVisor runtimes `runsc-uds` and `runsc-builder` in `/etc/docker/daemon.json`. `setup` prints the snippet if one is missing. | `docker info -f '{{json .Runtimes}}'` |
+| The devcontainer CLI | `devcontainer --version` |
 | `systemd-creds`, to keep the Bitwarden access token | `command -v systemd-creds` |
-| `bws`, from `mise install`. `build` uses it to authenticate to `ghcr.io`. | `bws --version` |
-| `openssl`, to make the CA | `openssl version` |
-| `socat`, for the host bridge. `just` stops if it is missing. | `socat -V` |
-| `podman`, `runsc` and `git`. `just` stops if one is missing. | `podman --version` and `runsc --version` |
-| `ip` and `nsenter`, to start the loopback of the agent sandbox | `ip -V` and `nsenter --version` |
+| `bws` and `jq`, from `mise install`. `publish` uses `bws` to authenticate to `ghcr.io`. | `bws --version` |
+| `openssl`, `setfacl` and `socat` (the host bridge). `just` stops if one is missing. | `socat -V` |
 | 6 GB of free memory: 3 GB for the agent sandbox, 2 GB for the builder and less than 1 GB for the two proxies | `free -h` |
-| Linger for your user (optional). The sandbox keeps running after your session ends. | `loginctl enable-linger "$USER"` |
 
 ## Quick start
 
 Run these steps in your main checkout.
 
-1. Run `mise install`. It installs `bws`.
+1. Run `mise install`. It installs `bws` and `jq`, and the root `mise.toml` sets `BUILDX_BAKE_ENTITLEMENTS_FS=0` for `devcontainer build`.
 2. Run these commands:
 
 ```shell
-just sandbox setup   # once, and again after you edit a file in agent/ or builder/
-just sandbox build   # build the images and push the agent sandbox image
-just sandbox run     # start the containers and open Herdr, a terminal workspace manager
+just sandbox setup                                  # once: the CA, the credential, the ACL, the repo link
+devcontainer up --workspace-folder .                # build if needed, then start the four services
+devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal workspace manager
 ```
 
 `setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable.
 
-`podman ps` then shows four containers: `sandbox-proxy`, `sandbox-builder-proxy`, `sandbox-builder` and `sandbox-agent`. 
-
-The flows of the three commands are in [Flows](#flows).
+`docker compose -p sandbox ps` then shows four services: `builder-proxy`, `builder`, `proxy` and `agent`.
 
 ## Decisions
 
-- [Quadlet units, not Docker Compose or Podman Compose](docs/adr/0001-quadlet-over-compose.md)
+- [Docker Compose and the devcontainer CLI, not Quadlet units](docs/adr/0002-compose-over-quadlet.md)
+- [Quadlet units, not Docker Compose or Podman Compose](docs/adr/0001-quadlet-over-compose.md) (superseded by 0002)
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `just sandbox run <command>` | Runs your command in place of Herdr. |
-| `just sandbox rm` | Removes the agent sandbox, the builder and both proxies. The volume stays. |
-| `just sandbox build --no-cache` | Updates the pinned tools. |
-| `podman ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
-| `podman logs -f sandbox-agent` | Follows the log of the agent sandbox. |
-| `journalctl --user -u sandbox-proxy -f` | Follows the audit log of the host proxy: one JSON line for each request. |
-| `podman logs -f sandbox-builder-proxy` | Follows the log of the builder proxy. |
+| `devcontainer up --workspace-folder .` | Starts the sandbox. On stopped containers, it starts them as they were. |
+| `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
+| `just sandbox apply` | Applies an edit of `compose.yaml`, `devcontainer.json`, a policy or the image: down, then up. |
+| `just sandbox down` | Stops the four containers and closes the bridge. The volume `sandbox-home` stays. |
+| `just sandbox publish` | Builds the agent sandbox image and pushes it to `ghcr.io`. `--no-cache` updates the pinned tools. |
+| `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
+| `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
+| `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |
 
 ## Open a port of the sandbox on the host
 
