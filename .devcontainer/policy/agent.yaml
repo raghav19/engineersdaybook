@@ -1,16 +1,16 @@
-# The config of iron-proxy (container sandbox-proxy), the only way out of the sandbox. Docs: https://github.com/ironsh/iron-proxy. Flow: ../../README.md#egress-request-flow
+# The policy of the proxy (service proxy in ../compose.yaml), the only way out of the agent sandbox. Docs: https://github.com/ironsh/iron-proxy. Flow: ../README.md#egress-request-flow
 # The proxy ends TLS with its own CA and allows only the hosts below. Any other host gets 403.
 # The sandbox holds placeholders. The proxy swaps each one for the real value from its environment. This file has variable names, never values.
-# Each placeholder in sandbox-agent.container, managed-settings.json and docker-config.json must equal a proxy_value line below.
-# All listeners are on the loopback of the container. iron-proxy requires the DNS, HTTP and HTTPS listeners. The sandbox does not use them.
+# Each placeholder in ../compose.yaml, managed-settings.json and docker-config.json must equal a proxy_value line below.
+# Only the tunnel listens on the internal network. iron-proxy requires the DNS, HTTP and HTTPS listeners. They stay on the loopback, where the sandbox cannot reach them.
 dns:
   listen: "127.0.0.1:18084"
   proxy_ip: "127.0.0.1"
 proxy:
   http_listen: "127.0.0.1:18081"
   https_listen: "127.0.0.1:18082"
-  # The tunnel takes CONNECT and SOCKS5. socat joins it to proxy.sock.
-  tunnel_listen: "127.0.0.1:18080"
+  # The tunnel takes CONNECT and SOCKS5. It must equal the proxy IP and port of HTTPS_PROXY in ../compose.yaml.
+  tunnel_listen: "10.200.0.2:18080"
 tls:
   ca_cert: /etc/iron-proxy/ca.crt
   ca_key: /etc/iron-proxy/ca.key

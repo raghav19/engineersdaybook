@@ -1,0 +1,17 @@
+// The entry of the agent sandbox for the devcontainer CLI: `devcontainer up --workspace-folder .` from the repo root. Spec: https://containers.dev/implementors/json_reference/
+// The CLI has no stop. `just sandbox down` stops the sandbox.
+{
+  "name": "sandbox",
+  "dockerComposeFile": "compose.yaml",
+  "service": "agent",
+  "runServices": ["builder-proxy", "builder", "proxy", "agent"],
+  // Lifecycle commands run in this folder. The clone does not exist before sandbox:start makes it.
+  "workspaceFolder": "/home/agent",
+  "remoteUser": "agent",
+  "updateRemoteUserUID": false,
+  // Keep the command of compose.yaml. The default runs the CMD of the image (bash), which exits without a TTY.
+  "overrideCommand": false,
+  // Runs on the host, in the repo root: the bws token for a new proxy, then the bridge.
+  "initializeCommand": "just -f .devcontainer/justfile pre-up",
+  "postStartCommand": "mise run sandbox:start"
+}

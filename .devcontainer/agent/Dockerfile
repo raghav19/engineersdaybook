@@ -63,7 +63,7 @@ COPY tools/ /etc/mise/conf.d/
 RUN mise reshim
 
 USER root
-# The docker config is read-only at run time. It has the ghcr.io login (a placeholder that must equal a proxy_value in agent/proxy/iron-proxy.yaml), the proxy settings and the builder definition.
+# The docker config is read-only at run time. It has the ghcr.io login (a placeholder that must equal a proxy_value in ../policy/agent.yaml), the proxy settings and the builder definition.
 # docker finds buildx through cliPluginsExtraDirs, and crane reads the login. buildx create only writes the definition. See https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
 COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
@@ -77,11 +77,9 @@ COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.confi
 COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
 # The prompt config is a copy of ~/.config/starship.toml on the host. Keep it the same as the host file.
 COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
-COPY --chown=agent:agent configs/tools/k9s-config.yaml /home/agent/.config/k9s/config.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
 COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
-COPY --chown=agent:agent configs/tools/gitconfig /home/agent/.gitconfig
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 # Keep tasks.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
@@ -89,7 +87,7 @@ COPY tasks.toml /etc/mise/conf.d/tasks.toml
 RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:herdr-plugins && mise run sandbox:shell && rm -rf /tmp/mise-cache
 
 USER root
-# The image has no command. sandbox-agent.container sets the command, starts the relay and runs the task sandbox:start.
+# The image has no command. ../compose.yaml sets it, and ../devcontainer.json runs the task sandbox:start after each start.
 
 # At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. The task sandbox:start copies it at each start.
 RUN mkdir -p /usr/share/sandbox \
@@ -103,7 +101,6 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
+# The run-time env is in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    LANG=C.UTF-8 \
-    EDITOR=fresh \
-    TMPDIR=/tmp
+    LANG=C.UTF-8

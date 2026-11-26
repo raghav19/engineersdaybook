@@ -1,0 +1,237 @@
+# The agent sandbox: four services on rootful Docker. gVisor runs the agent and the builder. Each one leaves only through its proxy. Flow: README.md#run-flow
+# devcontainer.json starts it. Compose keys: https://docs.docker.com/reference/compose-file/
+name: sandbox
+
+# internal: no route out of the subnet. inhibit_ipv4: the host gets no address on the bridge, so the agent cannot reach it.
+# The proxy IPs are fixed, because gVisor cannot use the DNS of Docker.
+networks:
+  sandbox:
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.inhibit_ipv4: "true"
+    ipam:
+      config: [{ subnet: 10.200.0.0/29 }]
+  build:
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.inhibit_ipv4: "true"
+    ipam:
+      config: [{ subnet: 10.200.0.8/29 }]
+
+volumes:
+  # The clone, the logins and the Herdr sessions. `docker compose down` keeps it. Never add -v.
+  sandbox-home:
+    name: sandbox-home
+  buildkit-sock: {}
+
+# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL that `just sandbox setup` sets.
+x-proxy: &proxy
+  build:
+    dockerfile_inline: |
+      FROM ghcr.io/bitwarden/bws:2.1.0@sha256:3927158c53ac5a17d6cbe59fc3e1353e426f168bf246dbfe3668f6de5eaa107f AS bws
+      FROM docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+      COPY --from=bws /bin/bws /usr/local/bin/bws
+      ENTRYPOINT []
+  image: localhost/sandbox-proxy:latest
+  runtime: runc
+  user: "10001:10001"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  # A proxy reads its token once. A restart outside `devcontainer up` has no token.
+  restart: "no"
+  tmpfs: ["/tmp:size=16m,mode=1777,noexec,nosuid,nodev"]
+  pids_limit: 256
+  ulimits: { core: 0 }
+  environment:
+    HOME: /tmp
+  working_dir: /tmp
+  # /healthz answers only after iron-proxy starts. In the proxy, bws starts iron-proxy only with the secrets.
+  healthcheck:
+    test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:18083/healthz"]
+    interval: 2s
+    timeout: 3s
+    retries: 30
+    start_period: 60s
+
+services:
+  builder-proxy:
+    <<: *proxy
+    command: ["iron-proxy", "-config", "/etc/iron-proxy/iron-proxy.yaml"]
+    mem_limit: 256m
+    memswap_limit: 256m
+    volumes:
+      - ./policy/builder.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
+    networks:
+      default: {}
+      build: { ipv4_address: 10.200.0.10 }
+
+  # BuildKit for `docker build` in the agent. Any holder of the socket can run any build step, so the container is the wall.
+  # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
+  builder:
+    image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
+    runtime: runsc-builder
+    user: "1000:1000"
+    # rootlesskit needs these three for newuidmap. no-new-privileges stays off: with it, rootlesskit hangs.
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID, SYS_CHROOT]
+    restart: "no"
+    command: ["--addr", "unix:///run/user/1000/buildkit/buildkitd.sock", "--oci-worker-no-process-sandbox", "--oci-worker-snapshotter=native"]
+    # The cache is in memory and counts against mem_limit. A new container starts empty.
+    tmpfs: ["/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g"]
+    environment:
+      HTTPS_PROXY: http://10.200.0.10:18080
+      HTTP_PROXY: http://10.200.0.10:18080
+      NO_PROXY: localhost,127.0.0.1
+    healthcheck:
+      test: ["CMD", "buildctl", "--addr", "unix:///run/user/1000/buildkit/buildkitd.sock", "debug", "workers"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: 2
+    pids_limit: 1024
+    # Trap: the image owns /run/user/1000 as uid 1000, so the empty volume gets that owner. Mounted elsewhere, buildkitd cannot make its socket.
+    volumes:
+      - buildkit-sock:/run/user/1000
+    networks:
+      build: { ipv4_address: 10.200.0.11 }
+    depends_on:
+      builder-proxy: { condition: service_healthy }
+
+  # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: README.md#egress-request-flow
+  proxy:
+    <<: *proxy
+    # The token file is in RAM ($XDG_RUNTIME_DIR). The proxy deletes it after it reads it. bws puts the real tokens in the env of iron-proxy only.
+    command:
+      - sh
+      - -c
+      - >-
+        t=$$(cat /run/bws/bws-token) && rm -f /run/bws/bws-token &&
+        export BWS_ACCESS_TOKEN="$$t" && unset t &&
+        exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config /etc/iron-proxy/iron-proxy.yaml
+    mem_limit: 512m
+    memswap_limit: 512m
+    volumes:
+      - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
+      - ${HOME}/.local/state/sandbox/ca.crt:/etc/iron-proxy/ca.crt:ro
+      - ${HOME}/.local/state/sandbox/ca.key:/etc/iron-proxy/ca.key:ro
+      # The only read-write mount of a proxy. `just sandbox pre-up` makes the folder. Docker must not make it as root.
+      - type: bind
+        source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
+        target: /run/bws
+        bind: { create_host_path: false }
+    networks:
+      default: {}
+      sandbox: { ipv4_address: 10.200.0.2 }
+
+  agent:
+    build: ./agent
+    image: localhost/sandbox-dev:latest
+    runtime: runsc-uds
+    user: agent
+    working_dir: /home/agent
+    # The image has no command. devcontainer.json keeps this one (overrideCommand false).
+    command: ["sleep", "infinity"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    init: true
+    # memswap equal to mem: no swap. gVisor counts host threads, so pids stays high.
+    mem_limit: 3g
+    memswap_limit: 3g
+    cpus: 4
+    pids_limit: 2048
+    # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
+    tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
+    # Healthy after the task sandbox:start (agent/tasks.toml) writes the file.
+    healthcheck:
+      test: ["CMD", "test", "-e", "/tmp/sandbox-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 180s
+    depends_on:
+      proxy: { condition: service_healthy }
+      builder: { condition: service_healthy }
+    environment:
+      # wiring: placeholders, not secrets. Each must equal a proxy_value in policy/agent.yaml.
+      GH_TOKEN: sandbox-placeholder-GH_TOKEN
+      CLAUDE_CODE_OAUTH_TOKEN: sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN
+      OPENAI_API_KEY: sandbox-placeholder-QWEN_API_KEY
+      # wiring: must equal tunnel_listen in policy/agent.yaml. A tool that ignores these variables has no route.
+      HTTP_PROXY: http://10.200.0.2:18080
+      HTTPS_PROXY: http://10.200.0.2:18080
+      http_proxy: http://10.200.0.2:18080
+      https_proxy: http://10.200.0.2:18080
+      NO_PROXY: localhost,127.0.0.1
+      NODE_USE_ENV_PROXY: "1"
+      # wiring: the CA of the proxy is mounted over this file, and each tool must read it.
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      GIT_SSL_CAINFO: /etc/ssl/certs/ca-certificates.crt
+      NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-certificates.crt
+      NODE_OPTIONS: --use-system-ca
+      # wiring: the home, the clone and the bridge
+      HOME: /home/agent
+      TMPDIR: /tmp
+      SANDBOX_WORKSPACE: /home/agent/engineersdaybook
+      REPO_URL: https://github.com/raghav19/engineersdaybook
+      MISE_TRUSTED_CONFIG_PATHS: /home/agent/engineersdaybook
+      MISE_IGNORED_CONFIG_PATHS: /home/agent/engineersdaybook/mise.toml
+      # Each Plannotator review binds the first free port of this range. `just sandbox bridge` opens the same range on the host.
+      PLANNOTATOR_PORT: 19432-19436
+      # base
+      EDITOR: fresh
+      COLORTERM: truecolor
+      DO_NOT_TRACK: "1"
+      # git: identity and config from env. $$ keeps the $ from Compose, so git expands $GH_TOKEN. See https://git-scm.com/docs/git-config#ENVIRONMENT
+      GIT_AUTHOR_NAME: agent
+      GIT_AUTHOR_EMAIL: agent@localhost
+      GIT_COMMITTER_NAME: agent
+      GIT_COMMITTER_EMAIL: agent@localhost
+      GIT_CONFIG_COUNT: "2"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+      GIT_CONFIG_KEY_1: credential.https://github.com.helper
+      GIT_CONFIG_VALUE_1: '!f() { echo username=x-access-token; echo "password=$$GH_TOKEN"; }; f'
+      # runtimes
+      HF_HUB_OFFLINE: "1"
+      # infra: the docker config holds the ghcr.io login placeholder, the builder proxy and the builder definition.
+      DOCKER_CONFIG: /etc/docker
+      BUILDX_BUILDER: sandbox
+      TF_PLUGIN_CACHE_DIR: /home/agent/.cache/terraform-providers
+      CHECKPOINT_DISABLE: "1"
+      # catppuccin-mocha or tokyo-night (agent/configs/tools/k9s-skin-*.yaml)
+      K9S_SKIN: catppuccin-mocha
+      # dev: the sandbox has no browser. Plannotator prints the URL, and you open it on the host.
+      PLANNOTATOR_BROWSER: none
+      # agents
+      CLAUDE_CONFIG_DIR: /home/agent/.claude
+      DISABLE_UPDATES: "1"
+      # Qwen Code reads its model from these. agent/configs/agents/qwen-settings.json keeps the auth type and the MCP servers.
+      OPENAI_BASE_URL: https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
+      OPENAI_MODEL: qwen3.8-max
+      # Under gVisor, Herdr lists no agents without this setting. See https://github.com/herdrdev/herdr/issues/1982
+      HERDR_PROCESS_DETECTION: child-groups
+      # Ponytail puts no codebase map in the session context. This saves input tokens.
+      PONYTAIL_MAP: "0"
+      PONYTAIL_DEFAULT_MODE: full
+      # lsp: marksman runs on .NET, and the image has no ICU library.
+      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+    volumes:
+      - ${HOME}/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      # Only the socket folder of the builder, read-only. The path must equal the builder definition in agent/Dockerfile.
+      - type: volume
+        source: buildkit-sock
+        target: /run/sandbox/buildkit
+        read_only: true
+        volume: { subpath: buildkit }
+      # `just sandbox setup` links it to the .git folder of the main checkout. sandbox:start clones it once.
+      - ${HOME}/.config/sandbox/repo.git:/run/sandbox/source:ro
+      - sandbox-home:/home/agent
+    networks:
+      sandbox: { ipv4_address: 10.200.0.3 }

@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0002
 ---
 
 # Quadlet units, not Docker Compose or Podman Compose
