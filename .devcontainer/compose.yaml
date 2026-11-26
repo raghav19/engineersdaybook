@@ -6,7 +6,7 @@ name: sandbox
 # We chose the subnets. 10.200.0.0/24 overlaps no range on this host: the LAN, the Docker pools (172.17-31, 192.168), Podman (10.88-89) and k3s (10.42-43).
 networks:
   sandbox:
-    # Docker gives the subnet no default route and drops forwarded packets. A container reaches only the other addresses of this subnet.
+    # This option cuts this network off from the internet. A container on it reaches only the other containers on this network.
     internal: true
     # This option gives the host no address (.1) on this network, so the agent cannot reach the host.
     # Without it, the agent can reach each host port that the firewall allows, for example LocalSend.
