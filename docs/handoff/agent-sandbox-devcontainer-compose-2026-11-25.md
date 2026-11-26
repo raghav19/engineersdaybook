@@ -19,7 +19,7 @@ The owner wants the whole agent sandbox in one declarative spec with a devcontai
 
 ## Research and evidence (read, do not repeat)
 
-- `docs/research/agent-sandbox-devcontainer-spike.md`: spike S1 (network model), S2a (hardened proxy), S2b (real bws token). The pending stages S3 to S6 and their pass checks.
+- `docs/research/agent-sandbox-devcontainer-spike.md`: spike S1 to S6, all pass. S1 is the network model. S2a and S2b are the hardened proxy and the real bws token. S3 is the builder, S4 the agent with the full env. S5 is the devcontainer CLI workflow, S6 the host port bridge. Each stage lists its traps.
 - `docs/research/agent-sandbox-manifest-spec.md`: no ready-made standard covers the whole sandbox.
 - `.devcontainer/docs/adr/0001-quadlet-over-compose.md`: the old reasons for Quadlet. ADR 0002 must supersede it in PR 3.
 
@@ -37,9 +37,9 @@ Does not work or is a limit:
 ## Host state to know
 
 - Rootful Docker is active. The user is in the `docker` group. ufw is active with a default deny for incoming traffic.
-- `/etc/docker/daemon.json` has runtimes `runsc`, `runsc-suid`, `runsc-uds`. `runsc-builder` (`--host-uds=all`) is not there yet. S3 needs it. Ask the owner to add it with sudo.
+- `/etc/docker/daemon.json` has runtimes `runsc`, `runsc-builder` (`--host-uds=all`), `runsc-suid`, `runsc-uds`.
 - `~/.local/state/sandbox/ca.key` has a POSIX ACL `user:10001:r--` (Decision 15). Undo: `setfacl -x u:10001 ~/.local/state/sandbox/ca.key`.
-- The devcontainer CLI is not installed. S5 needs it (`mise use -g npm:@devcontainers/cli`, owner approval).
+- The host has the devcontainer CLI 0.91.0 from mise (`npm:@devcontainers/cli`).
 - After #402 and #403 the Quadlet links still point to `.sandbox/` until the owner runs `just sandbox setup`, then `just sandbox build`.
 - The owner's git credential helper points at a removed `gh` path. Push with `git -c credential.helper= -c credential.helper='!gh auth git-credential' push`.
 - Ask the owner to run host-root steps with `!`.
@@ -68,12 +68,17 @@ Does not work or is a limit:
 17. **Token flow** (bws now, OpenBao later). `initializeCommand` runs `just pre-up` on the host. If the proxy does not run, `pre-up` decrypts the bws token with `systemd-creds --user decrypt` into `$XDG_RUNTIME_DIR/sandbox-secrets/` (folder 0700 plus ACL `u:10001:rwx`, file 0600 plus ACL `u:10001:r`). The proxy reads the file, removes it and runs `exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy`. No Compose `secrets`, no token in `environment:`.
 18. No userns-remap. It is daemon-wide, it hides the existing images and it can break kind. The non-root proxy uid gives the same result for the proxy.
 19. No `just verify` recipe. The owner's reason: the setup is declarative and the agent cannot change it.
-20. One `.devcontainer/devcontainer.json` (the agent): `runServices` lists all four services, `updateRemoteUserUID: false`, `initializeCommand: just -f .devcontainer/justfile pre-up`, `postStartCommand: mise run sandbox:start`. `overrideCommand` keeps its default, because the agent has no relay process.
+20. One `.devcontainer/devcontainer.json` (the agent): `runServices` lists all four services, `updateRemoteUserUID: false`, `overrideCommand: false`, `initializeCommand: just -f .devcontainer/justfile pre-up`, `postStartCommand: mise run sandbox:start`. The agent keeps `command: ["sleep", "infinity"]` in `compose.yaml`. With the default `overrideCommand`, the CLI entrypoint runs the image CMD `bash`, and bash exits with no TTY (spike S5).
 21. One inline proxy image (iron-proxy plus bws, by digest, no socat) for both proxies. `builder-proxy` runs it without a token.
 22. The policies are mounted read-only from `.devcontainer/policy/`. No copy into `~/.config/sandbox/`.
 23. The builder uses the upstream rootless BuildKit image by digest. No `builder/` folder. Runtime `runsc-builder` with `--host-uds=all` only (no `network=none`, no `ignore-cgroups`).
 24. Rejected: builds on the host Docker daemon, also through the proxy. The Docker API is root on the host.
 25. `tools/` keeps 5 files, one Docker stage each (per-group cache, parallel build).
+26. `workspaceFolder: /home/agent`. The CLI runs the lifecycle commands in `workspaceFolder`. The clone `/home/agent/engineersdaybook` does not exist before `sandbox:start` makes it (spike S5).
+27. `devcontainer build` needs `BUILDX_BAKE_ENTITLEMENTS_FS=0` on the host. The CLI writes its wrapper Dockerfile to `/tmp/devcontainercli-<user>/`, and Compose 5.6.1 (bake) refuses that path. PR 3 decides where to set the variable (spike S5).
+28. The BuildKit socket: the builder mounts the volume `buildkit-sock` at `/run/user/1000`. That folder has owner 1000 in the image, so Docker gives the volume the same owner. The socket is `/run/user/1000/buildkit/buildkitd.sock`. The agent mounts only the subpath `buildkit`, read-only, at `/run/sandbox/buildkit`. The folder is 0700 with owner 1000, so the agent user must stay uid 1000 (spike S3).
+29. Registry login runs in the agent. buildx (the client) fetches the registry token, so the agent needs its proxy for the token endpoints (`auth.docker.io`, the GHCR `/token`). buildkitd pulls the layers with the proxy of its container env. `RUN` steps take the proxy from `proxies` in `docker-config.json`: `http://10.200.0.10:18080` (spike S3).
+30. `devcontainer up --remove-existing-container` is not used. It makes a new agent only. If the proxy config changed, Compose also makes a new proxy, but `pre-up` already skipped the decrypt, and the proxy exits 1 with no token. To apply a change, use `just apply` (spike S5).
 
 ## Traps of the devcontainer CLI
 
@@ -84,7 +89,7 @@ Source: devcontainers/cli `src/spec-node/dockerCompose.ts`.
 | No containers | `docker compose build` and `up -d` for all `runServices`. Changes apply. |
 | Stopped | `up -d --no-recreate`, no build. Changes do not apply. |
 | Agent runs | Attaches only. `initializeCommand` still runs, so `pre-up` must skip the decrypt. |
-| `--remove-existing-container` | Removes the agent only. Do not use it to apply changes. |
+| `--remove-existing-container` | Removes the agent only. A new proxy has no token (Decision 30). |
 
 `docker compose restart proxy` fails, because the proxy removed its token. Use `just apply`. Never use `down -v`: it removes the home volume.
 
@@ -117,8 +122,9 @@ Host side, outside the repo: the `daemon.json` runtimes, `~/.config/credstore.en
 |---|---|---|
 | 1 | Move `.sandbox` to `.devcontainer` | Merged (#402) |
 | 2 | Image setup steps into `tasks.toml` | Merged (#403) |
-| A | This handoff and the spike note | Open |
-| 3 | Docker switch: `compose.yaml`, `devcontainer.json`, justfile, policies, ADR 0002. Remove the Quadlet units, `runsc.conf`, `ports`, `bridge.*`, `gitconfig`, `k9s-config.yaml` and the Qwen model block. | After spike S3 to S6 |
+| A | This handoff and the spike note (S1, S2) | Merged (#404) |
+| B | Spike S3 to S6, the fix of Decision 20, Decisions 26 to 30 | Open |
+| 3 | Docker switch: `compose.yaml`, `devcontainer.json`, justfile, policies, ADR 0002. Remove the Quadlet units, `runsc.conf`, `ports`, `bridge.*`, `gitconfig`, `k9s-config.yaml` and the Qwen model block. | In progress (spike S1 to S6 pass) |
 | 4 | Docs end state: README, `.devcontainer/AGENTS.md`, internals, diagrams, `docs/agents/sandbox-network.md` | After PR 3 |
 
 ## Open questions for the owner
@@ -127,10 +133,8 @@ Host side, outside the repo: the `daemon.json` runtimes, `~/.config/credstore.en
 
 ## Next steps
 
-1. Ask the owner to add the `runsc-builder` runtime and to approve the devcontainer CLI install.
-2. Run spike S3 to S6 (see the research note). If a network check fails, fall back to the socket model.
-3. PR 3, then PR 4.
-4. Update the memory file `sandbox-image-tasks-in-mise-toml-2026-11-25.md`: the tasks are in `tasks.toml`, and the env moves to `compose.yaml`.
+1. PR 3, then PR 4.
+2. Update the memory file `sandbox-image-tasks-in-mise-toml-2026-11-25.md`: the tasks are in `tasks.toml`, and the env moves to `compose.yaml`.
 
 ## Suggested skills
 
