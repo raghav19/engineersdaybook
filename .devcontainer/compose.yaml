@@ -92,8 +92,8 @@ services:
     command:
       - --addr
       - unix:///run/user/1000/buildkit/buildkitd.sock
-      # Each RUN step shares the PID namespace of buildkitd, so a step can see and kill it. A new PID namespace needs a new /proc, and this container cannot mount one.
-      # Accepted: the builder lives for one session, holds no token, and its only way out is builder-proxy.
+      # By default, each RUN step gets its own PID namespace and sees only its own processes. That needs a new /proc mount, and this container cannot mount /proc.
+      # With this flag, a RUN step runs next to buildkitd and can kill it. The worst case is a failed build: the builder holds no token and reaches only builder-proxy.
       - --oci-worker-no-process-sandbox
       # The snapshotter stores the image layers. native copies each layer in full: slower, and it uses more of the cache tmpfs.
       # overlayfs does not mount in rootlesskit under gVisor, and fuse-overlayfs needs /dev/fuse, which the container does not get.
