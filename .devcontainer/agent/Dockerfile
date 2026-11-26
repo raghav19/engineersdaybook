@@ -86,30 +86,15 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # The token usage plugin of Herdr. It reads the logs of Claude Code and makes no network call at run time.
-RUN herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
+RUN herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage \
+ && rm -rf /tmp/mise-cache
 
-# The Fresh packages. One row for each: name, kind (plugin, language or theme), repo, commit (a full hash, no tag) and subdir (. for the whole repo).
-# The kind gives the folder: plugin to plugins/packages, language to languages/packages, theme to themes/packages.
-RUN <<'SCRIPT' bash
-set -euo pipefail
-tmp=$(mktemp -d)
-while read -r name kind repo commit subdir; do
-    dest="$HOME/.config/fresh/${kind}s/packages/$name"
-    git -C "$tmp" init -q "$name"
-    git -C "$tmp/$name" fetch -q --depth 1 "$repo" "$commit"
-    git -C "$tmp/$name" checkout -q FETCH_HEAD
-    # A monorepo has more than one package, so copy the subdir and not the repo.
-    mkdir -p "${dest%/*}"
-    cp -r "$tmp/$name/$subdir" "$dest"
-    rm -rf "$dest/.git"
-done <<'PACKAGES'
-todo-highlighter        plugin   https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 todo-highlighter
-color-highlighter       plugin   https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 color-highlighter
-dotfiles-fresh-language language https://github.com/2fd/dotfiles-fresh-language 2b8c0e58721001dba0b7f9bf7608ee8b52e04261 .
-catppuccin              theme    https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 themes/catppuccin
-PACKAGES
-rm -rf "$tmp" /tmp/mise-cache
-SCRIPT
+# The Fresh packages, each at a pinned commit (a full hash, no tag). ADD fetches the folder after the colon, without .git.
+# The kind gives the folder: plugins/, languages/ or themes/ under ~/.config/fresh, then packages/<name>.
+ADD --chown=agent:agent https://github.com/sinelaw/fresh-plugins.git#3f327361b8b64e6e192386e5badda9d22241c854:todo-highlighter /home/agent/.config/fresh/plugins/packages/todo-highlighter
+ADD --chown=agent:agent https://github.com/sinelaw/fresh-plugins.git#3f327361b8b64e6e192386e5badda9d22241c854:color-highlighter /home/agent/.config/fresh/plugins/packages/color-highlighter
+ADD --chown=agent:agent https://github.com/2fd/dotfiles-fresh-language.git#2b8c0e58721001dba0b7f9bf7608ee8b52e04261 /home/agent/.config/fresh/languages/packages/dotfiles-fresh-language
+ADD --chown=agent:agent https://github.com/sinelaw/fresh-plugins.git#3f327361b8b64e6e192386e5badda9d22241c854:themes/catppuccin /home/agent/.config/fresh/themes/packages/catppuccin
 
 # The Claude Code plugins. Only ~/.claude/plugins stays in the image: managed-settings.json enables them, and the rest of ~/.claude is the state of the agent.
 RUN export CLAUDE_CONFIG_DIR=/home/agent/.claude \

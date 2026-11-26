@@ -21,7 +21,7 @@ When adding a language server to `agent/tools/lsp.toml`, also add it to `agent/c
 
 `fresh-config.json` is a copy of `~/.config/fresh/config.json` on the host. Keep it the same as the host file.
 
-The Fresh packages step in `agent/Dockerfile` lists the Fresh packages and installs each one at its pinned commit. When you add a package, add a row with `name`, `kind`, `repo`, `commit` and `subdir`.
+`agent/Dockerfile` installs each Fresh package with one `ADD` line at a pinned commit. When you add a package, copy a line and change the repo, the commit, the subfolder after the colon and the target folder.
 
 ## Fresh theme
 
