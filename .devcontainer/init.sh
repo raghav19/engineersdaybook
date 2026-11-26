@@ -62,5 +62,6 @@ for name in "${names[@]}"; do
     [ -n "$value" ] || fail "Bitwarden has no secret $name"
     # No newline at the end: iron-proxy uses the exact content of the file.
     printf '%s' "$value" >"$secrets/$name"
+    # Let the proxy (uid 10001) read the file. The ACL adds this one user, and the file stays yours.
     setfacl -m "u:$proxy_uid:r" "$secrets/$name"
 done
