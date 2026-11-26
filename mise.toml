@@ -15,6 +15,10 @@ ty = "0.0"
 k9s = "0.51"
 "github:dgunzy/flux9s" = { version = "1.5", asset_pattern = "flux9s-linux-x86_64-gnu.tar.gz" }
 qwen-code = "0.28"  # Qwen Code, the command qwen. It runs on node, which the host provides
+# Agent sandbox (.devcontainer/README.md#prerequisites). Docker runs runsc as root, so the README copies it to /usr/local/bin. Never point Docker at this copy.
+devcontainer-cli = "0.91"
+# A version bump needs the new sha512 from <url>.sha512.
+"http:gvisor" = { version = "20261102", url = "https://storage.googleapis.com/gvisor/releases/release/{{version}}/x86_64/gvisor.tar.bz2", checksum = "sha512:2e6671bb2d033b871c5811ab57e16ac570988b0e0054c525f911cfaf191bab3ca4efb08e0a98daa4b9e7d248f9e5776ef2ef2f8a6b82d829646a42924c98bb05" }
 
 [env]
 # Compose 5.6 builds with buildx bake, which refuses the Dockerfile that `devcontainer build` writes to /tmp. The sandbox ignores this file.

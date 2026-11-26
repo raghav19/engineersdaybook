@@ -24,7 +24,7 @@ volumes:
     name: sandbox-home
   buildkit-sock: {}
 
-# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL that `just sandbox setup` sets.
+# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL. See README.md#prerequisites.
 x-proxy: &proxy
   build:
     dockerfile_inline: |
@@ -119,7 +119,7 @@ services:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
       - ${HOME}/.local/state/sandbox/ca.crt:/etc/iron-proxy/ca.crt:ro
       - ${HOME}/.local/state/sandbox/ca.key:/etc/iron-proxy/ca.key:ro
-      # The only read-write mount of a proxy. `just sandbox pre-up` makes the folder. Docker must not make it as root.
+      # The only read-write mount of a proxy. init.sh makes the folder. Docker must not make it as root.
       - type: bind
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
         target: /run/bws
@@ -230,8 +230,8 @@ services:
         target: /run/sandbox/buildkit
         read_only: true
         volume: { subpath: buildkit }
-      # `just sandbox setup` links it to the .git folder of the main checkout. sandbox:start clones it once.
-      - ${HOME}/.config/sandbox/repo.git:/run/sandbox/source:ro
+      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. sandbox:start clones it once.
+      - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
