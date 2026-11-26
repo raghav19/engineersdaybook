@@ -129,7 +129,7 @@ services:
   proxy:
     <<: *proxy
     # exec: the shell turns into bws, so no shell stays with the token.
-    # env -u BWS_ACCESS_TOKEN: iron-proxy starts without the access token and gets only the real secrets.
+    # env -u BWS_ACCESS_TOKEN: bws starts iron-proxy and passes the API tokens from Bitwarden, minus the Bitwarden access token.
     command:
       - sh
       - -c
