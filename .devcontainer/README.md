@@ -140,7 +140,7 @@ sequenceDiagram
     Run->>Systemd: daemon-reload, restart sandbox-agent.service
     Systemd->>Proxies: restart
     Systemd->>Builder: restart, wait until it is healthy
-    Systemd->>Agent: start, then run the relay and sandbox-start
+    Systemd->>Agent: start, then run the relay and the task sandbox:start
     loop each 2 s, up to 180 s
         Run->>Agent: podman healthcheck run
     end
