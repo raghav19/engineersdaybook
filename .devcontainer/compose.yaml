@@ -84,7 +84,6 @@ services:
   # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
   builder:
     # The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image runs it as root and needs privileged.
-    # The Docker daemon is rootful, but it only starts this container. It runs no build step.
     image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
     runtime: runsc-builder
     user: "1000:1000"
