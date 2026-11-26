@@ -128,14 +128,8 @@ services:
   # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: README.md#egress-request-flow
   proxy:
     <<: *proxy
-    # The hand-off of the Bitwarden token, step by step. init.sh wrote the token file in RAM.
-    # 1. t=$(cat ...) && rm: read the token into t, then delete the file.
-    # 2. export BWS_ACCESS_TOKEN: the next program inherits the variable. bws takes its token only from the env or a flag, and ps shows a flag to all.
-    # 3. unset t: no plain copy stays in a shell variable.
-    # 4. exec bws: the shell does not start a child. It turns into bws, so no shell stays with the token.
-    # 5. env -u BWS_ACCESS_TOKEN iron-proxy: iron-proxy starts without the access token and gets only the real secrets from bws.
-    # bws stays alive as the parent of iron-proxy and keeps BWS_ACCESS_TOKEN. Only uid 10001 and root on the host can read it.
-    # TODO: fetch the secrets once with `bws secret list`, unset BWS_ACCESS_TOKEN, then exec iron-proxy, so bws exits. Check: the proxy is healthy and gh, claude and qwen work in the agent.
+    # exec: the shell turns into bws, so no shell stays with the token.
+    # env -u BWS_ACCESS_TOKEN: iron-proxy starts without the access token and gets only the real secrets.
     command:
       - sh
       - -c
