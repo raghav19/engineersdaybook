@@ -1,6 +1,6 @@
 # The policy of the proxy (service proxy in ../compose.yaml), the only way out of the agent sandbox. Docs: https://github.com/ironsh/iron-proxy. Flow: ../README.md#egress-request-flow
 # The proxy ends TLS with its own CA and allows only the hosts below. Any other host gets 403.
-# The sandbox holds placeholders. The proxy swaps each one for the real value from its environment. This file has variable names, never values.
+# The sandbox holds placeholders. The proxy swaps each one for the real value from a file in /run/secrets, which init.sh writes. This file has names, never values.
 # Each placeholder in ../compose.yaml, managed-settings.json and docker-config.json must equal a proxy_value line below.
 # Only the tunnel listens on the internal network. iron-proxy requires the DNS, HTTP and HTTPS listeners. They stay on the loopback, where the sandbox cannot reach them.
 dns:
@@ -114,24 +114,24 @@ transforms:
     config:
       secrets:
         # GitHub: git (Basic authentication), the API and the GitHub MCP server.
-        - source: {type: env, var: GH_TOKEN}
+        - source: {type: file, path: /run/secrets/GH_TOKEN}
           replace: {proxy_value: sandbox-placeholder-GH_TOKEN, match_headers: [Authorization]}
           rules:
             - {host: github.com}
             - {host: api.github.com}
             - {host: api.githubcopilot.com}
         # Claude Code
-        - source: {type: env, var: CLAUDE_CODE_OAUTH_TOKEN}
+        - source: {type: file, path: /run/secrets/CLAUDE_CODE_OAUTH_TOKEN}
           replace: {proxy_value: sandbox-placeholder-CLAUDE_CODE_OAUTH_TOKEN, match_headers: [Authorization]}
           rules:
             - {host: api.anthropic.com}
         # Qwen Code (Token Plan, Singapore)
-        - source: {type: env, var: QWEN_API_KEY}
+        - source: {type: file, path: /run/secrets/QWEN_API_KEY}
           replace: {proxy_value: sandbox-placeholder-QWEN_API_KEY, match_headers: [Authorization]}
           rules:
             - {host: token-plan.ap-southeast-1.maas.aliyuncs.com}
         # GitHub Container Registry: the login of crane (push and pull)
-        - source: {type: env, var: GITHUB_TOKEN}
+        - source: {type: file, path: /run/secrets/GITHUB_TOKEN}
           replace: {proxy_value: sandbox-placeholder-GHCR_PUSH_TOKEN, match_headers: [Authorization]}
           rules:
             - {host: ghcr.io}
