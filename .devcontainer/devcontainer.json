@@ -11,7 +11,7 @@
   "updateRemoteUserUID": false,
   // Keep the command of compose.yaml. The default runs the CMD of the image (bash), which exits without a TTY.
   "overrideCommand": false,
-  // Runs on the host, in the repo root: the bws token for a new proxy, then the bridge.
-  "initializeCommand": "just -f .devcontainer/justfile pre-up",
+  // Runs on the host, in the repo root: it checks the one-time setup, then gives a new proxy its token and starts the bridge.
+  "initializeCommand": ".devcontainer/init.sh",
   "postStartCommand": "mise run sandbox:start"
 }

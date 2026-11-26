@@ -30,7 +30,7 @@ volumes:
   # Holds the socket file of the builder. The agent sends its builds through it.
   buildkit-sock: {}
 
-# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL that `just sandbox setup` sets.
+# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL. See README.md#prerequisites.
 x-proxy: &proxy
   build:
     dockerfile_inline: |
@@ -128,7 +128,8 @@ services:
   # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: README.md#egress-request-flow
   proxy:
     <<: *proxy
-    # The token file is in RAM ($XDG_RUNTIME_DIR). The proxy deletes it after it reads it. bws puts the real tokens in the env of iron-proxy only.
+    # exec: the shell turns into bws, so no shell stays with the token.
+    # env -u BWS_ACCESS_TOKEN: bws starts iron-proxy and passes the API tokens from Bitwarden, minus the Bitwarden access token.
     command:
       - sh
       - -c
@@ -143,7 +144,7 @@ services:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
       - ${HOME}/.local/state/sandbox/ca.crt:/etc/iron-proxy/ca.crt:ro
       - ${HOME}/.local/state/sandbox/ca.key:/etc/iron-proxy/ca.key:ro
-      # The only read-write mount of a proxy. `just sandbox pre-up` makes the folder. Docker must not make it as root.
+      # The only read-write mount of a proxy. init.sh makes the folder. Docker must not make it as root.
       - type: bind
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
         target: /run/bws
@@ -256,8 +257,8 @@ services:
         target: /run/sandbox/buildkit
         read_only: true
         volume: { subpath: buildkit }
-      # `just sandbox setup` links it to the .git folder of the main checkout. sandbox:start clones it once.
-      - ${HOME}/.config/sandbox/repo.git:/run/sandbox/source:ro
+      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. sandbox:start clones it once.
+      - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
