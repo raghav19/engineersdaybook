@@ -311,15 +311,10 @@ For another registry or secret manager, change `policy/agent.yaml`, the proxy in
 
 Do these steps once, in your main checkout. Before each start, `init.sh` checks steps 3 to 5 and names the step that is missing.
 
-1. **Docker.** Install rootful Docker with Compose and buildx. Add your user to the `docker` group, then log in again. The `docker` group is equal to root on the host.
+1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
 
-   ```shell
-   sudo pacman -S --needed docker docker-compose docker-buildx acl socat
-   sudo systemctl enable --now docker
-   sudo usermod -aG docker "$USER"
-   ```
-
-2. **Tools.** Run `mise install`. The root `mise.toml` installs `just`, `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum.
+2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `just`, `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum.
+   `init.sh` and the bridge also need `setfacl` and `socat`. On Arch, they are in the packages `acl` and `socat`.
 
 3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
 
@@ -334,7 +329,9 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
 
    To update gVisor, change the version and the checksum in `mise.toml`, run `mise install`, then run the first three lines again.
 
-4. **CA.** The proxy ends the TLS of each HTTPS call with this CA. The agent gets only `ca.crt`. The ACL lets the proxy uid 10001 read the key, and the mode stays 0600 for all others.
+4. **CA.** TODO: a Compose service that makes the CA in a tmpfs volume can replace this step. Check that the proxy and the agent read it under gVisor.
+
+   The proxy ends the TLS of each HTTPS call with this CA. The agent gets only `ca.crt`. The ACL lets the proxy uid 10001 read the key, and the mode stays 0600 for all others.
 
    ```shell
    d=~/.local/state/sandbox && mkdir -p "$d"
