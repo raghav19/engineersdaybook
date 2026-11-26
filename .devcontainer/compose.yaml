@@ -94,8 +94,8 @@ services:
       - --addr
       - unix:///run/user/1000/buildkit/buildkitd.sock
       # This flag turns off the process sandbox. The process sandbox gives each RUN step its own PID namespace, so the step sees only its own processes.
-      # The process sandbox needs a /proc mount, and this container cannot mount /proc. Without it, a RUN step can see and kill buildkitd.
-      # The builder holds no token and reaches only builder-proxy, so the worst case is a failed build.
+      # The process sandbox needs a new /proc for each step. Docker hides the sensitive /proc entries, and a new /proc would show them again, so the kernel refuses it.
+      # We keep the hiding and turn off the process sandbox. A RUN step can then kill buildkitd, so the worst case is a failed build.
       - --oci-worker-no-process-sandbox
       # The snapshotter stores the image layers. native copies each layer in full: slower, and it uses more of the cache tmpfs.
       # overlayfs does not mount in rootlesskit under gVisor, and fuse-overlayfs needs /dev/fuse, which the container does not get.
