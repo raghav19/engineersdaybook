@@ -6,10 +6,9 @@ name: sandbox
 # We chose the subnets. 10.200.0.0/24 overlaps no range on this host: the LAN, the Docker pools (172.17-31, 192.168), Podman (10.88-89) and k3s (10.42-43).
 networks:
   sandbox:
-    # This option cuts this network off from the internet. A container on it reaches only the other containers on this network.
+    # Blocks calls to the internet.
     internal: true
-    # This option gives the host no address (.1) on this network, so the agent cannot reach the host.
-    # Without it, the agent can reach each host port that the firewall allows, for example LocalSend.
+    # Blocks calls to the host, for example to LocalSend.
     driver_opts:
       com.docker.network.bridge.inhibit_ipv4: "true"
     # /29 has 8 addresses: .0 network, .1 gateway (reserved), .2 to .6 containers, .7 broadcast.
