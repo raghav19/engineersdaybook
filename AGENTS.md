@@ -153,6 +153,7 @@ Before you create or edit a document that an agent reads, invoke `/writing-for-a
 
 Write each comment as a one-line signpost. It gives a reason, a trap or a link. The code gives the rest.
 
+- Lead with the effect in plain words. Example: `# Blocks calls to the internet.` Put a trade-off on its own line. In a chain of commands, comment only what a reader cannot guess.
 - Keep a comment that states a reason, a trap or a coupling to another file. Example: `# Must equal the port in config/server.yaml.` Delete a comment that repeats the next line.
 - Link to the upstream docs when they explain the topic. Use one link for each topic, at its first use in the file. Check that each URL returns 200.
 - Link to a README anchor in place of a flow. Example: `# Flow: README.md#run-flow`.
