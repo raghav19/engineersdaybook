@@ -2,7 +2,7 @@
 
 A handoff document lets a fresh session continue a piece of work without the old conversation. This file is the index. Newest first.
 
-A handoff is a record of one day. It can be out of date. For the sandbox as it runs now, read `.devcontainer/README.md` first. The sandbox is rootless Podman with gVisor, as Quadlet units, with a host proxy and a BuildKit builder. The `krun` microVM design and the Valkey build queue are not current.
+A handoff is a record of one day. It can be out of date. For the sandbox as it runs now, read `.devcontainer/README.md` first. The sandbox is rootful Docker with gVisor, run by the devcontainer CLI and Docker Compose, with iron-proxy and a BuildKit builder. The Podman and Quadlet design, the `krun` microVM design and the Valkey build queue are not current.
 
 ## How to add one
 
@@ -13,6 +13,8 @@ A handoff is a record of one day. It can be out of date. For the sandbox as it r
 
 ## The list
 
+- **2026-11-26. The native devcontainer sandbox (PRs #407 to #416 merged). Next: push the agent image, pin its digest, first real `devcontainer up`.** One run config and one build config (`agent/devcontainer.json`, `devcontainer build --push`). Lifecycle hooks in the image label. `init.sh` fetches the API tokens into RAM files, and the proxies run the upstream iron-proxy image. No justfile. The document has the decisions of the owner, the parked items, the traps and the host state.
+  Path: [`docs/handoff/agent-sandbox-native-devcontainer-2026-11-26.md`](handoff/agent-sandbox-native-devcontainer-2026-11-26.md). Earlier handoff: [`docs/handoff/agent-sandbox-devcontainer-compose-2026-11-25.md`](handoff/agent-sandbox-devcontainer-compose-2026-11-25.md). Status: active.
 - **2026-11-26. The `.devcontainer/` sandbox: Decisions 11 to 30 and spike S1 to S6, all pass (PRs #402 and #403 merged, Docker switch in progress).** The agent reaches iron-proxy on a Docker internal network, with no socat. The proxies run hardened on runc as uid 10001. All run-time env is in `compose.yaml`. The owner uses only the devcontainer CLI. The Docker switch is PR 3.
   Path: [`docs/handoff/agent-sandbox-devcontainer-compose-2026-11-25.md`](handoff/agent-sandbox-devcontainer-compose-2026-11-25.md), section "Decisions of 2026-11-26". Research: [`docs/research/agent-sandbox-devcontainer-spike.md`](research/agent-sandbox-devcontainer-spike.md). Status: active.
 - **2026-11-25. Move the agent sandbox to `.devcontainer/` with rootful Docker, Compose and gVisor (spike done, design agreed, nothing built).** The owner wants one declarative spec. The spike showed that rootful Docker enforces limits under gVisor and that rootless Docker and Podman cannot.
