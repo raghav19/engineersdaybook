@@ -30,26 +30,21 @@ volumes:
   # Holds the socket file of the builder. The agent sends its builds through it.
   buildkit-sock: {}
 
-# Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL. See README.md#prerequisites.
+# Both proxies: the upstream iron-proxy image, on runc as a dedicated uid. The uid reads ca.key and the secret files through ACLs. See README.md#prerequisites.
 x-proxy: &proxy
-  build:
-    dockerfile_inline: |
-      FROM ghcr.io/bitwarden/bws:2.1.0@sha256:3927158c53ac5a17d6cbe59fc3e1353e426f168bf246dbfe3668f6de5eaa107f AS bws
-      FROM docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
-      COPY --from=bws /bin/bws /usr/local/bin/bws
-      ENTRYPOINT []
-  # The tag names the two pinned versions above. Change it with each bump.
-  image: localhost/sandbox-proxy:iron-proxy-0.56.0-bws-2.1.0
+  image: docker.io/ironsh/iron-proxy:0.56.0@sha256:727da0cc35a6d73ed2913a38d56c4b9b4476c075149492e4fbf75552e83361ff
+  # The entrypoint of the image is iron-proxy.
+  command: ["-config", "/etc/iron-proxy/iron-proxy.yaml"]
   runtime: runc
   user: "10001:10001"
   read_only: true
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]
   init: true
-  # A proxy reads its token once. A restart outside `devcontainer up` has no token.
+  # No start at boot: the secrets folder is in RAM, and a reboot empties it. devcontainer up starts the proxies again.
   restart: "no"
   tmpfs: ["/tmp:size=16m,mode=1777,noexec,nosuid,nodev"]
-  # The maximum number of processes and threads. A fork bomb stops at this limit and cannot use all PIDs of the host. A proxy runs sh, bws and iron-proxy.
+  # The maximum number of processes and threads. A fork bomb stops at this limit and cannot use all PIDs of the host. A proxy runs iron-proxy only.
   pids_limit: 256
   # core: 0 turns off core dumps. A core dump is a copy of the memory of a crashed process, and the host saves it on its disk.
   # The memory of a proxy holds the real tokens, so a core dump would put the tokens on the disk.
@@ -57,7 +52,7 @@ x-proxy: &proxy
   environment:
     HOME: /tmp
   working_dir: /tmp
-  # /healthz answers only after iron-proxy starts. In the proxy, bws starts iron-proxy only with the secrets.
+  # /healthz answers only after iron-proxy starts.
   healthcheck:
     test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:18083/healthz"]
     interval: 2s
@@ -68,7 +63,6 @@ x-proxy: &proxy
 services:
   builder-proxy:
     <<: *proxy
-    command: ["iron-proxy", "-config", "/etc/iron-proxy/iron-proxy.yaml"]
     mem_limit: 256m
     # No swap. See the proxy service.
     memswap_limit: 256m
@@ -129,15 +123,6 @@ services:
   # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: README.md#egress-request-flow
   proxy:
     <<: *proxy
-    # exec: the shell turns into bws, so no shell stays with the token.
-    # env -u BWS_ACCESS_TOKEN: bws starts iron-proxy and passes the API tokens from Bitwarden, minus the Bitwarden access token.
-    command:
-      - sh
-      - -c
-      - >-
-        t=$$(cat /run/bws/bws-token) && rm -f /run/bws/bws-token &&
-        export BWS_ACCESS_TOKEN="$$t" && unset t &&
-        exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config /etc/iron-proxy/iron-proxy.yaml
     mem_limit: 512m
     # Swap would put the real tokens on the disk. A memswap_limit equal to mem_limit turns off swap.
     memswap_limit: 512m
@@ -145,10 +130,11 @@ services:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
       - ${HOME}/.local/state/sandbox/ca.crt:/etc/iron-proxy/ca.crt:ro
       - ${HOME}/.local/state/sandbox/ca.key:/etc/iron-proxy/ca.key:ro
-      # The only read-write mount of a proxy. init.sh makes the folder. Docker must not make it as root.
+      # The API tokens, one file each, in RAM. init.sh makes the folder. Docker must not make it as root.
       - type: bind
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
-        target: /run/bws
+        target: /run/secrets
+        read_only: true
         bind: { create_host_path: false }
     networks:
       default: {}
