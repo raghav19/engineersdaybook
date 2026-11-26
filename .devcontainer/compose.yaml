@@ -138,8 +138,8 @@ services:
         export BWS_ACCESS_TOKEN="$$t" && unset t &&
         exec bws run -- env -u BWS_ACCESS_TOKEN iron-proxy -config /etc/iron-proxy/iron-proxy.yaml
     mem_limit: 512m
-    # memswap_limit is memory plus swap. When it is unset, Docker allows swap equal to mem_limit. Equal values give no swap.
-    # This proxy holds the real tokens, and the host swaps to a disk file. Out of memory, the kernel stops the proxy. `just sandbox apply` starts it with a new token.
+    # A memswap_limit equal to mem_limit turns off swap. Swap is a file on the host disk, and the host moves memory there when the RAM is full.
+    # The memory of this proxy holds the real tokens, so swap would put the tokens on the disk. Out of memory, the proxy stops, and `just sandbox apply` starts it again.
     memswap_limit: 512m
     volumes:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
