@@ -4,13 +4,13 @@ Guidance for agents working on `.devcontainer/agent/`.
 
 ## Tool/completion coupling
 
-When adding or removing tools in `agent/tools/*.toml`, update the `sandbox:completions` task in `agent/tasks.toml`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
+When adding or removing tools in `agent/tools/*.toml`, update the completions in `agent/post-start.sh`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
 
 Tools differ in how they print completions. Check `<tool> --help` for the syntax. Examples:
 - Most tools: `<tool> completion bash`
 - Some tools: `<tool> --completions bash` (e.g., `just`)
 - Others: `<tool> generate-shell-completion bash` (e.g., `uv`)
-- A few tools use other forms. Read the task for `fd`, `yq`, `flux9s`, `terraform` and `terragrunt`.
+- A few tools use other forms. Read the lines for `fd`, `yq`, `flux9s`, `terraform` and `terragrunt`.
 
 ## LSP server coupling
 
@@ -21,7 +21,7 @@ When adding a language server to `agent/tools/lsp.toml`, also add it to `agent/c
 
 `fresh-config.json` is a copy of `~/.config/fresh/config.json` on the host. Keep it the same as the host file.
 
-The mise task `fresh:plugins` in `agent/tasks.toml` lists the Fresh packages and installs each one at its pinned commit. When you add a package, add a row with `name`, `kind`, `repo`, `commit` and `subdir`.
+The Fresh packages step in `agent/Dockerfile` lists the Fresh packages and installs each one at its pinned commit. When you add a package, add a row with `name`, `kind`, `repo`, `commit` and `subdir`.
 
 ## Fresh theme
 

@@ -82,13 +82,45 @@ COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.co
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
-# Keep tasks.toml last. An edit of it rebuilds only the layers below, and the tool stages stay cached.
-COPY tasks.toml /etc/mise/conf.d/tasks.toml
-RUN mise run fresh:plugins && mise run sandbox:completions && mise run sandbox:herdr-plugins && mise run sandbox:shell && rm -rf /tmp/mise-cache
+# The downloads at pinned versions come last, so an edit of one rebuilds only the layers below, and the tool stages stay cached.
+ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# The token usage plugin of Herdr. It reads the logs of Claude Code and makes no network call at run time.
+RUN herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
+
+# The Fresh packages. One row for each: name, kind (plugin, language or theme), repo, commit (a full hash, no tag) and subdir (. for the whole repo).
+# The kind gives the folder: plugin to plugins/packages, language to languages/packages, theme to themes/packages.
+RUN <<'SCRIPT' bash
+set -euo pipefail
+tmp=$(mktemp -d)
+while read -r name kind repo commit subdir; do
+    dest="$HOME/.config/fresh/${kind}s/packages/$name"
+    git -C "$tmp" init -q "$name"
+    git -C "$tmp/$name" fetch -q --depth 1 "$repo" "$commit"
+    git -C "$tmp/$name" checkout -q FETCH_HEAD
+    # A monorepo has more than one package, so copy the subdir and not the repo.
+    mkdir -p "${dest%/*}"
+    cp -r "$tmp/$name/$subdir" "$dest"
+    rm -rf "$dest/.git"
+done <<'PACKAGES'
+todo-highlighter        plugin   https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 todo-highlighter
+color-highlighter       plugin   https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 color-highlighter
+dotfiles-fresh-language language https://github.com/2fd/dotfiles-fresh-language 2b8c0e58721001dba0b7f9bf7608ee8b52e04261 .
+catppuccin              theme    https://github.com/sinelaw/fresh-plugins       3f327361b8b64e6e192386e5badda9d22241c854 themes/catppuccin
+PACKAGES
+rm -rf "$tmp" /tmp/mise-cache
+SCRIPT
+
+# The Claude Code plugins. Only ~/.claude/plugins stays in the image: managed-settings.json enables them, and the rest of ~/.claude is the state of the agent.
+RUN export CLAUDE_CONFIG_DIR=/home/agent/.claude \
+ && claude plugin marketplace add DietrichGebert/ponytail#v5.3.2 && claude plugin install ponytail@ponytail \
+ && claude plugin marketplace add /home/agent/token-economizer && claude plugin install tokeneconomizer@tokeneconomizer \
+ && find "$CLAUDE_CONFIG_DIR" -mindepth 1 -maxdepth 1 ! -name plugins -exec rm -rf {} +
 
 USER root
-# The image has no command. ../compose.yaml sets it, and ../devcontainer.json runs sandbox-on-create in each new container.
+# The image has no command. ../compose.yaml sets it. ../devcontainer.json runs sandbox-on-create in each new container and sandbox-post-start after each start.
 COPY --chmod=0755 on-create.sh /usr/local/bin/sandbox-on-create
+COPY --chmod=0755 post-start.sh /usr/local/bin/sandbox-post-start
 
 # At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-on-create copies it into the volume.
 RUN mkdir -p /usr/share/sandbox \
@@ -103,5 +135,4 @@ RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
 # The run-time env is in ../compose.yaml.
-ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    LANG=C.UTF-8
+ENV LANG=C.UTF-8

@@ -15,6 +15,6 @@
   "initializeCommand": ".devcontainer/init.sh",
   // Runs once in each new container: the home, the clone and the plugins. Script: agent/on-create.sh
   "onCreateCommand": "sandbox-on-create",
-  // Runs after each start. The healthcheck in compose.yaml waits for this file. /tmp is a tmpfs, so a restart empties it.
-  "postStartCommand": "touch /tmp/sandbox-ready"
+  // Runs after each start: the shell setup, the completions and the ready file for the healthcheck. Script: agent/post-start.sh
+  "postStartCommand": "sandbox-post-start"
 }
