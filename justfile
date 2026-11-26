@@ -1,16 +1,14 @@
-# The sandbox tooling lives in .devcontainer/ (Docker Compose and the devcontainer CLI). `mod` makes it `just sandbox <recipe>` from anywhere in the repo. `just sandbox` lists its recipes.
 # Part 3 has its own justfiles under code/mcp-sandbox/part-3-mcp-guardrails/; they do not fall back to this one.
 #
 #   devcontainer up --workspace-folder .   start the sandbox. See .devcontainer/README.md
 
 set quiet
 
-mod sandbox '.devcontainer'
 
-# list the recipes, modules included (the default)
+# list the recipes (the default)
 [default]
 help:
-    just --list --list-submodules
+    just --list
 
 # The agent skills in .claude/skills. The `skills` CLI (vercel-labs/skills) installs them and records them in skills-lock.json. See docs/agents/skills.md
 # The CLI is third-party code from npm, so the version is pinned here. No telemetry. It needs Node (npx).
