@@ -86,7 +86,6 @@ services:
     image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
     runtime: runsc-builder
     user: "1000:1000"
-    # rootlesskit needs these three for newuidmap. no-new-privileges stays off: with it, rootlesskit hangs.
     cap_drop: [ALL]
     cap_add: [SETUID, SETGID, SYS_CHROOT]
     restart: "no"
