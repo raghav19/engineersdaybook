@@ -303,37 +303,63 @@ What the setup assumes:
 
 - The image registry is `ghcr.io`. The secret manager is Bitwarden Secrets Manager.
 - The Bitwarden project holds `GH_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`, `QWEN_API_KEY` and `GITHUB_TOKEN`. `GITHUB_TOKEN` has the scope `write:packages`.
-- You have the access token of a machine account that reads that project. Give it only to `just sandbox setup`, which asks for it.
+- You have the access token of a machine account that can only read that project.
+- The host is Arch Linux with a systemd user manager.
+- The host has 6 GB of free memory: 3 GB for the agent sandbox, 2 GB for the builder and less than 1 GB for the two proxies.
 
 For another registry or secret manager, change `policy/agent.yaml`, the proxy in `compose.yaml` and the `publish` recipe.
 
-What the host needs:
+Do these steps once, in your main checkout. Before each start, `init.sh` checks steps 3 to 5 and names the step that is missing.
 
-| Need | Check |
-|---|---|
-| A Linux host with a systemd user manager | `systemctl --user is-system-running` |
-| Rootful Docker with Compose, and your user in the `docker` group | `docker compose version` |
-| gVisor runtimes `runsc-uds` and `runsc-builder` in `/etc/docker/daemon.json`. `setup` prints the snippet if one is missing. | `docker info -f '{{json .Runtimes}}'` |
-| The devcontainer CLI | `devcontainer --version` |
-| `systemd-creds`, to keep the Bitwarden access token | `command -v systemd-creds` |
-| `bws` and `jq`, from `mise install`. `publish` uses `bws` to authenticate to `ghcr.io`. | `bws --version` |
-| `openssl`, `setfacl` and `socat` (the host bridge). `just` stops if one is missing. | `socat -V` |
-| 6 GB of free memory: 3 GB for the agent sandbox, 2 GB for the builder and less than 1 GB for the two proxies | `free -h` |
+1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
+
+2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `just`, `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum.
+   `init.sh` and the bridge also need `setfacl` and `socat`. On Arch, they are in the packages `acl` and `socat`.
+
+3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
+
+   ```shell
+   g=$(mise where http:gvisor)
+   sudo install -m 0755 "$g/runsc" /usr/local/bin/runsc
+   sudo install -D -m 0755 -t /usr/local/bin/gvisor-bin "$g"/gvisor-bin/*
+   sudo runsc install --runtime=runsc-uds -- --host-uds=open        # the agent connects to the BuildKit socket
+   sudo runsc install --runtime=runsc-builder -- --host-uds=create  # the builder makes the BuildKit socket
+   sudo systemctl restart docker
+   ```
+
+   To update gVisor, change the version and the checksum in `mise.toml`, run `mise install`, then run the first three lines again.
+
+4. **CA.** TODO: a Compose service that makes the CA in a tmpfs volume can replace this step. Check that the proxy and the agent read it under gVisor.
+
+   The proxy ends the TLS of each HTTPS call with this CA. The agent gets only `ca.crt`. The ACL lets the proxy uid 10001 read the key, and the mode stays 0600 for all others.
+
+   ```shell
+   d=~/.local/state/sandbox && mkdir -p "$d"
+   openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+       -subj '/CN=sandbox egress proxy CA' \
+       -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
+       -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+       -keyout "$d/ca.key" -out "$d/ca.crt"
+   chmod 0600 "$d/ca.key"
+   setfacl -m u:10001:r "$d/ca.key"
+   ```
+
+5. **Token.** Encrypt the Bitwarden access token with systemd-creds. `read -s` hides the token, and the pipe writes no plain file.
+
+   ```shell
+   f=~/.config/credstore.encrypted/bws-token && mkdir -p "${f%/*}"
+   read -rsp 'Bitwarden access token> ' t && echo && printf %s "$t" | systemd-creds --user encrypt --name=bws-token - "$f" && unset t
+   chmod 0400 "$f"
+   ```
 
 ## Quick start
 
-Run these steps in your main checkout.
-
-1. Run `mise install`. It installs `bws` and `jq`, and the root `mise.toml` sets `BUILDX_BAKE_ENTITLEMENTS_FS=0` for `devcontainer build`.
-2. Run these commands:
+Run these commands in your main checkout. `init.sh` runs first: it checks the prerequisites, gives a new proxy its token and opens the host bridge.
 
 ```shell
-just sandbox setup                                  # once: the CA, the credential, the ACL, the repo link
 devcontainer up --workspace-folder .                # build if needed, then start the four services
 devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal workspace manager
 ```
-
-`setup` needs no root. It asks for the Bitwarden access token only if the credential is missing or unreadable.
 
 `docker compose -p sandbox ps` then shows four services: `builder-proxy`, `builder`, `proxy` and `agent`.
 
@@ -413,9 +439,9 @@ The plugin reads the logs of Claude Code and makes no network call. The cost is 
 | Symptom | Fix |
 |---|---|
 | `run` stops at the start | Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`. |
-| `run` says the credential is missing, or the proxy shows a `Credential` error | The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Run `just sandbox setup`. |
-| `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Run `just sandbox setup`. It asks for the token again. |
-| `podman logs sandbox-proxy` shows a Bitwarden error | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then run `just sandbox setup`. |
+| `init.sh` says the token is missing, or the proxy shows a `Credential` error | The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Do [step 5](#prerequisites) again. |
+| `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Remove it, then do [step 5](#prerequisites) again. |
+| `docker logs sandbox-proxy-1` shows a Bitwarden error | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then do [step 5](#prerequisites) again. |
 | `run` says a container is not healthy | Run `podman logs sandbox-agent` or `podman logs sandbox-builder`. |
 | `docker build` says `failed to connect to the docker API` | `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`. |
 | A `FROM` or a `RUN` step gets `403` | The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox run`. The proxy reads its file at start. `run` restarts the agent sandbox, the builder and both proxies. |
