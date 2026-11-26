@@ -8,7 +8,8 @@ networks:
   sandbox:
     # Docker gives the subnet no default route and drops forwarded packets. A container reaches only the other addresses of this subnet.
     internal: true
-    # The host gets no IPv4 address (.1) on this bridge. Without it, the agent can reach host ports that ufw allows, for example LocalSend.
+    # This option gives the host no address (.1) on this network, so the agent cannot reach the host.
+    # Without it, the agent can reach each host port that the firewall allows, for example LocalSend.
     driver_opts:
       com.docker.network.bridge.inhibit_ipv4: "true"
     # /29 has 8 addresses: .0 network, .1 gateway (reserved), .2 to .6 containers, .7 broadcast.
@@ -80,9 +81,10 @@ services:
       build: { ipv4_address: 10.200.0.10 }
 
   # BuildKit for `docker build` in the agent. Any holder of the socket can run any build step, so the container is the wall.
-  # The Docker daemon is rootful, but it only starts this container. The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image needs privileged.
   # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
   builder:
+    # The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image runs it as root and needs privileged.
+    # The Docker daemon is rootful, but it only starts this container. It runs no build step.
     image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:ef70e34495a1730a7c8e20e98fedd9fab328efd6ecfb37365ac464aa0627eb58
     runtime: runsc-builder
     user: "1000:1000"
@@ -97,8 +99,9 @@ services:
       # We keep the hiding and turn off the process sandbox.
       # Trade-off: a RUN step can kill buildkitd, so the worst case is a failed build.
       - --oci-worker-no-process-sandbox
-      # The snapshotter stores the image layers. native copies each layer in full: slower, and it uses more of the cache tmpfs.
-      # overlayfs does not mount in rootlesskit under gVisor, and fuse-overlayfs needs /dev/fuse, which the container does not get.
+      # The snapshotter stores the image layers. native copies each layer in full.
+      # Trade-off: builds are slower, and the cache tmpfs fills faster.
+      # TODO: overlayfs passed a 2-step build under gVisor. Try it with a build of the agent image.
       - --oci-worker-snapshotter=native
     # The cache is in memory and counts against mem_limit. A new container starts empty.
     tmpfs: ["/home/user/.local/share/buildkit:rw,exec,mode=1777,size=1g"]
