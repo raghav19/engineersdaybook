@@ -52,4 +52,3 @@ systemd-creds --user decrypt --name=bws-token "$credential" - >"$secrets/bws-tok
 # Let the proxy read the token file. The proxy deletes the file after it reads it.
 setfacl -m "u:$proxy_uid:r" "$secrets/bws-token"
 
-just -f justfile bridge

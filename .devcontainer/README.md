@@ -314,7 +314,7 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
 1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
 
 2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `just`, `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum.
-   `init.sh` and the bridge also need `setfacl` and `socat`. On Arch, they are in the packages `acl` and `socat`.
+   `init.sh` also needs `setfacl`. On Arch, it is in the package `acl`.
 
 3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
 
@@ -360,7 +360,7 @@ Do these steps once, in your main checkout. Before each start, `init.sh` checks 
 
 ## Quick start
 
-Run these commands in your main checkout. `init.sh` runs first: it checks the prerequisites, gives a new proxy its token and opens the host bridge.
+Run these commands in your main checkout. `init.sh` runs first: it checks the prerequisites and gives a new proxy its token.
 
 ```shell
 devcontainer up --workspace-folder .                # build if needed, then start the four services
@@ -380,60 +380,14 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 |---|---|
 | `devcontainer up --workspace-folder .` | Starts the sandbox. On stopped containers, it starts them as they were. |
 | `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
-| `just sandbox apply` | Applies an edit of `compose.yaml`, `devcontainer.json`, a policy or the image: down, then up. |
-| `just sandbox down` | Stops the four containers and closes the bridge. The volume `sandbox-home` stays. |
+| `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new token. |
+| `docker compose -p sandbox down` | Removes the four containers and the networks. The volume `sandbox-home` stays. Never add `-v`: it removes the clone and the logins. |
+| `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json`, a policy or `.env`. `devcontainer up` alone keeps the old containers. |
 | `just sandbox build` | Builds the agent sandbox image from the committed `agent/`. `--no-cache` updates the pinned tools. |
 | `just sandbox publish` | Pushes the built image to `ghcr.io` and writes its tag and digest into `.env`. Commit `.env` after. |
 | `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
 | `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
 | `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |
-
-## Open a port of the sandbox on the host
-
-The host bridge opens a port of a service in the agent sandbox on the loopback of the host.
-### Add a port
-
-1. Add the port number to `agent/ports` in your main checkout. Write one port or one range in each line. Example of a range: `19432-19441`.
-2. Run `systemctl --user restart sandbox-bridge.service`.
-3. Run `curl -s http://127.0.0.1:<port>/`. The port is open when the service in the sandbox answers.
-
-If step 3 fails, run `journalctl --user -u sandbox-bridge -n 20`. A `bad port` line names a wrong entry in `agent/ports`. An `Address already in use` line names a port that a program on the host holds. Only that port fails.
-
-### Host port bridge flow
-
-The unit `sandbox-bridge.service` runs `bridge.sh` on the host, not in the sandbox. For each port, `bridge.sh` starts a `socat` on the host. A range gives one `socat` for each port of the range.
-
-```mermaid
----
-title: Host port bridge flow
----
-sequenceDiagram
-    participant Browser as Browser on the host
-    participant HS as socat on the host
-    participant SS as socat in the agent sandbox
-    participant Svc as Service in the agent sandbox
-    Browser->>HS: connect to 127.0.0.1:PORT
-    HS->>SS: podman exec -i sandbox-agent socat - TCP:127.0.0.1:PORT
-    SS->>Svc: connect to 127.0.0.1:PORT
-    Svc-->>Browser: the response, through the same chain
-    Note over Browser,Svc: The host starts each connection. The sandbox cannot start one.
-```
-
-### Rules of the bridge
-
-| Rule | Value |
-|---|---|
-| Address on the host | `127.0.0.1` only |
-| Target in the sandbox | `127.0.0.1:<the same port>` only |
-| Ports | 1024 to 65535. A range holds at most 16 ports. Any other entry stops the bridge. |
-| Who adds a port | You, in your checkout. The agent edits its own clone, so it cannot add a port. |
-| Connections | At most 8 at the same time for each port |
-| Sandbox stopped | The connection closes at once. |
-| No port in the list | `bridge.sh` exits at once. This is not an error. |
-
-The agent controls what answers on a listed port. Open the page in a browser that holds no important logins.
-
-To remove the bridge, run `systemctl --user disable --now sandbox-bridge.service`.
 
 ## Token usage
 

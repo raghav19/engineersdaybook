@@ -1,79 +1,26 @@
-# The host recipes of the agent sandbox. ../justfile loads this file as `mod sandbox`. Recipes run in this folder.
-# One-time setup: README.md#prerequisites. init.sh runs before each start. Manual: https://just.systems/man/en/
+# The image recipes of the agent sandbox. ../justfile loads this file as `mod sandbox`. Recipes run in this folder.
+# Run the sandbox with devcontainer and docker compose: README.md#commands. Manual: https://just.systems/man/en/
 #
-#   devcontainer up --workspace-folder .    from the repo root: build if needed, then start. It runs init.sh first.
-#   devcontainer exec --workspace-folder . herdr    open Herdr in the agent sandbox.
-#   just sandbox apply     apply an edit of a file in this folder: down, then up.
-#   just sandbox down      stop and remove the containers and the bridge. The volume sandbox-home stays.
 #   just sandbox build     build the agent image.
 #   just sandbox publish   push it to ghcr.io and pin it in .env.
 
 set quiet
 set shell := ['bash', '-euo', 'pipefail', '-c']
 
-# Compose 5.6 builds with buildx bake, which refuses the Dockerfile that the devcontainer CLI writes to /tmp. The root mise.toml sets the same value.
-export BUILDX_BAKE_ENTITLEMENTS_FS := '0'
-
 # --- Required tools ---
-# If a tool is missing, just stops with a message before any recipe runs. jq comes from the root mise.toml.
-devcontainer   := require("devcontainer")
+# If a tool is missing, just stops with a message before any recipe runs.
 docker         := require("docker")
 git            := require("git")
-jq             := require("jq")
-socat          := require("socat")
-systemd_creds  := require("systemd-creds")
 
-# --- Names and paths ---
-compose := 'docker compose -p sandbox -f compose.yaml'
+# --- Names ---
 registry := 'ghcr.io/raghav19/engineersdaybook/sandbox-dev'
 # The tag is the git tree sha of agent/ at HEAD. It changes only with the content of agent/, and a squash merge keeps it.
 image := registry + ':' + shell(git + ' rev-parse HEAD:.devcontainer/agent')
-repo := parent_directory(source_directory())
-# The Bitwarden access token of the proxy, encrypted. README.md#prerequisites makes it.
-credential := config_directory() / 'credstore.encrypted/bws-token'
-# Must equal the secrets mount of the proxy in compose.yaml.
-secrets := env('XDG_RUNTIME_DIR') / 'sandbox-secrets'
-# The container of the service agent: project sandbox, first replica.
-agent := 'sandbox-agent-1'
 
 # List the recipes (the default)
 [default]
 help:
     just --list --unsorted
-
-# `devcontainer up` on stopped containers starts them as they were. down removes them, so up makes them from the new files.
-# Apply an edit of compose.yaml, devcontainer.json, a policy or the image: down, then up.
-apply: down
-    devcontainer up --workspace-folder '{{ repo }}'
-
-# Stop and remove the containers and the bridge. The volume sandbox-home stays, so the clone and the logins stay.
-down: bridge-stop
-    {{ compose }} down
-    rm -rf '{{ secrets }}'
-
-# The host starts each connection: one transient unit per port, and each connection runs socat in the agent. See README.md#host-port-bridge-flow
-# Open each agent port of PLANNOTATOR_PORT on 127.0.0.1 of the host. Run it again after a change: it stops the old units first.
-[script('bash')]
-bridge: bridge-stop
-    set -euo pipefail
-    spec=$({{ compose }} config --format json | jq -r '.services.agent.environment.PLANNOTATOR_PORT // empty')
-    [ -n "$spec" ] || { echo 'bridge: PLANNOTATOR_PORT is not set in compose.yaml' >&2; exit 1; }
-    # One port or a range like 19432-19436. A plain port gives first=last.
-    first=${spec%-*} last=${spec#*-}
-    if ! [[ $first =~ ^[0-9]+$ && $last =~ ^[0-9]+$ ]] || ((first < 1024 || last > 65535 || first > last || last - first >= 16)); then
-        echo "bridge: bad PLANNOTATOR_PORT '$spec'" >&2; exit 1
-    fi
-    for ((port = first; port <= last; port++)); do
-        # Trap: the colons inside EXEC need a backslash. max-children limits the connections to one port.
-        systemd-run --user --quiet --collect --unit "sandbox-bridge-$port" \
-            socat "TCP-LISTEN:$port,bind=127.0.0.1,reuseaddr,fork,max-children=8" \
-            "EXEC:docker exec -i {{ agent }} socat - TCP\\:127.0.0.1\\:$port"
-    done
-    echo "bridge: 127.0.0.1:$first-$last → {{ agent }}"
-
-# Close the host ports of the bridge.
-bridge-stop:
-    systemctl --user stop 'sandbox-bridge-*.service' 2>/dev/null || true
 
 # Flags go to docker build: `just sandbox build --no-cache` updates the tools that the Dockerfile pins by a prefix (claude, qwen).
 # Test it with: AGENT_IMAGE=<image> devcontainer up --workspace-folder ..
