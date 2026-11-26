@@ -45,8 +45,9 @@ fi
 
 # Make the secrets folder in RAM ($XDG_RUNTIME_DIR) with mode 0700: only you can open it.
 install -d -m 0700 "$secrets"
-# Let the proxy (uid 10001) open the folder. An ACL adds this one user without root. chown to another user needs root.
-setfacl -m "u:$proxy_uid:rx" "$secrets"
+# Let the proxy (uid 10001) open the folder. The default ACL (d:) gives each new file in it read access for the proxy.
+# An ACL adds this one user without root. chown to another user needs root.
+setfacl -m "u:$proxy_uid:rx,d:u:$proxy_uid:r" "$secrets"
 
 # Fetch the API tokens from Bitwarden. The access token stays in this script and in bws, and bws exits after the call.
 # Must equal the file sources in policy/agent.yaml.
@@ -55,13 +56,11 @@ if ! json=$(BWS_ACCESS_TOKEN="$(systemd-creds --user decrypt --name=bws-token "$
     fail "bws cannot read the secrets (step: token)"
 fi
 
-# Write one file for each token, and let the proxy read it.
+# Write one file for each token. Each file gets the read access of the proxy from the default ACL of the folder.
 for name in "${names[@]}"; do
     # The value of the secret with this key, or nothing if Bitwarden has no such secret.
     value=$(jq -r --arg key "$name" '.[] | select(.key == $key) | .value' <<<"$json")
     [ -n "$value" ] || fail "Bitwarden has no secret $name"
     # No newline at the end: iron-proxy uses the exact content of the file.
     printf '%s' "$value" >"$secrets/$name"
-    # Let the proxy (uid 10001) read the file. The ACL adds this one user, and the file stays yours.
-    setfacl -m "u:$proxy_uid:r" "$secrets/$name"
 done
