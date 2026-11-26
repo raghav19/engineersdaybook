@@ -43,17 +43,18 @@ if [ -n "$(docker compose -p sandbox -f compose.yaml ps -q --status running prox
     exit 0
 fi
 
-# The folder is in RAM ($XDG_RUNTIME_DIR). Mode 0700: only you can open it.
+# Make the token folder in RAM ($XDG_RUNTIME_DIR) with mode 0700: only you can open it.
 install -d -m 0700 "$secrets"
-# An ACL adds one more user to the folder: the proxy (uid 10001) can open it and delete the token file. chown to another user needs root, an ACL does not.
+# Let the proxy (uid 10001) open the folder and delete the token file in it. An ACL adds this one user without root. chown to another user needs root.
 setfacl -m "u:$proxy_uid:rwx" "$secrets"
-# umask 077 makes each new file 0600 (only you can read it) from the start, so no other user can read the plain token, not even for a moment.
+# Decrypt the Bitwarden token into the folder.
+# umask 077 makes the new file 0600 (only you can read it) from the start, so no other user can read the plain token, not even for a moment.
 # The brackets keep the umask to this one command.
 (
     umask 077
     systemd-creds --user decrypt --name=bws-token "$credential" - >"$secrets/bws-token"
 )
-# An ACL lets the proxy read the token file. The mode stays 0600 for all other users. The proxy deletes the file after it reads it.
+# Let the proxy read the token file. The mode stays 0600 for all other users. The proxy deletes the file after it reads it.
 setfacl -m "u:$proxy_uid:r" "$secrets/bws-token"
 
 just -f justfile bridge
