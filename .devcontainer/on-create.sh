@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The onCreateCommand of ../devcontainer.json: it runs once in each new agent container, as the user agent. It fills the home volume and makes the clone. Flow: ../README.md#run-flow
-# Variables: SANDBOX_WORKSPACE and REPO_URL come from ../compose.yaml. SANDBOX_BRANCH is optional (default: the branch of the host checkout).
+# The onCreateCommand of devcontainer.json: it runs once in each new agent container, as the user agent. compose.yaml mounts it read-only.
+# Variables: SANDBOX_WORKSPACE and REPO_URL come from compose.yaml. SANDBOX_BRANCH is optional (default: the branch of the host checkout).
 set -euo pipefail
 ws=${SANDBOX_WORKSPACE:?SANDBOX_WORKSPACE is not set}
 

@@ -5,7 +5,7 @@
   "dockerComposeFile": "compose.yaml",
   "service": "agent",
   "runServices": ["builder-proxy", "builder", "proxy", "agent"],
-  // Lifecycle commands run in this folder. The clone does not exist before sandbox-on-create makes it.
+  // Lifecycle commands run in this folder. The clone does not exist before on-create.sh makes it.
   "workspaceFolder": "/home/agent",
   "remoteUser": "agent",
   "updateRemoteUserUID": false,
@@ -13,8 +13,8 @@
   "overrideCommand": false,
   // Runs on the host, in the repo root: it checks the one-time setup, then gives a new proxy its token.
   "initializeCommand": ".devcontainer/init.sh",
-  // Runs once in each new container: the home, the clone and the plugins. Script: agent/on-create.sh
-  "onCreateCommand": "sandbox-on-create",
-  // Runs after each start: the shell setup, the completions and the ready file for the healthcheck. Script: agent/post-start.sh
-  "postStartCommand": "sandbox-post-start"
+  // Runs once in each new container: the home and the clone. compose.yaml mounts the script.
+  "onCreateCommand": "/opt/sandbox/on-create.sh",
+  // Runs after each start: the shell setup, the completions and the ready file for the healthcheck.
+  "postStartCommand": "/opt/sandbox/post-start.sh"
 }

@@ -4,7 +4,7 @@ Guidance for agents working on `.devcontainer/agent/`.
 
 ## Tool/completion coupling
 
-When adding or removing tools in `agent/tools/*.toml`, update the completions in `agent/post-start.sh`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
+When adding or removing tools in `agent/tools/*.toml`, update the completions in `post-start.sh`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
 
 Tools differ in how they print completions. Check `<tool> --help` for the syntax. Examples:
 - Most tools: `<tool> completion bash`

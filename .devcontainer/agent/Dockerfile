@@ -118,11 +118,9 @@ RUN export CLAUDE_CONFIG_DIR=/home/agent/.claude \
  && find "$CLAUDE_CONFIG_DIR" -mindepth 1 -maxdepth 1 ! -name plugins -exec rm -rf {} +
 
 USER root
-# The image has no command. ../compose.yaml sets it. ../devcontainer.json runs sandbox-on-create in each new container and sandbox-post-start after each start.
-COPY --chmod=0755 on-create.sh /usr/local/bin/sandbox-on-create
-COPY --chmod=0755 post-start.sh /usr/local/bin/sandbox-post-start
+# The image has no command. ../compose.yaml sets it. ../devcontainer.json runs ../on-create.sh and ../post-start.sh.
 
-# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. sandbox-on-create copies it into the volume.
+# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. ../on-create.sh copies it into the volume.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \
