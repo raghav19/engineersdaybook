@@ -28,8 +28,8 @@ volumes:
   # The clone, the logins and the Herdr sessions. `docker compose down` keeps it. Never add -v.
   sandbox-home:
     name: sandbox-home
-  # A shared folder for one file: the Unix socket of BuildKit. The builder makes buildkitd.sock, and the agent connects to it.
-  # The socket gives the agent the BuildKit API and nothing else. No network joins the agent and the builder.
+  # A shared folder that holds one file: buildkitd.sock. The agent sends its builds to the builder through this file.
+  # The agent and the builder are on different networks, so this file is their only connection. Through it, the agent can only ask for builds.
   buildkit-sock: {}
 
 # Both proxies: iron-proxy and bws in one image, on runc as a dedicated uid. The uid reads ca.key through an ACL that `just sandbox setup` sets.
