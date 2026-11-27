@@ -110,14 +110,6 @@ RUN mkdir -p /usr/share/sandbox \
  && mkdir /home/agent \
  && chown agent:agent /home/agent
 
-# The image has no config files. These links point into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
-# The policy files stay at their fixed path in /etc, because a process of the agent can change an env var that names a path.
-# ../lifecycle/on-create.sh links the other configs in the home.
-RUN mkdir -p /etc/claude-code /etc/qwen-code \
- && ln -s /run/sandbox/configs/managed-settings.json /etc/claude-code/managed-settings.json \
- && ln -s /run/sandbox/configs/qwen-settings.json /etc/qwen-code/settings.json \
- && chmod 0755 /etc/claude-code /etc/qwen-code
-
 # Build-time env only. The run-time env and the command are in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8

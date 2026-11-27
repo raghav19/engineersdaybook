@@ -246,7 +246,11 @@ services:
       - sandbox-home:/home/agent
       # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
       - ./lifecycle:/run/sandbox/lifecycle:ro
-      # All config files, read-only. The links in /etc (agent/Dockerfile) and in the home (lifecycle/on-create.sh) point here.
+      # All config files, read-only. The links in the home (lifecycle/on-create.sh) point here.
       - ./configs:/run/sandbox/configs:ro
+      # The policy files of Claude Code and Qwen Code, at their fixed path. A process of the agent can change an env var that names a path, but not this mount.
+      # TODO: check that gVisor makes these mount points in the read-only root. If not, put links to /run/sandbox/configs in the image.
+      - ./configs/managed-settings.json:/etc/claude-code/managed-settings.json:ro
+      - ./configs/qwen-settings.json:/etc/qwen-code/settings.json:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
