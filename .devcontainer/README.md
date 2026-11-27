@@ -163,7 +163,7 @@ sequenceDiagram
     Compose->>Compose: start both proxies and the builder, wait until healthy
     Compose->>Agent: start
     opt a new container
-        CLI->>Agent: lifecycle/on-create.sh: clone the repo, link the configs
+        CLI->>Agent: lifecycle/on-create.sh: home files, clone,<br/>config links, buildx builder
     end
     CLI->>Agent: lifecycle/post-start.sh: shell setup, then /tmp/sandbox-ready
     You->>CLI: devcontainer exec herdr
@@ -195,7 +195,7 @@ sequenceDiagram
 
 ### Egress request flow
 
-The agent sandbox and the builder follow this path. Only the proxy IP and the rule set differ.
+The agent sandbox and the builder follow this path. Only the proxy IP and the rule set differ. Only the agent proxy swaps a placeholder for a token.
 
 ```mermaid
 ---
@@ -205,9 +205,10 @@ sequenceDiagram
     participant Tool
     participant Proxy as iron-proxy
     participant Host as Listed host
-    Tool->>Proxy: CONNECT to HTTPS_PROXY on the internal network: 10.200.0.2:18080 (agent sandbox) or 10.200.0.10:18080 (builder)
+    Note over Tool: A tool that ignores HTTPS_PROXY<br/>gets network unreachable.
+    Tool->>Proxy: CONNECT through HTTPS_PROXY<br/>agent 10.200.0.2:18080, builder 10.200.0.10:18080
     alt a rule matches the host, the method and the path
-        Proxy->>Host: send the request on the network default, the agent proxy swaps the placeholder
+        Proxy->>Host: send the request on the network default
         Host-->>Proxy: the response
         Proxy-->>Tool: the response
     else no rule matches
@@ -227,22 +228,26 @@ sequenceDiagram
     participant Tool
     participant Proxy as agent proxy
     participant Host as The host
-    Tool->>Proxy: a request in the tunnel
-    alt the host is in neither domains nor rules
+    Tool->>Proxy: CONNECT host:443
+    alt the host is in neither domains nor a CONNECT rule
         Proxy-->>Tool: 403
-    else the method and the path match no rule
-        Proxy-->>Tool: 403
-    else a rule matches
-        opt a placeholder is in a header and the host is in its rule
-            Proxy->>Proxy: replace the placeholder with the real token
+    else the host is listed
+        Proxy-->>Tool: the tunnel is open
+        Tool->>Proxy: TLS with the proxy CA, then the request
+        alt the method and the path match no rule
+            Proxy-->>Tool: 403
+        else a rule matches
+            opt a placeholder is in a header and the host is in its rule
+                Proxy->>Proxy: replace the placeholder with the real token
+            end
+            Proxy->>Host: send the request over a new TLS connection
+            Host-->>Proxy: the response
+            Proxy-->>Tool: the response
         end
-        Proxy->>Host: send the request
-        Host-->>Proxy: the response
-        Proxy-->>Tool: the response
     end
 ```
 
-A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules, so a write goes to one GitHub repository only. The builder proxy has no path rules, because it cannot see a path.
+The proxy decides on the host at the `CONNECT`, before it sees a path. It reads the method and the path only after it ends TLS with its CA. A host in `domains` takes every method and every path. A host in `rules` takes only the methods and the paths of its rules, so a write goes to one GitHub repository only. The builder proxy has no path rules, because it cannot see a path.
 
 ### Image build flow
 
@@ -257,7 +262,7 @@ sequenceDiagram
     participant BK as buildkitd in the builder
     participant BP as builder proxy
     participant Reg as registry and package hosts
-    Agent->>BK: docker build, send the context on buildkitd.sock
+    Agent->>BK: docker build, the context on buildkitd.sock<br/>(gVisor --host-uds=open)
     BK->>BP: FROM, pull the base image through HTTPS_PROXY
     alt the host is in the allowlist
         BP->>Reg: pull the layers
@@ -296,7 +301,7 @@ sequenceDiagram
     participant crane as crane in the agent sandbox
     participant HP as agent proxy
     participant GH as ghcr.io
-    crane->>HP: push the tar file through HTTPS_PROXY, login with the placeholder
+    crane->>HP: push the tar file through HTTPS_PROXY,<br/>login: the placeholder in ~/.docker/config.json
     alt the path is in the namespace raghav19
         HP->>HP: replace the placeholder with the real token
         HP->>GH: send each blob and the manifest
