@@ -114,10 +114,11 @@ RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 USER root
 # The home is a volume at run time, so the image keeps its home files as a skeleton. ../lifecycle/on-create.sh copies them into the volume.
+# The empty clone folder: Docker copies it into a new home volume, so the workspace folder of ../devcontainer.json exists before the first hook.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
- && mkdir /home/agent \
- && chown agent:agent /home/agent
+ && mkdir -p /home/agent/engineersdaybook \
+ && chown -R agent:agent /home/agent
 
 # Build-time env only. The run-time env and the command are in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
