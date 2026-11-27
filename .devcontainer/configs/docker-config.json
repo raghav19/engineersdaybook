@@ -1,5 +1,4 @@
 {
-  "cliPluginsExtraDirs": ["/opt/mise/shims"],
   "auths": {
     "ghcr.io": {
       "auth": "cmFnaGF2MTk6c2FuZGJveC1wbGFjZWhvbGRlci1HSENSX1BVU0hfVE9LRU4="

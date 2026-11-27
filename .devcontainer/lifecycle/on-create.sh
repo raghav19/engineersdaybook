@@ -40,7 +40,7 @@ ln -sfn "$c/starship.toml" "$HOME/.config/starship.toml"
 ln -sfn "$c/k9s-skin-catppuccin-mocha.yaml" "$HOME/.config/k9s/skins/catppuccin-mocha.yaml"
 ln -sfn "$c/k9s-skin-tokyo-night.yaml" "$HOME/.config/k9s/skins/tokyo-night.yaml"
 
-# The docker config: the ghcr.io login placeholder, the builder proxy and the plugin folder of buildx. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
+# The docker config: the ghcr.io login placeholder and the builder proxy. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
 mkdir -p "$HOME/.docker" || fail "could not make ~/.docker"
 ln -sfn "$c/docker-config.json" "$HOME/.docker/config.json"
 # buildx keeps the builder in this file, and the home volume keeps the file. create refuses a name that exists, so remove the old file first.

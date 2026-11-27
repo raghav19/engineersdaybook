@@ -9,9 +9,5 @@ terraform = "1.17"
 flux2 = "2.10"
 "github:home-operations/flate" = "0.8"
 "github:fluxcd/flux-schema" = "0.18"
-# docker is the client of the builder. It needs no daemon. The Dockerfile adds the plugin buildx.
-docker-cli = "29.10"
-# buildx is a docker plugin, so rename_exe names it docker-buildx. docker-config.json adds /opt/mise/shims to the plugin folders.
-"github:docker/buildx" = { version = "0.39", rename_exe = "docker-buildx" }
 # crane pushes the tar of a build to a registry. It reads the login from the config of docker.
 crane = "0.22"

@@ -42,7 +42,9 @@ RUN mise install --yes
 
 FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
-RUN mise install --yes
+# Removes TypeScript from vscode-langservers-extracted. The JSON server, the only one that Fresh uses, runs without it.
+RUN mise install --yes \
+ && rm -rf /opt/mise/installs/npm-vscode-langservers-extracted/*/node_modules/.mise/typescript@*
 
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
@@ -84,6 +86,13 @@ FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends binutils \
+ && rm -rf /var/lib/apt/lists/*
+# Docker client and buildx only, no daemon. Steps: https://docs.docker.com/engine/install/debian/
+RUN install -m 0755 -d /etc/apt/keyrings \
+ && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+ && echo "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian trixie stable" >/etc/apt/sources.list.d/docker.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends docker-ce-cli=5:29.10.1-1~debian.13~trixie docker-buildx-plugin=0.39.1-1~debian.13~trixie \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
