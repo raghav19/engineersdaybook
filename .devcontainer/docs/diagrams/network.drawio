@@ -19,7 +19,7 @@
 <mxCell id="netD" value="Network default: Compose bridge" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
 <mxGeometry x="980" y="110" width="380" height="850" as="geometry" />
 </mxCell>
-<mxCell id="agent" value="&lt;b&gt;agent: 10.200.0.3&lt;/b&gt;&lt;br&gt;gVisor&lt;br&gt;HTTPS_PROXY=http://10.200.0.2:18080&lt;br&gt;NO_PROXY=localhost,127.0.0.1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxCell id="agent" value="&lt;b&gt;agent: 10.200.0.3&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel&lt;br&gt;HTTPS_PROXY=http://10.200.0.2:18080&lt;br&gt;NO_PROXY=localhost,127.0.0.1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
 <mxGeometry x="60" y="185" width="360" height="150" as="geometry" />
 </mxCell>
 <mxCell id="s_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
@@ -40,7 +40,7 @@
 <mxCell id="sock" value="&lt;b&gt;Volume buildkit-sock&lt;/b&gt;&lt;br&gt;a folder on the host&lt;br&gt;buildkitd.sock: a Unix&lt;br&gt;socket, not a network" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
 <mxGeometry x="355" y="495" width="230" height="80" as="geometry" />
 </mxCell>
-<mxCell id="builder" value="&lt;b&gt;builder: 10.200.0.11&lt;/b&gt;&lt;br&gt;gVisor&lt;br&gt;HTTPS_PROXY=http://10.200.0.10:18080&lt;br&gt;RUN steps: the same proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxCell id="builder" value="&lt;b&gt;builder: 10.200.0.11&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel&lt;br&gt;HTTPS_PROXY=http://10.200.0.10:18080&lt;br&gt;RUN steps: the same proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
 <mxGeometry x="60" y="665" width="360" height="150" as="geometry" />
 </mxCell>
 <mxCell id="b_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">

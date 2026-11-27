@@ -13,7 +13,7 @@
 <rect x="980" y="110" width="380" height="850" rx="16" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="8 6"/>
 <text x="990" y="127.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="990" dy="0" font-weight="bold">Network default: Compose bridge</tspan></text>
 <rect x="60" y="185" width="360" height="150" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<text x="240" y="231.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="240" dy="0" font-weight="bold">agent: 10.200.0.3</tspan><tspan x="240" dy="19">gVisor</tspan><tspan x="240" dy="19">HTTPS_PROXY=http://10.200.0.2:18080</tspan><tspan x="240" dy="19">NO_PROXY=localhost,127.0.0.1</tspan></text>
+<text x="240" y="231.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="240" dy="0" font-weight="bold">agent: 10.200.0.3</tspan><tspan x="240" dy="19">gVisor: userspace kernel</tspan><tspan x="240" dy="19">HTTPS_PROXY=http://10.200.0.2:18080</tspan><tspan x="240" dy="19">NO_PROXY=localhost,127.0.0.1</tspan></text>
 <rect x="60" y="360" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="240" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the Internet</tspan><tspan x="240" dy="17">internal: true, so network unreachable</tspan></text>
 <rect x="60" y="420" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
@@ -27,7 +27,7 @@
 <rect x="355" y="495" width="230" height="80" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
 <text x="470" y="509.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="470" dy="0" font-weight="bold">Volume buildkit-sock</tspan><tspan x="470" dy="17">a folder on the host</tspan><tspan x="470" dy="17">buildkitd.sock: a Unix</tspan><tspan x="470" dy="17">socket, not a network</tspan></text>
 <rect x="60" y="665" width="360" height="150" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<text x="240" y="711.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="240" dy="0" font-weight="bold">builder: 10.200.0.11</tspan><tspan x="240" dy="19">gVisor</tspan><tspan x="240" dy="19">HTTPS_PROXY=http://10.200.0.10:18080</tspan><tspan x="240" dy="19">RUN steps: the same proxy</tspan></text>
+<text x="240" y="711.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="240" dy="0" font-weight="bold">builder: 10.200.0.11</tspan><tspan x="240" dy="19">gVisor: userspace kernel</tspan><tspan x="240" dy="19">HTTPS_PROXY=http://10.200.0.10:18080</tspan><tspan x="240" dy="19">RUN steps: the same proxy</tspan></text>
 <rect x="60" y="840" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="240" y="856.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the Internet</tspan><tspan x="240" dy="17">internal: true, so network unreachable</tspan></text>
 <rect x="60" y="900" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>

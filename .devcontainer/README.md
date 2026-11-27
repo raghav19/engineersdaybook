@@ -49,7 +49,7 @@ This sandbox applies each concept as follows:
 | 1 The wall | A Docker container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
 | 2 Workspace | A private clone of the repo. The `.git` folder of your checkout is a read-only mount. |
 | 3 Network gate | An internal Docker network leads only to the agent proxy. The proxy allows listed hosts, methods and paths. |
-| 4 Key holder | The agent proxy swaps a placeholder for the real token. `init.sh` fetches the real tokens from Bitwarden into files in `$XDG_RUNTIME_DIR/sandbox-secrets`, a tmpfs. |
+| 4 Key holder | Bitwarden Secrets Manager, outside the host, holds the real tokens. `init.sh` fetches them into `$XDG_RUNTIME_DIR/sandbox-secrets`, a tmpfs, and the agent proxy swaps a placeholder for the real token. |
 | 5 Saved state | The volume `sandbox-home` keeps the clone, the logins and the histories. Herdr restores the panes. |
 | 6 You | You approve tool calls in Claude Code and follow the panes in Herdr and the audit log. `docker compose -p sandbox stop` stops the sandbox. Each task has its own worktree and branch. |
 
@@ -85,7 +85,7 @@ The sandbox has two limits of its own:
 
 Each internal network is a /29, a block of 8 addresses. In each block, the gateway takes the first host address, the proxy the next one, and the container the one after it. So the builder at .11 has the same place in its block as the agent at .3. The two blocks do not overlap.
 
-gVisor runs the agent sandbox and the builder. The proxies run on runc. The agent and the builder share no network. The agent reaches the builder only through `buildkitd.sock` in the volume `buildkit-sock`.
+gVisor, a userspace kernel, runs the agent sandbox and the builder. The proxies run on runc. The agent and the builder share no network. The agent reaches the builder only through `buildkitd.sock` in the volume `buildkit-sock`.
 
 The allowed hosts are in `policy/agent.yaml` and `policy/builder.yaml`.
 
@@ -388,17 +388,41 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 `agent/devcontainer.json` is the build config of the agent image. The lifecycle scripts in `lifecycle/` and the files in `configs/` are not in the image: `compose.yaml` mounts them read-only, and `devcontainer up` runs the scripts. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
 
-```shell
-tag=$(git rev-parse HEAD:.devcontainer/agent)
-img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
-devcontainer build --workspace-folder . --config .devcontainer/agent/devcontainer.json --image-name "$img:$tag" \
-  --push --cache-to "type=registry,ref=$img:cache,mode=max"
-docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}'
-```
+1. Set the tag and the image name:
 
-The last command prints the pinned reference. Put it in the `image` line of the service `agent` in `compose.yaml`, commit it, then apply it with `docker compose -p sandbox down && devcontainer up --workspace-folder .`.
+   ```shell
+   tag=$(git rev-parse HEAD:.devcontainer/agent)
+   img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
+   ```
 
-To test an image before the push, run the build without `--push` and `--cache-to`. `devcontainer up` uses the local image of that tag.
+2. Build the image, then push it and its layer cache:
+
+   ```shell
+   devcontainer build \
+     --workspace-folder . \
+     --config .devcontainer/agent/devcontainer.json \
+     --image-name "$img:$tag" \
+     --push \
+     --cache-to "type=registry,ref=$img:cache,mode=max"
+   ```
+
+   To test the image before the push, leave out `--push` and `--cache-to`. `devcontainer up` then uses the local image of that tag.
+
+3. Print the pinned reference:
+
+   ```shell
+   docker buildx imagetools inspect "$img:$tag" \
+     --format '{{.Name}}@{{.Manifest.Digest}}'
+   ```
+
+4. Put that reference in the `image` line of the service `agent` in `compose.yaml`, and commit it.
+
+5. Apply it:
+
+   ```shell
+   docker compose -p sandbox down
+   devcontainer up --workspace-folder .
+   ```
 
 ## Token usage
 

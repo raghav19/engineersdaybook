@@ -28,7 +28,7 @@
 <mxCell id="acont" value="agent: 10.200.0.3, 3 GB, 4 CPUs" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
 <mxGeometry x="310" y="240" width="390" height="264" as="geometry" />
 </mxCell>
-<mxCell id="agv" value="gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxCell id="agv" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
 <mxGeometry x="320" y="280" width="370" height="214" as="geometry" />
 </mxCell>
 <mxCell id="tools" value="&lt;b&gt;Agent tools&lt;/b&gt;&lt;br&gt;Claude, Qwen, Herdr, Fresh" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
@@ -49,7 +49,7 @@
 <mxCell id="bcont" value="builder: 10.200.0.11, 2 GB, 2 CPUs" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
 <mxGeometry x="310" y="680" width="390" height="224" as="geometry" />
 </mxCell>
-<mxCell id="bgv" value="gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxCell id="bgv" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
 <mxGeometry x="320" y="720" width="370" height="174" as="geometry" />
 </mxCell>
 <mxCell id="bk" value="&lt;b&gt;BuildKit (buildkitd)&lt;/b&gt;&lt;br&gt;no token, cache in tmpfs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
