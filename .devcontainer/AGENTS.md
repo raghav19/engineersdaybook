@@ -14,7 +14,7 @@ Tools differ in how they print completions. Check `<tool> --help` for the syntax
 
 ## LSP server coupling
 
-When adding a language server to `agent/tools/lsp.toml`, also add it to `agent/configs/editor/fresh-config.json`:
+When adding a language server to `agent/tools/lsp.toml`, also add it to `configs/fresh-config.json`:
 
 1. Add an entry to `lsp.<language>`: `{"command": "<tool>", "auto_start": true}`
 2. If the tool is also a formatter, add it under `languages.<language>.formatter`

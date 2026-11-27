@@ -94,30 +94,32 @@ COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 RUN mise reshim
 
-# The plugins from stage8. The config files further down overwrite a file from stage8 that has the same path.
+# The plugins from stage8. The config links further down replace a file from stage8 that has the same path.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh /home/agent/.config/fresh
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/herdr /home/agent/.config/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /home/agent/.local/state/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.claude /home/agent/.claude
 
 USER root
-# buildx create only writes the definition of the builder. docker-buildx runs on its own, because the docker config is a mount at run time.
-# The empty config.json is the mount point of ../configs/docker-config.json.
-# TODO: check if gVisor makes the mount point in the read-only root without the touch, then remove it.
+# The image has no config files. Each config is a link into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
+# A tool cannot write through a link, because the mount is read-only. Edit the file in ../configs.
+# buildx create only writes the definition of the builder. docker-buildx runs on its own, because the docker config is not in the image.
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
  && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker-buildx create --name sandbox \
- && touch /etc/docker/config.json \
+ && ln -s /run/sandbox/configs/docker-config.json /etc/docker/config.json \
  && chmod -R a+rX /etc/docker
 USER agent
 
-COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The theme takes its colors from the terminal. See AGENTS.md#fresh-theme.
-COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json
-COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
-# Must equal ~/.config/starship.toml on the host.
-COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
-COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
-COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
+# ../lifecycle/on-create.sh copies these links into the home volume with the skeleton.
+# ../configs/starship.toml must equal ~/.config/starship.toml on the host.
+RUN c=/run/sandbox/configs \
+ && mkdir -p /home/agent/.config/fresh/themes /home/agent/.config/herdr /home/agent/.config/k9s/skins \
+ && ln -sf $c/fresh-config.json /home/agent/.config/fresh/config.json \
+ && ln -sf $c/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json \
+ && ln -sf $c/herdr-config.toml /home/agent/.config/herdr/config.toml \
+ && ln -sf $c/starship.toml /home/agent/.config/starship.toml \
+ && ln -sf $c/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml \
+ && ln -sf $c/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
@@ -128,9 +130,10 @@ RUN mkdir -p /usr/share/sandbox \
  && mkdir /home/agent \
  && chown agent:agent /home/agent
 
-# The empty files are the mount points of ../configs/managed-settings.json and ../configs/qwen-settings.json.
+# The policy files of Claude Code and Qwen Code, as links like the docker config above.
 RUN mkdir -p /etc/claude-code /etc/qwen-code \
- && touch /etc/claude-code/managed-settings.json /etc/qwen-code/settings.json \
+ && ln -s /run/sandbox/configs/managed-settings.json /etc/claude-code/managed-settings.json \
+ && ln -s /run/sandbox/configs/qwen-settings.json /etc/qwen-code/settings.json \
  && chmod 0755 /etc/claude-code /etc/qwen-code
 
 # Build-time env only. The run-time env and the command are in ../compose.yaml.

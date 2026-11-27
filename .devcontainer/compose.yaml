@@ -215,7 +215,7 @@ services:
       BUILDX_BUILDER: sandbox
       TF_PLUGIN_CACHE_DIR: /home/agent/.cache/terraform-providers
       CHECKPOINT_DISABLE: "1"
-      # catppuccin-mocha or tokyo-night (agent/configs/tools/k9s-skin-*.yaml)
+      # catppuccin-mocha or tokyo-night (configs/k9s-skin-*.yaml)
       K9S_SKIN: catppuccin-mocha
       # agents
       CLAUDE_CONFIG_DIR: /home/agent/.claude
@@ -248,10 +248,8 @@ services:
       - sandbox-home:/home/agent
       # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
       - ./lifecycle:/run/sandbox/lifecycle:ro
-      # The docker config: the ghcr.io login placeholder, the builder proxy and the plugin folder of buildx. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
-      - ./configs/docker-config.json:/etc/docker/config.json:ro
-      # The policy of Claude Code. It also enables the plugins.
-      - ./configs/managed-settings.json:/etc/claude-code/managed-settings.json:ro
-      - ./configs/qwen-settings.json:/etc/qwen-code/settings.json:ro
+      # All config files, read-only. The links in the image point here, for example /etc/docker/config.json and ~/.config/herdr/config.toml.
+      # Keys of the docker config: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
+      - ./configs:/run/sandbox/configs:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
