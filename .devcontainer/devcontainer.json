@@ -5,8 +5,9 @@
   "dockerComposeFile": "compose.yaml",
   "service": "agent",
   "runServices": ["builder-proxy", "builder", "proxy", "agent"],
-  // Lifecycle commands run in this folder. The clone does not exist before lifecycle/on-create.sh makes it.
-  "workspaceFolder": "/home/agent",
+  // The clone: devcontainer exec and the lifecycle commands start here. The image makes the empty folder, because the CLI enters it before on-create.sh clones.
+  // Must equal SANDBOX_WORKSPACE in compose.yaml.
+  "workspaceFolder": "/home/agent/engineersdaybook",
   "remoteUser": "agent",
   "updateRemoteUserUID": false,
   // Keep the command of compose.yaml. The default runs the CMD of the image (bash), which exits without a TTY.
