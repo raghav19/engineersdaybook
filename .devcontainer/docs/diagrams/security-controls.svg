@@ -122,7 +122,7 @@
 <path d="M400 922 C584 922 676 922 860 922" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M1030 922 C1218 922 1312 922 1500 922" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M1710 922 C1793.99 922 1766.01 765.5 1850 765.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<path d="M200 584 L70 584 L70 922 L200 922" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M200 584 L110 584 Q70 584 70 624 L70 882 Q70 922 110 922 L200 922" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M450 628 C450 668 449.979 688 449.979 728" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M450 878 C450 838 449.979 818 449.979 778" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M1440 648 C1440 688 1440.02 688 1440.02 728" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
@@ -132,6 +132,7 @@
 <text x="1790" y="118.491" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1790" dy="0">tokens, CA</tspan></text>
 <text x="630" y="938.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="630" dy="0">HTTPS_PROXY</tspan><tspan x="630" dy="17">10.200.0.10:18080</tspan></text>
 <text x="1265" y="905.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1265" dy="0">TCP</tspan></text>
+<rect x="12.1" y="734" width="115.8" height="38" fill="#ffffff"/>
 <text x="70" y="744.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="70" dy="0">docker over</tspan><tspan x="70" dy="17">buildkitd.sock</tspan></text>
 <text x="449.989" y="678" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="449.989" dy="0">system calls</tspan></text>
 <text x="449.989" y="828" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="449.989" dy="0">system calls</tspan></text>

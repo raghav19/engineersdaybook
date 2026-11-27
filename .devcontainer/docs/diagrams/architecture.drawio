@@ -17,10 +17,10 @@
 <mxGeometry x="680" y="70" width="300" height="76" as="geometry" />
 </mxCell>
 <mxCell id="term" value="&lt;b&gt;Your terminal&lt;/b&gt;&lt;br&gt;devcontainer exec" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-<mxGeometry x="20" y="310" width="190" height="76" as="geometry" />
+<mxGeometry x="20" y="312" width="190" height="76" as="geometry" />
 </mxCell>
 <mxCell id="repo" value="&lt;b&gt;Repo&lt;/b&gt;&lt;br&gt;.git folder, read-only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-<mxGeometry x="20" y="420" width="190" height="76" as="geometry" />
+<mxGeometry x="20" y="412" width="190" height="76" as="geometry" />
 </mxCell>
 <mxCell id="netsbx" value="Network sandbox: internal, 10.200.0.0/29" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
 <mxGeometry x="290" y="200" width="980" height="320" as="geometry" />
@@ -38,7 +38,7 @@
 <mxGeometry x="335" y="420" width="340" height="60" as="geometry" />
 </mxCell>
 <mxCell id="proxy" value="&lt;b&gt;proxy: 10.200.0.2:18080&lt;/b&gt;&lt;br&gt;iron-proxy on runc, 512 MB&lt;br&gt;allowlist, path rules,&lt;br&gt;TLS, token swap" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-<mxGeometry x="940" y="300" width="310" height="110" as="geometry" />
+<mxGeometry x="940" y="295" width="310" height="110" as="geometry" />
 </mxCell>
 <mxCell id="sock" value="&lt;b&gt;Volume buildkit-sock&lt;/b&gt;&lt;br&gt;buildkitd.sock&lt;br&gt;for docker build" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
 <mxGeometry x="730" y="545" width="200" height="70" as="geometry" />
@@ -56,7 +56,7 @@
 <mxGeometry x="335" y="780" width="340" height="70" as="geometry" />
 </mxCell>
 <mxCell id="bproxy" value="&lt;b&gt;builder-proxy: 10.200.0.10:18080&lt;/b&gt;&lt;br&gt;iron-proxy on runc, 256 MB&lt;br&gt;host names only (sni-only),&lt;br&gt;no token" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-<mxGeometry x="940" y="735" width="310" height="110" as="geometry" />
+<mxGeometry x="940" y="760" width="310" height="110" as="geometry" />
 </mxCell>
 <mxCell id="net" value="&lt;b&gt;Internet&lt;/b&gt;&lt;br&gt;allowed hosts" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
 <mxGeometry x="1530" y="470" width="200" height="80" as="geometry" />
@@ -83,12 +83,12 @@
 </mxCell>
 <mxCell id="e_term" value="exec" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="term" target="tools">
 <mxGeometry relative="1" as="geometry">
-<mxPoint x="0" y="-16.5" as="offset" />
+<mxPoint x="-18" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
 <mxCell id="e_repo" value="clone" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="repo" target="clone">
 <mxGeometry relative="1" as="geometry">
-<mxPoint x="0" y="-16.5" as="offset" />
+<mxPoint x="-18" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
 <mxCell id="e_tc" value="reads and writes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="clone">
@@ -96,12 +96,12 @@
 <mxPoint x="66" y="0" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_tp" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="proxy">
+<mxCell id="e_tp" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="proxy">
 <mxGeometry relative="1" as="geometry">
 <mxPoint x="0" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_ts" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="sock">
+<mxCell id="e_ts" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="sock">
 <mxGeometry relative="1" as="geometry" />
 </mxCell>
 <mxCell id="e_sb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="bk">

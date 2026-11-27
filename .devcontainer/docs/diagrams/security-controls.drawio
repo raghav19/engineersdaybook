@@ -207,7 +207,7 @@
 <mxPoint x="0" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="d1" value="docker over&#10;buildkitd.sock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="bk">
+<mxCell id="d1" value="docker over&#10;buildkitd.sock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=#ffffff;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="bk">
 <mxGeometry relative="1" as="geometry">
 <Array as="points">
 <mxPoint x="70" y="584" />
