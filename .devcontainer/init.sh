@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# The initializeCommand of devcontainer.json: it runs on the host before each `devcontainer up`. It checks the one-time setup and gives a new proxy its token.
+# The initializeCommand of devcontainer.json: it runs on the host before each `devcontainer up`. It gives a new proxy a new CA and its tokens.
 # Setup: README.md#prerequisites. Flow: README.md#run-flow
 set -euo pipefail
 cd "$(dirname "$0")"
 
 credential="$HOME/.config/credstore.encrypted/bws-token"
-ca_dir="$HOME/.local/state/sandbox"
-# Must equal the secrets mount of the proxy in compose.yaml.
+# Must equal the secrets mount of the proxy and the CA mount of the agent in compose.yaml.
 secrets="${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets"
 # Must equal the uid of x-proxy in compose.yaml.
 proxy_uid=10001
@@ -16,29 +15,7 @@ fail() {
     exit 1
 }
 
-# --- Checks of the one-time setup. Each check names the missing step. ---
-
-runtimes=$(docker info --format '{{json .Runtimes}}')
-for runtime in runsc-uds runsc-builder; do
-    if ! jq -e --arg name "$runtime" 'has($name)' <<<"$runtimes" >/dev/null; then
-        fail "Docker has no runtime $runtime (step: gVisor)"
-    fi
-done
-
-if [ ! -f "$ca_dir/ca.crt" ] || [ ! -f "$ca_dir/ca.key" ]; then
-    fail "the proxy CA is missing in $ca_dir (step: CA)"
-fi
-
-if ! getfacl --omit-header "$ca_dir/ca.key" 2>/dev/null | grep -q "^user:$proxy_uid:r"; then
-    fail "uid $proxy_uid cannot read $ca_dir/ca.key (step: CA)"
-fi
-
-if [ ! -f "$credential" ]; then
-    fail "the encrypted Bitwarden token $credential is missing (step: token)"
-fi
-
-# --- The secrets of the proxy. A running proxy has read them already, so only a new proxy gets them. ---
-
+# A running proxy has read its CA and its tokens already, so only a new proxy gets them.
 if [ -n "$(docker compose -p sandbox -f compose.yaml ps -q --status running proxy)" ]; then
     exit 0
 fi
@@ -48,6 +25,16 @@ install -d -m 0700 "$secrets"
 # Let the proxy (uid 10001) open the folder. The default ACL (d:) gives each new file in it read access for the proxy.
 # An ACL adds this one user without root. chown to another user needs root.
 setfacl -m "u:$proxy_uid:rx,d:u:$proxy_uid:r" "$secrets"
+
+# A new CA for each new proxy. The proxy ends the TLS of each HTTPS call with it, and the agent trusts only ca.crt.
+# Trap: gVisor can keep the old ca.crt in a running agent. Stop the whole sandbox, not only the proxy.
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 365 \
+    -subj '/CN=sandbox egress proxy CA' \
+    -addext 'basicConstraints=critical,CA:TRUE,pathlen:0' \
+    -addext 'keyUsage=critical,keyCertSign,cRLSign' \
+    -keyout "$secrets/ca.key" -out "$secrets/ca.crt" 2>/dev/null
+# openssl makes the key with mode 0600, and that mode blocks the default ACL. This line gives the proxy its read access again.
+setfacl -m "u:$proxy_uid:r" "$secrets/ca.key"
 
 # Fetch the API tokens from Bitwarden. The access token stays in this script and in bws, and bws exits after the call.
 # Must equal the file sources in policy/agent.yaml.

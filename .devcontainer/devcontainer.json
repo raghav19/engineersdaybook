@@ -11,7 +11,7 @@
   "updateRemoteUserUID": false,
   // Keep the command of compose.yaml. The default runs the CMD of the image (bash), which exits without a TTY.
   "overrideCommand": false,
-  // Runs on the host, in the repo root: it checks the one-time setup, then gives a new proxy its token.
+  // Runs on the host, in the repo root: it gives a new proxy a new CA and its tokens.
   "initializeCommand": ".devcontainer/init.sh"
   // The agent image brings onCreateCommand and postStartCommand in its label (agent/devcontainer.json). A hook here would run twice.
 }

@@ -30,7 +30,7 @@ volumes:
   # Holds the socket file of the builder. The agent sends its builds through it.
   buildkit-sock: {}
 
-# Both proxies: the upstream iron-proxy image, on runc as a dedicated uid. The uid reads ca.key and the secret files through ACLs. See README.md#prerequisites.
+# Both proxies: the upstream iron-proxy image, on runc as a dedicated uid. The uid reads the CA and the secret files through ACLs that init.sh sets.
 x-proxy: &proxy
   image: docker.io/ironsh/iron-proxy:0.61.0@sha256:973b7adf44a12ded3b58cf67af35a80a8304d82bef0fb943e6467fe4f4020573
   # The entrypoint of the image is iron-proxy.
@@ -128,9 +128,7 @@ services:
     memswap_limit: 512m
     volumes:
       - ./policy/agent.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
-      - ${HOME}/.local/state/sandbox/ca.crt:/etc/iron-proxy/ca.crt:ro
-      - ${HOME}/.local/state/sandbox/ca.key:/etc/iron-proxy/ca.key:ro
-      # The API tokens, one file each, in RAM. init.sh makes the folder. Docker must not make it as root.
+      # The CA and the API tokens, one file each, in RAM. init.sh makes the folder. Docker must not make it as root.
       - type: bind
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
         target: /run/secrets
@@ -233,7 +231,12 @@ services:
       # lsp: marksman runs on .NET, and the image has no ICU library.
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
     volumes:
-      - ${HOME}/.local/state/sandbox/ca.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      # Only the CA certificate from the secrets folder. Docker must not make it as a folder when it is missing.
+      - type: bind
+        source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets/ca.crt
+        target: /etc/ssl/certs/ca-certificates.crt
+        read_only: true
+        bind: { create_host_path: false }
       # Only the socket folder of the builder, read-only. The path must equal the builder definition in agent/Dockerfile.
       - type: volume
         source: buildkit-sock
