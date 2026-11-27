@@ -28,3 +28,10 @@ key = "prefix+u"
 type = "plugin_action"
 command = "pseudovar.token-usage.open"
 description = "token usage dashboard"
+
+# Review pane plugin (persiyanov.reviewr). The prefix+d key opens or closes it beside the agent. A new worktree opens it.
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+description = "review the diff"

@@ -59,6 +59,10 @@ RUN mise reshim
 # The token usage plugin of Herdr: v0.5.0 plus 8 commits (2026-11-17). It reads the logs of Claude Code and makes no network call at run time.
 RUN herdr plugin install --yes --ref 7f2689bb0880c72fe7465a1dbd44519fb5cb4476 pseudovar/herdr-plugin-token-usage
 
+# The review pane of Herdr (persiyanov.reviewr): you comment on the diff of the agent and send the comments to it. Tag v0.9.0.
+# The install downloads the release binary and checks its sha256. At run time only the PR tab goes out, through gh, and the image has no gh.
+RUN herdr plugin install --yes --ref 0b5781997e9b3d833b17463c0824113cba4bfbd0 persiyanov/herdr-reviewr
+
 # The Fresh packages, each at a pinned commit (a full hash, no tag). ADD fetches the folder after the colon, without .git.
 # The kind gives the folder: plugins/, languages/ or themes/ under ~/.config/fresh, then packages/<name>.
 # fresh-plugins (2026-10-12): todo-highlighter 1.0.0, color-highlighter 1.0.0, catppuccin 1.0.0.
