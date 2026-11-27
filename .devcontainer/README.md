@@ -394,6 +394,14 @@ The token usage plugin of Herdr (`pseudovar.token-usage`) shows the usage in the
 
 The plugin reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices. The image pins the plugin to one commit in `agent/image/Dockerfile`.
 
+## Review the changes of the agent
+
+The review plugin of Herdr ([`persiyanov.reviewr`](https://github.com/persiyanov/herdr-reviewr)) shows the diff of the agent in a pane beside it. Press `prefix+d` to open or close the pane. A new worktree opens it.
+
+Select lines with `v`, write a comment with `c`, then press `s` to send all comments to the input of the agent. Press `?` for all keys. The pane keeps the comments only while it is open.
+
+The pane runs in the sandbox and makes no network call. The PR tab needs `gh`, and the image has no `gh`. The image pins the plugin to one tag in `agent/Dockerfile`.
+
 ## Troubleshooting
 
 | Symptom | Fix |
