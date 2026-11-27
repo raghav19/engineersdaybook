@@ -373,11 +373,11 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 ## Update the agent image
 
-`agent/devcontainer.json` is the build config of the agent image. The lifecycle scripts in `lifecycle/` and the files in `configs/` are not in the image: `compose.yaml` mounts them read-only, and `devcontainer up` runs the scripts. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
-
-1. Set the tag and the image name:
+1. Go to the root of your main checkout, and set the tag and the image name:
 
    ```shell
+   cd "$(git rev-parse --show-toplevel)"
+   # The tag is the git tree sha of agent/. Commit your change of agent/ first.
    tag=$(git rev-parse HEAD:.devcontainer/agent)
    img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
    ```
@@ -393,18 +393,18 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
      --cache-to "type=registry,ref=$img:cache,mode=max"
    ```
 
-   To test the image before the push, leave out `--push` and `--cache-to`. `devcontainer up` then uses the local image of that tag.
+   To test the image before the push, leave out `--push` and `--cache-to`.
 
-3. Print the pinned reference:
+3. Get the digest:
 
    ```shell
    docker buildx imagetools inspect "$img:$tag" \
      --format '{{.Name}}@{{.Manifest.Digest}}'
    ```
 
-4. Put that reference in the `image` line of the service `agent` in `compose.yaml`, and commit it.
+   Put the printed reference in the `image` line of the service `agent` in `compose.yaml`, and commit it.
 
-5. Apply it:
+4. Apply it:
 
    ```shell
    docker compose -p sandbox down
