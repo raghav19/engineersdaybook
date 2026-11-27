@@ -1,4 +1,4 @@
-# The policy of the proxy (service proxy in ../compose.yaml), the only way out of the agent sandbox. Docs: https://github.com/ironsh/iron-proxy. Flow: ../README.md#egress-request-flow
+# The policy of the proxy (service proxy in ../compose.yaml), the only way out of the agent sandbox. Docs: https://github.com/ironsh/iron-proxy. Flow: ../docs/flows.md#egress-request-flow
 # The proxy ends TLS with its own CA and allows only the hosts below. Any other host gets 403.
 # The sandbox holds placeholders. The proxy swaps each one for the real value from a file in /run/secrets, which init.sh writes. This file has names, never values.
 # Each placeholder in ../compose.yaml, managed-settings.json and docker-config.json must equal a proxy_value line below.

@@ -1,4 +1,4 @@
-# The agent sandbox: four services on rootful Docker. gVisor runs the agent and the builder. Each one leaves only through its proxy. Flow: README.md#run-flow
+# The agent sandbox: four services on rootful Docker. gVisor runs the agent and the builder. Each one leaves only through its proxy. Flow: docs/flows.md#start-flow
 # devcontainer.json starts it. Compose keys: https://docs.docker.com/reference/compose-file/
 name: sandbox
 
@@ -121,7 +121,7 @@ services:
     depends_on:
       builder-proxy: { condition: service_healthy }
 
-  # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: README.md#egress-request-flow
+  # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: docs/flows.md#egress-request-flow
   proxy:
     <<: *proxy
     mem_limit: 512m
