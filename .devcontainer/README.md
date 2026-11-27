@@ -2,8 +2,6 @@
 
 A sandbox for AI agents. It runs Claude Code, Qwen Code and the Fresh editor in a hardened Docker container with gVisor. A second container, the builder, builds images for the agent. The devcontainer CLI starts both, with their proxies, from `compose.yaml`.
 
-> [Quick start](#quick-start) and [Commands](#commands) describe the Docker setup. The flows, the security controls and the troubleshooting table still describe the Podman setup. The next docs PR rewrites them.
-
 ## The problem
 
 You let a coding agent work on your repository. The agent has three abilities. They are dangerous together:
@@ -31,12 +29,12 @@ The sandbox keeps the agent useful and limits what a fooled agent can do. It has
 
 | Ability | What the sandbox does |
 |---|---|
-| Private data | The agent works in a private clone. It holds placeholders, not real tokens. The real tokens stay in the proxy. |
+| Private data | The agent works in a private clone. It holds placeholders, not real tokens. The real tokens stay in the agent proxy. |
 | Untrusted content | The sandbox cannot stop it, because the agent must read. The other two steps limit the damage. |
-| Outside communication | The agent has no network device. The only way out is a file that leads to a proxy. The proxy allows listed hosts, methods and paths only. |
-| Builds | A second container, the builder, runs the build steps. It has no token and no network device. It uses its own proxy, the builder proxy. The agent sandbox uses the host proxy. |
+| Outside communication | The agent is on an internal Docker network with no route out. The only address that it can reach is the agent proxy. The proxy allows listed hosts, methods and paths only. |
+| Builds | A second container, the builder, runs the build steps. It has no token, and it is on its own internal network. It uses its own proxy, the builder proxy. |
 
-The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea: a socket to a proxy outside the sandbox, which enforces approved domains.
+The [sandbox of Claude Code](https://www.anthropic.com/engineering/claude-code-sandboxing) uses the same idea: a proxy outside the sandbox is the only way out, and it enforces approved domains.
 
 ### How to design an agent sandbox
 
@@ -48,12 +46,12 @@ This sandbox applies each concept as follows:
 
 | Concept | This sandbox |
 |---|---|
-| 1 The wall | A rootless Podman container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
+| 1 The wall | A Docker container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
 | 2 Workspace | A private clone of the repo. The `.git` folder of your checkout is a read-only mount. |
-| 3 Network gate | `proxy.sock` leads to the host proxy. The proxy allows listed hosts, methods and paths. |
-| 4 Key holder | The host proxy swaps a placeholder for the real token. The real tokens come from Bitwarden. |
+| 3 Network gate | An internal Docker network leads only to the agent proxy. The proxy allows listed hosts, methods and paths. |
+| 4 Key holder | The agent proxy swaps a placeholder for the real token. `init.sh` fetches the real tokens from Bitwarden into files in RAM. |
 | 5 Saved state | The volume `sandbox-home` keeps the clone, the logins and the histories. Herdr restores the panes. |
-| 6 You | You approve tool calls in Claude Code and follow the panes in Herdr and the audit log. `just sandbox rm` stops the sandbox. Each task has its own worktree and branch. |
+| 6 You | You approve tool calls in Claude Code and follow the panes in Herdr and the audit log. `docker compose -p sandbox stop` stops the sandbox. Each task has its own worktree and branch. |
 
 ## What is out of scope
 
@@ -77,103 +75,123 @@ The sandbox has two limits of its own:
 
 [![The agent sandbox, the builder and both proxies](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
-Each proxy runs in its own container, with the default Podman network. The allowed hosts are in `agent/proxy/iron-proxy.yaml` and `builder/proxy/iron-proxy.yaml`.
+`compose.yaml` starts four containers on two internal Docker networks:
+
+- **Network `sandbox`** (10.200.0.0/29) holds the agent sandbox (10.200.0.3) and the agent proxy (10.200.0.2).
+- **Network `build`** (10.200.0.8/29) holds the builder (10.200.0.11) and the builder proxy (10.200.0.10).
+- **Network `default`** of Compose holds only the two proxies. It is their way to the Internet.
+
+gVisor runs the agent sandbox and the builder. The proxies run on runc. The agent and the builder share no network. The agent reaches the builder only through `buildkitd.sock` in the volume `buildkit-sock`.
+
+The allowed hosts are in `policy/agent.yaml` and `policy/builder.yaml`.
+
+### Files
+
+A file outside `agent/` runs on your host or goes into a proxy as a mount. A file in `agent/` goes into the agent image.
+
+```text
+.devcontainer/
+├── devcontainer.json    # run config: compose.yaml, the agent service, init.sh first
+├── init.sh              # host: a new CA and the API tokens in RAM, for a new proxy
+├── compose.yaml         # the four containers, the networks, the limits and the mounts
+├── policy/
+│   ├── agent.yaml       # agent proxy: allowlist, path rules, token swap
+│   └── builder.yaml     # builder proxy: host names only
+└── agent/               # the agent image. Its git tree sha is the image tag.
+    ├── devcontainer.json    # build config: Dockerfile, layer cache, lifecycle hooks
+    ├── Dockerfile
+    ├── tools/*.toml         # the tools that mise installs
+    ├── configs/             # files that the image copies
+    └── lifecycle/           # on-create.sh and post-start.sh, run in the container
+```
+
+A change outside `agent/` needs a restart of the sandbox. A change in `agent/` needs a new image, a push and a new pin in `compose.yaml`. See [Update the agent image](#update-the-agent-image).
+
+There are two `devcontainer.json` files, because the devcontainer CLI refuses `--push` for a Compose config. The run config has no lifecycle hooks. The CLI reads the hooks from the image label, and a hook in both files runs twice.
 
 ## Security controls
 
 ![The security controls of the agent sandbox and the builder](docs/diagrams/security-controls.svg)
 
-The diagram shows each control in the container that has it. It calls the proxy of the agent sandbox the agent proxy. The other sections call it the host proxy.
+The diagram shows each control in the container that has it.
 
 Notes on the controls:
 
-- **One socket.** The container cannot see the files, the process or the other ports of the proxy.
+- **Internal networks.** Both networks have `internal: true`, so they have no route to the Internet. `inhibit_ipv4` gives the bridge no IPv4 address on the host, so a container cannot reach the host. A tool that ignores `HTTPS_PROXY` gets `network unreachable`.
+- **Fixed IPs.** gVisor cannot use the DNS of Docker to find a proxy by name. So each proxy has a fixed IP, and `HTTPS_PROXY` names that IP.
 - **The builder.** `rootlesskit` needs the three capabilities. The builder has no `no-new-privileges`, and its root file system is writable.
 - **Root in the builder.** BuildKit has no authorization. Any holder of `buildkitd.sock` can run any build step as root in the build. The container is the wall.
 - **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A merge, a file removal, a gist, a fork and GraphQL get `403`.
-- **TLS.** The agent proxy reads each request with its own CA, and the sandbox trusts only this CA. The builder proxy has no CA.
-- **Audit log.** Read it with `journalctl --user -u sandbox-proxy`.
-- **Limits.** Quadlet turns each container file into a systemd service. gVisor ignores the limits of Podman, so each service holds the limits of its container.
+- **TLS.** `init.sh` makes a new CA for each new agent proxy. The agent proxy reads each request with this CA, and the agent trusts only this CA. The builder proxy has no CA.
+- **Tokens.** `init.sh` writes each API token into a file in `$XDG_RUNTIME_DIR/sandbox-secrets`. This folder is in RAM and has mode 0700. An ACL lets the proxy uid 10001 read the files. Your host user can read them while the session runs. A logout or a reboot empties the folder.
+- **Audit log.** Read it with `docker logs -f sandbox-proxy-1`.
+- **Limits.** `compose.yaml` sets the memory, CPU and PID limits of each container. Rootful Docker enforces them under gVisor. `memswap_limit` is equal to `mem_limit`, so no container uses swap.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
 
 ## Flows
 
-### Setup flow
+### Start flow
 
-`setup` changes only files in your home folder, and it restarts only the bridge. `run` starts the containers.
+`devcontainer up` runs `init.sh` on the host, then starts the containers.
 
 ```mermaid
 ---
-title: Setup flow
+title: Start flow
 ---
 sequenceDiagram
     participant You
-    participant Setup as just sandbox setup
-    participant Home as Files in your home folder
-    participant Systemd as systemd user manager
-    opt ca.crt or ca.key is missing
-        Setup->>Home: make the CA
+    participant CLI as devcontainer CLI
+    participant Init as init.sh
+    participant BW as Bitwarden
+    participant Compose as Docker Compose
+    participant Agent as agent sandbox
+    You->>CLI: devcontainer up
+    CLI->>Init: initializeCommand, on the host
+    alt the agent proxy runs
+        Init-->>CLI: exit, the proxy has its CA and tokens
+    else no agent proxy runs
+        Init->>Init: make the RAM folder and a new CA
+        Init->>BW: bws secret list, with the decrypted access token
+        BW-->>Init: the API tokens
+        Init->>Init: write one file for each token
     end
-    opt bws-token is missing or unreadable
-        Setup->>You: ask for the Bitwarden access token
-        You-->>Setup: the token
-        Setup->>Home: encrypt it with systemd-creds
+    CLI->>Compose: up
+    Compose->>Compose: start both proxies and the builder, wait until healthy
+    Compose->>Agent: start
+    opt a new container
+        CLI->>Agent: sandbox-on-create: copy the home files, clone the repo
     end
-    Setup->>Home: link the proxy configs, the four .container files, the gVisor flags, repo.git and the bridge files
-    Setup->>Systemd: daemon-reload
-    Note over Systemd: Quadlet makes the four services
-    Setup->>Systemd: enable and restart sandbox-bridge.service
+    CLI->>Agent: sandbox-post-start: shell setup, then /tmp/sandbox-ready
+    You->>CLI: devcontainer exec herdr
 ```
 
-### Run flow
+The agent starts only after both proxies and the builder are healthy. The agent is healthy after `sandbox-post-start` writes `/tmp/sandbox-ready`. A running proxy keeps the CA and the tokens that it read at its start.
 
-`run` restarts the agent sandbox. systemd restarts the units that it requires, so each session has a new builder and new proxies.
+### Agent image flow
+
+The host builds the agent image and pushes it. The commands are in [Update the agent image](#update-the-agent-image).
 
 ```mermaid
 ---
-title: Run flow
+title: Agent image flow
 ---
 sequenceDiagram
-    participant Run as just sandbox run
-    participant Systemd as systemd user manager
-    participant Proxies as both proxies
-    participant Builder as sandbox-builder
-    participant Agent as sandbox-agent
-    Run->>Systemd: daemon-reload, restart sandbox-agent.service
-    Systemd->>Proxies: restart
-    Systemd->>Builder: restart, wait until it is healthy
-    Systemd->>Agent: start, then run the relay and the task sandbox:start
-    loop each 2 s, up to 180 s
-        Run->>Agent: podman healthcheck run
-    end
-    Run->>Agent: podman exec Herdr, or your command
-```
-
-### Sandbox build flow
-
-`build` runs on the host and makes the images of the sandbox. The Image build flow below makes an image for your project. `build` stops at the first error, so the login stays until you run `podman logout ghcr.io`.
-
-```mermaid
----
-title: Sandbox build flow
----
-sequenceDiagram
-    participant Build as just sandbox build
-    participant Bws as systemd-creds and bws
-    participant Podman
+    participant You
+    participant CLI as devcontainer CLI
+    participant Docker as Docker on the host
     participant GHCR as ghcr.io
-    Build->>Bws: decrypt bws-token, read GITHUB_TOKEN
-    Bws->>Podman: GITHUB_TOKEN
-    Podman->>GHCR: log in to ghcr.io
-    Build->>Podman: build the four images
-    Podman->>GHCR: read and write the stage cache of the agent sandbox image
-    Build->>Podman: push the agent sandbox image with the commit tag, then log out
-    Podman->>GHCR: push
+    You->>CLI: devcontainer build --push, tag = git tree sha of agent/
+    CLI->>Docker: build agent/Dockerfile, hooks in the image label
+    Docker->>GHCR: read the layer cache (tag cache)
+    Docker->>GHCR: push the image and the layer cache
+    You->>GHCR: docker buildx imagetools inspect
+    GHCR-->>You: the digest
+    You->>You: pin tag and digest in compose.yaml, then commit
 ```
 
 ### Egress request flow
 
-Both containers follow this path. Only the relay port, the proxy and the rule set differ.
+The agent sandbox and the builder follow this path. Only the proxy IP and the rule set differ.
 
 ```mermaid
 ---
@@ -181,17 +199,13 @@ title: Egress request flow
 ---
 sequenceDiagram
     participant Tool
-    participant Relay as relay socat
-    participant gVisor
-    participant Socat as socat in the proxy container
     participant Proxy as iron-proxy
     participant Host as Listed host
-    Tool->>Relay: connect to 127.0.0.1:3128 (agent sandbox) or 127.0.0.1:3129 (builder)
-    Relay->>gVisor: connect to proxy.sock
-    gVisor->>Socat: the gofer opens proxy.sock
-    Socat->>Proxy: copy the bytes to 127.0.0.1:18080
+    Tool->>Proxy: CONNECT to HTTPS_PROXY on the internal network: 10.200.0.2:18080 (agent sandbox) or 10.200.0.10:18080 (builder)
     alt a rule matches the host, the method and the path
-        Proxy->>Host: send the request, host proxy swaps the placeholder
+        Proxy->>Host: send the request on the network default, the agent proxy swaps the placeholder
+        Host-->>Proxy: the response
+        Proxy-->>Tool: the response
     else no rule matches
         Proxy-->>Tool: 403
     end
@@ -199,7 +213,7 @@ sequenceDiagram
 
 ### Request decision flow
 
-The host proxy judges each request in this order:
+The agent proxy judges each request in this order:
 
 ```mermaid
 ---
@@ -207,7 +221,7 @@ title: Request decision flow
 ---
 sequenceDiagram
     participant Tool
-    participant Proxy as host proxy
+    participant Proxy as agent proxy
     participant Host as The host
     Tool->>Proxy: a request in the tunnel
     alt the host is in neither domains nor rules
@@ -228,7 +242,7 @@ A host in `domains` takes every method and every path. A host in `rules` takes o
 
 ### Image build flow
 
-The agent sandbox sends the build. The builder runs it. The builder reaches the internet only through its own proxy.
+The agent sandbox sends the build. The builder runs it. The builder reaches the internet only through the builder proxy.
 
 ```mermaid
 ---
@@ -237,12 +251,10 @@ title: Image build flow
 sequenceDiagram
     participant Agent as docker in the agent sandbox
     participant BK as buildkitd in the builder
-    participant Relay as relay in the builder
     participant BP as builder proxy
     participant Reg as registry and package hosts
     Agent->>BK: docker build, send the context on buildkitd.sock
-    BK->>Relay: FROM, pull the base image
-    Relay->>BP: through proxy.sock and socat
+    BK->>BP: FROM, pull the base image through HTTPS_PROXY
     alt the host is in the allowlist
         BP->>Reg: pull the layers
         Reg-->>BK: the layers
@@ -251,13 +263,14 @@ sequenceDiagram
     end
     loop each RUN step
         BK->>BK: run the step as root inside the rootless build
-        BK->>Relay: download a package
-        Relay->>BP: through proxy.sock and socat
+        BK->>BP: download a package through HTTP_PROXY of the step
         BP->>Reg: only a host in the allowlist
     end
     BK-->>Agent: send the image as a tar on buildkitd.sock
     Agent->>Agent: write the tar file in the agent sandbox
 ```
+
+The docker config of the agent (`agent/configs/tools/docker-config.json`) gives each `RUN` step the builder proxy as `HTTP_PROXY` and `HTTPS_PROXY`.
 
 Run `docker build` as on any host. A normal Dockerfile builds as it is. The agent sandbox has no Docker daemon, so the build writes a tar file:
 
@@ -265,7 +278,7 @@ Run `docker build` as on any host. A normal Dockerfile builds as it is. The agen
 docker build -t ghcr.io/raghav19/<NAME>:<TAG> --output type=docker,dest=/tmp/image.tar .
 ```
 
-The builder proxy holds no token, so a base image comes from a public registry. For a private base image, the agent sandbox pulls it with `crane` through the host proxy. It then passes the image to `docker build` as an OCI layout.
+The builder proxy holds no token, so a base image comes from a public registry. For a private base image, the agent sandbox pulls it with `crane` through the agent proxy. It then passes the image to `docker build` as an OCI layout.
 
 ### Image push flow
 
@@ -277,11 +290,9 @@ title: Image push flow
 ---
 sequenceDiagram
     participant crane as crane in the agent sandbox
-    participant Relay as relay in the agent sandbox
-    participant HP as host proxy
+    participant HP as agent proxy
     participant GH as ghcr.io
-    crane->>Relay: push the tar file, login with the placeholder
-    Relay->>HP: through proxy.sock and socat
+    crane->>HP: push the tar file through HTTPS_PROXY, login with the placeholder
     alt the path is in the namespace raghav19
         HP->>HP: replace the placeholder with the real token
         HP->>GH: send each blob and the manifest
@@ -307,7 +318,7 @@ What the setup assumes:
 - The host is Arch Linux with a systemd user manager.
 - The host has 6 GB of free memory: 3 GB for the agent sandbox, 2 GB for the builder and less than 1 GB for the two proxies.
 
-For another registry or secret manager, change `policy/agent.yaml`, the proxy in `compose.yaml` and the `publish` recipe.
+For another registry or secret manager, change `policy/agent.yaml`, `init.sh` and the commands in [Update the agent image](#update-the-agent-image).
 
 Do these steps once, in your main checkout. If step 3 or 4 is missing, `devcontainer up` stops with an error that names it.
 
@@ -348,7 +359,7 @@ Do these steps once, in your main checkout. If step 3 or 4 is missing, `devconta
 Run these commands in your main checkout. `init.sh` runs first: it gives a new proxy a new CA and its tokens.
 
 ```shell
-devcontainer up --workspace-folder .                # build if needed, then start the four services
+devcontainer up --workspace-folder .                # pull the agent image if needed, then start the four services
 devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal workspace manager
 ```
 
@@ -365,7 +376,7 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 |---|---|
 | `devcontainer up --workspace-folder .` | Starts the sandbox. On stopped containers, it starts them as they were. |
 | `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
-| `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new token. |
+| `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new CA and its tokens. |
 | `docker compose -p sandbox down` | Removes the four containers and the networks. The volume `sandbox-home` stays. Never add `-v`: it removes the clone and the logins. |
 | `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json` or a policy. `devcontainer up` alone keeps the old containers. |
 | `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
@@ -392,26 +403,28 @@ To test an image before the push, run the build without `--push` and `--cache-to
 
 The token usage plugin of Herdr (`pseudovar.token-usage`) shows the usage in the sidebar of Herdr, one row for each agent pane. Press `prefix+u` to open the dashboard. Run `tu report --month` for a table in the terminal.
 
-The plugin reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices. The image pins the plugin to one commit in `agent/image/Dockerfile`.
+The plugin reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices. The image pins the plugin to one commit in `agent/Dockerfile`.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `run` stops at the start | Run `journalctl --user -u sandbox-proxy -u sandbox-builder-proxy -u sandbox-builder`. If the image is missing, run `just sandbox build`. |
+| `devcontainer up` stops at the start | Run `docker compose -p sandbox ps -a` and `docker compose -p sandbox logs proxy builder-proxy builder`. If the agent image is missing, see [Update the agent image](#update-the-agent-image). |
+| `unknown or invalid runtime name: runsc-uds` | Docker has no gVisor runtime of that name. Do [step 3](#prerequisites) again. |
+| `bind source path does not exist: .../sandbox-secrets` | `init.sh` did not run. Start the sandbox with `devcontainer up`, not with `docker compose up`. |
 | `Failed to read encrypted credential data: No such file or directory` | The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Do [step 4](#prerequisites) again. |
 | `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Remove it, then do [step 4](#prerequisites) again. |
 | `init.sh` says `bws cannot read the secrets` | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then do [step 4](#prerequisites) again. |
 | `init.sh` says `Bitwarden has no secret <name>` | The Bitwarden project has no secret of that name. Add it, or change the names in `init.sh` and `policy/agent.yaml`. |
-| `run` says a container is not healthy | Run `podman logs sandbox-agent` or `podman logs sandbox-builder`. |
-| `docker build` says `failed to connect to the docker API` | `DOCKER_CONFIG` and `BUILDX_BUILDER` are missing in your shell. Open a new session with `just sandbox run`. |
-| A `FROM` or a `RUN` step gets `403` | The host is not in `builder/proxy/iron-proxy.yaml`. Add it and run `just sandbox run`. The proxy reads its file at start. `run` restarts the agent sandbox, the builder and both proxies. |
+| `docker compose -p sandbox ps` shows `unhealthy` | Run `docker logs sandbox-agent-1` or `docker logs sandbox-builder-1`. The agent is healthy only after `sandbox-post-start` writes `/tmp/sandbox-ready`. |
+| `docker build` says `failed to connect to the docker API` | Check that `docker compose -p sandbox ps builder` shows `healthy`. `DOCKER_CONFIG` and `BUILDX_BUILDER` come from `compose.yaml`. |
+| A `FROM` or a `RUN` step gets `403` | The host is not in `policy/builder.yaml`. Add it, then run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. The proxy reads its policy at start. |
 | `crane push` gets `403` | The namespace is not `raghav19`. Push to `ghcr.io/raghav19/<NAME>:<TAG>`. |
-| A GitHub call gets `403` | The host proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `agent/proxy/iron-proxy.yaml` and run `just sandbox run`. |
-| `systemctl --user status sandbox-agent` shows `failed` | A limit killed it. Run `just sandbox run`. The clone stays in the volume. |
-| `systemctl --user status sandbox-builder` shows `failed` after `just sandbox rm` | This is normal. `buildkitd` exits with code 1 when it stops. |
-| A tool fails with a connection error | The tool ignores `HTTPS_PROXY`. Set the proxy of the tool to `http://127.0.0.1:3128`. |
-| You made a new CA | Run `just sandbox run`. |
+| A GitHub call gets `403` | The agent proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `policy/agent.yaml`, then run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. |
+| `docker compose -p sandbox ps -a` shows the agent as `exited` | Read `docker logs sandbox-agent-1`. A limit can stop the container. Run `devcontainer up --workspace-folder .` again. The clone stays in the volume `sandbox-home`. |
+| The builder shows `exited (1)` after `docker compose -p sandbox stop` | This is normal. `buildkitd` exits with code 1 when it stops. |
+| A tool fails with `network unreachable` | The tool ignores `HTTPS_PROXY`. Set the proxy of the tool to `http://10.200.0.2:18080`. |
+| HTTPS calls in the agent fail with a certificate error | The agent proxy has a new CA, and the running agent still trusts the old one. Run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. |
 
 ## References
 

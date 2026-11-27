@@ -1,121 +1,68 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="1720" height="900" viewBox="0 0 1720 900" font-family="Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="940" viewBox="0 0 1760 940" font-family="Helvetica, Arial, sans-serif" fill="#000000">
 <defs>
-<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
-<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333333"/></marker>
-<marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#d79b00"/></marker>
-<marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b85450"/></marker>
-<marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666666"/></marker>
+<marker id="m333333" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#333333"/></marker>
+<marker id="md79b00" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="strokeWidth" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d79b00"/></marker>
 </defs>
-<rect x="0" y="0" width="1720" height="900" fill="#ffffff"/>
-<text x="20" y="38" font-size="22" font-weight="bold" fill="#000000">Agent Sandbox and Builder with Podman and gVisor</text>
-
-<rect x="20" y="378" width="170" height="76" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="105" y="410.8" font-weight="bold">Your terminal</text><text x="105" y="431.8">just sandbox run</text></g>
-
-<rect x="20" y="534" width="170" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="105" y="566.8" font-weight="bold">Repo</text><text x="105" y="587.8">.git folder, read-only</text></g>
-
-<rect x="250" y="90" width="320" height="556" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
-<line x1="250" y1="126" x2="570" y2="126" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="262" y="113.3">Agent sandbox</text></g>
-
-<rect x="260" y="136" width="300" height="500" rx="12" fill="#ffffff" stroke="#666666" stroke-width="2"/>
-<line x1="260" y1="168" x2="560" y2="168" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="272" y="157.3">Podman - container</text></g>
-
-<rect x="270" y="176" width="280" height="450" rx="12" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
-<line x1="270" y1="208" x2="550" y2="208" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="282" y="197.3">gVisor: userspace kernel</text></g>
-
-<rect x="285" y="222" width="250" height="76" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="410" y="244.3" font-weight="bold">socat relay</text><text x="410" y="265.3">127.0.0.1:3128</text><text x="410" y="286.3">to proxy.sock</text></g>
-
-<rect x="285" y="378" width="250" height="76" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="410" y="410.8" font-weight="bold">Agent/MCP tools</text><text x="410" y="431.8">Claude, Qwen, Herdr, Fresh</text></g>
-
-<rect x="285" y="534" width="250" height="76" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="410" y="566.8" font-weight="bold">Clone of the repo</text><text x="410" y="587.8">in the sandbox-home volume</text></g>
-
-<rect x="250" y="770" width="320" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="410" y="802.8" font-weight="bold">Quadlet service sandbox-agent.service</text><text x="410" y="823.8">limits: 3 GB, 4 CPUs</text></g>
-
-<rect x="700" y="296" width="300" height="416" rx="12" fill="#ffffff" stroke="#82b366" stroke-width="2"/>
-<line x1="700" y1="332" x2="1000" y2="332" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="712" y="319.3">Builder: new per sandbox session</text></g>
-
-<rect x="710" y="342" width="280" height="360" rx="12" fill="#ffffff" stroke="#666666" stroke-width="2"/>
-<line x1="710" y1="374" x2="990" y2="374" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="722" y="363.3">Podman - container</text></g>
-
-<rect x="720" y="382" width="260" height="310" rx="12" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
-<line x1="720" y1="414" x2="980" y2="414" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="start" fill="#000000" font-weight="bold"><text x="732" y="403.3">gVisor: userspace kernel</text></g>
-
-<rect x="735" y="428" width="230" height="76" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="850" y="450.3" font-weight="bold">socat relay</text><text x="850" y="471.3">127.0.0.1:3129</text><text x="850" y="492.3">to proxy.sock</text></g>
-
-<rect x="735" y="584" width="230" height="92" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="850" y="624.8" font-weight="bold">BuildKit (buildkitd)</text><text x="850" y="645.8">no secret, cache in tmpfs</text></g>
-
-<rect x="660" y="770" width="380" height="76" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="850" y="802.8" font-weight="bold">Quadlet service sandbox-builder.service</text><text x="850" y="823.8">limits: 2 GB, 2 CPUs</text></g>
-
-<rect x="1290" y="20" width="240" height="50" rx="12" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="50.3" font-weight="bold">Bitwarden Secrets Manager</text></g>
-
-<rect x="1270" y="198" width="280" height="330" rx="12" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4"/>
-
-<rect x="1040" y="230" width="160" height="60" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1120" y="254.8" font-weight="bold">proxy.sock</text><text x="1120" y="275.8">Unix socket file</text></g>
-
-<rect x="1040" y="436" width="160" height="60" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1120" y="460.8" font-weight="bold">proxy.sock</text><text x="1120" y="481.8">Unix socket file</text></g>
-
-<rect x="1290" y="218" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="244.3" font-weight="bold">Host proxy container</text><text x="1410" y="265.3">allowlist, path rules,</text><text x="1410" y="286.3">TLS, token swap</text></g>
-
-<rect x="1290" y="424" width="240" height="84" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="450.3" font-weight="bold">Builder proxy container</text><text x="1410" y="471.3">host names only,</text><text x="1410" y="492.3">no tokens</text></g>
-
-<rect x="1250" y="590" width="320" height="84" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1410" y="616.3" font-weight="bold">Quadlet services of the proxies</text><text x="1410" y="637.3">sandbox-proxy.service: 512 MB</text><text x="1410" y="658.3">sandbox-builder-proxy.service: 256 MB</text></g>
-
-<rect x="1580" y="225" width="110" height="70" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
-<g font-size="16" text-anchor="middle" fill="#000000"><text x="1635" y="254.8" font-weight="bold">Internet</text><text x="1635" y="275.8">allowed hosts</text></g>
-
-<path d="M190,416 L285,416" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M190,572 L285,572" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M535,260 L1040,260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1200,260 L1290,260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1530,260 L1580,260" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1410,70 L1410,218" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#o)"/>
-<path d="M410,454 L410,534" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M410,378 L410,298" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M1410,590 L1410,528" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
-<path d="M410,770 L410,646" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
-<path d="M570,600 L700,600" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M850,770 L850,712" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
-<path d="M570,808 L660,808" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#g)"/>
-<path d="M965,466 L1040,466" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1200,466 L1290,466" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#b)"/>
-<path d="M1530,466 L1611,466 Q1635,466 1635,442 L1635,295" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<path d="M850,584 L850,504" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#a)"/>
-<text x="237.5" y="406" font-size="14" text-anchor="middle" fill="#000000">runs</text>
-<text x="237.5" y="562" font-size="14" text-anchor="middle" fill="#000000">clone</text>
-<text x="790" y="250" font-size="14" text-anchor="middle" fill="#000000">connect</text>
-<rect x="1361.2" y="130.5" width="97.6" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="1410" y="148.7">real tokens</text></g>
-<text x="422" y="498" font-size="14" text-anchor="start" fill="#000000">reads and writes</text>
-<text x="422" y="342" font-size="14" text-anchor="start" fill="#000000">HTTPS_PROXY</text>
-<rect x="1361.2" y="545.5" width="72" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="1410" y="563.7">limits</text></g>
-<rect x="361.2" y="702.5" width="72" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="410" y="720.7">limits</text></g>
-<text x="635" y="565" font-size="14" text-anchor="middle" fill="#000000">docker over</text>
-<text x="635" y="583" font-size="14" text-anchor="middle" fill="#000000">buildkitd.sock</text>
-<rect x="801.2" y="727.5" width="72" height="24" fill="#ffffff"/>
-<g font-size="14" text-anchor="middle" fill="#000000"><text x="850" y="745.7">limits</text></g>
-<text x="615" y="798" font-size="14" text-anchor="middle" fill="#000000">requires</text>
-<text x="862" y="548" font-size="14" text-anchor="start" fill="#000000">HTTPS_PROXY</text>
+<rect width="1760" height="940" fill="#ffffff"/>
+<text x="20" y="30" text-anchor="start" dominant-baseline="central" font-size="22"><tspan x="20" dy="0" font-weight="bold">Agent Sandbox and Builder with Docker Compose and gVisor</tspan></text>
+<rect x="20" y="70" width="190" height="76" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="115" y="98.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="115" dy="0" font-weight="bold">Bitwarden</tspan><tspan x="115" dy="19">Secrets Manager</tspan></text>
+<rect x="300" y="70" width="290" height="76" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="445" y="98.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="445" dy="0" font-weight="bold">init.sh on the host</tspan><tspan x="445" dy="19">before each devcontainer up</tspan></text>
+<rect x="680" y="70" width="300" height="76" rx="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="1"/>
+<text x="830" y="98.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="830" dy="0" font-weight="bold">RAM folder sandbox-secrets</tspan><tspan x="830" dy="19">ca.key, ca.crt, 4 token files</tspan></text>
+<rect x="20" y="310" width="190" height="76" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="115" y="338.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="115" dy="0" font-weight="bold">Your terminal</tspan><tspan x="115" dy="19">devcontainer exec</tspan></text>
+<rect x="20" y="420" width="190" height="76" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="115" y="448.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="115" dy="0" font-weight="bold">Repo</tspan><tspan x="115" dy="19">.git folder, read-only</tspan></text>
+<rect x="290" y="200" width="980" height="320" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="300" y="217.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="300" dy="0" font-weight="bold">Network sandbox: internal, 10.200.0.0/29</tspan></text>
+<rect x="310" y="240" width="390" height="264" rx="16" fill="#ffffff" stroke="#666666" stroke-width="2"/>
+<text x="320" y="257.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="320" dy="0" font-weight="bold">agent: 10.200.0.3, 3 GB, 4 CPUs</tspan></text>
+<rect x="320" y="280" width="370" height="214" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="330" y="297.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="330" dy="0" font-weight="bold">gVisor: runsc-uds</tspan></text>
+<rect x="335" y="320" width="340" height="60" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="505" y="340.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="505" dy="0" font-weight="bold">Agent tools</tspan><tspan x="505" dy="19">Claude, Qwen, Herdr, Fresh</tspan></text>
+<rect x="335" y="420" width="340" height="60" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="505" y="440.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="505" dy="0" font-weight="bold">Clone of the repo</tspan><tspan x="505" dy="19">in the volume sandbox-home</tspan></text>
+<rect x="940" y="300" width="310" height="110" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1095" y="326.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1095" dy="0" font-weight="bold">proxy: 10.200.0.2:18080</tspan><tspan x="1095" dy="19">iron-proxy on runc, 512 MB</tspan><tspan x="1095" dy="19">allowlist, path rules,</tspan><tspan x="1095" dy="19">TLS, token swap</tspan></text>
+<rect x="730" y="545" width="200" height="70" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="830" y="561" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="830" dy="0" font-weight="bold">Volume buildkit-sock</tspan><tspan x="830" dy="19">buildkitd.sock</tspan><tspan x="830" dy="19">for docker build</tspan></text>
+<rect x="290" y="640" width="980" height="280" rx="16" fill="#ffffff" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="300" y="657.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="300" dy="0" font-weight="bold">Network build: internal, 10.200.0.8/29</tspan></text>
+<rect x="310" y="680" width="390" height="224" rx="16" fill="#ffffff" stroke="#666666" stroke-width="2"/>
+<text x="320" y="697.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="320" dy="0" font-weight="bold">builder: 10.200.0.11, 2 GB, 2 CPUs</tspan></text>
+<rect x="320" y="720" width="370" height="174" rx="16" fill="#ffffff" stroke="#9673a6" stroke-width="2"/>
+<text x="330" y="737.5" text-anchor="start" dominant-baseline="central" font-size="16"><tspan x="330" dy="0" font-weight="bold">gVisor: runsc-builder</tspan></text>
+<rect x="335" y="780" width="340" height="70" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
+<text x="505" y="805.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="505" dy="0" font-weight="bold">BuildKit (buildkitd)</tspan><tspan x="505" dy="19">no token, cache in tmpfs</tspan></text>
+<rect x="940" y="735" width="310" height="110" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="1095" y="761.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1095" dy="0" font-weight="bold">builder-proxy: 10.200.0.10:18080</tspan><tspan x="1095" dy="19">iron-proxy on runc, 256 MB</tspan><tspan x="1095" dy="19">host names only (sni-only),</tspan><tspan x="1095" dy="19">no token</tspan></text>
+<rect x="1530" y="470" width="200" height="80" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
+<text x="1630" y="500.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1630" dy="0" font-weight="bold">Internet</tspan><tspan x="1630" dy="19">allowed hosts</tspan></text>
+<path d="M210 108 C250 108 260 108 300 108" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#md79b00)"/>
+<path d="M590 108 C630 108 640 108 680 108" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M980 108 C1069.52 108 1095 210.478 1095 300" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#md79b00)"/>
+<path d="M761 146 C761 204.396 649.3 181.604 649.3 240" fill="none" stroke="#d79b00" stroke-width="2" marker-end="url(#md79b00)"/>
+<path d="M210 348 C260.006 348 284.994 350 335 350" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M210 458 C260.102 458 284.898 450 335 450" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M505 380 C505 420 505 380 505 420" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M675 338 C781 338 834 338.5 940 338.5" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
+<path d="M675 368 C769.11 368 830 450.89 830 545" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M780 615 C780 705.828 624 689.172 624 780" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M675 815 C781.471 815 833.529 790 940 790" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
+<path d="M1250 355 C1375.04 355 1404.96 494 1530 494" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M1250 790 C1403.93 790 1376.07 526 1530 526" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<text x="255" y="91.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="255" dy="0">API tokens</tspan></text>
+<text x="635" y="91.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="635" dy="0">writes</tspan></text>
+<text x="1129.07" y="170.429" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1129.07" dy="0">/run/secrets</tspan></text>
+<text x="653.15" y="179" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="653.15" dy="0">ca.crt only</tspan></text>
+<text x="272.5" y="332.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="272.5" dy="0">exec</tspan></text>
+<text x="272.5" y="437.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="272.5" dy="0">clone</tspan></text>
+<text x="571" y="400" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="571" dy="0">reads and writes</tspan></text>
+<text x="807.5" y="321.75" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="807.5" dy="0">HTTPS_PROXY</tspan></text>
+<text x="807.5" y="786" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="807.5" dy="0">HTTPS_PROXY</tspan></text>
+<text x="1453" y="424.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1453" dy="0">network default</tspan></text>
+<text x="1453" y="658" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1453" dy="0">network default</tspan></text>
 </svg>

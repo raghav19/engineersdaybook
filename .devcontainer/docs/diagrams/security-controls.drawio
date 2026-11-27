@@ -1,84 +1,233 @@
-<mxfile host="app.diagrams.net"><diagram id="security-controls" name="security-controls"><mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2030" pageHeight="1532" background="#ffffff" math="0" shadow="0"><root>
-<mxCell id="0"/>
-<mxCell id="1" parent="0"/>
-<mxCell id="title" value="Security controls of the agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="700" height="40" as="geometry"/></mxCell>
-<mxCell id="pbox" value="Agent proxy&#xa;rootless Podman, no gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1150" y="80" width="580" height="568" as="geometry"/></mxCell>
-<mxCell id="psocat" value="socat" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1170" y="551" width="110" height="66" as="geometry"/></mxCell>
-<mxCell id="pc0" value="&lt;b&gt;Allowlist of hosts&lt;/b&gt;&lt;br&gt;Other hosts get 403" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="150" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc1" value="&lt;b&gt;Method and path rules&lt;/b&gt;&lt;br&gt;Writes go to one repo and&lt;br&gt;one ghcr.io namespace" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1450" y="150" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc2" value="&lt;b&gt;TLS termination&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1170" y="220" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc3" value="&lt;b&gt;Token swap&lt;/b&gt;&lt;br&gt;Placeholder becomes the real&lt;br&gt;token, for listed hosts only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1450" y="220" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc4" value="&lt;b&gt;Audit log&lt;/b&gt;&lt;br&gt;One JSON line per request" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="290" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc5" value="&lt;b&gt;Encrypted access token&lt;/b&gt;&lt;br&gt;Not given to iron-proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1450" y="290" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc6" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="360" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc7" value="&lt;b&gt;Limits (Quadlet service)&lt;/b&gt;&lt;br&gt;512 MB, 512 threads" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1450" y="360" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="pc8" value="&lt;b&gt;Wiped when the session ends&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1170" y="430" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="piron" value="iron-proxy&#xa;the egress proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1500" y="551" width="210" height="66" as="geometry"/></mxCell>
-<mxCell id="qbox" value="Builder proxy&#xa;rootless Podman, no gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1"><mxGeometry x="1150" y="858" width="580" height="568" as="geometry"/></mxCell>
-<mxCell id="qsocat" value="socat" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1170" y="889" width="110" height="66" as="geometry"/></mxCell>
-<mxCell id="qc0" value="&lt;b&gt;Allowlist of host names&lt;/b&gt;&lt;br&gt;Other hosts get 403" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="1016" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qc1" value="&lt;b&gt;TLS passthrough&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1450" y="1016" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qc2" value="&lt;b&gt;No URL path rules&lt;/b&gt;&lt;br&gt;The proxy sees the host name&lt;br&gt;only. It does not decrypt TLS." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="1086" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qc3" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1450" y="1086" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qc4" value="&lt;b&gt;Limits (Quadlet service)&lt;/b&gt;&lt;br&gt;256 MB, 256 threads" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="1170" y="1156" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qc5" value="&lt;b&gt;Wiped when the session ends&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1450" y="1156" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="qiron" value="iron-proxy&#xa;the egress proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1500" y="889" width="210" height="66" as="geometry"/></mxCell>
-<mxCell id="abox" value="Agent sandbox&#xa;rootless Podman + gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="160" y="80" width="580" height="568" as="geometry"/></mxCell>
-<mxCell id="g_a" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="180" y="510" width="540" height="118" as="geometry"/></mxCell>
-<mxCell id="ac0" value="&lt;b&gt;No network device&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="180" y="150" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac1" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User agent, a subuid" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="150" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac2" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="180" y="220" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac3" value="&lt;b&gt;Read-only mounts&lt;/b&gt;&lt;br&gt;CA, proxy and builder sockets" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="220" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac4" value="&lt;b&gt;Read-only /etc/docker&lt;/b&gt;&lt;br&gt;and managed settings" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="180" y="290" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac5" value="&lt;b&gt;Limits (Quadlet service)&lt;/b&gt;&lt;br&gt;3 GB, 4 CPUs, 2048 threads" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="290" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="ac6" value="&lt;b&gt;Private clone of the repo&lt;/b&gt;&lt;br&gt;Your .git is read-only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="180" y="360" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="agent" value="Agent tools&#xa;placeholders only" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="200" y="551" width="200" height="66" as="geometry"/></mxCell>
-<mxCell id="arelay" value="socat" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="600" y="551" width="110" height="66" as="geometry"/></mxCell>
-<mxCell id="bbox" value="Builder sandbox&#xa;rootless Podman + gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1"><mxGeometry x="160" y="858" width="580" height="568" as="geometry"/></mxCell>
-<mxCell id="g_b" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1"><mxGeometry x="180" y="878" width="540" height="118" as="geometry"/></mxCell>
-<mxCell id="bc0" value="&lt;b&gt;No network device&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="180" y="1016" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc1" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User 1000, a subuid" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="1016" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc2" value="&lt;b&gt;No token, no secret&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="180" y="1086" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc3" value="&lt;b&gt;3 capabilities only&lt;/b&gt;&lt;br&gt;SETUID, SETGID, SYS_CHROOT" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="1086" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc4" value="&lt;b&gt;Read-only proxy socket&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="180" y="1156" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc5" value="&lt;b&gt;BuildKit cache: tmpfs&lt;/b&gt;&lt;br&gt;1 GB, in memory" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="1156" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc6" value="&lt;b&gt;RUN steps run as root&lt;/b&gt;&lt;br&gt;only inside the rootless build" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="180" y="1226" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc7" value="&lt;b&gt;Limits (Quadlet service)&lt;/b&gt;&lt;br&gt;2 GB, 2 CPUs, 1024 threads" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="460" y="1226" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bc8" value="&lt;b&gt;Wiped when the session ends&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="180" y="1296" width="260" height="60" as="geometry"/></mxCell>
-<mxCell id="bk" value="BuildKit&#xa;runs the builds" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="200" y="889" width="200" height="66" as="geometry"/></mxCell>
-<mxCell id="brelay" value="socat" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="600" y="889" width="110" height="66" as="geometry"/></mxCell>
-<mxCell id="sock" value="proxy.sock&#xa;Unix socket file&#xa;the only way out" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="860" y="551" width="170" height="66" as="geometry"/></mxCell>
-<mxCell id="bsock" value="proxy.sock&#xa;Unix socket file&#xa;the only way out" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="860" y="889" width="170" height="66" as="geometry"/></mxCell>
-<mxCell id="hk" value="Host kernel" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1"><mxGeometry x="160" y="728" width="1570" height="50" as="geometry"/></mxCell>
-<mxCell id="bw" value="Bitwarden&#xa;Secrets Manager" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1850" y="100" width="160" height="70" as="geometry"/></mxCell>
-<mxCell id="net" value="Internet" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;align=left;spacingLeft=10;" vertex="1" parent="1"><mxGeometry x="1850" y="728" width="140" height="50" as="geometry"/></mxCell>
-<mxCell id="legend" value="Legend" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#999999;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1"><mxGeometry x="455" y="1450" width="1120" height="58" as="geometry"/></mxCell>
-<mxCell id="lg0" value="Part of a sandbox" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="545" y="1460" width="160" height="38" as="geometry"/></mxCell>
-<mxCell id="lg1" value="Part of a proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="717" y="1460" width="140" height="38" as="geometry"/></mxCell>
-<mxCell id="lg2" value="Security control" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="869" y="1460" width="150" height="38" as="geometry"/></mxCell>
-<mxCell id="lg3" value="Shared socket file" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="1031" y="1460" width="190" height="38" as="geometry"/></mxCell>
-<mxCell id="lg4" value="Secret store" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1"><mxGeometry x="1233" y="1460" width="120" height="38" as="geometry"/></mxCell>
-<mxCell id="lg5" value="Host kernel, Internet" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="1365" y="1460" width="190" height="38" as="geometry"/></mxCell>
-<mxCell id="e1" value="HTTPS_PROXY&#xa;127.0.0.1:3128" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="arelay"><mxGeometry x="0.0" y="-25.0" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e2" value="Unix socket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="arelay" target="sock"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e3" value="Unix socket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="psocat"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e3b" value="127.0.0.1:18080" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="psocat" target="piron"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="piron" target="net"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e5" value="real tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.0968;entryDx=0;entryDy=0;" edge="1" parent="1" source="bw" target="pbox"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e6" value="TCP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bk" target="brelay"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="brelay" target="bsock"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bsock" target="qsocat"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e8b" value="TCP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="qsocat" target="qiron"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="qiron" target="net"><mxGeometry x="0.0" y="-16.5" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="d1" value="docker over&#xa;buildkitd.sock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="bk"><mxGeometry x="0.0" y="0" relative="1" as="geometry"><Array as="points"><mxPoint x="70" y="584"/><mxPoint x="70" y="922"/></Array></mxGeometry></mxCell>
-<mxCell id="k1" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.1847;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_a" target="hk"><mxGeometry x="0.0" y="0" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="k2" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.1847;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_b" target="hk"><mxGeometry x="0.0" y="0" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="k3" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.8153;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="pbox" target="hk"><mxGeometry x="0.0" y="0" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="k4" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.8153;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="qbox" target="hk"><mxGeometry x="0.0" y="0" relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e1_l2" value="TCP" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e1"><mxGeometry x="0.0" y="16.5" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-<mxCell id="e3b_l2" value="TCP" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e3b"><mxGeometry x="0.0" y="16.5" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-<mxCell id="e6_l2" value="HTTPS_PROXY&#xa;127.0.0.1:3129" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e6"><mxGeometry x="0.0" y="25.0" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-<mxCell id="e7_l2" value="Unix socket" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e7"><mxGeometry x="0.0" y="16.5" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-<mxCell id="e8_l2" value="Unix socket" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e8"><mxGeometry x="0.0" y="16.5" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-<mxCell id="e8b_l2" value="127.0.0.1:18080" style="edgeLabel;html=0;fontSize=14;labelBackgroundColor=none;" vertex="1" connectable="0" parent="e8b"><mxGeometry x="0.0" y="16.5" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry></mxCell>
-</root></mxGraphModel></diagram></mxfile>
+<mxfile host="app.diagrams.net">
+<diagram id="security-controls" name="security-controls">
+<mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2030" pageHeight="1532" background="#ffffff" math="0" shadow="0">
+<root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="title" value="Security controls of the agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="10" width="700" height="40" as="geometry" />
+</mxCell>
+<mxCell id="pbox" value="Agent proxy&#10;Docker container on runc, no gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1150" y="80" width="580" height="568" as="geometry" />
+</mxCell>
+<mxCell id="pc0" value="&lt;b&gt;Allowlist of hosts&lt;/b&gt;&lt;br&gt;Other hosts get 403" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="150" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc1" value="&lt;b&gt;Method and path rules&lt;/b&gt;&lt;br&gt;Writes go to one repo and&lt;br&gt;one ghcr.io namespace" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1450" y="150" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc2" value="&lt;b&gt;TLS termination&lt;/b&gt;&lt;br&gt;A new CA for each new proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1170" y="220" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc3" value="&lt;b&gt;Token swap&lt;/b&gt;&lt;br&gt;Placeholder becomes the real&lt;br&gt;token, for listed hosts only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1450" y="220" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc4" value="&lt;b&gt;Audit log&lt;/b&gt;&lt;br&gt;One JSON line per request" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="290" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc5" value="&lt;b&gt;Encrypted access token&lt;/b&gt;&lt;br&gt;Not given to iron-proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1450" y="290" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc6" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="360" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc7" value="&lt;b&gt;Limits (compose.yaml)&lt;/b&gt;&lt;br&gt;512 MB, no swap, 256 PIDs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1450" y="360" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc8" value="&lt;b&gt;Tokens and CA in RAM&lt;/b&gt;&lt;br&gt;No swap, no core dump" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1170" y="430" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="pc9" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User 10001" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1450" y="430" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="piron" value="iron-proxy&#10;the egress proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="1500" y="551" width="210" height="66" as="geometry" />
+</mxCell>
+<mxCell id="qbox" value="Builder proxy&#10;Docker container on runc, no gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1">
+<mxGeometry x="1150" y="858" width="580" height="568" as="geometry" />
+</mxCell>
+<mxCell id="qc0" value="&lt;b&gt;Allowlist of host names&lt;/b&gt;&lt;br&gt;Other hosts get 403" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="1016" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc1" value="&lt;b&gt;TLS passthrough&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1450" y="1016" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc2" value="&lt;b&gt;No URL path rules&lt;/b&gt;&lt;br&gt;The proxy sees the host name&lt;br&gt;only. It does not decrypt TLS." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="1086" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc3" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1450" y="1086" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc4" value="&lt;b&gt;Limits (compose.yaml)&lt;/b&gt;&lt;br&gt;256 MB, no swap, 256 PIDs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="1170" y="1156" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc5" value="&lt;b&gt;No token, no CA&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1450" y="1156" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qc6" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User 10001" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1170" y="1226" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="qiron" value="iron-proxy&#10;the egress proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="1500" y="889" width="210" height="66" as="geometry" />
+</mxCell>
+<mxCell id="abox" value="Agent sandbox&#10;Docker container + gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="160" y="80" width="580" height="568" as="geometry" />
+</mxCell>
+<mxCell id="g_a" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="510" width="540" height="118" as="geometry" />
+</mxCell>
+<mxCell id="ac0" value="&lt;b&gt;Internal network only&lt;/b&gt;&lt;br&gt;No route to internet or host" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="180" y="150" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac1" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User agent, uid 1000" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="150" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac2" value="&lt;b&gt;Hardened container&lt;/b&gt;&lt;br&gt;No capability or new privilege&lt;br&gt;Read-only root file system" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="220" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac3" value="&lt;b&gt;Read-only mounts&lt;/b&gt;&lt;br&gt;CA cert, .git, builder socket" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="220" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac4" value="&lt;b&gt;Read-only /etc/docker&lt;/b&gt;&lt;br&gt;and managed settings" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="290" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac5" value="&lt;b&gt;Limits (compose.yaml)&lt;/b&gt;&lt;br&gt;3 GB, no swap, 4 CPUs, 2048 PIDs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="290" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="ac6" value="&lt;b&gt;Private clone of the repo&lt;/b&gt;&lt;br&gt;Your .git is read-only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="360" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="agent" value="Agent tools&#10;placeholders only" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="200" y="551" width="200" height="66" as="geometry" />
+</mxCell>
+<mxCell id="bbox" value="Builder sandbox&#10;Docker container + gVisor" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1">
+<mxGeometry x="160" y="858" width="580" height="568" as="geometry" />
+</mxCell>
+<mxCell id="g_b" value="gVisor: userspace kernel" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=bottom;spacingBottom=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="878" width="540" height="118" as="geometry" />
+</mxCell>
+<mxCell id="bc0" value="&lt;b&gt;Internal network only&lt;/b&gt;&lt;br&gt;No route to internet or host" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="180" y="1016" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc1" value="&lt;b&gt;Not root in the container&lt;/b&gt;&lt;br&gt;User 1000" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="1016" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc2" value="&lt;b&gt;No token, no secret&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="180" y="1086" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc3" value="&lt;b&gt;3 capabilities only&lt;/b&gt;&lt;br&gt;SETUID, SETGID, SYS_CHROOT" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="1086" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc4" value="&lt;b&gt;BuildKit socket in a volume&lt;/b&gt;&lt;br&gt;The agent mounts it read-only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="180" y="1156" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc5" value="&lt;b&gt;BuildKit cache: tmpfs&lt;/b&gt;&lt;br&gt;1 GB, in memory" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="1156" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc6" value="&lt;b&gt;RUN steps run as root&lt;/b&gt;&lt;br&gt;only inside the rootless build" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="180" y="1226" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc7" value="&lt;b&gt;Limits (compose.yaml)&lt;/b&gt;&lt;br&gt;2 GB, no swap, 2 CPUs, 1024 PIDs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="460" y="1226" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bc8" value="&lt;b&gt;Cache wiped at each stop&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="180" y="1296" width="260" height="60" as="geometry" />
+</mxCell>
+<mxCell id="bk" value="BuildKit&#10;runs the builds" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="200" y="889" width="200" height="66" as="geometry" />
+</mxCell>
+<mxCell id="sock" value="Network sandbox&#10;internal&#10;the only way out" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="860" y="551" width="170" height="66" as="geometry" />
+</mxCell>
+<mxCell id="bsock" value="Network build&#10;internal&#10;the only way out" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="860" y="889" width="170" height="66" as="geometry" />
+</mxCell>
+<mxCell id="hk" value="Host kernel" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+<mxGeometry x="160" y="728" width="1570" height="50" as="geometry" />
+</mxCell>
+<mxCell id="bw" value="RAM folder&#10;sandbox-secrets&#10;from init.sh" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+<mxGeometry x="1850" y="100" width="160" height="70" as="geometry" />
+</mxCell>
+<mxCell id="net" value="Internet" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;align=left;spacingLeft=10;" vertex="1" parent="1">
+<mxGeometry x="1850" y="728" width="140" height="50" as="geometry" />
+</mxCell>
+<mxCell id="legend" value="Legend" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffffff;strokeColor=#999999;fontStyle=1;align=left;spacingLeft=10;" vertex="1" parent="1">
+<mxGeometry x="455" y="1450" width="1120" height="58" as="geometry" />
+</mxCell>
+<mxCell id="lg0" value="Part of a sandbox" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="545" y="1460" width="160" height="38" as="geometry" />
+</mxCell>
+<mxCell id="lg1" value="Part of a proxy" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="717" y="1460" width="140" height="38" as="geometry" />
+</mxCell>
+<mxCell id="lg2" value="Security control" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+<mxGeometry x="869" y="1460" width="150" height="38" as="geometry" />
+</mxCell>
+<mxCell id="lg3" value="Internal network" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="1031" y="1460" width="190" height="38" as="geometry" />
+</mxCell>
+<mxCell id="lg4" value="Secrets in RAM" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+<mxGeometry x="1233" y="1460" width="120" height="38" as="geometry" />
+</mxCell>
+<mxCell id="lg5" value="Host kernel, Internet" style="rounded=1;whiteSpace=wrap;html=0;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+<mxGeometry x="1365" y="1460" width="190" height="38" as="geometry" />
+</mxCell>
+<mxCell id="e1" value="HTTPS_PROXY&#10;10.200.0.2:18080" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="sock">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-25.0" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e3" value="TCP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="piron">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="piron" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e5" value="tokens, CA" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.0968;entryDx=0;entryDy=0;" edge="1" parent="1" source="bw" target="pbox">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e6" value="HTTPS_PROXY&#10;10.200.0.10:18080" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bk" target="bsock">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="25.0" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e8" value="TCP" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bsock" target="qiron">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" edge="1" parent="1" source="qiron" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="d1" value="docker over&#10;buildkitd.sock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="bk">
+<mxGeometry relative="1" as="geometry">
+<Array as="points">
+<mxPoint x="70" y="584" />
+<mxPoint x="70" y="922" />
+</Array>
+</mxGeometry>
+</mxCell>
+<mxCell id="k1" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.1847;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_a" target="hk">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="k2" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.1847;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="g_b" target="hk">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="k3" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.8153;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="pbox" target="hk">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="k4" value="system calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.8153;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="qbox" target="hk">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>

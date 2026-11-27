@@ -1,45 +1,128 @@
-<mxfile host="app.diagrams.net"><diagram id="architecture" name="architecture"><mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1720" pageHeight="900" background="#ffffff" math="0" shadow="0"><root>
-<mxCell id="0"/>
-<mxCell id="1" parent="0"/>
-<mxCell id="title" value="Agent Sandbox and Builder with Podman and gVisor" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="600" height="40" as="geometry"/></mxCell>
-<mxCell id="term" value="Your terminal&#xa;just sandbox run" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="20" y="378" width="170" height="76" as="geometry"/></mxCell>
-<mxCell id="repo" value="Repo&#xa;.git folder, read-only" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="20" y="534" width="170" height="76" as="geometry"/></mxCell>
-<mxCell id="sbx" value="Agent sandbox" style="swimlane;rounded=1;arcSize=4;startSize=36;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="250" y="90" width="320" height="556" as="geometry"/></mxCell>
-<mxCell id="podman" value="Podman - container" style="swimlane;rounded=1;arcSize=4;startSize=32;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="260" y="136" width="300" height="500" as="geometry"/></mxCell>
-<mxCell id="gvisor" value="gVisor: userspace kernel" style="swimlane;rounded=1;arcSize=4;startSize=32;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="270" y="176" width="280" height="450" as="geometry"/></mxCell>
-<mxCell id="relay" value="socat relay&#xa;127.0.0.1:3128&#xa;to proxy.sock" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="285" y="222" width="250" height="76" as="geometry"/></mxCell>
-<mxCell id="agent" value="Agent/MCP tools&#xa;Claude, Qwen, Herdr, Fresh" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="285" y="378" width="250" height="76" as="geometry"/></mxCell>
-<mxCell id="home" value="Clone of the repo&#xa;in the sandbox-home volume" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="285" y="534" width="250" height="76" as="geometry"/></mxCell>
-<mxCell id="svc" value="Quadlet service sandbox-agent.service&#xa;limits: 3 GB, 4 CPUs" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="250" y="770" width="320" height="76" as="geometry"/></mxCell>
-<mxCell id="bld" value="Builder: new per sandbox session" style="swimlane;rounded=1;arcSize=4;startSize=36;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#82b366;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="700" y="296" width="300" height="416" as="geometry"/></mxCell>
-<mxCell id="bpodman" value="Podman - container" style="swimlane;rounded=1;arcSize=4;startSize=32;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="710" y="342" width="280" height="360" as="geometry"/></mxCell>
-<mxCell id="bgvisor" value="gVisor: userspace kernel" style="swimlane;rounded=1;arcSize=4;startSize=32;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;align=left;spacingLeft=10;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="720" y="382" width="260" height="310" as="geometry"/></mxCell>
-<mxCell id="brelay" value="socat relay&#xa;127.0.0.1:3129&#xa;to proxy.sock" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="735" y="428" width="230" height="76" as="geometry"/></mxCell>
-<mxCell id="bk" value="BuildKit (buildkitd)&#xa;no secret, cache in tmpfs" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="735" y="584" width="230" height="92" as="geometry"/></mxCell>
-<mxCell id="bsvc" value="Quadlet service sandbox-builder.service&#xa;limits: 2 GB, 2 CPUs" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="660" y="770" width="380" height="76" as="geometry"/></mxCell>
-<mxCell id="bw" value="Bitwarden Secrets Manager" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1290" y="20" width="240" height="50" as="geometry"/></mxCell>
-<mxCell id="grp" value="" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=#666666;dashed=1;strokeWidth=2;" vertex="1" parent="1"><mxGeometry x="1270" y="198" width="280" height="330" as="geometry"/></mxCell>
-<mxCell id="sock" value="proxy.sock&#xa;Unix socket file" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="1040" y="230" width="160" height="60" as="geometry"/></mxCell>
-<mxCell id="bsock" value="proxy.sock&#xa;Unix socket file" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="1040" y="436" width="160" height="60" as="geometry"/></mxCell>
-<mxCell id="proxy" value="Host proxy container&#xa;allowlist, path rules,&#xa;TLS, token swap" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1290" y="218" width="240" height="84" as="geometry"/></mxCell>
-<mxCell id="bproxy" value="Builder proxy container&#xa;host names only,&#xa;no tokens" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1290" y="424" width="240" height="84" as="geometry"/></mxCell>
-<mxCell id="psvc" value="Quadlet services of the proxies&#xa;sandbox-proxy.service: 512 MB&#xa;sandbox-builder-proxy.service: 256 MB" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="1250" y="590" width="320" height="84" as="geometry"/></mxCell>
-<mxCell id="net" value="Internet&#xa;allowed hosts" style="rounded=1;whiteSpace=wrap;html=0;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="1580" y="225" width="110" height="70" as="geometry"/></mxCell>
-<mxCell id="e1" value="runs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="term" target="agent"><mxGeometry y="-14" relative="1" as="geometry"/></mxCell>
-<mxCell id="e2" value="clone" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="repo" target="home"><mxGeometry y="-14" relative="1" as="geometry"/></mxCell>
-<mxCell id="e3" value="connect" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="relay" target="sock"><mxGeometry y="-14" relative="1" as="geometry"/></mxCell>
-<mxCell id="e3b" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="proxy"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="proxy" target="net"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e5" value="real tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="bw" target="proxy"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e6" value="reads and writes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="home"><mxGeometry relative="1" as="geometry"><mxPoint x="60" as="offset"/></mxGeometry></mxCell>
-<mxCell id="e6b" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="relay"><mxGeometry relative="1" as="geometry"><mxPoint x="60" as="offset"/></mxGeometry></mxCell>
-<mxCell id="e15" value="limits" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;dashed=1;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="psvc" target="grp"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e8" value="limits" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;dashed=1;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="svc" target="sbx"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e9" value="docker over&#xa;buildkitd.sock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.917;exitDx=0;exitDy=0;entryX=0;entryY=0.731;entryDx=0;entryDy=0;" edge="1" parent="1" source="sbx" target="bld"><mxGeometry y="-14" relative="1" as="geometry"/></mxCell>
-<mxCell id="e10" value="limits" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;dashed=1;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="bsvc" target="bld"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e11" value="requires" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;dashed=1;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#666666;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="svc" target="bsvc"><mxGeometry y="-14" relative="1" as="geometry"/></mxCell>
-<mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="brelay" target="bsock"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e12b" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bsock" target="bproxy"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="bproxy" target="net"><mxGeometry relative="1" as="geometry"/></mxCell>
-<mxCell id="e14" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;defaultLabelBackgroundColor=gap;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="bk" target="brelay"><mxGeometry relative="1" as="geometry"><mxPoint x="60" as="offset"/></mxGeometry></mxCell>
-</root></mxGraphModel></diagram></mxfile>
+<mxfile host="app.diagrams.net">
+<diagram id="architecture" name="architecture">
+<mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="940" background="#ffffff" math="0" shadow="0">
+<root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="title" value="Agent Sandbox and Builder with Docker Compose and gVisor" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="10" width="760" height="40" as="geometry" />
+</mxCell>
+<mxCell id="bw" value="&lt;b&gt;Bitwarden&lt;/b&gt;&lt;br&gt;Secrets Manager" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+<mxGeometry x="20" y="70" width="190" height="76" as="geometry" />
+</mxCell>
+<mxCell id="init" value="&lt;b&gt;init.sh on the host&lt;/b&gt;&lt;br&gt;before each devcontainer up" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+<mxGeometry x="300" y="70" width="290" height="76" as="geometry" />
+</mxCell>
+<mxCell id="ram" value="&lt;b&gt;RAM folder sandbox-secrets&lt;/b&gt;&lt;br&gt;ca.key, ca.crt, 4 token files" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+<mxGeometry x="680" y="70" width="300" height="76" as="geometry" />
+</mxCell>
+<mxCell id="term" value="&lt;b&gt;Your terminal&lt;/b&gt;&lt;br&gt;devcontainer exec" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="20" y="310" width="190" height="76" as="geometry" />
+</mxCell>
+<mxCell id="repo" value="&lt;b&gt;Repo&lt;/b&gt;&lt;br&gt;.git folder, read-only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="20" y="420" width="190" height="76" as="geometry" />
+</mxCell>
+<mxCell id="netsbx" value="Network sandbox: internal, 10.200.0.0/29" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
+<mxGeometry x="290" y="200" width="980" height="320" as="geometry" />
+</mxCell>
+<mxCell id="acont" value="agent: 10.200.0.3, 3 GB, 4 CPUs" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="310" y="240" width="390" height="264" as="geometry" />
+</mxCell>
+<mxCell id="agv" value="gVisor: runsc-uds" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="320" y="280" width="370" height="214" as="geometry" />
+</mxCell>
+<mxCell id="tools" value="&lt;b&gt;Agent tools&lt;/b&gt;&lt;br&gt;Claude, Qwen, Herdr, Fresh" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="335" y="320" width="340" height="60" as="geometry" />
+</mxCell>
+<mxCell id="clone" value="&lt;b&gt;Clone of the repo&lt;/b&gt;&lt;br&gt;in the volume sandbox-home" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="335" y="420" width="340" height="60" as="geometry" />
+</mxCell>
+<mxCell id="proxy" value="&lt;b&gt;proxy: 10.200.0.2:18080&lt;/b&gt;&lt;br&gt;iron-proxy on runc, 512 MB&lt;br&gt;allowlist, path rules,&lt;br&gt;TLS, token swap" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="940" y="300" width="310" height="110" as="geometry" />
+</mxCell>
+<mxCell id="sock" value="&lt;b&gt;Volume buildkit-sock&lt;/b&gt;&lt;br&gt;buildkitd.sock&lt;br&gt;for docker build" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="730" y="545" width="200" height="70" as="geometry" />
+</mxCell>
+<mxCell id="netbld" value="Network build: internal, 10.200.0.8/29" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
+<mxGeometry x="290" y="640" width="980" height="280" as="geometry" />
+</mxCell>
+<mxCell id="bcont" value="builder: 10.200.0.11, 2 GB, 2 CPUs" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="310" y="680" width="390" height="224" as="geometry" />
+</mxCell>
+<mxCell id="bgv" value="gVisor: runsc-builder" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=#ffffff;strokeColor=#9673a6;strokeWidth=2;align=left;spacingLeft=10;fontStyle=1;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="320" y="720" width="370" height="174" as="geometry" />
+</mxCell>
+<mxCell id="bk" value="&lt;b&gt;BuildKit (buildkitd)&lt;/b&gt;&lt;br&gt;no token, cache in tmpfs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="335" y="780" width="340" height="70" as="geometry" />
+</mxCell>
+<mxCell id="bproxy" value="&lt;b&gt;builder-proxy: 10.200.0.10:18080&lt;/b&gt;&lt;br&gt;iron-proxy on runc, 256 MB&lt;br&gt;host names only (sni-only),&lt;br&gt;no token" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="940" y="735" width="310" height="110" as="geometry" />
+</mxCell>
+<mxCell id="net" value="&lt;b&gt;Internet&lt;/b&gt;&lt;br&gt;allowed hosts" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+<mxGeometry x="1530" y="470" width="200" height="80" as="geometry" />
+</mxCell>
+<mxCell id="e_bw" value="API tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bw" target="init">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_init" value="writes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="init" target="ram">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_ram_p" value="/run/secrets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="ram" target="proxy">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="58" y="0" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_ram_a" value="ca.crt only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.27;exitY=1;exitDx=0;exitDy=0;entryX=0.87;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="ram" target="acont">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="-52" y="-14" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_term" value="exec" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="term" target="tools">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_repo" value="clone" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="repo" target="clone">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_tc" value="reads and writes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="clone">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="66" y="0" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_tp" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="proxy">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_ts" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tools" target="sock">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_sb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="bk">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_bp" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="bk" target="bproxy">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_pn" value="network default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" parent="1" source="proxy" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="63" y="0" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_bn" value="network default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" parent="1" source="bproxy" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="63" y="0" as="offset" />
+</mxGeometry>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>
