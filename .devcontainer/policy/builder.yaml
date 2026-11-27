@@ -7,7 +7,7 @@ dns:
 proxy:
   http_listen: "127.0.0.1:18081"
   https_listen: "127.0.0.1:18082"
-  # The tunnel takes CONNECT. It must equal the builder proxy IP and port in ../compose.yaml and ../agent/configs/tools/docker-config.json.
+  # The tunnel takes CONNECT. It must equal the builder proxy IP and port in ../compose.yaml and ../configs/docker-config.json.
   tunnel_listen: "10.200.0.10:18080"
 tls:
   mode: sni-only

@@ -101,12 +101,12 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /h
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.claude /home/agent/.claude
 
 USER root
-# Read-only at run time. The ghcr.io login placeholder must equal a proxy_value in ../policy/agent.yaml.
-# docker finds buildx through cliPluginsExtraDirs, and crane reads the login. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
-COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
-# buildx create only writes the definition of the builder.
+# buildx create only writes the definition of the builder. docker-buildx runs on its own, because the docker config is a mount at run time.
+# The empty config.json is the mount point of ../configs/docker-config.json.
+# TODO: check if gVisor makes the mount point in the read-only root without the touch, then remove it.
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
- && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker buildx create --name sandbox \
+ && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker-buildx create --name sandbox \
+ && touch /etc/docker/config.json \
  && chmod -R a+rX /etc/docker
 USER agent
 
@@ -128,11 +128,10 @@ RUN mkdir -p /usr/share/sandbox \
  && mkdir /home/agent \
  && chown agent:agent /home/agent
 
-RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
-COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
-
-RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
-COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
+# The empty files are the mount points of ../configs/managed-settings.json and ../configs/qwen-settings.json.
+RUN mkdir -p /etc/claude-code /etc/qwen-code \
+ && touch /etc/claude-code/managed-settings.json /etc/qwen-code/settings.json \
+ && chmod 0755 /etc/claude-code /etc/qwen-code
 
 # Build-time env only. The run-time env and the command are in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \

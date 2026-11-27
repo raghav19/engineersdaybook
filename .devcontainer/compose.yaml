@@ -70,7 +70,7 @@ services:
       - ./policy/builder.yaml:/etc/iron-proxy/iron-proxy.yaml:ro
     networks:
       default: {}
-      # Must equal tunnel_listen in policy/builder.yaml, HTTPS_PROXY of the builder and proxies in agent/configs/tools/docker-config.json.
+      # Must equal tunnel_listen in policy/builder.yaml, HTTPS_PROXY of the builder and proxies in configs/docker-config.json.
       build: { ipv4_address: 10.200.0.10 }
 
   # BuildKit for `docker build` in the agent. Any holder of the socket can run any build step, so the container is the wall.
@@ -220,7 +220,7 @@ services:
       # agents
       CLAUDE_CONFIG_DIR: /home/agent/.claude
       DISABLE_UPDATES: "1"
-      # Qwen Code reads its model from these. agent/configs/agents/qwen-settings.json keeps the auth type and the MCP servers.
+      # Qwen Code reads its model from these. configs/qwen-settings.json keeps the auth type and the MCP servers.
       OPENAI_BASE_URL: https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
       OPENAI_MODEL: qwen3.8-max
       # Under gVisor, Herdr lists no agents without this setting. See https://github.com/herdrdev/herdr/issues/1982
@@ -248,5 +248,10 @@ services:
       - sandbox-home:/home/agent
       # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
       - ./lifecycle:/run/sandbox/lifecycle:ro
+      # The docker config: the ghcr.io login placeholder, the builder proxy and the plugin folder of buildx. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
+      - ./configs/docker-config.json:/etc/docker/config.json:ro
+      # The policy of Claude Code. It also enables the plugins.
+      - ./configs/managed-settings.json:/etc/claude-code/managed-settings.json:ro
+      - ./configs/qwen-settings.json:/etc/qwen-code/settings.json:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
