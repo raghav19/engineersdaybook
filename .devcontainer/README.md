@@ -201,14 +201,14 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
    To test the image before the push, leave out `--push` and `--cache-to`.
 
-3. Get the digest:
+3. Pin the digest in `compose.yaml`, then review and commit the change:
 
    ```shell
-   docker buildx imagetools inspect "$img:$tag" \
-     --format '{{.Name}}@{{.Manifest.Digest}}'
+   export REF=$(docker buildx imagetools inspect "$img:$tag" \
+     --format '{{.Name}}@{{.Manifest.Digest}}')
+   yq -i '.services.agent.image = strenv(REF)' .devcontainer/compose.yaml
+   git diff .devcontainer/compose.yaml
    ```
-
-   Put the printed reference in the `image` line of the service `agent` in `compose.yaml`, and commit it.
 
 4. Apply it:
 
