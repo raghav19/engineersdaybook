@@ -19,17 +19,14 @@
 <mxCell id="netD" value="Network default: Compose bridge" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
 <mxGeometry x="980" y="110" width="380" height="850" as="geometry" />
 </mxCell>
-<mxCell id="agent" value="&lt;b&gt;agent: 10.200.0.3&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel&lt;br&gt;HTTPS_PROXY=http://10.200.0.2:18080&lt;br&gt;NO_PROXY=localhost,127.0.0.1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-<mxGeometry x="60" y="185" width="360" height="150" as="geometry" />
+<mxCell id="agent" value="&lt;b&gt;agent: 10.200.0.3&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="60" y="215" width="360" height="90" as="geometry" />
 </mxCell>
-<mxCell id="s_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-<mxGeometry x="60" y="360" width="360" height="50" as="geometry" />
+<mxCell id="s_out" value="&lt;b&gt;No route to the Internet or the host&lt;/b&gt;&lt;br&gt;internal: true, inhibit_ipv4" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="340" width="360" height="50" as="geometry" />
 </mxCell>
-<mxCell id="s_host" value="&lt;b&gt;No route to the host&lt;/b&gt;&lt;br&gt;inhibit_ipv4: the bridge has no host IP" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-<mxGeometry x="60" y="420" width="360" height="50" as="geometry" />
-</mxCell>
-<mxCell id="proxy" value="&lt;b&gt;proxy (the agent proxy)&lt;/b&gt;&lt;br&gt;runc, uid 10001&lt;br&gt;tunnel on 10.200.0.2:18080&lt;br&gt;(CONNECT, SOCKS5)&lt;br&gt;127.0.0.1 only: DNS, HTTP,&lt;br&gt;HTTPS, metrics&lt;br&gt;ends TLS, swaps the tokens" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-<mxGeometry x="760" y="170" width="360" height="180" as="geometry" />
+<mxCell id="proxy" value="&lt;b&gt;proxy&lt;/b&gt;&lt;br&gt;tunnel port 18080&lt;br&gt;ends TLS, swaps tokens" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="760" y="200" width="360" height="120" as="geometry" />
 </mxCell>
 <mxCell id="p_in" value="&lt;b&gt;10.200.0.2&lt;/b&gt;&lt;br&gt;sandbox" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
 <mxGeometry x="710" y="230" width="100" height="60" as="geometry" />
@@ -40,17 +37,14 @@
 <mxCell id="sock" value="&lt;b&gt;Volume buildkit-sock&lt;/b&gt;&lt;br&gt;a folder on the host&lt;br&gt;buildkitd.sock: a Unix&lt;br&gt;socket, not a network" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
 <mxGeometry x="355" y="495" width="230" height="80" as="geometry" />
 </mxCell>
-<mxCell id="builder" value="&lt;b&gt;builder: 10.200.0.11&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel&lt;br&gt;HTTPS_PROXY=http://10.200.0.10:18080&lt;br&gt;RUN steps: the same proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-<mxGeometry x="60" y="665" width="360" height="150" as="geometry" />
+<mxCell id="builder" value="&lt;b&gt;builder: 10.200.0.11&lt;/b&gt;&lt;br&gt;gVisor: userspace kernel" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="60" y="695" width="360" height="90" as="geometry" />
 </mxCell>
-<mxCell id="b_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-<mxGeometry x="60" y="840" width="360" height="50" as="geometry" />
+<mxCell id="b_out" value="&lt;b&gt;No route to the Internet or the host&lt;/b&gt;&lt;br&gt;internal: true, inhibit_ipv4" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="820" width="360" height="50" as="geometry" />
 </mxCell>
-<mxCell id="b_host" value="&lt;b&gt;No route to the host&lt;/b&gt;&lt;br&gt;inhibit_ipv4: the bridge has no host IP" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-<mxGeometry x="60" y="900" width="360" height="50" as="geometry" />
-</mxCell>
-<mxCell id="bproxy" value="&lt;b&gt;builder-proxy&lt;/b&gt;&lt;br&gt;runc, uid 10001&lt;br&gt;tunnel on 10.200.0.10:18080&lt;br&gt;(CONNECT)&lt;br&gt;127.0.0.1 only: DNS, HTTP,&lt;br&gt;HTTPS, metrics&lt;br&gt;sni-only, no token" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-<mxGeometry x="760" y="650" width="360" height="180" as="geometry" />
+<mxCell id="bproxy" value="&lt;b&gt;builder-proxy&lt;/b&gt;&lt;br&gt;tunnel port 18080&lt;br&gt;TLS passthrough, no token" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="760" y="680" width="360" height="120" as="geometry" />
 </mxCell>
 <mxCell id="bp_in" value="&lt;b&gt;10.200.0.10&lt;/b&gt;&lt;br&gt;build" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
 <mxGeometry x="710" y="710" width="100" height="60" as="geometry" />

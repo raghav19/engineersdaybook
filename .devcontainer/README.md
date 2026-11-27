@@ -75,6 +75,18 @@ The sandbox has two limits of its own:
 
 [![The agent sandbox, the builder and both proxies](docs/diagrams/architecture.png)](docs/diagrams/architecture.svg)
 
+The numbers follow one session:
+
+1. `init.sh` fetches the API tokens from Bitwarden.
+2. `init.sh` writes a new CA and the tokens into `$XDG_RUNTIME_DIR/sandbox-secrets`.
+3. The proxy reads the CA and the tokens at `/run/secrets`. The agent reads only `ca.crt`.
+4. `lifecycle/on-create.sh` clones the repo into the volume `sandbox-home`.
+5. You open Herdr in the agent with `devcontainer exec`.
+6. A tool sends each request to the proxy through `HTTPS_PROXY`.
+7. The proxy checks the request, swaps the placeholder for the token, and sends the request out on the network `default`.
+8. `docker build` sends the build to BuildKit through `buildkitd.sock`.
+9. BuildKit fetches images and packages through the builder proxy.
+
 `compose.yaml` starts four containers on two internal Docker networks:
 
 - **Network `sandbox`** (10.200.0.0/29) holds the agent sandbox (10.200.0.3) and the agent proxy (10.200.0.2).
