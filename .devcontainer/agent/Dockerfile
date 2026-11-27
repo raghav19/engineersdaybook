@@ -100,16 +100,6 @@ COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/herdr /home/a
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /home/agent/.local/state/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.claude /home/agent/.claude
 
-USER root
-# The image has no config files. The links in /etc point into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
-# ../lifecycle/on-create.sh makes the links in the home.
-# buildx create only writes the definition of the builder. docker-buildx runs on its own, because the docker config is not in the image.
-RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
- && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker-buildx create --name sandbox \
- && ln -s /run/sandbox/configs/docker-config.json /etc/docker/config.json \
- && chmod -R a+rX /etc/docker
-USER agent
-
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
@@ -120,7 +110,9 @@ RUN mkdir -p /usr/share/sandbox \
  && mkdir /home/agent \
  && chown agent:agent /home/agent
 
-# The policy files of Claude Code and Qwen Code, as links like the docker config above.
+# The image has no config files. These links point into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
+# The policy files stay at their fixed path in /etc, because a process of the agent can change an env var that names a path.
+# ../lifecycle/on-create.sh links the other configs in the home.
 RUN mkdir -p /etc/claude-code /etc/qwen-code \
  && ln -s /run/sandbox/configs/managed-settings.json /etc/claude-code/managed-settings.json \
  && ln -s /run/sandbox/configs/qwen-settings.json /etc/qwen-code/settings.json \

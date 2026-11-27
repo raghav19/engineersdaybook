@@ -39,3 +39,10 @@ ln -sfn "$c/herdr-config.toml" "$HOME/.config/herdr/config.toml"
 ln -sfn "$c/starship.toml" "$HOME/.config/starship.toml"
 ln -sfn "$c/k9s-skin-catppuccin-mocha.yaml" "$HOME/.config/k9s/skins/catppuccin-mocha.yaml"
 ln -sfn "$c/k9s-skin-tokyo-night.yaml" "$HOME/.config/k9s/skins/tokyo-night.yaml"
+
+# The docker config: the ghcr.io login placeholder, the builder proxy and the plugin folder of buildx. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
+mkdir -p "$HOME/.docker" || fail "could not make ~/.docker"
+ln -sfn "$c/docker-config.json" "$HOME/.docker/config.json"
+# Define the builder again in each new container, so a change of the socket path applies. The path must equal the buildkit-sock mount in ../compose.yaml.
+rm -f "$HOME/.docker/buildx/instances/sandbox"
+docker buildx create --name sandbox --driver remote unix:///run/sandbox/buildkit/buildkitd.sock >/dev/null || fail "could not define the builder"

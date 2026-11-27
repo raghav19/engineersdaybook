@@ -157,8 +157,7 @@ services:
     cpus: 4
     # The PID limit also counts the threads of the gVisor kernel on the host, so it is higher than the agent processes need.
     pids_limit: 2048
-    # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
-    tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
+    tmpfs: [/tmp, /run]
     # Healthy after lifecycle/post-start.sh writes the file.
     healthcheck:
       test: ["CMD", "test", "-e", "/tmp/sandbox-ready"]
@@ -210,8 +209,7 @@ services:
       GIT_CONFIG_VALUE_1: '!f() { echo username=x-access-token; echo "password=$$GH_TOKEN"; }; f'
       # runtimes
       HF_HUB_OFFLINE: "1"
-      # infra: the docker config holds the ghcr.io login placeholder, the builder proxy and the builder definition.
-      DOCKER_CONFIG: /etc/docker
+      # infra: lifecycle/on-create.sh links ~/.docker/config.json and defines the builder that BUILDX_BUILDER names.
       BUILDX_BUILDER: sandbox
       TF_PLUGIN_CACHE_DIR: /home/agent/.cache/terraform-providers
       CHECKPOINT_DISABLE: "1"
@@ -237,7 +235,7 @@ services:
         target: /etc/ssl/certs/ca-certificates.crt
         read_only: true
         bind: { create_host_path: false }
-      # Only the socket folder of the builder, read-only. The path must equal the builder definition in agent/Dockerfile.
+      # Only the socket folder of the builder, read-only. The path must equal the builder definition in lifecycle/on-create.sh.
       - type: volume
         source: buildkit-sock
         target: /run/sandbox/buildkit
@@ -249,7 +247,6 @@ services:
       # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
       - ./lifecycle:/run/sandbox/lifecycle:ro
       # All config files, read-only. The links in /etc (agent/Dockerfile) and in the home (lifecycle/on-create.sh) point here.
-      # Keys of the docker config: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
       - ./configs:/run/sandbox/configs:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }
