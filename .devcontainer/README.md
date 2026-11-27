@@ -204,10 +204,9 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 3. Pin the digest in `compose.yaml`, then review and commit the change:
 
    ```shell
-   export REF=$(docker buildx imagetools inspect "$img:$tag" \
-     --format '{{.Name}}@{{.Manifest.Digest}}')
-   yq -i '.services.agent.image = strenv(REF)' .devcontainer/compose.yaml
-   git diff .devcontainer/compose.yaml
+   docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}' \
+     | yq -i '.services.agent.image = (load_str("/dev/stdin") | trim)' .devcontainer/compose.yaml \
+     && git diff .devcontainer/compose.yaml
    ```
 
 4. Apply it:
