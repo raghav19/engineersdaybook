@@ -81,6 +81,8 @@ The sandbox has two limits of its own:
 - **Network `build`** (10.200.0.8/29) holds the builder (10.200.0.11) and the builder proxy (10.200.0.10).
 - **Network `default`** of Compose holds only the two proxies. It is their way to the Internet.
 
+Each internal network is a /29, a block of 8 addresses. In each block, the gateway takes the first host address, the proxy the next one, and the container the one after it. So the builder at .11 has the same place in its block as the agent at .3. The two blocks do not overlap.
+
 gVisor runs the agent sandbox and the builder. The proxies run on runc. The agent and the builder share no network. The agent reaches the builder only through `buildkitd.sock` in the volume `buildkit-sock`.
 
 The allowed hosts are in `policy/agent.yaml` and `policy/builder.yaml`.
