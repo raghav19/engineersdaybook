@@ -1,0 +1,78 @@
+<mxfile host="app.diagrams.net">
+<diagram id="workflow" name="workflow">
+<mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1520" pageHeight="530" background="#ffffff" math="0" shadow="0">
+<root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="title" value="Developer workflow of the agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="10" width="700" height="40" as="geometry" />
+</mxCell>
+<mxCell id="laneA" value="Build: when agent/ changes" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="20" y="70" width="1480" height="190" as="geometry" />
+</mxCell>
+<mxCell id="a1" value="&lt;b&gt;Edit agent/&lt;/b&gt;&lt;br&gt;Dockerfile, tools/*.toml" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="50" y="120" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="a2" value="&lt;b&gt;Commit&lt;/b&gt;&lt;br&gt;the tag is the git tree&lt;br&gt;sha of agent/" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="340" y="120" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="a3" value="&lt;b&gt;Build and push&lt;/b&gt;&lt;br&gt;devcontainer build --push,&lt;br&gt;layer cache in :cache" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="630" y="120" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="a4" value="&lt;b&gt;ghcr.io&lt;/b&gt;&lt;br&gt;sandbox-dev:&amp;lt;tag&amp;gt;,&lt;br&gt;a private package" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="920" y="120" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="a5" value="&lt;b&gt;Pin the digest&lt;/b&gt;&lt;br&gt;image line in compose.yaml,&lt;br&gt;then PR and merge" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="1210" y="120" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="laneB" value="Use: each session" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="20" y="310" width="1480" height="190" as="geometry" />
+</mxCell>
+<mxCell id="b1" value="&lt;b&gt;Start&lt;/b&gt;&lt;br&gt;devcontainer up: init.sh,&lt;br&gt;then the 4 containers" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="50" y="360" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="b2" value="&lt;b&gt;Open Herdr&lt;/b&gt;&lt;br&gt;devcontainer exec herdr" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="340" y="360" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="b3" value="&lt;b&gt;The agent works&lt;/b&gt;&lt;br&gt;Claude or Qwen in its clone,&lt;br&gt;a branch for each task" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="630" y="360" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="b4" value="&lt;b&gt;Push and open a PR&lt;/b&gt;&lt;br&gt;through the agent proxy,&lt;br&gt;this repo only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="920" y="360" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="b5" value="&lt;b&gt;You review and merge&lt;/b&gt;&lt;br&gt;on GitHub. The proxy&lt;br&gt;blocks a merge." style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="1210" y="360" width="250" height="110" as="geometry" />
+</mxCell>
+<mxCell id="e_a1_a2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a1" target="a2">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_a2_a3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a2" target="a3">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_a3_a4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a3" target="a4">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_a4_a5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="a4" target="a5">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_b1_b2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="b1" target="b2">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_b2_b3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="b2" target="b3">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_b3_b4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="b3" target="b4">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_b4_b5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="b4" target="b5">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_pull" value="devcontainer up pulls the pinned image" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="a5" target="b1">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-15" as="offset" />
+</mxGeometry>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>

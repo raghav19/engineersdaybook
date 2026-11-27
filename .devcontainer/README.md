@@ -310,6 +310,12 @@ sequenceDiagram
 crane push /tmp/image.tar ghcr.io/raghav19/<NAME>:<TAG>
 ```
 
+## Workflow
+
+You build the agent image only when `agent/` changes. Each session starts the sandbox from the pinned image.
+
+[![Build the agent image, then use the sandbox](docs/diagrams/workflow.png)](docs/diagrams/workflow.svg)
+
 ## Prerequisites
 
 This is a personal setup.
