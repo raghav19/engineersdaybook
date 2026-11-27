@@ -94,7 +94,7 @@ COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 RUN mise reshim
 
-# Before the configs below, so a config of the repo replaces the default file of a plugin.
+# The plugins from stage8. The config files further down overwrite a file from stage8 that has the same path.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh /home/agent/.config/fresh
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/herdr /home/agent/.config/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /home/agent/.local/state/herdr
