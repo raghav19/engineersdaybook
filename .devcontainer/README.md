@@ -133,16 +133,16 @@ The diagram shows each control in the container that has it.
 
 Notes on the controls:
 
-- **Internal networks.** Both networks have `internal: true`, so they have no route to the Internet. `inhibit_ipv4` gives the bridge no IPv4 address on the host, so a container cannot reach the host. A tool that ignores `HTTPS_PROXY` gets `network unreachable`.
-- **Fixed IPs.** gVisor cannot use the DNS of Docker to find a proxy by name. So each proxy has a fixed IP, and `HTTPS_PROXY` names that IP.
-- **The builder.** `rootlesskit` needs the three capabilities. The builder has no `no-new-privileges`, and its root file system is writable.
-- **Root in the builder.** BuildKit has no authorization. Any holder of `buildkitd.sock` can run any build step as root in the build. The container is the wall.
-- **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A merge, a file removal, a gist, a fork and GraphQL get `403`.
-- **TLS.** `init.sh` makes a new CA for each new agent proxy. The agent proxy reads each request with this CA, and the agent trusts only this CA. The builder proxy has no CA.
-- **Tokens.** `init.sh` writes each API token into a file in `$XDG_RUNTIME_DIR/sandbox-secrets`. `$XDG_RUNTIME_DIR` is `/run/user/<uid>`, a tmpfs, so the files stay in RAM. The folder has mode 0700. An ACL lets the proxy uid 10001 read the files. Your host user can read them while the session runs. A logout or a reboot empties the folder.
-- **Audit log.** Read it with `docker logs -f sandbox-proxy-1`.
-- **Limits.** `compose.yaml` sets the memory, CPU and PID limits of each container. Rootful Docker enforces them under gVisor. `memswap_limit` is equal to `mem_limit`, so no container uses swap.
-- **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
+- **No route out.** The internal networks have no route to the Internet or to the host. A tool that ignores `HTTPS_PROXY` gets `network unreachable`.
+- **Fixed proxy IPs.** gVisor cannot use the DNS of Docker. So `HTTPS_PROXY` names each proxy by its IP.
+- **Builder rights.** BuildKit needs three capabilities. The builder also has a writable root file system and no `no-new-privileges`.
+- **Root in a build.** Any holder of `buildkitd.sock` can run any build step as root. The container is the wall.
+- **Path rules.** The agent proxy checks the path of each URL. A merge, a file removal, a gist, a fork and GraphQL get `403`.
+- **TLS.** Each new agent proxy gets a new CA. The agent trusts only this CA. The builder proxy has no CA.
+- **Tokens.** The tokens are files in a tmpfs folder, `$XDG_RUNTIME_DIR/sandbox-secrets`. Only you and the proxy can read them. A logout or a reboot deletes them.
+- **Audit log.** `docker logs -f sandbox-proxy-1` shows each request.
+- **Limits.** `compose.yaml` limits the memory, the CPUs and the processes of each container. No container uses swap.
+- **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories.
 
 ## Flows
 
