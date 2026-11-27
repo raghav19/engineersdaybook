@@ -78,6 +78,7 @@ services:
   builder:
     # The rootless image runs buildkitd as uid 1000 with 3 capabilities. The rootful image runs it as root and needs privileged.
     image: docker.io/moby/buildkit:v0.35.1-rootless@sha256:7d02292556e66feea6d2d89b7ec143503b57e4f59a4efc6b7ece8547e4d3e5be
+    # gVisor with --host-uds=create: buildkitd can create its socket in the volume buildkit-sock. See README.md#prerequisites.
     runtime: runsc-builder
     user: "1000:1000"
     cap_drop: [ALL]
@@ -142,6 +143,7 @@ services:
   agent:
     # The tag is the git tree sha of agent/, and the digest pins the content. Update: README.md#update-the-agent-image
     image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:97a22d03cd2b99e6ab7e8cb792cdd826df20e77b
+    # gVisor with --host-uds=open: the agent can connect to the BuildKit socket. See README.md#prerequisites.
     runtime: runsc-uds
     user: agent
     working_dir: /home/agent

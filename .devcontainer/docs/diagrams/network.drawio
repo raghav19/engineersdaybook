@@ -71,13 +71,15 @@
 <mxPoint x="0" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_as" value="docker build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="sock">
+<mxCell id="e_as" value="docker build connects&#10;--host-uds=open" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="sock">
 <mxGeometry relative="1" as="geometry">
-<mxPoint x="52" y="0" as="offset" />
+<mxPoint x="83" y="0" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_sb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.15;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="builder">
-<mxGeometry relative="1" as="geometry" />
+<mxCell id="e_sb" value="buildkitd creates it&#10;--host-uds=create" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.15;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="builder" target="sock">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="83" y="0" as="offset" />
+</mxGeometry>
 </mxCell>
 <mxCell id="e_pn" value="network default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="p_out" target="net">
 <mxGeometry relative="1" as="geometry">

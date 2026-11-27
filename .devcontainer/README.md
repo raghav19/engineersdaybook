@@ -341,7 +341,10 @@ Do these steps once, in your main checkout.
    g=$(mise where http:gvisor)
    sudo install -m 0755 "$g/runsc" /usr/local/bin/runsc
    sudo install -D -m 0755 -t /usr/local/bin/gvisor-bin "$g"/gvisor-bin/*
+   # gVisor blocks host Unix sockets by default. Each runtime allows one thing.
+   # The agent: it can connect to a socket on the host, the BuildKit socket.
    sudo runsc install --runtime=runsc-uds -- --host-uds=open
+   # The builder: it can create a socket on the host, buildkitd.sock in the volume buildkit-sock.
    sudo runsc install --runtime=runsc-builder -- --host-uds=create
    sudo systemctl restart docker
    ```

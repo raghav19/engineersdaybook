@@ -43,12 +43,13 @@
 <path d="M420 260 L710 260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
 <path d="M420 740 L710 740" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
 <path d="M420 312.5 L446 312.5 Q470 312.5 470 336.5 L470 495" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<path d="M470 575 L470 663.5 Q470 687.5 446 687.5 L420 687.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M420 687.5 L446 687.5 Q470 687.5 470 663.5 L470 575" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M1170 260 L1536 260 Q1560 260 1560 284 L1560 450" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <path d="M1170 740 L1536 740 Q1560 740 1560 716 L1560 530" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
 <text x="565" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="565" dy="0">HTTPS_PROXY</tspan></text>
 <text x="565" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="565" dy="0">HTTPS_PROXY</tspan></text>
-<text x="522" y="378.75" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="522" dy="0">docker build</tspan></text>
+<text x="553" y="370.25" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="553" dy="0">docker build connects</tspan><tspan x="553" dy="17">--host-uds=open</tspan></text>
+<text x="553" y="647.75" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="553" dy="0">buildkitd creates it</tspan><tspan x="553" dy="17">--host-uds=create</tspan></text>
 <text x="1460" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1460" dy="0">network default</tspan></text>
 <text x="1470" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1470" dy="0">network default</tspan></text>
 </svg>
