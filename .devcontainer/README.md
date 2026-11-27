@@ -324,27 +324,23 @@ What the setup assumes:
 
 For another registry or secret manager, change `policy/agent.yaml`, `init.sh` and the commands in [Update the agent image](#update-the-agent-image).
 
-Do these steps once, in your main checkout. If step 3 or 4 is missing, `devcontainer up` stops with an error that names it.
+Do these steps once, in your main checkout.
 
-1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
-
-2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum. `init.sh` uses `bws` to fetch the API tokens.
-   `init.sh` also needs `setfacl` and `openssl`. On Arch, they are in the packages `acl` and `openssl`. `init.sh` makes a new proxy CA in `$XDG_RUNTIME_DIR/sandbox-secrets` for each new proxy.
-
-3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
+1. **Docker Engine** with Compose and buildx: [install](https://docs.docker.com/engine/install/), then [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/).
+2. **mise**: [getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo.
+3. **acl and openssl**: the Arch packages `acl` and `openssl`.
+4. **gVisor runtimes**:
 
    ```shell
    g=$(mise where http:gvisor)
    sudo install -m 0755 "$g/runsc" /usr/local/bin/runsc
    sudo install -D -m 0755 -t /usr/local/bin/gvisor-bin "$g"/gvisor-bin/*
-   sudo runsc install --runtime=runsc-uds -- --host-uds=open        # the agent connects to the BuildKit socket
-   sudo runsc install --runtime=runsc-builder -- --host-uds=create  # the builder makes the BuildKit socket
+   sudo runsc install --runtime=runsc-uds -- --host-uds=open
+   sudo runsc install --runtime=runsc-builder -- --host-uds=create
    sudo systemctl restart docker
    ```
 
-   To update gVisor, change the version and the checksum in `mise.toml`, run `mise install`, then run the first three lines again.
-
-4. **Token.** Encrypt the Bitwarden access token with systemd-creds. `read -s` hides the token, and the pipe writes no plain file.
+5. **Bitwarden token**, encrypted with systemd-creds:
 
    ```shell
    f=~/.config/credstore.encrypted/bws-token && mkdir -p "${f%/*}"
@@ -352,7 +348,7 @@ Do these steps once, in your main checkout. If step 3 or 4 is missing, `devconta
    chmod 0400 "$f"
    ```
 
-5. **ghcr.io.** Log in once with a GitHub token that has `read:packages` and `write:packages`. `devcontainer up` pulls the private agent image, and the [image update](#update-the-agent-image) pushes it. A push or a pull without the login fails with `unauthorized`.
+6. **ghcr.io login**, with a GitHub token that has `read:packages` and `write:packages`:
 
    ```shell
    docker login ghcr.io -u <github-user>
@@ -368,11 +364,6 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 ```
 
 `docker compose -p sandbox ps` then shows four services: `builder-proxy`, `builder`, `proxy` and `agent`.
-
-## Decisions
-
-- [Docker Compose and the devcontainer CLI, not Quadlet units](docs/adr/0002-compose-over-quadlet.md)
-- [Quadlet units, not Docker Compose or Podman Compose](docs/adr/0001-quadlet-over-compose.md) (superseded by 0002)
 
 ## Commands
 
@@ -422,11 +413,11 @@ The pane runs in the sandbox and makes no network call. The PR tab needs `gh`, a
 | Symptom | Fix |
 |---|---|
 | `devcontainer up` stops at the start | Run `docker compose -p sandbox ps -a` and `docker compose -p sandbox logs proxy builder-proxy builder`. If the agent image is missing, see [Update the agent image](#update-the-agent-image). |
-| `unknown or invalid runtime name: runsc-uds` | Docker has no gVisor runtime of that name. Do [step 3](#prerequisites) again. |
+| `unknown or invalid runtime name: runsc-uds` | Docker has no gVisor runtime of that name. Do [step 4](#prerequisites) again. |
 | `bind source path does not exist: .../sandbox-secrets` | `init.sh` did not run. Start the sandbox with `devcontainer up`, not with `docker compose up`. |
-| `Failed to read encrypted credential data: No such file or directory` | The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Do [step 4](#prerequisites) again. |
-| `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Remove it, then do [step 4](#prerequisites) again. |
-| `init.sh` says `bws cannot read the secrets` | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then do [step 4](#prerequisites) again. |
+| `Failed to read encrypted credential data: No such file or directory` | The file `~/.config/credstore.encrypted/bws-token` is missing or unreadable. Do [step 5](#prerequisites) again. |
+| `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Remove it, then do [step 5](#prerequisites) again. |
+| `init.sh` says `bws cannot read the secrets` | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then do [step 5](#prerequisites) again. |
 | `init.sh` says `Bitwarden has no secret <name>` | The Bitwarden project has no secret of that name. Add it, or change the names in `init.sh` and `policy/agent.yaml`. |
 | `docker compose -p sandbox ps` shows `unhealthy` | Run `docker logs sandbox-agent-1` or `docker logs sandbox-builder-1`. The agent is healthy only after `lifecycle/post-start.sh` writes `/tmp/sandbox-ready`. |
 | `docker build` says `failed to connect to the docker API` | Check that `docker compose -p sandbox ps builder` shows `healthy`. `BUILDX_BUILDER` comes from `compose.yaml`, and `lifecycle/on-create.sh` defines that builder. |
