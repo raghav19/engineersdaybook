@@ -30,7 +30,9 @@ RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
 FROM stage1-base AS stage4-infra
 COPY tools/infra.toml /etc/mise/conf.d/infra.toml
-RUN mise install --yes
+# Keeps only the docker client of the docker-cli bundle. The agent has no daemon: it sends each build to the builder over buildkitd.sock.
+RUN mise install --yes \
+ && find /opt/mise/installs/docker-cli -path '*/docker/*' -type f ! -name docker -delete
 
 FROM stage1-base AS stage5-dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
@@ -42,7 +44,9 @@ RUN mise install --yes
 
 FROM stage1-base AS stage7-lsp
 COPY tools/lsp.toml /etc/mise/conf.d/lsp.toml
-RUN mise install --yes
+# Removes TypeScript from vscode-langservers-extracted. The JSON server, the only one that Fresh uses, runs without it.
+RUN mise install --yes \
+ && rm -rf /opt/mise/installs/npm-vscode-langservers-extracted/*/node_modules/.mise/typescript@*
 
 FROM stage1-base AS stage9-token-economizer
 ARG TE_REPO=https://github.com/microsoft/TokenEconomizer.git
