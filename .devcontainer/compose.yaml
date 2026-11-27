@@ -159,7 +159,7 @@ services:
     pids_limit: 2048
     # buildx writes its activity and refs here. The rest of /etc/docker is read-only.
     tmpfs: [/tmp, /run, /etc/docker/buildx/activity, /etc/docker/buildx/refs]
-    # Healthy after agent/lifecycle/post-start.sh writes the file.
+    # Healthy after lifecycle/post-start.sh writes the file.
     healthcheck:
       test: ["CMD", "test", "-e", "/tmp/sandbox-ready"]
       interval: 5s
@@ -243,8 +243,10 @@ services:
         target: /run/sandbox/buildkit
         read_only: true
         volume: { subpath: buildkit }
-      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. agent/lifecycle/on-create.sh clones it once.
+      # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. lifecycle/on-create.sh clones it once.
       - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
+      # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
+      - ./lifecycle:/run/sandbox/lifecycle:ro
     networks:
       sandbox: { ipv4_address: 10.200.0.3 }

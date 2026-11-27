@@ -116,11 +116,7 @@ COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-econom
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 USER root
-# The image has no command. ../compose.yaml sets it. devcontainer.json in this folder names the two lifecycle scripts as hooks.
-COPY --chmod=0755 lifecycle/on-create.sh /usr/local/bin/sandbox-on-create
-COPY --chmod=0755 lifecycle/post-start.sh /usr/local/bin/sandbox-post-start
-
-# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. lifecycle/on-create.sh copies it into the volume.
+# At run time the root file system is read-only and /home/agent is a volume. Keep the home files of the image as a skeleton. ../lifecycle/on-create.sh copies it into the volume.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \
@@ -132,6 +128,6 @@ COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-
 RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
 COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
 
-# The run-time env is in ../compose.yaml.
+# The run-time env and the command are in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8

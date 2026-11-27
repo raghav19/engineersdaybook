@@ -374,7 +374,7 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 ## Update the agent image
 
-`agent/devcontainer.json` is the build config of the agent image. `devcontainer build` writes its lifecycle hooks into the image label, and `devcontainer up` runs them. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
+`agent/devcontainer.json` is the build config of the agent image. The lifecycle scripts in `lifecycle/` are not in the image: `compose.yaml` mounts them read-only, and `devcontainer up` runs them. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
 
 ```shell
 tag=$(git rev-parse HEAD:.devcontainer/agent)
