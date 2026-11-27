@@ -179,37 +179,29 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 ## Update the agent image
 
-1. Go to the root of your main checkout, and set the tag and the image name:
+1. Commit your change of `agent/`. The tag is the git tree sha of `agent/`, so the command stops if `agent/` has changes that are not committed.
+
+2. Build, push and pin, in one command. It builds the image, pushes the image and its layer cache, and writes the new digest into `compose.yaml`:
 
    ```shell
-   cd "$(git rev-parse --show-toplevel)"
-   # The tag is the git tree sha of agent/. Commit your change of agent/ first.
-   tag=$(git rev-parse HEAD:.devcontainer/agent)
-   img=ghcr.io/raghav19/engineersdaybook/sandbox-dev
-   ```
-
-2. Build the image, then push it and its layer cache:
-
-   ```shell
-   devcontainer build \
-     --workspace-folder . \
-     --config .devcontainer/agent/devcontainer.json \
-     --image-name "$img:$tag" \
-     --push \
-     --cache-to "type=registry,ref=$img:cache,mode=max"
-   ```
-
-   To test the image before the push, leave out `--push` and `--cache-to`.
-
-3. Pin the digest in `compose.yaml`, then review and commit the change:
-
-   ```shell
-   docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}' \
+   cd "$(git rev-parse --show-toplevel)" \
+     && { [ -z "$(git status --porcelain -- .devcontainer/agent)" ] || { echo "Commit agent/ first." >&2; false; }; } \
+     && img=ghcr.io/raghav19/engineersdaybook/sandbox-dev \
+     && tag=$(git rev-parse HEAD:.devcontainer/agent) \
+     && devcontainer build \
+          --workspace-folder . \
+          --config .devcontainer/agent/devcontainer.json \
+          --image-name "$img:$tag" \
+          --push \
+          --cache-to "type=registry,ref=$img:cache,mode=max" \
+     && docker buildx imagetools inspect "$img:$tag" --format '{{.Name}}@{{.Manifest.Digest}}' \
      | yq -i '.services.agent.image = (load_str("/dev/stdin") | trim)' .devcontainer/compose.yaml \
      && git diff .devcontainer/compose.yaml
    ```
 
-4. Apply it:
+   Review the diff and commit it. To test an image before the push, run only the `devcontainer build` part, without `--push` and `--cache-to`.
+
+3. Apply it. This restarts the sandbox:
 
    ```shell
    docker compose -p sandbox down
