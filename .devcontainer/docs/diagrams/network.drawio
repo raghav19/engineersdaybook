@@ -1,0 +1,83 @@
+<mxfile host="app.diagrams.net">
+<diagram id="network" name="network">
+<mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1000" background="#ffffff" math="0" shadow="0">
+<root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="title" value="Networks of the agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="10" width="600" height="40" as="geometry" />
+</mxCell>
+<mxCell id="host" value="Host: rootful Docker" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="10" y="60" width="1370" height="920" as="geometry" />
+</mxCell>
+<mxCell id="netS" value="Network sandbox: internal, 10.200.0.0/29" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
+<mxGeometry x="30" y="110" width="760" height="380" as="geometry" />
+</mxCell>
+<mxCell id="netB" value="Network build: internal, 10.200.0.8/29" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#6c8ebf;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
+<mxGeometry x="30" y="580" width="760" height="380" as="geometry" />
+</mxCell>
+<mxCell id="netD" value="Network default: Compose bridge" style="rounded=1;arcSize=2;container=1;collapsible=0;whiteSpace=wrap;html=0;fontSize=16;fillColor=none;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;fontStyle=3;verticalAlign=top;spacingTop=8;dashed=1;" vertex="1" parent="1">
+<mxGeometry x="1010" y="110" width="350" height="850" as="geometry" />
+</mxCell>
+<mxCell id="agent" value="&lt;b&gt;agent: 10.200.0.3&lt;/b&gt;&lt;br&gt;gVisor&lt;br&gt;HTTPS_PROXY=http://10.200.0.2:18080&lt;br&gt;NO_PROXY=localhost,127.0.0.1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="60" y="185" width="360" height="150" as="geometry" />
+</mxCell>
+<mxCell id="s_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="360" width="360" height="50" as="geometry" />
+</mxCell>
+<mxCell id="s_host" value="&lt;b&gt;No route to the host&lt;/b&gt;&lt;br&gt;inhibit_ipv4: the bridge has no host IP" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="420" width="360" height="50" as="geometry" />
+</mxCell>
+<mxCell id="proxy" value="&lt;b&gt;proxy (the agent proxy)&lt;/b&gt;&lt;br&gt;runc, uid 10001&lt;br&gt;10.200.0.2:18080: tunnel (CONNECT, SOCKS5)&lt;br&gt;127.0.0.1 only: DNS, HTTP, HTTPS, metrics&lt;br&gt;ends TLS, swaps the tokens" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="710" y="195" width="360" height="130" as="geometry" />
+</mxCell>
+<mxCell id="sock" value="&lt;b&gt;Volume buildkit-sock&lt;/b&gt;&lt;br&gt;buildkitd.sock, a Unix&lt;br&gt;socket, not a network" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+<mxGeometry x="450" y="500" width="230" height="70" as="geometry" />
+</mxCell>
+<mxCell id="builder" value="&lt;b&gt;builder: 10.200.0.11&lt;/b&gt;&lt;br&gt;gVisor&lt;br&gt;HTTPS_PROXY=http://10.200.0.10:18080&lt;br&gt;RUN steps: the same proxy" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+<mxGeometry x="60" y="665" width="360" height="150" as="geometry" />
+</mxCell>
+<mxCell id="b_out" value="&lt;b&gt;No route to the Internet&lt;/b&gt;&lt;br&gt;internal: true, so network unreachable" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="840" width="360" height="50" as="geometry" />
+</mxCell>
+<mxCell id="b_host" value="&lt;b&gt;No route to the host&lt;/b&gt;&lt;br&gt;inhibit_ipv4: the bridge has no host IP" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+<mxGeometry x="60" y="900" width="360" height="50" as="geometry" />
+</mxCell>
+<mxCell id="bproxy" value="&lt;b&gt;builder-proxy&lt;/b&gt;&lt;br&gt;runc, uid 10001&lt;br&gt;10.200.0.10:18080: tunnel (CONNECT)&lt;br&gt;127.0.0.1 only: DNS, HTTP, HTTPS, metrics&lt;br&gt;TLS passthrough (sni-only), no token" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="710" y="675" width="360" height="130" as="geometry" />
+</mxCell>
+<mxCell id="net" value="&lt;b&gt;Internet&lt;/b&gt;&lt;br&gt;allowed hosts only" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+<mxGeometry x="1450" y="450" width="220" height="80" as="geometry" />
+</mxCell>
+<mxCell id="e_ap" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="proxy">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_bp" value="HTTPS_PROXY" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=3;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="builder" target="bproxy">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_as" value="docker build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="sock">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="-48" y="-30" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_sb" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.15;entryDx=0;entryDy=0;" edge="1" parent="1" source="sock" target="builder">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e_pn" value="network default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="proxy" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="70" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e_bn" value="network default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="bproxy" target="net">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="70" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>
