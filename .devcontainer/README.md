@@ -411,19 +411,16 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
    devcontainer up --workspace-folder .
    ```
 
-## Token usage
+## Plugins
 
-The token usage plugin of Herdr (`pseudovar.token-usage`) shows the usage in the sidebar of Herdr, one row for each agent pane. Press `prefix+u` to open the dashboard. Run `tu report --month` for a table in the terminal.
+Herdr loads two plugins. `agent/Dockerfile` pins each one to a commit. Neither plugin makes a network call.
 
-The plugin reads the logs of Claude Code and makes no network call. The cost is an estimate from list prices. The image pins the plugin to one commit in `agent/Dockerfile`.
+| Plugin | What it does | How to use it |
+|---|---|---|
+| Token usage (`pseudovar.token-usage`) | Shows the tokens and the cost of each agent pane in the Herdr sidebar. It reads the logs of Claude Code. The cost is an estimate from list prices. | Press `prefix+u` for the dashboard. Run `tu report --month` for a table in the terminal. |
+| Review (`persiyanov.reviewr`) | Shows the diff of the agent in a pane beside it. You comment on lines, and the agent gets your comments. | Press `prefix+d` to open or close the pane. A new worktree opens it too. Select lines with `v`, write a comment with `c`, and send all comments with `s`. Press `?` for all keys. |
 
-## Review the changes of the agent
-
-The review plugin of Herdr ([`persiyanov.reviewr`](https://github.com/persiyanov/herdr-reviewr)) shows the diff of the agent in a pane beside it. Press `prefix+d` to open or close the pane. A new worktree opens it.
-
-Select lines with `v`, write a comment with `c`, then press `s` to send all comments to the input of the agent. Press `?` for all keys. The pane keeps the comments only while it is open.
-
-The pane runs in the sandbox and makes no network call. The PR tab needs `gh`, and the image has no `gh`. The image pins the plugin to one tag in `agent/Dockerfile`.
+The review pane keeps your comments only while it is open. Its PR tab needs `gh`, and the image has no `gh`.
 
 ## Troubleshooting
 
