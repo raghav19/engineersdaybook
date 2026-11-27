@@ -94,50 +94,22 @@ COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 RUN mise reshim
 
-# The plugins from stage8. The config files further down overwrite a file from stage8 that has the same path.
+# The plugins from stage8. The config links of ../lifecycle/on-create.sh replace a file from stage8 that has the same path.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh /home/agent/.config/fresh
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/herdr /home/agent/.config/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /home/agent/.local/state/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.claude /home/agent/.claude
 
-USER root
-# Read-only at run time. The ghcr.io login placeholder must equal a proxy_value in ../policy/agent.yaml.
-# docker finds buildx through cliPluginsExtraDirs, and crane reads the login. Keys: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
-COPY --chmod=0644 configs/tools/docker-config.json /etc/docker/config.json
-# buildx create only writes the definition of the builder.
-RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
- && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker buildx create --name sandbox \
- && chmod -R a+rX /etc/docker
-USER agent
-
-COPY --chown=agent:agent configs/editor/fresh-config.json /home/agent/.config/fresh/config.json
-# The theme takes its colors from the terminal. See AGENTS.md#fresh-theme.
-COPY --chown=agent:agent configs/editor/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json
-COPY --chown=agent:agent configs/tools/herdr-config.toml /home/agent/.config/herdr/config.toml
-# Must equal ~/.config/starship.toml on the host.
-COPY --chown=agent:agent configs/tools/starship.toml /home/agent/.config/starship.toml
-COPY --chown=agent:agent configs/tools/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml
-COPY --chown=agent:agent configs/tools/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
 USER root
-# No CMD: ../compose.yaml sets the command. devcontainer.json in this folder runs these scripts as hooks.
-COPY --chmod=0755 lifecycle/on-create.sh /usr/local/bin/sandbox-on-create
-COPY --chmod=0755 lifecycle/post-start.sh /usr/local/bin/sandbox-post-start
-
-# The home is a volume at run time, so the image keeps its home files as a skeleton. lifecycle/on-create.sh copies them into the volume.
+# The home is a volume at run time, so the image keeps its home files as a skeleton. ../lifecycle/on-create.sh copies them into the volume.
 RUN mkdir -p /usr/share/sandbox \
  && mv /home/agent /usr/share/sandbox/home \
  && mkdir /home/agent \
  && chown agent:agent /home/agent
 
-RUN mkdir -p /etc/claude-code && chmod 0755 /etc/claude-code
-COPY --chmod=0644 configs/agents/managed-settings.json /etc/claude-code/managed-settings.json
-
-RUN mkdir -p /etc/qwen-code && chmod 0755 /etc/qwen-code
-COPY --chmod=0644 configs/agents/qwen-settings.json /etc/qwen-code/settings.json
-
-# Build-time env only. The run-time env is in ../compose.yaml.
+# Build-time env only. The run-time env and the command are in ../compose.yaml.
 ENV PATH=/opt/mise/shims:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     LANG=C.UTF-8

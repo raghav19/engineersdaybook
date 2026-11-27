@@ -4,7 +4,7 @@ Guidance for agents working on `.devcontainer/agent/`.
 
 ## Tool/completion coupling
 
-When adding or removing tools in `agent/tools/*.toml`, update the completions in `agent/lifecycle/post-start.sh`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
+When adding or removing tools in `agent/tools/*.toml`, update the completions in `lifecycle/post-start.sh`. Add one line for each tool that has a bash completion. Remove the line of each tool that you remove.
 
 Tools differ in how they print completions. Check `<tool> --help` for the syntax. Examples:
 - Most tools: `<tool> completion bash`
@@ -14,7 +14,7 @@ Tools differ in how they print completions. Check `<tool> --help` for the syntax
 
 ## LSP server coupling
 
-When adding a language server to `agent/tools/lsp.toml`, also add it to `agent/configs/editor/fresh-config.json`:
+When adding a language server to `agent/tools/lsp.toml`, also add it to `configs/fresh-config.json`:
 
 1. Add an entry to `lsp.<language>`: `{"command": "<tool>", "auto_start": true}`
 2. If the tool is also a formatter, add it under `languages.<language>.formatter`

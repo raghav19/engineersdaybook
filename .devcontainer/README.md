@@ -91,27 +91,27 @@ The allowed hosts are in `policy/agent.yaml` and `policy/builder.yaml`.
 
 ### Files
 
-A file outside `agent/` runs on your host or goes into a proxy as a mount. A file in `agent/` goes into the agent image.
+A file in `agent/` goes into the agent image. Every other file stays in your checkout: it runs on your host, or a container mounts it read-only.
 
 ```text
 .devcontainer/
-├── devcontainer.json    # run config: compose.yaml, the agent service, init.sh first
+├── devcontainer.json    # run config: compose.yaml, the agent service, init.sh first, the lifecycle hooks
 ├── init.sh              # host: a new CA and the API tokens in a tmpfs, for a new proxy
 ├── compose.yaml         # the four containers, the networks, the limits and the mounts
 ├── policy/
 │   ├── agent.yaml       # agent proxy: allowlist, path rules, token swap
 │   └── builder.yaml     # builder proxy: host names only
+├── lifecycle/           # on-create.sh and post-start.sh, a read-only mount in the agent
+├── configs/             # tool and agent settings, a read-only mount in the agent
 └── agent/               # the agent image. Its git tree sha is the image tag.
-    ├── devcontainer.json    # build config: Dockerfile, layer cache, lifecycle hooks
+    ├── devcontainer.json    # build config: Dockerfile and layer cache
     ├── Dockerfile
-    ├── tools/*.toml         # the tools that mise installs
-    ├── configs/             # files that the image copies
-    └── lifecycle/           # on-create.sh and post-start.sh, run in the container
+    └── tools/*.toml         # the tools that mise installs
 ```
 
 A change outside `agent/` needs a restart of the sandbox. A change in `agent/` needs a new image, a push and a new pin in `compose.yaml`. See [Update the agent image](#update-the-agent-image).
 
-There are two `devcontainer.json` files, because the devcontainer CLI refuses `--push` for a Compose config. The run config has no lifecycle hooks. The CLI reads the hooks from the image label, and a hook in both files runs twice.
+There are two `devcontainer.json` files, because the devcontainer CLI refuses `--push` for a Compose config. The run config holds the lifecycle hooks. They run the scripts from the read-only mount of `lifecycle/`, so a change of a script needs no new image.
 
 ## Security controls
 
@@ -163,13 +163,13 @@ sequenceDiagram
     Compose->>Compose: start both proxies and the builder, wait until healthy
     Compose->>Agent: start
     opt a new container
-        CLI->>Agent: sandbox-on-create: copy the home files, clone the repo
+        CLI->>Agent: lifecycle/on-create.sh: clone the repo, link the configs
     end
-    CLI->>Agent: sandbox-post-start: shell setup, then /tmp/sandbox-ready
+    CLI->>Agent: lifecycle/post-start.sh: shell setup, then /tmp/sandbox-ready
     You->>CLI: devcontainer exec herdr
 ```
 
-The agent starts only after both proxies and the builder are healthy. The agent is healthy after `sandbox-post-start` writes `/tmp/sandbox-ready`. A running proxy keeps the CA and the tokens that it read at its start.
+The agent starts only after both proxies and the builder are healthy. The agent is healthy after `lifecycle/post-start.sh` writes `/tmp/sandbox-ready`. A running proxy keeps the CA and the tokens that it read at its start.
 
 ### Agent image flow
 
@@ -185,7 +185,7 @@ sequenceDiagram
     participant Docker as Docker on the host
     participant GHCR as ghcr.io
     You->>CLI: devcontainer build --push, tag = git tree sha of agent/
-    CLI->>Docker: build agent/Dockerfile, hooks in the image label
+    CLI->>Docker: build agent/Dockerfile
     Docker->>GHCR: read the layer cache (tag cache)
     Docker->>GHCR: push the image and the layer cache
     You->>GHCR: docker buildx imagetools inspect
@@ -274,7 +274,7 @@ sequenceDiagram
     Agent->>Agent: write the tar file in the agent sandbox
 ```
 
-The docker config of the agent (`agent/configs/tools/docker-config.json`) gives each `RUN` step the builder proxy as `HTTP_PROXY` and `HTTPS_PROXY`.
+The docker config of the agent (`configs/docker-config.json`) gives each `RUN` step the builder proxy as `HTTP_PROXY` and `HTTPS_PROXY`.
 
 Run `docker build` as on any host. A normal Dockerfile builds as it is. The agent sandbox has no Docker daemon, so the build writes a tar file:
 
@@ -389,7 +389,7 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 ## Update the agent image
 
-`agent/devcontainer.json` is the build config of the agent image. `devcontainer build` writes its lifecycle hooks into the image label, and `devcontainer up` runs them. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
+`agent/devcontainer.json` is the build config of the agent image. The lifecycle scripts in `lifecycle/` and the files in `configs/` are not in the image: `compose.yaml` mounts them read-only, and `devcontainer up` runs the scripts. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
 
 ```shell
 tag=$(git rev-parse HEAD:.devcontainer/agent)
@@ -428,8 +428,8 @@ The pane runs in the sandbox and makes no network call. The PR tab needs `gh`, a
 | `Failed to read encrypted credential data: Invalid argument` | `bws-token` holds the plain token. Remove it, then do [step 4](#prerequisites) again. |
 | `init.sh` says `bws cannot read the secrets` | The access token is wrong or expired. Remove `~/.config/credstore.encrypted/bws-token`, then do [step 4](#prerequisites) again. |
 | `init.sh` says `Bitwarden has no secret <name>` | The Bitwarden project has no secret of that name. Add it, or change the names in `init.sh` and `policy/agent.yaml`. |
-| `docker compose -p sandbox ps` shows `unhealthy` | Run `docker logs sandbox-agent-1` or `docker logs sandbox-builder-1`. The agent is healthy only after `sandbox-post-start` writes `/tmp/sandbox-ready`. |
-| `docker build` says `failed to connect to the docker API` | Check that `docker compose -p sandbox ps builder` shows `healthy`. `DOCKER_CONFIG` and `BUILDX_BUILDER` come from `compose.yaml`. |
+| `docker compose -p sandbox ps` shows `unhealthy` | Run `docker logs sandbox-agent-1` or `docker logs sandbox-builder-1`. The agent is healthy only after `lifecycle/post-start.sh` writes `/tmp/sandbox-ready`. |
+| `docker build` says `failed to connect to the docker API` | Check that `docker compose -p sandbox ps builder` shows `healthy`. `BUILDX_BUILDER` comes from `compose.yaml`, and `lifecycle/on-create.sh` defines that builder. |
 | A `FROM` or a `RUN` step gets `403` | The host is not in `policy/builder.yaml`. Add it, then run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. The proxy reads its policy at start. |
 | `crane push` gets `403` | The namespace is not `raghav19`. Push to `ghcr.io/raghav19/<NAME>:<TAG>`. |
 | A GitHub call gets `403` | The agent proxy allows a push to `raghav19/engineersdaybook` and a REST write on its issues and pull requests. It denies a merge, a file write, a removal and GraphQL. To change this, edit `policy/agent.yaml`, then run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. |
