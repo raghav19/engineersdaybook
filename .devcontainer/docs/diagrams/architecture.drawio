@@ -11,10 +11,10 @@
 <mxGeometry x="20" y="70" width="190" height="76" as="geometry" />
 </mxCell>
 <mxCell id="init" value="&lt;b&gt;init.sh on the host&lt;/b&gt;&lt;br&gt;before each devcontainer up" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
-<mxGeometry x="290" y="70" width="250" height="76" as="geometry" />
+<mxGeometry x="330" y="70" width="250" height="76" as="geometry" />
 </mxCell>
 <mxCell id="ram" value="&lt;b&gt;$XDG_RUNTIME_DIR/sandbox-secrets&lt;/b&gt;&lt;br&gt;/run/user/1000, a tmpfs&lt;br&gt;ca.key, ca.crt, 4 token files" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
-<mxGeometry x="620" y="70" width="560" height="76" as="geometry" />
+<mxGeometry x="640" y="70" width="540" height="76" as="geometry" />
 </mxCell>
 <mxCell id="term" value="&lt;b&gt;Your terminal&lt;/b&gt;&lt;br&gt;devcontainer exec" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
 <mxGeometry x="20" y="312" width="190" height="76" as="geometry" />
@@ -61,7 +61,7 @@
 <mxCell id="net" value="&lt;b&gt;Internet&lt;/b&gt;&lt;br&gt;allowed hosts" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
 <mxGeometry x="1530" y="545" width="200" height="80" as="geometry" />
 </mxCell>
-<mxCell id="e_bw" value="API tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=1.0000;exitY=0.5000;exitDx=0;exitDy=0;entryX=0.0000;entryY=0.5000;entryDx=0;entryDy=0;" edge="1" parent="1" source="bw" target="init">
+<mxCell id="e_bw" value="fetches tokens" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.0000;exitY=0.5000;exitDx=0;exitDy=0;entryX=1.0000;entryY=0.5000;entryDx=0;entryDy=0;" edge="1" parent="1" source="init" target="bw">
 <mxGeometry relative="1" as="geometry">
 <mxPoint x="0" y="-16.5" as="offset" />
 </mxGeometry>
@@ -71,14 +71,14 @@
 <mxPoint x="0" y="-16.5" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_ram_a" value="ca.crt only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.0536;exitY=1.0000;exitDx=0;exitDy=0;entryX=0.8718;entryY=0.0000;entryDx=0;entryDy=0;" edge="1" parent="1" source="ram" target="acont">
+<mxCell id="e_ram_a" value="reads ca.crt only" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.8718;exitY=0.0000;exitDx=0;exitDy=0;entryX=0.0185;entryY=1.0000;entryDx=0;entryDy=0;" edge="1" parent="1" source="acont" target="ram">
 <mxGeometry relative="1" as="geometry">
-<mxPoint x="52" y="-12" as="offset" />
+<mxPoint x="74" y="-12" as="offset" />
 </mxGeometry>
 </mxCell>
-<mxCell id="e_ram_p" value="/run/secrets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.8482;exitY=1.0000;exitDx=0;exitDy=0;entryX=0.5000;entryY=0.0000;entryDx=0;entryDy=0;" edge="1" parent="1" source="ram" target="proxy">
+<mxCell id="e_ram_p" value="reads /run/secrets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#d79b00;exitX=0.5000;exitY=0.0000;exitDx=0;exitDy=0;entryX=0.8426;entryY=1.0000;entryDx=0;entryDy=0;" edge="1" parent="1" source="proxy" target="ram">
 <mxGeometry relative="1" as="geometry">
-<mxPoint x="52" y="0" as="offset" />
+<mxPoint x="78" y="0" as="offset" />
 </mxGeometry>
 </mxCell>
 <mxCell id="e_term" value="exec" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;strokeWidth=2;strokeColor=#333333;exitX=1.0000;exitY=0.5000;exitDx=0;exitDy=0;entryX=0.0000;entryY=0.5000;entryDx=0;entryDy=0;" edge="1" parent="1" source="term" target="tools">
