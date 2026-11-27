@@ -248,7 +248,7 @@ services:
       - sandbox-home:/home/agent
       # The lifecycle scripts. The hooks in devcontainer.json run them from this path.
       - ./lifecycle:/run/sandbox/lifecycle:ro
-      # All config files, read-only. The links in the image point here, for example /etc/docker/config.json and ~/.config/herdr/config.toml.
+      # All config files, read-only. The links in /etc (agent/Dockerfile) and in the home (lifecycle/on-create.sh) point here.
       # Keys of the docker config: https://docs.docker.com/reference/cli/docker/#docker-cli-configuration-file-configjson-properties
       - ./configs:/run/sandbox/configs:ro
     networks:

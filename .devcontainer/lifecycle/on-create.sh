@@ -28,3 +28,14 @@ fi
 mkdir -p "$HOME/.config/herdr" "$HOME/.herdr/session-snapshots"
 ln -sfn "$HOME/.herdr/session.json" "$HOME/.config/herdr/session.json"
 ln -sfn "$HOME/.herdr/session-snapshots" "$HOME/.config/herdr/session-snapshots"
+
+# Link the configs of the tools to /run/sandbox/configs, the read-only mount of ../configs. A tool cannot write through a link: edit the file in ../configs.
+# ../configs/starship.toml must equal ~/.config/starship.toml on the host.
+c=/run/sandbox/configs
+mkdir -p "$HOME/.config/fresh/themes" "$HOME/.config/k9s/skins" || fail "could not make the config folders"
+ln -sfn "$c/fresh-config.json" "$HOME/.config/fresh/config.json"
+ln -sfn "$c/omarchy-terminal.json" "$HOME/.config/fresh/themes/omarchy-terminal.json"
+ln -sfn "$c/herdr-config.toml" "$HOME/.config/herdr/config.toml"
+ln -sfn "$c/starship.toml" "$HOME/.config/starship.toml"
+ln -sfn "$c/k9s-skin-catppuccin-mocha.yaml" "$HOME/.config/k9s/skins/catppuccin-mocha.yaml"
+ln -sfn "$c/k9s-skin-tokyo-night.yaml" "$HOME/.config/k9s/skins/tokyo-night.yaml"

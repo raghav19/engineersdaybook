@@ -94,15 +94,15 @@ COPY --from=stage7-lsp --chown=agent:agent /opt/mise/installs /opt/mise/installs
 COPY tools/ /etc/mise/conf.d/
 RUN mise reshim
 
-# The plugins from stage8. The config links further down replace a file from stage8 that has the same path.
+# The plugins from stage8. The config links of ../lifecycle/on-create.sh replace a file from stage8 that has the same path.
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/fresh /home/agent/.config/fresh
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.config/herdr /home/agent/.config/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.local/state/herdr /home/agent/.local/state/herdr
 COPY --from=stage8-plugins --chown=agent:agent /home/agent/.claude /home/agent/.claude
 
 USER root
-# The image has no config files. Each config is a link into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
-# A tool cannot write through a link, because the mount is read-only. Edit the file in ../configs.
+# The image has no config files. The links in /etc point into /run/sandbox/configs, the read-only mount of ../configs in ../compose.yaml.
+# ../lifecycle/on-create.sh makes the links in the home.
 # buildx create only writes the definition of the builder. docker-buildx runs on its own, because the docker config is not in the image.
 RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
  && PATH=/opt/mise/shims:$PATH DOCKER_CONFIG=/etc/docker BUILDKIT_HOST=unix:///run/sandbox/buildkit/buildkitd.sock docker-buildx create --name sandbox \
@@ -110,16 +110,6 @@ RUN mkdir -p /etc/docker/buildx/activity /etc/docker/buildx/refs \
  && chmod -R a+rX /etc/docker
 USER agent
 
-# ../lifecycle/on-create.sh copies these links into the home volume with the skeleton.
-# ../configs/starship.toml must equal ~/.config/starship.toml on the host.
-RUN c=/run/sandbox/configs \
- && mkdir -p /home/agent/.config/fresh/themes /home/agent/.config/herdr /home/agent/.config/k9s/skins \
- && ln -sf $c/fresh-config.json /home/agent/.config/fresh/config.json \
- && ln -sf $c/omarchy-terminal.json /home/agent/.config/fresh/themes/omarchy-terminal.json \
- && ln -sf $c/herdr-config.toml /home/agent/.config/herdr/config.toml \
- && ln -sf $c/starship.toml /home/agent/.config/starship.toml \
- && ln -sf $c/k9s-skin-catppuccin-mocha.yaml /home/agent/.config/k9s/skins/catppuccin-mocha.yaml \
- && ln -sf $c/k9s-skin-tokyo-night.yaml /home/agent/.config/k9s/skins/tokyo-night.yaml
 COPY --from=stage9-token-economizer --chown=agent:agent /home/agent/token-economizer /home/agent/token-economizer
 RUN mkdir -p /home/agent/.tokeneconomizer /home/agent/.qwen
 
