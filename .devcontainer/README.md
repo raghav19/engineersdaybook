@@ -371,19 +371,6 @@ devcontainer exec --workspace-folder . herdr        # open Herdr, a terminal wor
 
 `docker compose -p sandbox ps` then shows four services: `builder-proxy`, `builder`, `proxy` and `agent`.
 
-## Commands
-
-| Command | What it does |
-|---|---|
-| `devcontainer up --workspace-folder .` | Starts the sandbox. On stopped containers, it starts them as they were. |
-| `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
-| `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new CA and its tokens. |
-| `docker compose -p sandbox down` | Removes the four containers and the networks. The volume `sandbox-home` stays. Never add `-v`: it removes the clone and the logins. |
-| `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json` or a policy. `devcontainer up` alone keeps the old containers. |
-| `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
-| `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
-| `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |
-
 ## Update the agent image
 
 `agent/devcontainer.json` is the build config of the agent image. The lifecycle scripts in `lifecycle/` and the files in `configs/` are not in the image: `compose.yaml` mounts them read-only, and `devcontainer up` runs the scripts. The tag is the git tree sha of `agent/`, so commit your change of `agent/` first.
@@ -458,6 +445,19 @@ The pane runs in the sandbox and makes no network call. The PR tab needs `gh`, a
 | The builder shows `exited (1)` after `docker compose -p sandbox stop` | This is normal. `buildkitd` exits with code 1 when it stops. |
 | A tool fails with `network unreachable` | The tool ignores `HTTPS_PROXY`. Set the proxy of the tool to `http://10.200.0.2:18080`. |
 | HTTPS calls in the agent fail with a certificate error | The agent proxy has a new CA, and the running agent still trusts the old one. Run `docker compose -p sandbox down && devcontainer up --workspace-folder .`. |
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `devcontainer up --workspace-folder .` | Starts the sandbox. On stopped containers, it starts them as they were. |
+| `devcontainer exec --workspace-folder . <command>` | Runs your command in the agent sandbox. |
+| `docker compose -p sandbox stop` | Stops the four containers. `devcontainer up` starts them again, and `init.sh` gives the proxy a new CA and its tokens. |
+| `docker compose -p sandbox down` | Removes the four containers and the networks. The volume `sandbox-home` stays. Never add `-v`: it removes the clone and the logins. |
+| `docker compose -p sandbox down && devcontainer up --workspace-folder .` | Applies an edit of `compose.yaml`, `devcontainer.json` or a policy. `devcontainer up` alone keeps the old containers. |
+| `docker compose -p sandbox ps` | Shows `(starting)`, `(healthy)` or `(unhealthy)`. |
+| `docker logs -f sandbox-proxy-1` | Follows the audit log of the proxy: one JSON line for each request. |
+| `docker logs -f sandbox-builder-proxy-1` | Follows the log of the builder proxy. |
 
 ## References
 
