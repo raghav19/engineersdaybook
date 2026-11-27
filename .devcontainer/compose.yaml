@@ -1,7 +1,6 @@
 # The agent sandbox: four services on rootful Docker. gVisor runs the agent and the builder. Each one leaves only through its proxy. Flow: docs/flows.md#start-flow
 # devcontainer.json starts it. Compose keys: https://docs.docker.com/reference/compose-file/
 name: sandbox
-
 # Docker sends no traffic to a proxy. A tool reaches a proxy only through HTTP(S)_PROXY. Any other connection gets "network unreachable".
 # We chose the subnets. 10.200.0.0/24 overlaps no range on this host: the LAN, the Docker pools (172.17-31, 192.168), Podman (10.88-89) and k3s (10.42-43).
 networks:
@@ -14,22 +13,20 @@ networks:
     # /29 has 8 addresses: .0 network, .1 gateway (reserved), .2 to .6 containers, .7 broadcast.
     # Each ipv4_address below is one of .2 to .6. The IPs are fixed, because gVisor cannot use the DNS of Docker to find a proxy by name.
     ipam:
-      config: [{ subnet: 10.200.0.0/29 }]
+      config: [{subnet: 10.200.0.0/29}]
   # The same settings as sandbox, with the next /29. The builder and the agent share no network.
   build:
     internal: true
     driver_opts:
       com.docker.network.bridge.inhibit_ipv4: "true"
     ipam:
-      config: [{ subnet: 10.200.0.8/29 }]
-
+      config: [{subnet: 10.200.0.8/29}]
 volumes:
   # The clone, the logins and the Herdr sessions. `docker compose down` keeps it. Never add -v.
   sandbox-home:
     name: sandbox-home
   # Holds the socket file of the builder. The agent sends its builds through it.
   buildkit-sock: {}
-
 # Both proxies: the upstream iron-proxy image, on runc as a dedicated uid. The uid reads the CA and the secret files through ACLs that init.sh sets.
 x-proxy: &proxy
   image: docker.io/ironsh/iron-proxy:0.61.0@sha256:973b7adf44a12ded3b58cf67af35a80a8304d82bef0fb943e6467fe4f4020573
@@ -39,7 +36,7 @@ x-proxy: &proxy
   user: "10001:10001"
   read_only: true
   cap_drop: [ALL]
-  security_opt: [no-new-privileges:true]
+  security_opt: ['no-new-privileges:true']
   init: true
   # No start at boot: the secrets folder is in RAM, and a reboot empties it. devcontainer up starts the proxies again.
   restart: "no"
@@ -48,7 +45,7 @@ x-proxy: &proxy
   pids_limit: 256
   # core: 0 turns off core dumps. A core dump is a copy of the memory of a crashed process, and the host saves it on its disk.
   # The memory of a proxy holds the real tokens, so a core dump would put the tokens on the disk.
-  ulimits: { core: 0 }
+  ulimits: {core: 0}
   environment:
     HOME: /tmp
   working_dir: /tmp
@@ -59,7 +56,6 @@ x-proxy: &proxy
     timeout: 3s
     retries: 30
     start_period: 60s
-
 services:
   builder-proxy:
     <<: *proxy
@@ -71,8 +67,7 @@ services:
     networks:
       default: {}
       # Must equal tunnel_listen in policy/builder.yaml, HTTPS_PROXY of the builder and proxies in configs/docker-config.json.
-      build: { ipv4_address: 10.200.0.10 }
-
+      build: {ipv4_address: 10.200.0.10}
   # BuildKit for `docker build` in the agent. Any holder of the socket can run any build step, so the container is the wall.
   # Flags: https://github.com/moby/buildkit/blob/master/docs/rootless.md
   builder:
@@ -121,10 +116,9 @@ services:
     volumes:
       - buildkit-sock:/run/user/1000
     networks:
-      build: { ipv4_address: 10.200.0.11 }
+      build: {ipv4_address: 10.200.0.11}
     depends_on:
-      builder-proxy: { condition: service_healthy }
-
+      builder-proxy: {condition: service_healthy}
   # The only way out of the agent sandbox. It swaps each placeholder for the real token. Flow: docs/flows.md#egress-request-flow
   proxy:
     <<: *proxy
@@ -138,12 +132,11 @@ services:
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets
         target: /run/secrets
         read_only: true
-        bind: { create_host_path: false }
+        bind: {create_host_path: false}
     networks:
       default: {}
       # The only container on both networks. Must equal tunnel_listen in policy/agent.yaml and HTTPS_PROXY of the agent.
-      sandbox: { ipv4_address: 10.200.0.2 }
-
+      sandbox: {ipv4_address: 10.200.0.2}
   agent:
     # The tag is the git tree sha of agent/, and the digest pins the content. Update: README.md#update-the-agent-image
     image: ghcr.io/raghav19/engineersdaybook/sandbox-dev:97a22d03cd2b99e6ab7e8cb792cdd826df20e77b
@@ -155,7 +148,7 @@ services:
     command: ["sleep", "infinity"]
     read_only: true
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    security_opt: ['no-new-privileges:true']
     init: true
     mem_limit: 3g
     # No swap. See the proxy service.
@@ -172,8 +165,8 @@ services:
       retries: 3
       start_period: 180s
     depends_on:
-      proxy: { condition: service_healthy }
-      builder: { condition: service_healthy }
+      proxy: {condition: service_healthy}
+      builder: {condition: service_healthy}
     environment:
       # wiring: placeholders, not secrets. Each must equal a proxy_value in policy/agent.yaml.
       GH_TOKEN: sandbox-placeholder-GH_TOKEN
@@ -240,13 +233,13 @@ services:
         source: ${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR is not set}/sandbox-secrets/ca.crt
         target: /etc/ssl/certs/ca-certificates.crt
         read_only: true
-        bind: { create_host_path: false }
+        bind: {create_host_path: false}
       # Only the socket folder of the builder, read-only. The path must equal the builder definition in lifecycle/on-create.sh.
       - type: volume
         source: buildkit-sock
         target: /run/sandbox/buildkit
         read_only: true
-        volume: { subpath: buildkit }
+        volume: {subpath: buildkit}
       # The .git folder of this checkout. In a worktree .git is a file, so run the sandbox from the main checkout. lifecycle/on-create.sh clones it once.
       - ../.git:/run/sandbox/source:ro
       - sandbox-home:/home/agent
@@ -255,4 +248,4 @@ services:
       - ./configs/managed-settings.json:/etc/claude-code/managed-settings.json:ro
       - ./configs/qwen-settings.json:/etc/qwen-code/settings.json:ro
     networks:
-      sandbox: { ipv4_address: 10.200.0.3 }
+      sandbox: {ipv4_address: 10.200.0.3}
