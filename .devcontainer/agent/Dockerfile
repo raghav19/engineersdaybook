@@ -87,8 +87,7 @@ USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends binutils \
  && rm -rf /var/lib/apt/lists/*
-# The docker client and its buildx plugin, from Docker's apt repo. No daemon: each build goes to the builder over buildkitd.sock.
-# Install steps: https://docs.docker.com/engine/install/debian/
+# Docker client and buildx only, no daemon. Steps: https://docs.docker.com/engine/install/debian/
 RUN install -m 0755 -d /etc/apt/keyrings \
  && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
  && echo "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian trixie stable" >/etc/apt/sources.list.d/docker.list \
