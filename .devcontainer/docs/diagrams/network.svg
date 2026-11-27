@@ -6,9 +6,9 @@
 <text x="20" y="30" text-anchor="start" dominant-baseline="central" font-size="22"><tspan x="20" dy="0" font-weight="bold">Networks of the agent sandbox</tspan></text>
 <rect x="10" y="60" width="1370" height="920" rx="16" fill="none" stroke="#666666" stroke-width="2"/>
 <text x="20" y="77.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="20" dy="0" font-weight="bold">Host: rootful Docker</tspan></text>
-<rect x="30" y="110" width="760" height="380" rx="16" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="30" y="110" width="920" height="380" rx="16" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
 <text x="40" y="127.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="40" dy="0" font-weight="bold">Network sandbox: internal, 10.200.0.0/29</tspan></text>
-<rect x="30" y="580" width="760" height="380" rx="16" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="30" y="580" width="920" height="380" rx="16" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-dasharray="8 6"/>
 <text x="40" y="597.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="40" dy="0" font-weight="bold">Network build: internal, 10.200.0.8/29</tspan></text>
 <rect x="1010" y="110" width="350" height="850" rx="16" fill="none" stroke="#666666" stroke-width="2" stroke-dasharray="8 6"/>
 <text x="1020" y="127.5" text-anchor="start" dominant-baseline="central" font-size="16" font-style="italic"><tspan x="1020" dy="0" font-weight="bold">Network default: Compose bridge</tspan></text>
@@ -18,29 +18,29 @@
 <text x="240" y="376.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the Internet</tspan><tspan x="240" dy="17">internal: true, so network unreachable</tspan></text>
 <rect x="60" y="420" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="240" y="436.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the host</tspan><tspan x="240" dy="17">inhibit_ipv4: the bridge has no host IP</tspan></text>
-<rect x="710" y="195" width="360" height="130" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="890" y="226" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="890" dy="0" font-weight="bold">proxy (the agent proxy)</tspan><tspan x="890" dy="17">runc, uid 10001</tspan><tspan x="890" dy="17">10.200.0.2:18080: tunnel (CONNECT, SOCKS5)</tspan><tspan x="890" dy="17">127.0.0.1 only: DNS, HTTP, HTTPS, metrics</tspan><tspan x="890" dy="17">ends TLS, swaps the tokens</tspan></text>
-<rect x="450" y="500" width="230" height="70" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
-<text x="565" y="518" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="565" dy="0" font-weight="bold">Volume buildkit-sock</tspan><tspan x="565" dy="17">buildkitd.sock, a Unix</tspan><tspan x="565" dy="17">socket, not a network</tspan></text>
+<rect x="560" y="195" width="360" height="130" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="740" y="226" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="740" dy="0" font-weight="bold">proxy (the agent proxy)</tspan><tspan x="740" dy="17">runc, uid 10001</tspan><tspan x="740" dy="17">10.200.0.2:18080: tunnel (CONNECT, SOCKS5)</tspan><tspan x="740" dy="17">127.0.0.1 only: DNS, HTTP, HTTPS, metrics</tspan><tspan x="740" dy="17">ends TLS, swaps the tokens</tspan></text>
+<rect x="355" y="500" width="230" height="70" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1"/>
+<text x="470" y="518" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="470" dy="0" font-weight="bold">Volume buildkit-sock</tspan><tspan x="470" dy="17">buildkitd.sock, a Unix</tspan><tspan x="470" dy="17">socket, not a network</tspan></text>
 <rect x="60" y="665" width="360" height="150" rx="10" fill="#d5e8d4" stroke="#82b366" stroke-width="1"/>
 <text x="240" y="711.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="240" dy="0" font-weight="bold">builder: 10.200.0.11</tspan><tspan x="240" dy="19">gVisor</tspan><tspan x="240" dy="19">HTTPS_PROXY=http://10.200.0.10:18080</tspan><tspan x="240" dy="19">RUN steps: the same proxy</tspan></text>
 <rect x="60" y="840" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="240" y="856.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the Internet</tspan><tspan x="240" dy="17">internal: true, so network unreachable</tspan></text>
 <rect x="60" y="900" width="360" height="50" rx="10" fill="#f8cecc" stroke="#b85450" stroke-width="1"/>
 <text x="240" y="916.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="240" dy="0" font-weight="bold">No route to the host</tspan><tspan x="240" dy="17">inhibit_ipv4: the bridge has no host IP</tspan></text>
-<rect x="710" y="675" width="360" height="130" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
-<text x="890" y="706" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="890" dy="0" font-weight="bold">builder-proxy</tspan><tspan x="890" dy="17">runc, uid 10001</tspan><tspan x="890" dy="17">10.200.0.10:18080: tunnel (CONNECT)</tspan><tspan x="890" dy="17">127.0.0.1 only: DNS, HTTP, HTTPS, metrics</tspan><tspan x="890" dy="17">TLS passthrough (sni-only), no token</tspan></text>
+<rect x="560" y="675" width="360" height="130" rx="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1"/>
+<text x="740" y="706" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="740" dy="0" font-weight="bold">builder-proxy</tspan><tspan x="740" dy="17">runc, uid 10001</tspan><tspan x="740" dy="17">10.200.0.10:18080: tunnel (CONNECT)</tspan><tspan x="740" dy="17">127.0.0.1 only: DNS, HTTP, HTTPS, metrics</tspan><tspan x="740" dy="17">TLS passthrough (sni-only), no token</tspan></text>
 <rect x="1450" y="450" width="220" height="80" rx="10" fill="#f5f5f5" stroke="#666666" stroke-width="1"/>
 <text x="1560" y="480.5" text-anchor="middle" dominant-baseline="central" font-size="16"><tspan x="1560" dy="0" font-weight="bold">Internet</tspan><tspan x="1560" dy="19">allowed hosts only</tspan></text>
-<path d="M420 260 L710 260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
-<path d="M420 740 L710 740" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
-<path d="M420 312.5 L541 312.5 Q565 312.5 565 336.5 L565 500" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<path d="M565 570 L565 663.5 Q565 687.5 541 687.5 L420 687.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<path d="M1070 260 L1536 260 Q1560 260 1560 284 L1560 450" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<path d="M1070 740 L1536 740 Q1560 740 1560 716 L1560 530" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
-<text x="565" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="565" dy="0">HTTPS_PROXY</tspan></text>
-<text x="565" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="565" dy="0">HTTPS_PROXY</tspan></text>
-<text x="517" y="303.75" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="517" dy="0">docker build</tspan></text>
-<text x="1480" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1480" dy="0">network default</tspan></text>
-<text x="1490" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1490" dy="0">network default</tspan></text>
+<path d="M420 260 L560 260" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
+<path d="M420 740 L560 740" fill="none" stroke="#333333" stroke-width="3" marker-end="url(#m333333)"/>
+<path d="M420 312.5 L446 312.5 Q470 312.5 470 336.5 L470 500" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M470 570 L470 663.5 Q470 687.5 446 687.5 L420 687.5" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M920 260 L1536 260 Q1560 260 1560 284 L1560 450" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<path d="M920 740 L1536 740 Q1560 740 1560 716 L1560 530" fill="none" stroke="#333333" stroke-width="2" marker-end="url(#m333333)"/>
+<text x="490" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="490" dy="0">HTTPS_PROXY</tspan></text>
+<text x="490" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="490" dy="0">HTTPS_PROXY</tspan></text>
+<text x="522" y="381.25" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="522" dy="0">docker build</tspan></text>
+<text x="1185" y="243.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1185" dy="0">second address on network default</tspan></text>
+<text x="1185" y="723.5" text-anchor="middle" dominant-baseline="central" font-size="14"><tspan x="1185" dy="0">second address on network default</tspan></text>
 </svg>
