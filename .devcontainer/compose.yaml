@@ -83,6 +83,10 @@ services:
     user: "1000:1000"
     cap_drop: [ALL]
     cap_add: [SETUID, SETGID, SYS_CHROOT]
+    # Turns off the seccomp filter of Docker in the builder, so rootlesskit can make the user namespace of buildkitd.
+    # gVisor loads that filter by default (runsc --oci-seccomp), and the filter blocks a new user namespace without CAP_SYS_ADMIN.
+    # Trade-off: a build step can make any system call. gVisor still gets each call, so the host kernel never sees it.
+    security_opt: ["seccomp=unconfined"]
     restart: "no"
     command:
       - --addr
