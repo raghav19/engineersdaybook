@@ -12,8 +12,9 @@ proxy:
   # The tunnel takes CONNECT and SOCKS5. It must equal the proxy IP and port of HTTPS_PROXY in ../compose.yaml.
   tunnel_listen: "10.200.0.2:18080"
 tls:
-  ca_cert: /etc/iron-proxy/ca.crt
-  ca_key: /etc/iron-proxy/ca.key
+  # init.sh makes a new CA in the secrets folder for each new proxy.
+  ca_cert: /run/secrets/ca.crt
+  ca_key: /run/secrets/ca.key
 metrics:
   listen: "127.0.0.1:18083"
 transforms:
