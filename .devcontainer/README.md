@@ -49,7 +49,7 @@ This sandbox applies each concept as follows:
 | 1 The wall | A Docker container on gVisor, a user-space kernel. The root file system is read-only. The container has no capabilities. |
 | 2 Workspace | A private clone of the repo. The `.git` folder of your checkout is a read-only mount. |
 | 3 Network gate | An internal Docker network leads only to the agent proxy. The proxy allows listed hosts, methods and paths. |
-| 4 Key holder | The agent proxy swaps a placeholder for the real token. `init.sh` fetches the real tokens from Bitwarden into files in RAM. |
+| 4 Key holder | The agent proxy swaps a placeholder for the real token. `init.sh` fetches the real tokens from Bitwarden into files in `$XDG_RUNTIME_DIR/sandbox-secrets`, a tmpfs. |
 | 5 Saved state | The volume `sandbox-home` keeps the clone, the logins and the histories. Herdr restores the panes. |
 | 6 You | You approve tool calls in Claude Code and follow the panes in Herdr and the audit log. `docker compose -p sandbox stop` stops the sandbox. Each task has its own worktree and branch. |
 
@@ -92,7 +92,7 @@ A file outside `agent/` runs on your host or goes into a proxy as a mount. A fil
 ```text
 .devcontainer/
 ├── devcontainer.json    # run config: compose.yaml, the agent service, init.sh first
-├── init.sh              # host: a new CA and the API tokens in RAM, for a new proxy
+├── init.sh              # host: a new CA and the API tokens in a tmpfs, for a new proxy
 ├── compose.yaml         # the four containers, the networks, the limits and the mounts
 ├── policy/
 │   ├── agent.yaml       # agent proxy: allowlist, path rules, token swap
@@ -123,7 +123,7 @@ Notes on the controls:
 - **Root in the builder.** BuildKit has no authorization. Any holder of `buildkitd.sock` can run any build step as root in the build. The container is the wall.
 - **Path rules.** The path is the part of a URL after the host name. For `https://github.com/raghav19/engineersdaybook`, the path is `/raghav19/engineersdaybook`. A merge, a file removal, a gist, a fork and GraphQL get `403`.
 - **TLS.** `init.sh` makes a new CA for each new agent proxy. The agent proxy reads each request with this CA, and the agent trusts only this CA. The builder proxy has no CA.
-- **Tokens.** `init.sh` writes each API token into a file in `$XDG_RUNTIME_DIR/sandbox-secrets`. This folder is in RAM and has mode 0700. An ACL lets the proxy uid 10001 read the files. Your host user can read them while the session runs. A logout or a reboot empties the folder.
+- **Tokens.** `init.sh` writes each API token into a file in `$XDG_RUNTIME_DIR/sandbox-secrets`. `$XDG_RUNTIME_DIR` is `/run/user/<uid>`, a tmpfs, so the files stay in RAM. The folder has mode 0700. An ACL lets the proxy uid 10001 read the files. Your host user can read them while the session runs. A logout or a reboot empties the folder.
 - **Audit log.** Read it with `docker logs -f sandbox-proxy-1`.
 - **Limits.** `compose.yaml` sets the memory, CPU and PID limits of each container. Rootful Docker enforces them under gVisor. `memswap_limit` is equal to `mem_limit`, so no container uses swap.
 - **Session.** The volume `sandbox-home` keeps the clone, the logins and the histories of the agent sandbox.
@@ -150,7 +150,7 @@ sequenceDiagram
     alt the agent proxy runs
         Init-->>CLI: exit, the proxy has its CA and tokens
     else no agent proxy runs
-        Init->>Init: make the RAM folder and a new CA
+        Init->>Init: make the secrets folder and a new CA
         Init->>BW: bws secret list, with the decrypted access token
         BW-->>Init: the API tokens
         Init->>Init: write one file for each token
@@ -325,7 +325,7 @@ Do these steps once, in your main checkout. If step 3 or 4 is missing, `devconta
 1. **Docker.** Install Docker Engine with the Compose and buildx plugins: [Install Docker Engine](https://docs.docker.com/engine/install/). Then do [the post-install steps for Linux](https://docs.docker.com/engine/install/linux-postinstall/). The `docker` group is equal to root on the host.
 
 2. **mise and the tools.** Install mise: [Getting started](https://mise.jdx.dev/getting-started.html). Then run `mise install` in the repo. The root `mise.toml` installs `jq`, `bws`, the devcontainer CLI and gVisor at a pinned version with a checksum. `init.sh` uses `bws` to fetch the API tokens.
-   `init.sh` also needs `setfacl` and `openssl`. On Arch, they are in the packages `acl` and `openssl`. `init.sh` makes a new proxy CA in RAM for each new proxy.
+   `init.sh` also needs `setfacl` and `openssl`. On Arch, they are in the packages `acl` and `openssl`. `init.sh` makes a new proxy CA in `$XDG_RUNTIME_DIR/sandbox-secrets` for each new proxy.
 
 3. **gVisor.** Copy runsc to a folder that only root can write, because Docker runs it as root. Then add the two runtimes and restart Docker.
 
