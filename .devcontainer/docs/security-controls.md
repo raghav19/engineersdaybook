@@ -16,7 +16,7 @@ The diagram shows each control in the container that has it.
 
 - **No route out.** The internal networks have no route to the Internet or to the host. A tool that ignores `HTTPS_PROXY` gets `network unreachable`.
 - **Fixed proxy IPs.** gVisor cannot use the DNS of Docker. So `HTTPS_PROXY` names each proxy by its IP.
-- **Builder rights.** BuildKit needs three capabilities. The builder also has a writable root file system and no `no-new-privileges`.
+- **Builder rights.** BuildKit needs three capabilities and no seccomp filter. The builder also has a writable root file system and no `no-new-privileges`. gVisor still gets each system call of a build.
 - **Root in a build.** Any holder of `buildkitd.sock` can run any build step as root. The container is the wall.
 - **Path rules.** The agent proxy checks the path of each URL. A merge, a file removal, a gist, a fork and GraphQL get `403`.
 - **TLS.** Each new agent proxy gets a new CA. The agent trusts only this CA. The builder proxy has no CA.
