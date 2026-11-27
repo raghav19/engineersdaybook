@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The initializeCommand of devcontainer.json: it runs on the host before each `devcontainer up`. It gives a new proxy a new CA and its tokens.
-# Setup: README.md#prerequisites. Flow: README.md#run-flow
+# Setup: README.md#prerequisites. Flow: docs/flows.md#start-flow
 set -euo pipefail
 cd "$(dirname "$0")"
 

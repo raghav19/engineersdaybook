@@ -1,28 +1,90 @@
-<mxfile host="app.diagrams.net"><diagram id="concepts" name="concepts"><mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="780" background="#ffffff" math="0" shadow="0"><root>
-<mxCell id="0"/>
-<mxCell id="1" parent="0"/>
-<mxCell id="title" value="How to design an agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="700" height="40" as="geometry"/></mxCell>
-<mxCell id="host" value="&lt;b&gt;Host computer&lt;/b&gt;" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fafafa;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="280" y="80" width="1100" height="500" as="geometry"/></mxCell>
-<mxCell id="wall" value="&lt;b&gt;The wall: a user-space kernel or a microVM&lt;/b&gt;&lt;br&gt;The agent calls this kernel, not the host kernel.&lt;br&gt;A plain container shares the host kernel." style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=4;align=left;spacingLeft=48;verticalAlign=top;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="300" y="150" width="620" height="390" as="geometry"/></mxCell>
-<mxCell id="request" value="&lt;b&gt;Your request&lt;/b&gt;&lt;br&gt;a task for the agent" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="20" y="240" width="220" height="70" as="geometry"/></mxCell>
-<mxCell id="agent" value="&lt;b&gt;Agent&lt;/b&gt;&lt;br&gt;the model and its client" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="330" y="230" width="270" height="90" as="geometry"/></mxCell>
-<mxCell id="software" value="&lt;b&gt;Software&lt;/b&gt;&lt;br&gt;the tools that the task needs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="620" y="230" width="270" height="90" as="geometry"/></mxCell>
-<mxCell id="workspace" value="&lt;b&gt;Workspace&lt;/b&gt;&lt;br&gt;only the files and folders&lt;br&gt;that the task needs.&lt;br&gt;Mount the rest read-only,&lt;br&gt;or leave it out." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="330" y="400" width="270" height="110" as="geometry"/></mxCell>
-<mxCell id="state" value="&lt;b&gt;Saved state&lt;/b&gt;&lt;br&gt;Decide what stays after&lt;br&gt;a restart: a volume,&lt;br&gt;a snapshot or nothing." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="620" y="400" width="270" height="110" as="geometry"/></mxCell>
-<mxCell id="gate" value="&lt;b&gt;Network gate&lt;/b&gt;&lt;br&gt;No network device. One way out, to a proxy.&lt;br&gt;Listed hosts pass. The proxy blocks the rest." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1000" y="230" width="350" height="90" as="geometry"/></mxCell>
-<mxCell id="keys" value="&lt;b&gt;Key holder&lt;/b&gt;&lt;br&gt;Real keys stay outside the wall.&lt;br&gt;The sandbox holds placeholders. The proxy&lt;br&gt;swaps in a key for its listed hosts only." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1000" y="400" width="350" height="110" as="geometry"/></mxCell>
-<mxCell id="hosts" value="&lt;b&gt;Outside services&lt;/b&gt;&lt;br&gt;APIs, websites and registries" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#ffffff;strokeColor=#333333;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="1000" y="660" width="350" height="90" as="geometry"/></mxCell>
-<mxCell id="you" value="&lt;b&gt;You&lt;/b&gt;&lt;br&gt;Approve each risky action. Follow each step in a log.&lt;br&gt;Stop the sandbox at any time.&lt;br&gt;Undo the changes of one task, not the whole workspace." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="300" y="660" width="620" height="90" as="geometry"/></mxCell>
-<mxCell id="n1" value="1" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="308" y="158" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="n2" value="2" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="318" y="388" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="n5" value="5" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="608" y="388" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="n3" value="3" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="988" y="218" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="n4" value="4" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="988" y="388" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="n6" value="6" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="288" y="648" width="32" height="32" as="geometry"/></mxCell>
-<mxCell id="e-request-agent" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="request" target="agent"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e-agent-workspace" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="workspace"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e-software-gate" value="requests" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="software" target="gate"><mxGeometry relative="1" as="geometry"><mxPoint x="8" y="-8" as="offset"/></mxGeometry></mxCell>
-<mxCell id="e-gate-keys" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gate" target="keys"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e-keys-hosts" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="keys" target="hosts"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
-<mxCell id="e-you-wall" value="allow or deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=1;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="you" target="wall"><mxGeometry relative="1" as="geometry"><mxPoint x="8" y="-8" as="offset"/></mxGeometry></mxCell>
-</root></mxGraphModel></diagram></mxfile>
+<mxfile host="app.diagrams.net">
+<diagram id="concepts" name="concepts">
+<mxGraphModel dx="1000" dy="600" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1820" pageHeight="780" background="#ffffff" math="0" shadow="0">
+<root>
+<mxCell id="0" />
+<mxCell id="1" parent="0" />
+<mxCell id="title" value="How to design an agent sandbox" style="text;html=0;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="10" width="700" height="40" as="geometry" />
+</mxCell>
+<mxCell id="host" value="&lt;b&gt;Host computer&lt;/b&gt;" style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=1;fontSize=16;fillColor=#fafafa;strokeColor=#666666;strokeWidth=2;align=left;spacingLeft=10;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="280" y="80" width="1100" height="500" as="geometry" />
+</mxCell>
+<mxCell id="wall" value="&lt;b&gt;The wall: a user-space kernel or a microVM&lt;/b&gt;&lt;br&gt;The agent calls this kernel, not the host kernel.&lt;br&gt;A plain container shares the host kernel." style="rounded=1;arcSize=4;container=1;collapsible=0;whiteSpace=wrap;html=1;fontSize=16;fillColor=#ffffff;strokeColor=#6c8ebf;strokeWidth=4;align=left;spacingLeft=48;verticalAlign=top;spacingTop=8;" vertex="1" parent="1">
+<mxGeometry x="300" y="150" width="620" height="390" as="geometry" />
+</mxCell>
+<mxCell id="request" value="&lt;b&gt;Your request&lt;/b&gt;&lt;br&gt;a task for the agent" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="20" y="240" width="220" height="70" as="geometry" />
+</mxCell>
+<mxCell id="agent" value="&lt;b&gt;Agent&lt;/b&gt;&lt;br&gt;the model and its client" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="330" y="230" width="270" height="90" as="geometry" />
+</mxCell>
+<mxCell id="software" value="&lt;b&gt;Software&lt;/b&gt;&lt;br&gt;the tools that the task needs" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="620" y="230" width="270" height="90" as="geometry" />
+</mxCell>
+<mxCell id="workspace" value="&lt;b&gt;Workspace&lt;/b&gt;&lt;br&gt;only the files and folders&lt;br&gt;that the task needs.&lt;br&gt;Mount the rest read-only,&lt;br&gt;or leave it out." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="330" y="400" width="270" height="110" as="geometry" />
+</mxCell>
+<mxCell id="state" value="&lt;b&gt;Saved state&lt;/b&gt;&lt;br&gt;Decide what stays after&lt;br&gt;a restart: a volume,&lt;br&gt;a snapshot or nothing." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="620" y="400" width="270" height="110" as="geometry" />
+</mxCell>
+<mxCell id="gate" value="&lt;b&gt;Network gate&lt;/b&gt;&lt;br&gt;No network device. One way out, to a proxy.&lt;br&gt;The proxy swaps in a key for a listed host&lt;br&gt;and blocks every other host." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1000" y="230" width="350" height="90" as="geometry" />
+</mxCell>
+<mxCell id="keys" value="&lt;b&gt;Key holder&lt;/b&gt;&lt;br&gt;An outside secret manager.&lt;br&gt;Real keys never enter the wall.&lt;br&gt;The sandbox holds placeholders." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1440" y="400" width="350" height="110" as="geometry" />
+</mxCell>
+<mxCell id="hosts" value="&lt;b&gt;Outside services&lt;/b&gt;&lt;br&gt;APIs, websites and registries" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#ffffff;strokeColor=#333333;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="1440" y="230" width="350" height="90" as="geometry" />
+</mxCell>
+<mxCell id="you" value="&lt;b&gt;You&lt;/b&gt;&lt;br&gt;Approve each risky action. Follow each step in a log.&lt;br&gt;Stop the sandbox at any time.&lt;br&gt;Undo the changes of one task, not the whole workspace." style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;" vertex="1" parent="1">
+<mxGeometry x="300" y="660" width="620" height="90" as="geometry" />
+</mxCell>
+<mxCell id="n1" value="1" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="308" y="158" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="n2" value="2" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="318" y="388" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="n5" value="5" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="608" y="388" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="n3" value="3" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="988" y="218" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="n4" value="4" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="1428" y="388" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="n6" value="6" style="ellipse;html=0;fontSize=16;fontStyle=1;fontColor=#ffffff;fillColor=#6c8ebf;strokeColor=#6c8ebf;" vertex="1" parent="1">
+<mxGeometry x="288" y="648" width="32" height="32" as="geometry" />
+</mxCell>
+<mxCell id="e-request-agent" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="request" target="agent">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e-agent-workspace" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="agent" target="workspace">
+<mxGeometry relative="1" as="geometry" />
+</mxCell>
+<mxCell id="e-software-gate" value="requests" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="software" target="gate">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="14" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e-gate-keys" value="gets the real keys" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gate" target="keys">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-15" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e-keys-hosts" value="listed hosts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="gate" target="hosts">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="0" y="-16.5" as="offset" />
+</mxGeometry>
+</mxCell>
+<mxCell id="e-you-wall" value="allow or deny" style="edgeStyle=orthogonalEdgeStyle;rounded=1;curved=0;html=0;labelBackgroundColor=none;fontSize=14;fontStyle=2;strokeWidth=2;strokeColor=#333333;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="you" target="wall">
+<mxGeometry relative="1" as="geometry">
+<mxPoint x="60" y="0" as="offset" />
+</mxGeometry>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>
