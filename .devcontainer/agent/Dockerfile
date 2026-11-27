@@ -30,9 +30,7 @@ RUN mise install --yes && rm -rf /opt/mise/installs/node/*/include
 
 FROM stage1-base AS stage4-infra
 COPY tools/infra.toml /etc/mise/conf.d/infra.toml
-# Keeps only the docker client of the docker-cli bundle. The agent has no daemon: it sends each build to the builder over buildkitd.sock.
-RUN mise install --yes \
- && find /opt/mise/installs/docker-cli -path '*/docker/*' -type f ! -name docker -delete
+RUN mise install --yes
 
 FROM stage1-base AS stage5-dev
 COPY tools/dev.toml /etc/mise/conf.d/dev.toml
@@ -88,6 +86,14 @@ FROM stage1-base AS stage10-final
 USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends binutils \
+ && rm -rf /var/lib/apt/lists/*
+# The docker client and its buildx plugin, from Docker's apt repo. No daemon: each build goes to the builder over buildkitd.sock.
+# Install steps: https://docs.docker.com/engine/install/debian/
+RUN install -m 0755 -d /etc/apt/keyrings \
+ && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+ && echo "deb [signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian trixie stable" >/etc/apt/sources.list.d/docker.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends docker-ce-cli=5:29.10.1-1~debian.13~trixie docker-buildx-plugin=0.39.1-1~debian.13~trixie \
  && rm -rf /var/lib/apt/lists/*
 USER agent
 COPY --from=stage2-runtimes --chown=agent:agent /opt/mise/installs /opt/mise/installs
